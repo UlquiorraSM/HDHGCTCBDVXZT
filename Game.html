@@ -608,18 +608,21 @@
             // Die folgende Implementierung nutzt das Plugin, wenn es verfügbar ist (auf Perchance),
             // ansonsten Fallback auf Mock.
             async function generateAIResponse(entity, input) {
-                const npc = entity.npc;
-                const traits = "Aggressive, Loner, HardWorker"; // Diese kommen aus deinem NPC-System
-                
-                const prompt = `You are a ${entity.data.species}. 
-                Your personality traits are: ${traits}. 
-                A player says to you: "${input}". 
-                Respond aggressively and shortly in Pokemon language with a translation.`;
+                const prompt = `You are ${entity.data.species}. Player says: ${input}. Respond shortly.`;
             
-                if (window.askAI) {
-                    return await window.askAI(prompt);
-                }
-                return "*knurrt leise*";
+                return new Promise((resolve) => {
+                    // Wir senden den Prompt an das Hauptfenster (Perchance)
+                    window.parent.postMessage({ type: "AI_PROMPT", text: prompt }, "*");
+            
+                    // Wir warten einmalig auf die Antwort
+                    const handler = (event) => {
+                        if (event.data && event.data.type === "AI_RESPONSE") {
+                            window.removeEventListener("message", handler);
+                            resolve(event.data.text);
+                        }
+                    };
+                    window.addEventListener("message", handler);
+                });
             }
 
             async function generateMockResponse(entity, input) {
@@ -2519,6 +2522,7 @@ Give a short greeting or reaction (1 sentence).`;
     </script>
 </body>
 </html>
+
 
 
 
