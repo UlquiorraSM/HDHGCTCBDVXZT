@@ -609,22 +609,17 @@
             // ansonsten Fallback auf Mock.
             async function generateAIResponse(entity, input) {
                 const npc = entity.npc;
-                const pokeData = entity.data;
+                const traits = "Aggressive, Loner, HardWorker"; // Diese kommen aus deinem NPC-System
                 
-                // Wir bauen den Auftrag für die KI
-                const prompt = `You are a Pokemon (${pokeData.species}) with the nature ${npc.nature}. 
-                Current mood: ${npc.mood}. Personality: ${npc.personality}.
-                The player says: "${input}". 
-                Respond in Pokemon language, then provide a translation in brackets.`;
+                const prompt = `You are a ${entity.data.species}. 
+                Your personality traits are: ${traits}. 
+                A player says to you: "${input}". 
+                Respond aggressively and shortly in Pokemon language with a translation.`;
             
-                // Der Aufruf der Brücke zu Perchance
-                if (typeof window.askAI === 'function') {
-                    // Hier wird die Funktion aus dem Perchance-HTML-Panel aufgerufen
-                    const response = await window.askAI(prompt); 
-                    return response;
-                } else {
-                    return "*starrt dich verwirrt an*";
+                if (window.askAI) {
+                    return await window.askAI(prompt);
                 }
+                return "*knurrt leise*";
             }
 
             async function generateMockResponse(entity, input) {
@@ -2524,6 +2519,7 @@ Give a short greeting or reaction (1 sentence).`;
     </script>
 </body>
 </html>
+
 
 
 
