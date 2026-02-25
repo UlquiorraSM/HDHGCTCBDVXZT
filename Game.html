@@ -611,50 +611,19 @@
                 const npc = entity.npc;
                 const pokeData = entity.data;
                 
-                // Prompt Konstruktion
-                const memoryContext = npc.memory.slice(-5).map(m => `Player: "${m.player}"\nYou: "${m.response}"`).join('\n');
-                
-                const instructionText = `You are a wild Pokemon.
-Species: ${pokeData.name}
-Name: ${npc.name}
-Gender: ${npc.gender}
-Type: ${pokeData.type}
-Traits: ${npc.traits.join(', ')}
-Age: ${npc.age} years
-Hunger: ${npc.hunger}% (Lower is hungrier)
-Thirst: ${npc.thirst}% (Lower is thirstier)
-
-Conversation History (Last 5 messages):
-${memoryContext}
-
-The player says to you: "${input}"
-
-Reply in character as this Pokemon. 
-Keep it short (1-2 sentences). 
-Include actions in asterisks like *tilts head*.
-Reflect your traits and current status in your response.`;
-
-                try {
-                    // Prüfen ob 'ai' (vom Plugin) verfügbar ist
-                    if (typeof ai === 'function') {
-                        const response = await ai({
-                            instruction: instructionText,
-                            stopSequences: ["\n", "Player:"], // Stop bei neuer Zeile oder Player Prefix
-                        });
-                        const cleanResponse = response.generatedText || response;
-                        
-                        // Save to Memory
-                        npc.memory.push({ player: input, response: cleanResponse });
-                        if (npc.memory.length > 20) npc.memory.shift(); // Keep only last 20 interactions
-                        
-                        return cleanResponse;
-                    } else {
-                        console.warn("AI Plugin not found. Using Mock Fallback.");
-                        return await generateMockResponse(entity, input);
-                    }
-                } catch (e) {
-                    console.error("AI Generation failed:", e);
-                    return await generateMockResponse(entity, input);
+                // Dein fertiger Prompt-Text aus der Game.html
+                const instructionText = `You are a wild Pokemon... ${input} ...`; 
+            
+                // JETZT DIE BRÜCKE NUTZEN:
+                if (typeof window.askAI === 'function') {
+                    const cleanResponse = await window.askAI(instructionText);
+                    
+                    // Speichere in NPC-Memory
+                    npc.memory.push({ player: input, response: cleanResponse });
+                    return cleanResponse;
+                } else {
+                    // Fallback, falls Perchance noch nicht geladen ist
+                    return "*guckt verwirrt*";
                 }
             }
 
@@ -2555,3 +2524,4 @@ Give a short greeting or reaction (1 sentence).`;
     </script>
 </body>
 </html>
+
