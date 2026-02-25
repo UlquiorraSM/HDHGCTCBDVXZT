@@ -32,12 +32,32 @@
 
     /* Header Bereich */
     #headerEl {
-      padding: 16px;
+      padding: 12px 16px;
       border-bottom: 1px solid #eee;
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #fff;
+    }
+    #headerTitle {
       font-weight: bold;
       font-size: 1.2rem;
-      background-color: #fff;
+      flex: 1;
+      text-align: center;
+    }
+    .navBtn {
+      background-color: #f0f2f5;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+    .navBtn:hover {
+      background-color: #e4e6eb;
     }
 
     /* Chat Bereich (Mittig) */
@@ -145,7 +165,11 @@
 
   <div id="appCtn">
     <!-- Kopfzeile -->
-    <div id="headerEl">KI Chatbot</div>
+    <div id="headerEl">
+      <div style="width: 60px;"></div> <!-- Platzhalter für Symmetrie -->
+      <div id="headerTitle">KI Chatbot</div>
+      <a href="Menu.html" class="navBtn">Menu</a>
+    </div>
 
     <!-- Chat-Verlauf (Mittig) -->
     <div id="chatCtn">
