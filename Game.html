@@ -611,19 +611,22 @@
                 const npc = entity.npc;
                 const pokeData = entity.data;
                 
-                // Dein fertiger Prompt-Text aus der Game.html
-                const instructionText = `You are a wild Pokemon... ${input} ...`; 
+                // Wir bauen einen "Befehl" für die KI, damit sie weiß, wer sie ist
+                const prompt = `You are a wild Pokemon (${pokeData.species}) with the nature ${pokeData.nature}. 
+                A player just said to you: "${input}". 
+                Respond as the Pokemon in its language, followed by a translation in brackets. 
+                Keep it short and react to the player's tone.`;
             
-                // JETZT DIE BRÜCKE NUTZEN:
+                // Hier rufen wir die Brücke zu Perchance auf
                 if (typeof window.askAI === 'function') {
-                    const cleanResponse = await window.askAI(instructionText);
+                    const aiAntwort = await window.askAI(prompt);
                     
-                    // Speichere in NPC-Memory
-                    npc.memory.push({ player: input, response: cleanResponse });
-                    return cleanResponse;
+                    // Speichere die Interaktion im Gedächtnis des NPCs
+                    npc.memory.push({ player: input, response: aiAntwort });
+                    return aiAntwort;
                 } else {
-                    // Fallback, falls Perchance noch nicht geladen ist
-                    return "*guckt verwirrt*";
+                    // Falls die KI-Brücke noch nicht bereit ist
+                    return "*Bisasam guckt verwirrt* Bi-sa?";
                 }
             }
 
@@ -2524,4 +2527,5 @@ Give a short greeting or reaction (1 sentence).`;
     </script>
 </body>
 </html>
+
 
