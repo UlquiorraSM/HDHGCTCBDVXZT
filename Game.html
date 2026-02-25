@@ -608,20 +608,39 @@
             // Die folgende Implementierung nutzt das Plugin, wenn es verfügbar ist (auf Perchance),
             // ansonsten Fallback auf Mock.
             async function generateAIResponse(entity, input) {
-                const prompt = `You are ${entity.data.species}. Player says: ${input}. Respond shortly.`;
+                const npc = entity.npc;
+                const pokeData = entity.data;
+                
+                const prompt = `You are a Pokemon (${pokeData.species}) named Luna with the nature ${npc.nature}. 
+                Personality: ${npc.personality}. Current mood: ${npc.mood}.
+                The player says: "${input}". 
+                Respond in Pokemon language with a short translation in brackets.`;
             
+                // Der "Funkversand" an Perchance
                 return new Promise((resolve) => {
-                    // Wir senden den Prompt an das Hauptfenster (Perchance)
-                    window.parent.postMessage({ type: "AI_PROMPT", text: prompt }, "*");
+                    const messageId = Date.now(); // Eindeutige ID für diese Anfrage
+                    
+                    // Wir senden die Nachricht an das Elternelement (Perchance)
+                    window.parent.postMessage({ 
+                        type: "AI_PROMPT", 
+                        text: prompt 
+                    }, "*");
             
-                    // Wir warten einmalig auf die Antwort
-                    const handler = (event) => {
+                    // Wir erstellen einen einmaligen "Fänger" für die Antwort
+                    const responseHandler = (event) => {
                         if (event.data && event.data.type === "AI_RESPONSE") {
-                            window.removeEventListener("message", handler);
+                            window.removeEventListener("message", responseHandler);
                             resolve(event.data.text);
                         }
                     };
-                    window.addEventListener("message", handler);
+            
+                    window.addEventListener("message", responseHandler);
+                    
+                    // Timeout nach 10 Sekunden, falls die KI hakt
+                    setTimeout(() => {
+                        window.removeEventListener("message", responseHandler);
+                        resolve("*Luna starrt dich nur still an...*");
+                    }, 10000);
                 });
             }
 
@@ -2522,6 +2541,7 @@ Give a short greeting or reaction (1 sentence).`;
     </script>
 </body>
 </html>
+
 
 
 
