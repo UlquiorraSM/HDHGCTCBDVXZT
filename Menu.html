@@ -76,6 +76,58 @@
       background-color: #f0f2f5;
       transform: translateY(-2px);
     }
+    /* Spin Button Styling */
+    #spinCtn {
+      margin-top: 20px;
+      padding: 20px;
+      border: 2px dashed #007aff;
+      border-radius: 12px;
+      text-align: center;
+      background-color: #f0f7ff;
+    }
+    #spinBtn {
+      background-color: #007aff;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      margin-bottom: 15px;
+    }
+    #spinBtn:hover {
+      background-color: #0056b3;
+    }
+    #spinBtn:active {
+      transform: scale(0.95);
+    }
+    #resultCtn {
+      min-height: 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .speciesName {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #007aff;
+      margin-bottom: 5px;
+    }
+    .speciesDesc {
+      font-size: 0.9rem;
+      color: #666;
+      font-style: italic;
+    }
+    .spinning {
+      animation: pulse 0.5s infinite alternate;
+    }
+    @keyframes pulse {
+      from { opacity: 0.5; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1.02); }
+    }
   </style>
 </head>
 <body>
@@ -88,8 +140,72 @@
     <div id="menuContent">
       <a href="List.html" class="menuItem">Chat Verlauf</a>
       <a href="Game.html" class="menuItem">Spore Game</a>
-      <div class="menuItem" style="opacity: 0.5; cursor: default;">Einstellungen (Demnächst)</div>
+      
+      <div id="spinCtn">
+        <button id="spinBtn">Zufällige Spezies drehen!</button>
+        <div id="resultCtn">
+          <div id="resultName" class="speciesName">Bereit zum Drehen...</div>
+          <div id="resultDesc" class="speciesDesc"></div>
+        </div>
+      </div>
+
+      <div class="menuItem" style="opacity: 0.5; cursor: default; margin-top: auto;">Einstellungen (Demnächst)</div>
     </div>
   </div>
+
+  <script>
+    const spinBtn = document.getElementById('spinBtn');
+    const resultName = document.getElementById('resultName');
+    const resultDesc = document.getElementById('resultDesc');
+
+    async function spinSpecies() {
+      spinBtn.disabled = true;
+      resultName.textContent = "Spezies wird gesucht...";
+      resultName.classList.add('spinning');
+      resultDesc.textContent = "";
+
+      try {
+        // 1. Species.html abrufen
+        const response = await fetch('Species.html');
+        if (!response.ok) throw new Error('Konnte Species.html nicht laden');
+        
+        const htmlText = await response.text();
+        
+        // 2. HTML parsen
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+        const speciesElements = doc.querySelectorAll('#speciesList li');
+        
+        const speciesList = Array.from(speciesElements).map(el => ({
+          name: el.textContent,
+          description: el.getAttribute('data-description')
+        }));
+
+        if (speciesList.length === 0) throw new Error('Keine Spezies gefunden');
+
+        // 3. Kurze Verzögerung für den "Spin"-Effekt
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // 4. Zufällige Spezies auswählen
+        const randomIndex = Math.floor(Math.random() * speciesList.length);
+        const selected = speciesList[randomIndex];
+
+        // 5. Ergebnis anzeigen
+        resultName.classList.remove('spinning');
+        resultName.textContent = selected.name;
+        resultDesc.textContent = selected.description;
+
+      } catch (error) {
+        console.error(error);
+        resultName.classList.remove('spinning');
+        resultName.textContent = "Fehler!";
+        resultDesc.textContent = "Spezies konnten nicht geladen werden.";
+      } finally {
+        spinBtn.disabled = false;
+      }
+    }
+
+    spinBtn.onclick = spinSpecies;
+  </script>
 </body>
 </html>
