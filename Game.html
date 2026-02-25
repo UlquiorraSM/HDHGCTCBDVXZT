@@ -252,7 +252,7 @@
         // Wir nutzen root.generateText, da wir in einem Modul sind
         let promptInstruction = `Du bist ein hilfreicher, freundlicher Assistent. Antworte immer auf Deutsch.\n\nHier ist der bisherige Chat:\n${historyText}\nBot:`;
         
-        let generationPromise = root.generateText({
+        let generationPromise = root.ai({
           instruction: promptInstruction,
           stopSequences: ["\nUser:", "\n\n"] // Stoppen, wenn der Bot versucht, den User zu simulieren oder einen neuen Absatz beginnt
         });
@@ -297,3 +297,4 @@
   </script>
 </body>
 </html>
+
