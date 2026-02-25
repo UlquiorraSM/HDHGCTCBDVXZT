@@ -153,6 +153,7 @@
     </div>
   </div>
 
+  <script src="Species.js"></script>
   <script>
     const spinBtn = document.getElementById('spinBtn');
     const resultName = document.getElementById('resultName');
@@ -165,41 +166,30 @@
       resultDesc.textContent = "";
 
       try {
-        // 1. Species.html abrufen
-        const response = await fetch('Species.html');
-        if (!response.ok) throw new Error('Konnte Species.html nicht laden');
-        
-        const htmlText = await response.text();
-        
-        // 2. HTML parsen
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlText, 'text/html');
-        const speciesElements = doc.querySelectorAll('#speciesList li');
-        
-        const speciesList = Array.from(speciesElements).map(el => ({
-          name: el.textContent,
-          description: el.getAttribute('data-description')
-        }));
+        // Nutze direkt die Daten aus Species.js
+        const speciesList = window.speciesData || [];
 
-        if (speciesList.length === 0) throw new Error('Keine Spezies gefunden');
+        if (speciesList.length === 0) {
+          throw new Error('Keine Spezies-Daten in Species.js gefunden.');
+        }
 
-        // 3. Kurze Verzögerung für den "Spin"-Effekt
+        // 1. Kurze Verzögerung für den "Spin"-Effekt
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        // 4. Zufällige Spezies auswählen
+        // 2. Zufällige Spezies auswählen
         const randomIndex = Math.floor(Math.random() * speciesList.length);
         const selected = speciesList[randomIndex];
 
-        // 5. Ergebnis anzeigen
+        // 3. Ergebnis anzeigen
         resultName.classList.remove('spinning');
         resultName.textContent = selected.name;
         resultDesc.textContent = selected.description;
 
       } catch (error) {
-        console.error(error);
+        console.error('Spin Error:', error);
         resultName.classList.remove('spinning');
         resultName.textContent = "Fehler!";
-        resultDesc.textContent = "Spezies konnten nicht geladen werden.";
+        resultDesc.textContent = error.message;
       } finally {
         spinBtn.disabled = false;
       }
