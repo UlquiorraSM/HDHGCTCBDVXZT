@@ -1,201 +1,141 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menü - KI Chatbot</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background-color: #f0f2f5;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      color: #333;
-    }
-    #appCtn {
-      width: 100%;
-      max-width: 600px;
-      height: 90vh;
-      background-color: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    #headerEl {
-      padding: 12px 16px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background-color: #fff;
-    }
-    #headerTitle {
-      font-weight: bold;
-      font-size: 1.2rem;
-      flex: 1;
-      text-align: center;
-    }
-    .navBtn {
-      background-color: #f0f2f5;
-      color: #333;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background-color 0.2s;
-    }
-    .navBtn:hover {
-      background-color: #e4e6eb;
-    }
-    #menuContent {
-      flex: 1;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .menuItem {
-      padding: 16px;
-      background-color: #fafafa;
-      border: 1px solid #eee;
-      border-radius: 8px;
-      text-align: center;
-      text-decoration: none;
-      color: #333;
-      font-weight: 600;
-      transition: transform 0.1s, background-color 0.2s;
-    }
-    .menuItem:hover {
-      background-color: #f0f2f5;
-      transform: translateY(-2px);
-    }
-    /* Spin Button Styling */
-    #spinCtn {
-      margin-top: 20px;
-      padding: 20px;
-      border: 2px dashed #007aff;
-      border-radius: 12px;
-      text-align: center;
-      background-color: #f0f7ff;
-    }
-    #spinBtn {
-      background-color: #007aff;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      padding: 12px 24px;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.2s, transform 0.1s;
-      margin-bottom: 15px;
-    }
-    #spinBtn:hover {
-      background-color: #0056b3;
-    }
-    #spinBtn:active {
-      transform: scale(0.95);
-    }
-    #resultCtn {
-      min-height: 60px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
-    .speciesName {
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: #007aff;
-      margin-bottom: 5px;
-    }
-    .speciesDesc {
-      font-size: 0.9rem;
-      color: #666;
-      font-style: italic;
-    }
-    .spinning {
-      animation: pulse 0.5s infinite alternate;
-    }
-    @keyframes pulse {
-      from { opacity: 0.5; transform: scale(0.98); }
-      to { opacity: 1; transform: scale(1.02); }
-    }
-  </style>
-</head>
-<body>
-  <div id="appCtn">
-    <div id="headerEl">
-      <a href="List.html" class="navBtn">Zurück</a>
-      <div id="headerTitle">Menü</div>
-      <div style="width: 60px;"></div>
-    </div>
-    <div id="menuContent">
-      <a href="List.html" class="menuItem">Chat Verlauf</a>
-      <a href="Game.html" class="menuItem">Spore Game</a>
-      
-      <div id="spinCtn">
-        <button id="spinBtn">Zufällige Spezies drehen!</button>
-        <div id="resultCtn">
-          <div id="resultName" class="speciesName">Bereit zum Drehen...</div>
-          <div id="resultDesc" class="speciesDesc"></div>
-        </div>
-      </div>
-
-      <div class="menuItem" style="opacity: 0.5; cursor: default; margin-top: auto;">Einstellungen (Demnächst)</div>
-    </div>
-  </div>
-
-  <script src="Species.js"></script>
-  <script>
-    const spinBtn = document.getElementById('spinBtn');
-    const resultName = document.getElementById('resultName');
-    const resultDesc = document.getElementById('resultDesc');
-
-    async function spinSpecies() {
-      spinBtn.disabled = true;
-      resultName.textContent = "Spezies wird gesucht...";
-      resultName.classList.add('spinning');
-      resultDesc.textContent = "";
-
-      try {
-        // Nutze direkt die Daten aus Species.js
-        const speciesList = window.speciesData || [];
-
-        if (speciesList.length === 0) {
-          throw new Error('Keine Spezies-Daten in Species.js gefunden.');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokeWilds Clone - Menu</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        
+        /* Menü Styling */
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to bottom, #2c3e50, #000000);
+            color: white;
+            z-index: 100;
         }
 
-        // 1. Kurze Verzögerung für den "Spin"-Effekt
-        await new Promise(resolve => setTimeout(resolve, 800));
+        .menu-title {
+            font-size: 64px;
+            margin-bottom: 50px;
+            text-shadow: 4px 4px 0px #000;
+            color: #f1c40f;
+        }
 
-        // 2. Zufällige Spezies auswählen
-        const randomIndex = Math.floor(Math.random() * speciesList.length);
-        const selected = speciesList[randomIndex];
+        .menu-btn {
+            background: #34495e;
+            color: white;
+            border: 2px solid #7f8c8d;
+            padding: 15px 40px;
+            font-size: 24px;
+            margin: 10px;
+            cursor: pointer;
+            width: 300px;
+            font-family: inherit;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
 
-        // 3. Ergebnis anzeigen
-        resultName.classList.remove('spinning');
-        resultName.textContent = selected.name;
-        resultDesc.textContent = selected.description;
+        .menu-btn:hover {
+            background: #e67e22;
+            border-color: #f39c12;
+            transform: scale(1.05);
+        }
 
-      } catch (error) {
-        console.error('Spin Error:', error);
-        resultName.classList.remove('spinning');
-        resultName.textContent = "Fehler!";
-        resultDesc.textContent = error.message;
-      } finally {
-        spinBtn.disabled = false;
-      }
-    }
+        .hidden { display: none !important; }
 
-    spinBtn.onclick = spinSpecies;
-  </script>
+        /* Formular Styling */
+        .form-group {
+            margin: 20px 0;
+            text-align: left;
+            width: 400px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 18px;
+            color: #bdc3c7;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            background: #ecf0f1;
+            border: none;
+            font-family: inherit;
+        }
+        
+        .back-btn {
+            margin-top: 30px;
+            background: #c0392b;
+        }
+        .back-btn:hover {
+            background: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hauptmenü -->
+    <div id="main-menu" class="menu-screen">
+        <h1 class="menu-title">WebMon</h1>
+        <button class="menu-btn" id="btn-play">Play World</button>
+        <button class="menu-btn" id="btn-load">Load World</button>
+        <button class="menu-btn" id="btn-settings">Settings</button>
+    </div>
+
+    <!-- Neue Welt Screen -->
+    <div id="new-world-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Create New World</h1>
+        
+        <div class="form-group">
+            <label>World Name:</label>
+            <input type="text" id="world-name" placeholder="My New World" value="New World">
+        </div>
+
+        <div class="form-group">
+            <label>World Size:</label>
+            <select id="world-size">
+                <option value="500">Dwarfism - 500x500</option>
+                <option value="750">Short - 750x750</option>
+                <option value="1000" selected>Normal - 1000x1000</option>
+                <option value="1250">Big - 1250x1250</option>
+                <option value="1500">Giant - 1500x1500</option>
+            </select>
+        </div>
+
+        <button class="menu-btn" id="btn-start-game">Start Adventure</button>
+        <button class="menu-btn back-btn" id="btn-back-main">Back</button>
+    </div>
+
+    <script>
+        const mainMenu = document.getElementById('main-menu');
+        const newWorldScreen = document.getElementById('new-world-screen');
+
+        document.getElementById('btn-play').addEventListener('click', () => {
+            mainMenu.classList.add('hidden');
+            newWorldScreen.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-back-main').addEventListener('click', () => {
+            newWorldScreen.classList.add('hidden');
+            mainMenu.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-start-game').addEventListener('click', () => {
+            const size = document.getElementById('world-size').value;
+            const name = encodeURIComponent(document.getElementById('world-name').value);
+            window.location.href = `Game.html?size=${size}&name=${name}`;
+        });
+    </script>
 </body>
 </html>
