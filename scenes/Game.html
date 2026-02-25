@@ -20,6 +20,26 @@
         
         .hidden { display: none !important; }
 
+        /* Transition Screen */
+        #transition-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease-in-out;
+            pointer-events: none;
+        }
+
+        #transition-overlay.fade-out {
+            opacity: 0;
+        }
+
         #bottom-bar { 
             position: absolute; 
             left: 0; 
@@ -217,9 +237,15 @@
      </style>
  </head>
  <body>
-     <div id="debug">Debug Info...</div>
+     <div id="transition-overlay"></div>
+    <div id="debug">Debug Info...</div>
 
-     <!-- In-Game Aktionsmenü -->
+    <!-- Data Scripts -->
+    <script src="../js/PokemonData.js"></script>
+    <script src="../js/ItemData.js"></script>
+    <script src="../js/BiomeData.js"></script>
+
+    <!-- In-Game Aktionsmenü -->
      <div id="action-menu"></div>
 
      <!-- Kontextmenü -->
@@ -712,6 +738,16 @@ Give a short greeting or reaction (1 sentence).`;
                 needsAccum = 0;
                 renderInventory();
                 gameLoop();
+
+                // Fade out transition overlay after everything is set up
+                setTimeout(() => {
+                    const overlay = document.getElementById('transition-overlay');
+                    if (overlay) {
+                        overlay.classList.add('fade-out');
+                        // Remove from DOM after transition
+                        setTimeout(() => overlay.remove(), 1000);
+                    }
+                }, 100);
             }
 
             const TILE_SIZE = 32;
@@ -719,50 +755,6 @@ Give a short greeting or reaction (1 sentence).`;
             const ACTUAL_TILE_SIZE = TILE_SIZE * SCALE;
             const MOVEMENT_SPEED = 4; // Pixel pro Frame
             const ACTIVE_RANGE = 15; // 30x30 Grids um den Spieler
-
-            const POKEMONS = {
-                BISASAM: {
-                    id: 'BISASAM',
-                    name: 'Bisasam',
-                    type: ['Grass', 'Poison'],
-                    stats: {
-                        height: 0.7, // m
-                        weight: 6.9, // kg
-                        catchRate: 45
-                    },
-                    sprites: {
-                        // Bitte hier die korrekten Links einfügen
-                        move: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/75597f3d-cbb2-4ea4-a202-11d5ab9af9a0/dljfy9k-71eccaf1-1ff2-415b-b4cf-e0a76b26933c.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi83NTU5N2YzZC1jYmIyLTRlYTQtYTIwMi0xMWQ1YWI5YWY5YTAvZGxqZnk5ay03MWVjY2FmMS0xZmYyLTQxNWItYjRjZi1lMGE3NmIyNjkzM2MucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.1Vgnd9XsBHTBq-Ll98WXEF1StEhXo1IQLPcsBicYwOg', 
-                        front: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/75597f3d-cbb2-4ea4-a202-11d5ab9af9a0/dljfy9k-2de461ea-dc32-47ae-ad54-4bfed0a873db.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi83NTU5N2YzZC1jYmIyLTRlYTQtYTIwMi0xMWQ1YWI5YWY5YTAvZGxqZnk5ay0yZGU0NjFlYS1kYzMyLTQ3YWUtYWQ1NC00YmZlZDBhODczZGIucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.bVPfgppo1stTEBaujdcV8RGpI7hVwRvuHQvy2jp_gDU',
-                        moveShiny: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/75597f3d-cbb2-4ea4-a202-11d5ab9af9a0/dljfy9k-d7727b01-5047-49f1-92fe-3dfa11ee7ad1.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi83NTU5N2YzZC1jYmIyLTRlYTQtYTIwMi0xMWQ1YWI5YWY5YTAvZGxqZnk5ay1kNzcyN2IwMS01MDQ3LTQ5ZjEtOTJmZS0zZGZhMTFlZTdhZDEucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.XKaIevOMGxSStz1RgjrEJ3bispdRFKcWdrv6tQHzj-4',
-                        frontShiny: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/75597f3d-cbb2-4ea4-a202-11d5ab9af9a0/dljfy9k-d29a7f98-961a-4c14-8434-c176c3dc0b99.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi83NTU5N2YzZC1jYmIyLTRlYTQtYTIwMi0xMWQ1YWI5YWY5YTAvZGxqZnk5ay1kMjlhN2Y5OC05NjFhLTRjMTQtODQzNC1jMTc2YzNkYzBiOTkucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.D9qmw6NsRmrLCe8p4ppOE1DugjXboZd3DtvCuWmNV2Y'
-                    },
-                    spawn: {
-                        biome: 'FOREST',
-                        chance: 0.02 // 2% Chance pro Tile im Forest
-                    }
-                }
-            };
-
-            const ITEMS = {
-                SWEETBERRY: { 
-                    id: 'SWEETBERRY', 
-                    name: 'Sweetberry', 
-                    icon: 'https://t.novaskin.me/ce69347868a803b8cc9a8e2da04d16673382f47677b35368d81e9e26eb9aa811',
-                    eatable: true,
-                    stockHunger: 15
-                },
-                STICK: {
-                    id: 'STICK',
-                    name: 'Stick',
-                    icon: 'https://static.wikia.nocookie.net/minecraft_gamepedia/images/7/7a/Stick_JE2_BE2.png'
-                },
-                LOG: {
-                    id: 'LOG',
-                    name: 'Log',
-                    icon: 'https://static.wikia.nocookie.net/minecraft_gamepedia/images/d/d4/Oak_Log_JE3_BE2.png'
-                }
-            };
 
             function addItem(id, count=1) {
                 const item = ITEMS[id];
@@ -978,77 +970,6 @@ Give a short greeting or reaction (1 sentence).`;
             const GLOBAL_WEATHERS = ['CLEAR', 'CLOUDY', 'RAIN', 'STORM'];
             let currentGlobalWeather = 'CLEAR';
             let weatherTimer = 120; // Minuten bis zum nächsten Wechsel
-
-            const BIOMES = {
-                WATER: { 
-                    id: 'WATER', 
-                    name: 'Ozean', 
-                    color: '#4444ff',
-                    imageSrc: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/75597f3d-cbb2-4ea4-a202-11d5ab9af9a0/dljgpqs-0bd1b07a-69fa-4b78-90f1-2500f93b6da1.png/v1/fill/w_32,h_32,q_80,strp/water_by_ulquiorrasm_dljgpqs-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MzIiLCJwYXRoIjoiL2YvNzU1OTdmM2QtY2JiMi00ZWE0LWEyMDItMTFkNWFiOWFmOWEwL2RsamdwcXMtMGJkMWIwN2EtNjlmYS00Yjc4LTkwZjEtMjUwMGY5M2I2ZGExLnBuZyIsIndpZHRoIjoiPD0zMiJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.W56mH_mJArRLRJ7vAukwmIMWCCQab9J1mCSA-3Yv9G8', 
-                    walkable: false,
-                    clima: {
-                        CLEAR: { weather: 'Sunny', temp: 18, humidity: 80 },
-                        CLOUDY: { weather: 'Foggy', temp: 16, humidity: 90 },
-                        RAIN: { weather: 'Rainy', temp: 14, humidity: 100 },
-                        STORM: { weather: 'Stormy', temp: 12, humidity: 100 }
-                    }
-                },
-                PLAINS: { 
-                    id: 'PLAINS', 
-                    name: 'Ebene', 
-                    color: '#44cc44', 
-                    imageSrc: [
-                        'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/75597f3d-cbb2-4ea4-a202-11d5ab9af9a0/dljezqu-414b8c8a-0fb6-4cd4-bb04-d0948cccdddc.png/v1/fill/w_32,h_32,q_80,strp/plant1_by_ulquiorrasm_dljezqu-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MzIiLCJwYXRoIjoiL2YvNzU1OTdmM2QtY2JiMi00ZWE0LWEyMDItMTFkNWFiOWFmOWEwL2RsamV6cXUtNDE0YjhjOGEtMGZiNi00Y2Q0LWJiMDQtZDA5NDhjY2NkZGRjLnBuZyIsIndpZHRoIjoiPD0zMiJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.UTmF5WMtEwc6c8gS_il44tJYZTGiAqNc3BDqMlGsTYg',
-                        'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/75597f3d-cbb2-4ea4-a202-11d5ab9af9a0/dljezqu-11f8fdcb-81e4-40d4-acdd-ad7318c8b516.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi83NTU5N2YzZC1jYmIyLTRlYTQtYTIwMi0xMWQ1YWI5YWY5YTAvZGxqZXpxdS0xMWY4ZmRjYi04MWU0LTQwZDQtYWNkZC1hZDczMThjOGI1MTYucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.iMeIm7yUNg7gPrViTU-WepSX3y_zjiggUmzODRtQnOI'
-                    ],
-                    walkable: true,
-                    clima: {
-                        CLEAR: { weather: 'Sunny', temp: 22, humidity: 40 },
-                        CLOUDY: { weather: 'Overcast', temp: 20, humidity: 60 },
-                        RAIN: { weather: 'Rainy', temp: 18, humidity: 80 },
-                        STORM: { weather: 'Heavy Rain', temp: 16, humidity: 95 }
-                    }
-                },
-                FOREST: { 
-                    id: 'FOREST', 
-                    name: 'Wald', 
-                    color: '#006600', 
-                    imageSrc: 'forest_32x32.png', 
-                    walkable: true,
-                    clima: {
-                        CLEAR: { weather: 'Sunny', temp: 16, humidity: 60 },
-                        CLOUDY: { weather: 'Mist', temp: 14, humidity: 80 },
-                        RAIN: { weather: 'Drizzle', temp: 12, humidity: 90 },
-                        STORM: { weather: 'Stormy', temp: 10, humidity: 100 }
-                    }
-                },
-                SAND: { 
-                    id: 'SAND', 
-                    name: 'Wüste', 
-                    color: '#eeee88',
-                    imageSrc: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/75597f3d-cbb2-4ea4-a202-11d5ab9af9a0/dljgp70-5280a709-a6f1-43c4-9a11-53aefd4386fe.png/v1/fill/w_32,h_32,q_80,strp/desert_by_ulquiorrasm_dljgp70-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MzIiLCJwYXRoIjoiL2YvNzU1OTdmM2QtY2JiMi00ZWE0LWEyMDItMTFkNWFiOWFmOWEwL2RsamdwNzAtNTI4MGE3MDktYTZmMS00M2M0LTlhMTEtNTNhZWZkNDM4NmZlLnBuZyIsIndpZHRoIjoiPD0zMiJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.1PpH03j21ZcJv0-DD3ih1RFVIeAWPKYM_aIlB3zjN5s',
-                    walkable: true,
-                    clima: {
-                        CLEAR: { weather: 'Heatwave', temp: 38, humidity: 10 },
-                        CLOUDY: { weather: 'Dusty', temp: 34, humidity: 20 },
-                        RAIN: { weather: 'Light Rain', temp: 30, humidity: 40 },
-                        STORM: { weather: 'Sandstorm', temp: 28, humidity: 50 }
-                    }
-                },
-                MOUNTAIN: { 
-                    id: 'MOUNTAIN', 
-                    name: 'Gebirge', 
-                    color: '#888888',
-                    imageSrc: 'stone_32x32.png',
-                    walkable: false,
-                    clima: {
-                        CLEAR: { weather: 'Clear', temp: 4, humidity: 20 },
-                        CLOUDY: { weather: 'Foggy', temp: 0, humidity: 40 },
-                        RAIN: { weather: 'Sleet', temp: -2, humidity: 60 },
-                        STORM: { weather: 'Blizzard', temp: -8, humidity: 90 }
-                    }
-                }
-            };
 
             // Objekte Definitionen (Overlay Layer)
             const OBJECTS = {
