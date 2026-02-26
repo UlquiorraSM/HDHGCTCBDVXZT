@@ -215,56 +215,75 @@
             if (!isVisible) userInput.focus();
         }
 
+        // Ein Counter, um Anfragen und Antworten zuzuordnen
+        let currentRequestId = 0;
+        const pendingRequests = new Map();
+        
+        // Listener für die Antwort von der Perchance-KI (vom Parent-Frame)
+        window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data.type === "AI_RESPONSE" && pendingRequests.has(data.requestId)) {
+                const resolve = pendingRequests.get(data.requestId);
+                resolve(data.text);
+                pendingRequests.delete(data.requestId);
+            } else if (data.type === "AI_ERROR") {
+                console.error("KI Fehler:", data.error);
+                dialogText.innerText = "Fehler bei der KI-Verbindung.";
+            }
+        });
+        
         async function sendMessage() {
             const text = userInput.value.trim();
             if (!text || sendBtn.disabled) return;
-
-            // User Message
+        
+            // User Message anzeigen
             userInput.value = "";
             nameTag.innerText = "Du";
             dialogText.innerText = text;
             messages.push({ role: "user", content: text });
-
-            // Prepare AI Response
+        
+            // UI sperren
             sendBtn.disabled = true;
             userInput.disabled = true;
             
-            // System Prompt mit NPC Kontext
-            const systemPrompt = `Du bist ${currentNPC.name} aus dem Higurashi Universum. 
-            Dein Aussehen: ${currentNPC.appearance}
-            Deine Persönlichkeit: ${currentNPC.personality}
-            Deine Geheimnisse (nur andeuten, nicht sofort verraten): ${currentNPC.secrets}
-            Deine Beziehungen: ${currentNPC.relations}
-            Antworte immer auf Deutsch, bleibe in deiner Rolle und sei immersiv. 
-            Verwende keine Metasprache (wie *lacht*), sondern drücke Gefühle durch Worte aus, 
-            es sei denn, es passt extrem gut zum Charakter (z.B. Renas "o-mo-chi-ka-e-ri").`;
-
+            // System Prompt erstellen
+            const systemPrompt = `Du bist ${currentNPC.name} aus Higurashi. 
+            Persönlichkeit: ${currentNPC.personality}
+            Geheimnisse: ${currentNPC.secrets}
+            Antworte kurz, auf Deutsch und bleibe in deiner Rolle. Keine Metasprache.`;
+        
             let historyStr = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join("\n");
             let fullInstruction = `${systemPrompt}\n\nGesprächsverlauf:\n${historyStr}\n\nAssistant:`;
-
-            let fullResponse = "";
+        
             nameTag.innerText = currentNPC.name;
-            dialogText.innerText = "...";
-
+            dialogText.innerText = "... denkt nach ...";
+        
+            // Anfrage an den Parent (Perchance) schicken
+            const requestId = currentRequestId++;
+            
+            // Wir erstellen ein Promise, das auf die Antwort wartet
+            const aiPromise = new Promise((resolve) => {
+                pendingRequests.set(requestId, resolve);
+            });
+        
+            window.parent.postMessage({
+                type: "AI_REQUEST",
+                requestId: requestId,
+                instruction: fullInstruction
+            }, "*"); // In Produktion hier die genaue URL statt "*" nutzen
+        
             try {
-                await ai({
-                    instruction: fullInstruction,
-                    onChunk: (data) => {
-                        fullResponse += data.textChunk;
-                        dialogText.innerText = fullResponse;
-                    }
-                });
-
-                messages.push({ role: "assistant", content: fullResponse });
+                const responseText = await aiPromise;
+                dialogText.innerText = responseText;
+                messages.push({ role: "assistant", content: responseText });
             } catch (err) {
-                dialogText.innerText = "Fehler bei der Verbindung zur KI...";
-                console.error(err);
+                dialogText.innerText = "Verbindung unterbrochen.";
             }
-
+        
             sendBtn.disabled = false;
             userInput.disabled = false;
             userInput.focus();
-        }
+}
     </script>
 </body>
 </html>
