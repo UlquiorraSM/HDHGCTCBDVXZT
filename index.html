@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Higurashi</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        
+        /* Menü Styling */
+        .bg-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            transition: opacity 1s ease-in-out;
+            z-index: -1;
+            opacity: 0;
+        }
+
+        .bg-layer.active {
+            opacity: 1;
+        }
+
+        .bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+            color: white;
+            z-index: 100;
+        }
+
+        .menu-title {
+            font-size: 64px;
+            margin-bottom: 50px;
+            text-shadow: 4px 4px 0px #000;
+            color: #f1c40f;
+        }
+
+        .menu-btn {
+            background: #34495e;
+            color: white;
+            border: 2px solid #7f8c8d;
+            padding: 15px 40px;
+            font-size: 24px;
+            margin: 10px;
+            cursor: pointer;
+            width: 300px;
+            font-family: inherit;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .menu-btn:hover {
+            background: #e67e22;
+            border-color: #f39c12;
+            transform: scale(1.05);
+        }
+
+        .hidden { display: none !important; }
+
+        /* Formular Styling */
+        .form-group {
+            margin: 20px 0;
+            text-align: left;
+            width: 400px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 18px;
+            color: #bdc3c7;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #7f8c8d;
+            color: white;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        input::placeholder {
+            color: #7f8c8d;
+        }
+        
+        /* Button Layouts */
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            width: 400px;
+            justify-content: center;
+        }
+
+        .btn-row .menu-btn {
+            flex: 1;
+            width: auto;
+            padding: 15px 10px;
+            font-size: 18px;
+        }
+
+        .back-btn-fixed {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            margin: 0 !important;
+        }
+
+        .back-btn {
+            background: #c0392b;
+        }
+        .back-btn:hover {
+            background: #e74c3c;
+            border-color: #ff7675;
+            transform: translateX(-50%) scale(1) !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="bg-layer-1" class="bg-layer"></div>
+    <div id="bg-layer-2" class="bg-layer"></div>
+    <div class="bg-overlay"></div>
+
+    <!-- Hauptmenü -->
+    <div id="main-menu" class="menu-screen">
+        <h1 class="menu-title">MyFortress</h1>
+        <button class="menu-btn" id="btn-play">Play World</button>
+        <button class="menu-btn" id="btn-load">Load World</button>
+        <button class="menu-btn" id="btn-settings">Settings</button>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Settings</h1>
+        
+        <div class="form-group">
+            <label>Custom Background URL:</label>
+            <input type="text" id="bg-url-input" placeholder="https://example.com/image.png">
+        </div>
+
+        <div class="btn-row">
+            <button class="menu-btn" id="btn-apply-bg">Apply Background</button>
+            <button class="menu-btn" id="btn-reset-bg">Reset to Default</button>
+        </div>
+        
+        <button class="menu-btn back-btn back-btn-fixed" id="btn-back-settings">Back</button>
+    </div>
+
+    <script>
+        const mainMenu = document.getElementById('main-menu');
+        const settingsScreen = document.getElementById('settings-screen');
+        const bgUrlInput = document.getElementById('bg-url-input');
+        const bgLayers = [document.getElementById('bg-layer-1'), document.getElementById('bg-layer-2')];
+        let currentLayerIndex = 0;
+
+        const DEFAULT_BG = 'https://wallpaperaccess.com/full/636556.jpg';
+        // Hintergrund laden mit Fade
+        function applyBackground(url, instant = false) {
+            const finalUrl = url || DEFAULT_BG;
+            const nextLayerIndex = (currentLayerIndex + 1) % 2;
+            const currentLayer = bgLayers[currentLayerIndex];
+            const nextLayer = bgLayers[nextLayerIndex];
+
+            // Neues Bild auf den nächsten Layer setzen
+            nextLayer.style.backgroundImage = `url('${finalUrl}')`;
+
+            if (instant) {
+                nextLayer.style.transition = 'none';
+                nextLayer.classList.add('active');
+                currentLayer.classList.remove('active');
+                nextLayer.offsetHeight; // Force reflow
+                nextLayer.style.transition = '';
+            } else {
+                nextLayer.classList.add('active');
+                currentLayer.classList.remove('active');
+            }
+
+            currentLayerIndex = nextLayerIndex;
+            localStorage.setItem('customBgUrl', finalUrl);
+            bgUrlInput.value = finalUrl === DEFAULT_BG ? '' : finalUrl;
+        }
+
+        // Initialer Check (Sofort ohne Fade beim ersten Laden)
+        const savedBg = localStorage.getItem('customBgUrl');
+        applyBackground(savedBg, true);
+
+        document.getElementById('btn-play').addEventListener('click', () => {
+            window.location.href = 'Game.html';
+        });
+
+        document.getElementById('btn-settings').addEventListener('click', () => {
+            mainMenu.classList.add('hidden');
+            settingsScreen.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-back-settings').addEventListener('click', () => {
+            settingsScreen.classList.add('hidden');
+            mainMenu.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-apply-bg').addEventListener('click', () => {
+            const url = bgUrlInput.value.trim();
+            if (url) {
+                applyBackground(url);
+            }
+        });
+
+        document.getElementById('btn-reset-bg').addEventListener('click', () => {
+            applyBackground(DEFAULT_BG);
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Higurashi - In-Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', Courier, monospace;
+            color: white;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
+            transition: background-image 1s ease-in-out;
+        }
+
+        /* NPC Sprite Container */
+        #npc-container {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 80%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        #npc-sprite {
+            max-height: 100%;
+            transition: opacity 0.5s ease-in-out;
+            opacity: 0;
+        }
+
+        #npc-sprite.visible {
+            opacity: 1;
+        }
+
+        /* Dialog Box */
+        #dialog-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 1000px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 3px solid #7f8c8d;
+            border-radius: 10px;
+            padding: 20px;
+            box-sizing: border-box;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        #name-tag {
+            position: absolute;
+            top: -30px;
+            left: 20px;
+            background: #e67e22;
+            padding: 5px 20px;
+            font-weight: bold;
+            font-size: 20px;
+            border-radius: 5px;
+            border: 2px solid #f39c12;
+        }
+
+        #dialog-text {
+            font-size: 22px;
+            line-height: 1.4;
+            min-height: 80px;
+        }
+
+        /* UI Buttons */
+        .ui-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ui-btn {
+            background: rgba(52, 73, 94, 0.8);
+            color: white;
+            border: 1px solid #7f8c8d;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .ui-btn:hover {
+            background: #e67e22;
+        }
+
+        /* Interaction / Chat Input */
+        #chat-input-container {
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 1000px;
+            display: none;
+            gap: 10px;
+            z-index: 2000;
+        }
+
+        #user-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #7f8c8d;
+            color: white;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 18px;
+            border-radius: 5px;
+        }
+
+        #send-btn {
+            background: #e67e22;
+            color: white;
+            border: none;
+            padding: 0 25px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+
+        #send-btn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="npc-container">
+            <img id="npc-sprite" src="" alt="NPC">
+        </div>
+
+        <div id="dialog-box">
+            <div id="name-tag">System</div>
+            <div id="dialog-text">Lade Welt...</div>
+        </div>
+
+        <div id="chat-input-container">
+            <input type="text" id="user-input" placeholder="Schreibe etwas..." onkeydown="if(event.key === 'Enter') sendMessage()">
+            <button id="send-btn" onclick="sendMessage()">Senden</button>
+        </div>
+
+        <div class="ui-panel">
+            <button class="ui-btn" onclick="window.location.href='Menu.html'">Hauptmenü</button>
+            <button class="ui-btn" id="btn-interact" onclick="toggleChat()">Reden</button>
+        </div>
+    </div>
+
+    <script src="Backgrounds.js"></script>
+    <script src="npc.js"></script>
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const npcSprite = document.getElementById('npc-sprite');
+        const dialogBox = document.getElementById('dialog-box');
+        const nameTag = document.getElementById('name-tag');
+        const dialogText = document.getElementById('dialog-text');
+        const chatInputContainer = document.getElementById('chat-input-container');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        
+        let currentNPC = null;
+        let messages = [];
+
+        // Initialisierung
+        window.onload = () => {
+            const bgKeys = Object.keys(window.gameBackgrounds);
+            const randomBg = bgKeys[Math.floor(Math.random() * bgKeys.length)];
+            gameContainer.style.backgroundImage = `url('${window.gameBackgrounds[randomBg]}')`;
+
+            currentNPC = window.gameNPCs[Math.floor(Math.random() * window.gameNPCs.length)];
+            
+            showIntro();
+        };
+
+        function showIntro() {
+            nameTag.innerText = "Erzähler";
+            dialogText.innerText = `Du betrittst den Ort. Vor dir steht ${currentNPC.name}.`;
+            
+            npcSprite.src = currentNPC.image;
+            npcSprite.onload = () => npcSprite.classList.add('visible');
+            
+            dialogBox.onclick = () => {
+                nameTag.innerText = currentNPC.name;
+                dialogText.innerText = "Hallo! Schön dich zu sehen. Möchtest du mit mir reden?";
+                dialogBox.onclick = null;
+            };
+        }
+
+        function toggleChat() {
+            const isVisible = chatInputContainer.style.display === 'flex';
+            chatInputContainer.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) userInput.focus();
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text || sendBtn.disabled) return;
+
+            // User Message
+            userInput.value = "";
+            nameTag.innerText = "Du";
+            dialogText.innerText = text;
+            messages.push({ role: "user", content: text });
+
+            // Prepare AI Response
+            sendBtn.disabled = true;
+            userInput.disabled = true;
+            
+            // System Prompt mit NPC Kontext
+            const systemPrompt = `Du bist ${currentNPC.name} aus dem Higurashi Universum. 
+            Dein Aussehen: ${currentNPC.appearance}
+            Deine Persönlichkeit: ${currentNPC.personality}
+            Deine Geheimnisse (nur andeuten, nicht sofort verraten): ${currentNPC.secrets}
+            Deine Beziehungen: ${currentNPC.relations}
+            Antworte immer auf Deutsch, bleibe in deiner Rolle und sei immersiv. 
+            Verwende keine Metasprache (wie *lacht*), sondern drücke Gefühle durch Worte aus, 
+            es sei denn, es passt extrem gut zum Charakter (z.B. Renas "o-mo-chi-ka-e-ri").`;
+
+            let historyStr = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join("\n");
+            let fullInstruction = `${systemPrompt}\n\nGesprächsverlauf:\n${historyStr}\n\nAssistant:`;
+
+            let fullResponse = "";
+            nameTag.innerText = currentNPC.name;
+            dialogText.innerText = "...";
+
+            try {
+                await ai({
+                    instruction: fullInstruction,
+                    onChunk: (data) => {
+                        fullResponse += data.textChunk;
+                        dialogText.innerText = fullResponse;
+                    }
+                });
+
+                messages.push({ role: "assistant", content: fullResponse });
+            } catch (err) {
+                dialogText.innerText = "Fehler bei der Verbindung zur KI...";
+                console.error(err);
+            }
+
+            sendBtn.disabled = false;
+            userInput.disabled = false;
+            userInput.focus();
+        }
+    </script>
+</body>
+</html>
