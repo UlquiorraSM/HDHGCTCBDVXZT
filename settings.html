@@ -256,17 +256,35 @@
         
         // Zurück zum Hauptmenü
         function backToMenu() {
+            navigateWithTransition("index.html");
+        }
+        
+        // Universelle Navigationsfunktion mit Übergang (genau wie in index.html)
+        function navigateWithTransition(url) {
             // Fade out transition
             document.body.style.transition = 'opacity 0.4s ease-in-out';
             document.body.style.opacity = '0';
             
             setTimeout(() => {
-                window.location.href = "index.html";
+                window.location.href = url;
             }, 400);
         }
         
         // Kreativitätswert aktualisieren
         function updateCreativityValue() {
+            const value = document.getElementById('creativity').value;
+            document.getElementById('creativity-value').textContent = value;
+        }
+        
+        // Event Listener
+        document.getElementById('creativity').addEventListener('input', updateCreativityValue);
+        document.getElementById('background-url').addEventListener('input', () => applyBackground(false));
+        
+        // Einstellungen beim Laden laden
+        window.addEventListener('load', loadSettings);
+    </script>
+</body>
+</html>
             const value = document.getElementById('creativity').value;
             document.getElementById('creativity-value').textContent = value;
         }
