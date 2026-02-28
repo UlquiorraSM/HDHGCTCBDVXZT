@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StoryKI - Hauptmenü</title>
+    <link rel="prefetch" href="Game.html">
+    <link rel="prefetch" href="settings.html">
     <style>
         body {
             margin: 0;
@@ -14,6 +16,20 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: -1;
         }
         
         .menu-container {
@@ -72,16 +88,28 @@
     </div>
 
     <script>
+        // Hintergrund aus Settings laden
+        function loadBackground() {
+            const settings = localStorage.getItem('storyki_settings');
+            if (settings) {
+                const data = JSON.parse(settings);
+                const backgroundUrl = data.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
+                document.body.style.backgroundImage = `url(${backgroundUrl})`;
+            } else {
+                document.body.style.backgroundImage = 'url(https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg)';
+            }
+        }
+        
         function continueGame() {
             // Logik zum Fortsetzen des Spiels
             console.log("Continue Game");
-            window.location.href = "Game.html";
+            navigateWithTransition("Game.html");
         }
         
         function newStory() {
             // Logik für eine neue Geschichte
             console.log("New Story");
-            window.location.href = "Game.html";
+            navigateWithTransition("Game.html");
         }
         
         function loadGame() {
@@ -93,8 +121,22 @@
         function openSettings() {
             // Logik zum Öffnen der Einstellungen
             console.log("Open Settings");
-            // Hier könnte ein Einstellungsfenster geöffnet werden
+            navigateWithTransition("settings.html");
         }
+        
+        // Universelle Navigationsfunktion mit Übergang
+        function navigateWithTransition(url) {
+            // Fade out transition
+            document.body.style.transition = 'opacity 0.4s ease-in-out';
+            document.body.style.opacity = '0';
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 400);
+        }
+        
+        // Hintergrund beim Laden
+        window.addEventListener('load', loadBackground);
     </script>
 </body>
 </html>
