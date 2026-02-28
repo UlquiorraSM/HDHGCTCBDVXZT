@@ -111,7 +111,7 @@
 
       try {
         // 4. Generate Response using generateText
-        await root.generateText({
+        await root.ai({
           instruction: `You are a helpful and intelligent AI assistant. Continue the conversation based on the history below. Respond naturally and concisely.\n\n${historyString}\nAI:`,
           onChunk: (data) => {
             // Stream text chunks into the element
