@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoryKI - Einstellungen</title>
+    <link rel="prefetch" href="index.html">
+    <link rel="prefetch" href="Game.html">
+    <link rel="preload" href="index.html" as="document">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+            overflow: hidden;
+        }
+        
+        /* Scrollbar komplett unsichtbar machen - stärkste Regeln */
+        *::-webkit-scrollbar {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
+        }
+        
+        *::-webkit-scrollbar-thumb {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
+        }
+        
+        *::-webkit-scrollbar-track {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
+        }
+        
+        *::-webkit-scrollbar-button {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
+        }
+        
+        *::-webkit-scrollbar-corner {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
+        }
+        
+        /* Für alle Browser */
+        * {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+        
+        html, body {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+        }
+        
+        .settings-layout {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        .settings-sidebar {
+            width: 180px;
+            background: rgba(30, 30, 30, 0.95);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 10;
+        }
+        
+        .settings-tab {
+            padding: 15px 20px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+            margin: 5px 0;
+        }
+        
+        .settings-tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .settings-tab.active {
+            background: rgba(102, 126, 234, 0.2);
+            border-left-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .settings-content {
+            flex: 1;
+            padding: 60px;
+            margin-left: 180px;
+            overflow-y: auto;
+            background: rgba(30, 30, 30, 0.95);
+            min-height: 100vh;
+            max-height: 100vh;
+            box-sizing: border-box;
+        }
+        
+        /* Scrollbar unsichtbar machen */
+        .settings-content::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        .settings-content::-webkit-scrollbar-thumb {
+            width: 0px;
+            background: transparent;
+        }
+        
+        .settings-content::-webkit-scrollbar-track {
+            width: 0px;
+            background: transparent;
+        }
+        
+        /* Für Firefox */
+        .settings-content {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .settings-group {
+            margin-bottom: 50px;
+        }
+        
+        .settings-group h3 {
+            color: #fff;
+            margin-bottom: 30px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .setting-item {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(50, 50, 50, 0.6);
+            border-radius: 8px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .setting-item:hover {
+            background: rgba(60, 60, 60, 0.8);
+            border-left-color: #667eea;
+        }
+
+        .setting-label {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        input[type="url"], input[type="number"], select {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        input[type="url"]::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .back-button-fixed {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+        }
+        
+        .settings-section {
+            display: none;
+        }
+        
+        .settings-section.active {
+            display: block;
+        }
+        
+        .setting-item {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(50, 50, 50, 0.6);
+            border-radius: 8px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .setting-item:hover {
+            background: rgba(60, 60, 60, 0.8);
+            border-left-color: #667eea;
+        }
+        
+        .setting-label {
+            color: rgba(255, 255, 255, 0.8);
+            flex: 1;
+            margin-right: 20px;
+        }
+        
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            justify-content: flex-end;
+        }
+        
+        input[type="range"] {
+            width: 180px;
+        }
+        
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+        
+        select, input[type="url"] {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background: white;
+            font-size: 0.9em;
+        }
+        
+        input[type="url"] {
+            width: 250px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #495057);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-sidebar">
+        <div class="settings-tab active" onclick="switchTab('general')">Allgemein</div>
+        <div class="settings-tab" onclick="switchTab('ai')">KI-Einstellungen</div>
+        <div class="settings-tab" onclick="switchTab('interface')">Interface</div>
+        <div class="settings-tab" onclick="switchTab('advanced')">Erweitert</div>
+    </div>
+    
+    <div class="settings-content">
+        <!-- Allgemein Section -->
+        <div id="general-section" class="settings-section active">
+            <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Allgemeine Einstellungen</h2>
+            
+            <div class="settings-group">
+                <h3>Hintergrund</h3>
+                <div class="setting-item">
+                    <span class="setting-label">Hintergrund URL</span>
+                    <div class="setting-control">
+                        <input type="url" id="background-url" placeholder="https://...">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h3>Anzeige</h3>
+                <div class="setting-item">
+                    <span class="setting-label">Sprache</span>
+                    <div class="setting-control">
+                        <select id="language">
+                            <option value="de">Deutsch</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Thema</span>
+                    <div class="setting-control">
+                        <select id="theme">
+                            <option value="light">Hell</option>
+                            <option value="dark">Dunkel</option>
+                            <option value="auto">Auto</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+            
+            <!-- KI-Einstellungen Section -->
+            <div id="ai-section" class="settings-section">
+                <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">KI-Einstellungen</h2>
+                
+                <div class="settings-group">
+                    <h3>KI-Verhalten</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Kreativität</span>
+                        <div class="setting-control">
+                            <input type="range" id="creativity" min="0" max="100" value="50">
+                            <span id="creativity-value">50</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Antwortgeschwindigkeit</span>
+                        <div class="setting-control">
+                            <select id="speed">
+                                <option value="fast">Schnell</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="slow">Langsam</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Temperatur</span>
+                        <div class="setting-control">
+                            <input type="range" id="temperature" min="0" max="100" value="70">
+                            <span id="temperature-value">70</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Interface Section -->
+            <div id="interface-section" class="settings-section">
+                <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Interface</h2>
+                
+                <div class="settings-group">
+                    <h3>Benachrichtigungen</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Ton aktivieren</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="sound" checked>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Auto-Speichern</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="autosave" checked>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Animationen</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="animations" checked>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h3>Chat</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Zeitstempel anzeigen</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="timestamps">
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Zeichenlimit</span>
+                        <div class="setting-control">
+                            <input type="number" id="charlimit" value="1000" min="100" max="5000" style="width: 80px; padding: 5px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Erweitert Section -->
+            <div id="advanced-section" class="settings-section">
+                <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Erweiterte Einstellungen</h2>
+                
+                <div class="settings-group">
+                    <h3>Daten</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Cache leeren</span>
+                        <div class="setting-control">
+                            <button class="btn btn-secondary" onclick="clearCache()">Leeren</button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Einstellungen exportieren</span>
+                        <div class="setting-control">
+                            <button class="btn" onclick="exportSettings()">Exportieren</button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Einstellungen importieren</span>
+                        <div class="setting-control">
+                            <button class="btn btn-secondary" onclick="importSettings()">Importieren</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h3>Entwickler</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Debug-Modus</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="debug">
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Konsole anzeigen</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="console">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fixierter Zurück-Button -->
+        <button class="btn btn-danger back-button-fixed" onclick="backToMenu()">Zurück</button>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Remove active class from all tabs and sections
+            document.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.settings-section').forEach(section => section.classList.remove('active'));
+            
+            // Add active class to selected tab and section
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}-section`).classList.add('active');
+        }
+        
+        // Zusätzliches Preloading für index.html
+        function preloadPage(url) {
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = url;
+            document.head.appendChild(link);
+        }
+        
+        // Seite preloaden wenn settings geladen wird
+        window.addEventListener('load', () => {
+            preloadPage('index.html');
+            preloadPage('Game.html');
+        });
+        
+        // Einstellungen laden
+        function loadSettings() {
+            const settings = localStorage.getItem('storyki_settings');
+            if (settings) {
+                const data = JSON.parse(settings);
+                // Allgemein
+                document.getElementById('background-url').value = data.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
+                document.getElementById('language').value = data.language || 'de';
+                document.getElementById('theme').value = data.theme || 'light';
+                
+                // KI-Einstellungen
+                document.getElementById('creativity').value = data.creativity || 50;
+                document.getElementById('speed').value = data.speed || 'normal';
+                document.getElementById('temperature').value = data.temperature || 70;
+                updateCreativityValue();
+                updateTemperatureValue();
+                
+                // Interface
+                document.getElementById('sound').checked = data.sound !== false;
+                document.getElementById('autosave').checked = data.autosave !== false;
+                document.getElementById('animations').checked = data.animations !== false;
+                document.getElementById('timestamps').checked = data.timestamps || false;
+                document.getElementById('charlimit').value = data.charlimit || 1000;
+                
+                // Erweitert
+                document.getElementById('debug').checked = data.debug || false;
+                document.getElementById('console').checked = data.console || false;
+                
+                applyBackground(true);
+            } else {
+                // Standard-Hintergrund anwenden
+                document.getElementById('background-url').value = 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
+                applyBackground(true);
+            }
+            
+            // Fade in effect
+            setTimeout(() => {
+                document.body.style.opacity = '1';
+            }, 100);
+        }
+        
+        // Hintergrund anwenden
+        function applyBackground(isInitialLoad = false) {
+            const backgroundUrl = document.getElementById('background-url').value;
+            if (backgroundUrl) {
+                if (isInitialLoad) {
+                    // Kein Übergang beim initialen Laden
+                    document.body.style.backgroundImage = `url(${backgroundUrl})`;
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundAttachment = 'fixed';
+                } else {
+                    // Fade out effect nur bei URL-Änderung
+                    document.body.style.transition = 'opacity 0.5s ease-in-out';
+                    document.body.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        document.body.style.backgroundImage = `url(${backgroundUrl})`;
+                        document.body.style.backgroundSize = 'cover';
+                        document.body.style.backgroundPosition = 'center';
+                        document.body.style.backgroundAttachment = 'fixed';
+                        
+                        // Fade in effect
+                        setTimeout(() => {
+                            document.body.style.opacity = '1';
+                        }, 50);
+                    }, 250);
+                }
+            }
+        }
+        
+        // Einstellungen speichern
+        function saveSettings() {
+            const settings = {
+                // Allgemein
+                backgroundUrl: document.getElementById('background-url').value,
+                language: document.getElementById('language').value,
+                theme: document.getElementById('theme').value,
+                
+                // KI-Einstellungen
+                creativity: document.getElementById('creativity').value,
+                speed: document.getElementById('speed').value,
+                temperature: document.getElementById('temperature').value,
+                
+                // Interface
+                sound: document.getElementById('sound').checked,
+                autosave: document.getElementById('autosave').checked,
+                animations: document.getElementById('animations').checked,
+                timestamps: document.getElementById('timestamps').checked,
+                charlimit: document.getElementById('charlimit').value,
+                
+                // Erweitert
+                debug: document.getElementById('debug').checked,
+                console: document.getElementById('console').checked
+            };
+            
+            localStorage.setItem('storyki_settings', JSON.stringify(settings));
+            applyBackground(false);
+            alert('Einstellungen wurden gespeichert!');
+        }
+        
+        // Einstellungen zurücksetzen
+        function resetSettings() {
+            if (confirm('Möchtest du wirklich alle Einstellungen zurücksetzen?')) {
+                localStorage.removeItem('storyki_settings');
+                document.getElementById('background-url').value = 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
+                document.getElementById('creativity').value = 50;
+                updateCreativityValue();
+                applyBackground(true);
+                alert('Einstellungen wurden zurückgesetzt!');
+            }
+        }
+        
+        // Zurück zum Hauptmenü
+        function backToMenu() {
+            navigateWithTransition("index.html");
+        }
+        
+        // Universelle Navigationsfunktion mit Übergang (genau wie in index.html)
+        function navigateWithTransition(url) {
+            // Fade out transition
+            document.body.style.transition = 'opacity 0.4s ease-in-out';
+            document.body.style.opacity = '0';
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 400);
+        }
+        
+        // Kreativitätswert aktualisieren
+        function updateCreativityValue() {
+            const value = document.getElementById('creativity').value;
+            document.getElementById('creativity-value').textContent = value;
+        }
+        
+        // Temperaturwert aktualisieren
+        function updateTemperatureValue() {
+            const value = document.getElementById('temperature').value;
+            document.getElementById('temperature-value').textContent = value;
+        }
+        
+        // Cache leeren
+        function clearCache() {
+            if (confirm('Möchtest du wirklich den Cache leeren?')) {
+                localStorage.clear();
+                alert('Cache wurde geleert!');
+            }
+        }
+        
+        // Einstellungen exportieren
+        function exportSettings() {
+            const settings = localStorage.getItem('storyki_settings');
+            if (settings) {
+                const blob = new Blob([settings], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'storyki-settings.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            } else {
+                alert('Keine Einstellungen zum Exportieren gefunden.');
+            }
+        }
+        
+        // Einstellungen importieren
+        function importSettings() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const settings = JSON.parse(e.target.result);
+                            localStorage.setItem('storyki_settings', JSON.stringify(settings));
+                            loadSettings();
+                            alert('Einstellungen wurden importiert!');
+                        } catch (err) {
+                            alert('Fehler beim Importieren der Einstellungen.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+        
+        // Event Listener
+        document.getElementById('creativity').addEventListener('input', updateCreativityValue);
+        document.getElementById('temperature').addEventListener('input', updateTemperatureValue);
+        document.getElementById('background-url').addEventListener('input', () => applyBackground(false));
+        
+        // Einstellungen beim Laden laden
+        window.addEventListener('load', loadSettings);
+    </script>
+</body>
+</html>
