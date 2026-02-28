@@ -22,6 +22,44 @@
             background-attachment: fixed;
             opacity: 0;
             transition: opacity 0.4s ease-in-out;
+            overflow: hidden;
+        }
+        
+        /* Scrollbar unsichtbar machen für den gesamten Body */
+        html::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        html::-webkit-scrollbar-thumb {
+            width: 0px;
+            background: transparent;
+        }
+        
+        html::-webkit-scrollbar-track {
+            width: 0px;
+            background: transparent;
+        }
+        
+        body::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        body::-webkit-scrollbar-thumb {
+            width: 0px;
+            background: transparent;
+        }
+        
+        body::-webkit-scrollbar-track {
+            width: 0px;
+            background: transparent;
+        }
+        
+        /* Für Firefox */
+        html, body {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
         
         body::before {
