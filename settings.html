@@ -25,41 +25,51 @@
             overflow: hidden;
         }
         
-        /* Scrollbar unsichtbar machen für den gesamten Body */
-        html::-webkit-scrollbar {
-            width: 0px;
-            background: transparent;
+        /* Scrollbar komplett unsichtbar machen - stärkste Regeln */
+        *::-webkit-scrollbar {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
         }
         
-        html::-webkit-scrollbar-thumb {
-            width: 0px;
-            background: transparent;
+        *::-webkit-scrollbar-thumb {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
         }
         
-        html::-webkit-scrollbar-track {
-            width: 0px;
-            background: transparent;
+        *::-webkit-scrollbar-track {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
         }
         
-        body::-webkit-scrollbar {
-            width: 0px;
-            background: transparent;
+        *::-webkit-scrollbar-button {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
         }
         
-        body::-webkit-scrollbar-thumb {
-            width: 0px;
-            background: transparent;
+        *::-webkit-scrollbar-corner {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            display: none !important;
         }
         
-        body::-webkit-scrollbar-track {
-            width: 0px;
-            background: transparent;
+        /* Für alle Browser */
+        * {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
         }
         
-        /* Für Firefox */
         html, body {
-            scrollbar-width: none;
-            -ms-overflow-style: none;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
         }
         
         body::before {
@@ -122,6 +132,8 @@
             overflow-y: auto;
             background: rgba(30, 30, 30, 0.95);
             min-height: 100vh;
+            max-height: 100vh;
+            box-sizing: border-box;
         }
         
         /* Scrollbar unsichtbar machen */
