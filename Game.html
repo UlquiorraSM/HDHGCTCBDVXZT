@@ -4,53 +4,28 @@
   <meta charset="UTF-8">
   <title>AI Chat Interface</title>
   <style>
-    /* Basic Reset and Font */
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; height: 100vh; overflow: hidden; }
-    
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-    
-    /* Main App Container */
-    #appCtn { display: flex; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    
-    /* Header */
-    #header { padding: 15px 20px; border-bottom: 1px solid #e0e0e0; background: #ffffff; display: flex; align-items: center; justify-content: space-between; }
-    .status { font-size: 0.85rem; color: #28a745; display: flex; align-items: center; gap: 5px; }
-    .dot { height: 8px; width: 8px; background-color: #28a745; border-radius: 50%; display: inline-block; }
-
-    /* Chat History Area */
+    /* Styling bleibt gleich für die Optik */
+    body { margin: 0; font-family: sans-serif; background-color: #f0f2f5; height: 100vh; overflow: hidden; }
+    #appCtn { display: flex; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; background: white; }
     #messagesListEl { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background-color: #f9f9f9; }
-
-    /* Input Area */
-    #inputArea { padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; align-items: center; }
-    #userInputEl { flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 24px; outline: none; font-size: 15px; }
-    #userInputEl:focus { border-color: #007bff; }
-    
-    #sendBtn { background-color: #007bff; color: white; border: none; padding: 0 20px; height: 44px; border-radius: 24px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    #sendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* Bubbles */
-    .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; word-wrap: break-word; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 4px; }
-    .ai { align-self: flex-start; background: white; color: #333; border: 1px solid #e5e5e5; border-bottom-left-radius: 4px; }
+    #inputArea { padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; }
+    #userInputEl { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 24px; outline: none; }
+    #sendBtn { background-color: #007bff; color: white; border: none; padding: 0 20px; border-radius: 24px; cursor: pointer; }
+    #sendBtn:disabled { opacity: 0.5; }
+    .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; }
+    .user { align-self: flex-end; background: #007bff; color: white; }
+    .ai { align-self: flex-start; background: #e5e5e5; color: #333; }
   </style>
 </head>
 <body>
 
   <div id="appCtn">
-    <div id="header">
-      <div style="font-weight: 700; font-size: 1.2rem; color: #333;">AI Chat</div>
-      <div class="status"><span class="dot"></span> Online</div>
-    </div>
-
     <div id="messagesListEl">
-      <div class="msg ai">Hallo! Ich bin dein KI-Assistent. Wie kann ich dir heute helfen?</div>
+      <div class="msg ai">System bereit. Wie lautet dein Befehl?</div>
     </div>
 
     <div id="inputArea">
-      <input id="userInputEl" type="text" placeholder="Schreibe eine Nachricht..." autocomplete="off">
+      <input id="userInputEl" type="text" placeholder="Schreibe etwas..." autocomplete="off">
       <button id="sendBtn">Senden</button>
     </div>
   </div>
@@ -59,10 +34,8 @@
     const messagesListEl = document.getElementById('messagesListEl');
     const userInputEl = document.getElementById('userInputEl');
     const sendBtn = document.getElementById('sendBtn');
-
     let chatHistory = [];
 
-    // Nachricht zur UI hinzufügen
     function appendMessage(role, text) {
       const div = document.createElement('div');
       div.className = `msg ${role}`;
@@ -72,13 +45,13 @@
       return div;
     }
 
-    // Kommunikation mit dem Perchance-Parent-Window
+    // DIESE FUNKTION ERSETZT DEN FEHLERHAFTEN 'ROOT' AUFRUF
     async function askAI(prompt) {
       return new Promise((resolve, reject) => {
         const requestId = Date.now().toString();
         
-        // Listener für die Antwort vom Parent
         const handler = (event) => {
+          // Wir hören auf die Antwort vom Perchance-Hauptfenster
           if (event.data.type === "AI_RESPONSE" && event.data.requestId === requestId) {
             window.removeEventListener("message", handler);
             resolve(event.data.text);
@@ -89,7 +62,7 @@
         };
         window.addEventListener("message", handler);
 
-        // Anfrage an Parent senden
+        // Nachricht an das Hauptfenster senden (wo das Plugin lebt)
         window.parent.postMessage({
           type: "AI_REQUEST",
           instruction: prompt,
@@ -102,30 +75,25 @@
       const text = userInputEl.value.trim();
       if (!text || sendBtn.disabled) return;
 
-      // User Message anzeigen
       appendMessage('user', text);
-      chatHistory.push(`User: ${text}`);
+      chatHistory.push(`Player: ${text}`);
       userInputEl.value = '';
       
-      // UI Sperren
       sendBtn.disabled = true;
-      sendBtn.innerText = '...';
-
-      // Thinking Bubble
-      const thinkingBubble = appendMessage('ai', 'Überlegt...');
+      const thinkingBubble = appendMessage('ai', 'KI schreibt...');
 
       try {
-        const context = `Konversationsverlauf:\n${chatHistory.join('\n')}\nKI:`;
-        const response = await askAI(context);
+        // Wir senden den Verlauf als Kontext mit
+        const prompt = chatHistory.join("\n") + "\nAI:";
+        const response = await askAI(prompt);
         
         thinkingBubble.innerText = response;
-        chatHistory.push(`KI: ${response}`);
+        chatHistory.push(`AI: ${response}`);
       } catch (err) {
-        thinkingBubble.innerText = "Fehler: Die KI konnte nicht antworten.";
-        console.error(err);
+        thinkingBubble.innerText = "Fehler: Verbindung zur KI unterbrochen.";
+        console.error("Bridge Error:", err);
       } finally {
         sendBtn.disabled = false;
-        sendBtn.innerText = 'Senden';
         userInputEl.focus();
       }
     }
