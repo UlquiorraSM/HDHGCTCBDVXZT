@@ -21,7 +21,7 @@
             background-position: center;
             background-attachment: fixed;
             opacity: 0;
-            transition: opacity 0.3s ease-in-out;
+            transition: opacity 0.4s ease-in-out;
         }
         
         body::before {
@@ -35,55 +35,146 @@
             z-index: -1;
         }
         
-        .settings-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            min-width: 400px;
-            max-width: 600px;
+        .settings-layout {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
         
-        h1 {
-            color: #333;
+        .settings-sidebar {
+            width: 180px;
+            background: rgba(30, 30, 30, 0.9);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 10;
+        }
+        
+        .settings-tab {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+            margin: 5px 0;
+        }
+        
+        .settings-tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .settings-tab.active {
+            background: rgba(102, 126, 234, 0.2);
+            border-left-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .settings-content {
+            flex: 1;
+            padding: 60px;
+            margin-left: 180px;
+            overflow-y: auto;
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(8px);
+            min-height: 100vh;
+        }
+        
+        .settings-group {
+            background: rgba(40, 40, 40, 0.9);
+            padding: 40px;
+            border-radius: 12px;
             margin-bottom: 30px;
-            font-size: 2.5em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            color: #fff;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .settings-group h3 {
+            color: #fff;
+            margin-bottom: 25px;
+            font-size: 1.2em;
+        }
+
+        .setting-label {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        input[type="url"], input[type="number"], select {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        input[type="url"]::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .back-button-fixed {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+        }
+        
+        .settings-section {
+            display: none;
+        }
+        
+        .settings-section.active {
+            display: block;
         }
         
         .settings-group {
             margin-bottom: 25px;
-            text-align: left;
         }
         
         .settings-group h3 {
-            color: #555;
-            margin-bottom: 15px;
+            color: #fff;
+            margin-bottom: 25px;
             font-size: 1.2em;
             border-bottom: 2px solid #667eea;
-            padding-bottom: 5px;
+            padding-bottom: 8px;
         }
-        
+
         .setting-item {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
         .setting-label {
-            color: #333;
-            font-size: 1em;
+            color: rgba(255, 255, 255, 0.8);
+            flex: 1;
+            margin-right: 20px;
         }
         
         .setting-control {
             display: flex;
             align-items: center;
             gap: 10px;
+            flex: 1;
+            justify-content: flex-end;
         }
         
         input[type="range"] {
-            width: 150px;
+            width: 180px;
         }
         
         input[type="checkbox"] {
@@ -91,11 +182,16 @@
             height: 20px;
         }
         
-        select {
-            padding: 5px 10px;
+        select, input[type="url"] {
+            padding: 8px 12px;
             border: 1px solid #ccc;
             border-radius: 5px;
             background: white;
+            font-size: 0.9em;
+        }
+        
+        input[type="url"] {
+            width: 250px;
         }
         
         .button-group {
@@ -133,38 +229,188 @@
     </style>
 </head>
 <body>
-    <div class="settings-container">
-        <h1>Einstellungen</h1>
-        
-        <div class="settings-group">
-            <h3>Allgemein</h3>
-            <div class="setting-item">
-                <span class="setting-label">Hintergrund URL</span>
-                <div class="setting-control">
-                    <input type="url" id="background-url" style="width: 250px; padding: 5px; border: 1px solid #ccc; border-radius: 5px;" placeholder="https://...">
+    <div class="settings-sidebar">
+        <div class="settings-tab active" onclick="switchTab('general')">Allgemein</div>
+        <div class="settings-tab" onclick="switchTab('ai')">KI-Einstellungen</div>
+        <div class="settings-tab" onclick="switchTab('interface')">Interface</div>
+        <div class="settings-tab" onclick="switchTab('advanced')">Erweitert</div>
+    </div>
+    
+    <div class="settings-content">
+        <!-- Allgemein Section -->
+        <div id="general-section" class="settings-section active">
+            <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Allgemeine Einstellungen</h2>
+            
+            <div class="settings-group">
+                <h3>Hintergrund</h3>
+                <div class="setting-item">
+                    <span class="setting-label">Hintergrund URL</span>
+                    <div class="setting-control">
+                        <input type="url" id="background-url" placeholder="https://...">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h3>Anzeige</h3>
+                <div class="setting-item">
+                    <span class="setting-label">Sprache</span>
+                    <div class="setting-control">
+                        <select id="language">
+                            <option value="de">Deutsch</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">Thema</span>
+                    <div class="setting-control">
+                        <select id="theme">
+                            <option value="light">Hell</option>
+                            <option value="dark">Dunkel</option>
+                            <option value="auto">Auto</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+            
+            <!-- KI-Einstellungen Section -->
+            <div id="ai-section" class="settings-section">
+                <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">KI-Einstellungen</h2>
+                
+                <div class="settings-group">
+                    <h3>KI-Verhalten</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Kreativität</span>
+                        <div class="setting-control">
+                            <input type="range" id="creativity" min="0" max="100" value="50">
+                            <span id="creativity-value">50</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Antwortgeschwindigkeit</span>
+                        <div class="setting-control">
+                            <select id="speed">
+                                <option value="fast">Schnell</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="slow">Langsam</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Temperatur</span>
+                        <div class="setting-control">
+                            <input type="range" id="temperature" min="0" max="100" value="70">
+                            <span id="temperature-value">70</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Interface Section -->
+            <div id="interface-section" class="settings-section">
+                <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Interface</h2>
+                
+                <div class="settings-group">
+                    <h3>Benachrichtigungen</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Ton aktivieren</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="sound" checked>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Auto-Speichern</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="autosave" checked>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Animationen</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="animations" checked>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h3>Chat</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Zeitstempel anzeigen</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="timestamps">
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Zeichenlimit</span>
+                        <div class="setting-control">
+                            <input type="number" id="charlimit" value="1000" min="100" max="5000" style="width: 80px; padding: 5px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Erweitert Section -->
+            <div id="advanced-section" class="settings-section">
+                <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Erweiterte Einstellungen</h2>
+                
+                <div class="settings-group">
+                    <h3>Daten</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Cache leeren</span>
+                        <div class="setting-control">
+                            <button class="btn btn-secondary" onclick="clearCache()">Leeren</button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Einstellungen exportieren</span>
+                        <div class="setting-control">
+                            <button class="btn" onclick="exportSettings()">Exportieren</button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Einstellungen importieren</span>
+                        <div class="setting-control">
+                            <button class="btn btn-secondary" onclick="importSettings()">Importieren</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h3>Entwickler</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Debug-Modus</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="debug">
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Konsole anzeigen</span>
+                        <div class="setting-control">
+                            <input type="checkbox" id="console">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="settings-group">
-            <h3>KI-Einstellungen</h3>
-            <div class="setting-item">
-                <span class="setting-label">Kreativität</span>
-                <div class="setting-control">
-                    <input type="range" id="creativity" min="0" max="100" value="50">
-                    <span id="creativity-value">50</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="button-group">
-            <button class="btn" onclick="saveSettings()">Speichern</button>
-            <button class="btn btn-secondary" onclick="resetSettings()">Zurücksetzen</button>
-            <button class="btn btn-danger" onclick="backToMenu()">Zurück</button>
-        </div>
+        <!-- Fixierter Zurück-Button -->
+        <button class="btn btn-danger back-button-fixed" onclick="backToMenu()">Zurück</button>
     </div>
 
     <script>
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Remove active class from all tabs and sections
+            document.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.settings-section').forEach(section => section.classList.remove('active'));
+            
+            // Add active class to selected tab and section
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}-section`).classList.add('active');
+        }
+        
         // Zusätzliches Preloading für index.html
         function preloadPage(url) {
             const link = document.createElement('link');
@@ -184,9 +430,29 @@
             const settings = localStorage.getItem('storyki_settings');
             if (settings) {
                 const data = JSON.parse(settings);
+                // Allgemein
                 document.getElementById('background-url').value = data.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
+                document.getElementById('language').value = data.language || 'de';
+                document.getElementById('theme').value = data.theme || 'light';
+                
+                // KI-Einstellungen
                 document.getElementById('creativity').value = data.creativity || 50;
+                document.getElementById('speed').value = data.speed || 'normal';
+                document.getElementById('temperature').value = data.temperature || 70;
                 updateCreativityValue();
+                updateTemperatureValue();
+                
+                // Interface
+                document.getElementById('sound').checked = data.sound !== false;
+                document.getElementById('autosave').checked = data.autosave !== false;
+                document.getElementById('animations').checked = data.animations !== false;
+                document.getElementById('timestamps').checked = data.timestamps || false;
+                document.getElementById('charlimit').value = data.charlimit || 1000;
+                
+                // Erweitert
+                document.getElementById('debug').checked = data.debug || false;
+                document.getElementById('console').checked = data.console || false;
+                
                 applyBackground(true);
             } else {
                 // Standard-Hintergrund anwenden
@@ -233,8 +499,26 @@
         // Einstellungen speichern
         function saveSettings() {
             const settings = {
+                // Allgemein
                 backgroundUrl: document.getElementById('background-url').value,
-                creativity: document.getElementById('creativity').value
+                language: document.getElementById('language').value,
+                theme: document.getElementById('theme').value,
+                
+                // KI-Einstellungen
+                creativity: document.getElementById('creativity').value,
+                speed: document.getElementById('speed').value,
+                temperature: document.getElementById('temperature').value,
+                
+                // Interface
+                sound: document.getElementById('sound').checked,
+                autosave: document.getElementById('autosave').checked,
+                animations: document.getElementById('animations').checked,
+                timestamps: document.getElementById('timestamps').checked,
+                charlimit: document.getElementById('charlimit').value,
+                
+                // Erweitert
+                debug: document.getElementById('debug').checked,
+                console: document.getElementById('console').checked
             };
             
             localStorage.setItem('storyki_settings', JSON.stringify(settings));
@@ -276,21 +560,64 @@
             document.getElementById('creativity-value').textContent = value;
         }
         
-        // Event Listener
-        document.getElementById('creativity').addEventListener('input', updateCreativityValue);
-        document.getElementById('background-url').addEventListener('input', () => applyBackground(false));
+        // Temperaturwert aktualisieren
+        function updateTemperatureValue() {
+            const value = document.getElementById('temperature').value;
+            document.getElementById('temperature-value').textContent = value;
+        }
         
-        // Einstellungen beim Laden laden
-        window.addEventListener('load', loadSettings);
-    </script>
-</body>
-</html>
-            const value = document.getElementById('creativity').value;
-            document.getElementById('creativity-value').textContent = value;
+        // Cache leeren
+        function clearCache() {
+            if (confirm('Möchtest du wirklich den Cache leeren?')) {
+                localStorage.clear();
+                alert('Cache wurde geleert!');
+            }
+        }
+        
+        // Einstellungen exportieren
+        function exportSettings() {
+            const settings = localStorage.getItem('storyki_settings');
+            if (settings) {
+                const blob = new Blob([settings], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'storyki-settings.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            } else {
+                alert('Keine Einstellungen zum Exportieren gefunden.');
+            }
+        }
+        
+        // Einstellungen importieren
+        function importSettings() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const settings = JSON.parse(e.target.result);
+                            localStorage.setItem('storyki_settings', JSON.stringify(settings));
+                            loadSettings();
+                            alert('Einstellungen wurden importiert!');
+                        } catch (err) {
+                            alert('Fehler beim Importieren der Einstellungen.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
         }
         
         // Event Listener
         document.getElementById('creativity').addEventListener('input', updateCreativityValue);
+        document.getElementById('temperature').addEventListener('input', updateTemperatureValue);
         document.getElementById('background-url').addEventListener('input', () => applyBackground(false));
         
         // Einstellungen beim Laden laden
