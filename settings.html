@@ -159,20 +159,32 @@
         }
         
         .settings-group {
-            background: rgba(40, 40, 40, 0.95);
-            padding: 40px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            color: #fff;
-            max-width: 800px;
-            width: 100%;
+            margin-bottom: 50px;
         }
-
+        
         .settings-group h3 {
             color: #fff;
+            margin-bottom: 30px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .setting-item {
             margin-bottom: 25px;
-            font-size: 1.2em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(50, 50, 50, 0.6);
+            border-radius: 8px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .setting-item:hover {
+            background: rgba(60, 60, 60, 0.8);
+            border-left-color: #667eea;
         }
 
         .setting-label {
@@ -208,23 +220,21 @@
             display: block;
         }
         
-        .settings-group {
-            margin-bottom: 25px;
-        }
-        
-        .settings-group h3 {
-            color: #fff;
-            margin-bottom: 25px;
-            font-size: 1.2em;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 8px;
-        }
-
         .setting-item {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 15px 20px;
+            background: rgba(50, 50, 50, 0.6);
+            border-radius: 8px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .setting-item:hover {
+            background: rgba(60, 60, 60, 0.8);
+            border-left-color: #667eea;
         }
         
         .setting-label {
