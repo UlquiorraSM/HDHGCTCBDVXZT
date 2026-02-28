@@ -2,31 +2,24 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>AI Chat Interface</title>
+  <title>AI Stream Chat</title>
   <style>
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; height: 100vh; overflow: hidden; }
     #appCtn { display: flex; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    #header { padding: 15px 20px; border-bottom: 1px solid #e0e0e0; background: #ffffff; display: flex; align-items: center; justify-content: space-between; }
-    .status { font-size: 0.85rem; color: #28a745; display: flex; align-items: center; gap: 5px; }
-    .dot { height: 8px; width: 8px; background-color: #28a745; border-radius: 50%; display: inline-block; }
     #messagesListEl { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background-color: #f9f9f9; }
-    #inputArea { padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; align-items: center; }
-    #userInputEl { flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 24px; outline: none; font-size: 15px; }
-    #sendBtn { background-color: #007bff; color: white; border: none; padding: 0 20px; height: 44px; border-radius: 24px; font-weight: 600; cursor: pointer; }
-    #sendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; word-wrap: break-word; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    #inputArea { padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; }
+    #userInputEl { flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 24px; outline: none; }
+    #sendBtn { background-color: #007bff; color: white; border: none; padding: 0 20px; border-radius: 24px; cursor: pointer; font-weight: 600; }
+    #sendBtn:disabled { opacity: 0.5; }
+    .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; word-wrap: break-word; line-height: 1.5; }
     .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 4px; }
     .ai { align-self: flex-start; background: white; color: #333; border: 1px solid #e5e5e5; border-bottom-left-radius: 4px; }
   </style>
 </head>
 <body>
   <div id="appCtn">
-    <div id="header">
-      <div style="font-weight: 700; font-size: 1.2rem; color: #333;">AI Chat</div>
-      <div class="status"><span class="dot"></span> Online</div>
-    </div>
     <div id="messagesListEl">
-      <div class="msg ai">Hallo! Ich bin bereit. Wie kann ich helfen?</div>
+      <div class="msg ai">Streaming-Modus aktiv. Wie kann ich helfen?</div>
     </div>
     <div id="inputArea">
       <input id="userInputEl" type="text" placeholder="Schreibe eine Nachricht..." autocomplete="off">
@@ -39,6 +32,7 @@
     const userInputEl = document.getElementById('userInputEl');
     const sendBtn = document.getElementById('sendBtn');
     let chatHistory = [];
+    let currentAIResponseEl = null;
 
     function appendMessage(role, text) {
       const div = document.createElement('div');
@@ -49,35 +43,34 @@
       return div;
     }
 
-    async function askAI(prompt) {
-      return new Promise((resolve, reject) => {
-        const requestId = Math.random().toString(36).substring(7);
-        
-        // Timeout nach 45 Sekunden
-        const timeout = setTimeout(() => {
-          window.removeEventListener("message", handler);
-          reject("Die KI hat zu lange zum Antworten gebraucht.");
-        }, 45000);
+    // Listener für die Chunks von Perchance
+    window.addEventListener("message", (event) => {
+      const data = event.data;
+      
+      if (data.type === "AI_CHUNK" && currentAIResponseEl) {
+        // Platzhalter "KI denkt nach..." beim ersten Chunk entfernen
+        if (currentAIResponseEl.innerText === "KI denkt nach...") {
+          currentAIResponseEl.innerText = "";
+        }
+        currentAIResponseEl.innerText += data.chunk;
+        messagesListEl.scrollTop = messagesListEl.scrollHeight;
+      } 
+      
+      if (data.type === "AI_RESPONSE_DONE") {
+        chatHistory.push(`KI: ${currentAIResponseEl.innerText}`);
+        finishGeneration();
+      }
 
-        const handler = (event) => {
-          if (event.data.requestId === requestId) {
-            clearTimeout(timeout);
-            window.removeEventListener("message", handler);
-            if (event.data.type === "AI_RESPONSE") {
-              resolve(event.data.text);
-            } else {
-              reject(event.data.error || "Unbekannter Fehler");
-            }
-          }
-        };
+      if (data.type === "AI_ERROR") {
+        if(currentAIResponseEl) currentAIResponseEl.innerText = "Fehler: " + data.error;
+        finishGeneration();
+      }
+    });
 
-        window.addEventListener("message", handler);
-        window.parent.postMessage({
-          type: "AI_REQUEST",
-          instruction: prompt,
-          requestId: requestId
-        }, "*");
-      });
+    function finishGeneration() {
+      sendBtn.disabled = false;
+      currentAIResponseEl = null;
+      userInputEl.focus();
     }
 
     async function sendMessage() {
@@ -89,19 +82,17 @@
       userInputEl.value = '';
       sendBtn.disabled = true;
       
-      const thinkingBubble = appendMessage('ai', 'KI denkt nach...');
+      // Erstelle die Sprechblase, die gleich befüllt wird
+      currentAIResponseEl = appendMessage('ai', 'KI denkt nach...');
 
-      try {
-        const historyText = chatHistory.join("\n") + "\nKI:";
-        const response = await askAI(historyText);
-        thinkingBubble.innerText = response;
-        chatHistory.push(`KI: ${response}`);
-      } catch (err) {
-        thinkingBubble.innerText = "Fehler: " + err;
-      } finally {
-        sendBtn.disabled = false;
-        userInputEl.focus();
-      }
+      const requestId = Math.random().toString(36).substring(7);
+      const historyText = chatHistory.slice(-6).join("\n") + "\nKI:";
+
+      window.parent.postMessage({
+        type: "AI_REQUEST",
+        instruction: historyText,
+        requestId: requestId
+      }, "*");
     }
 
     sendBtn.onclick = sendMessage;
