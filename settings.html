@@ -6,6 +6,7 @@
     <title>StoryKI - Einstellungen</title>
     <link rel="prefetch" href="index.html">
     <link rel="prefetch" href="Game.html">
+    <link rel="preload" href="index.html" as="document">
     <style>
         body {
             margin: 0;
@@ -164,6 +165,20 @@
     </div>
 
     <script>
+        // Zusätzliches Preloading für index.html
+        function preloadPage(url) {
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = url;
+            document.head.appendChild(link);
+        }
+        
+        // Seite preloaden wenn settings geladen wird
+        window.addEventListener('load', () => {
+            preloadPage('index.html');
+            preloadPage('Game.html');
+        });
+        
         // Einstellungen laden
         function loadSettings() {
             const settings = localStorage.getItem('storyki_settings');
