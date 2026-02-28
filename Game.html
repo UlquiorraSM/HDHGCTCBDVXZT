@@ -1,146 +1,137 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="UTF-8">
   <title>AI Chat Interface</title>
   <style>
     /* Basic Reset and Font */
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; height: 100vh; overflow: hidden; }
     
-    /* Custom Scrollbar for cleaner look */
+    /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #b3b3b3; }
+    
+    /* Main App Container */
+    #appCtn { display: flex; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    
+    /* Header */
+    #header { padding: 15px 20px; border-bottom: 1px solid #e0e0e0; background: #ffffff; display: flex; align-items: center; justify-content: space-between; }
+    .status { font-size: 0.85rem; color: #28a745; display: flex; align-items: center; gap: 5px; }
+    .dot { height: 8px; width: 8px; background-color: #28a745; border-radius: 50%; display: inline-block; }
+
+    /* Chat History Area */
+    #messagesListEl { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background-color: #f9f9f9; }
+
+    /* Input Area */
+    #inputArea { padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; align-items: center; }
+    #userInputEl { flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 24px; outline: none; font-size: 15px; }
+    #userInputEl:focus { border-color: #007bff; }
+    
+    #sendBtn { background-color: #007bff; color: white; border: none; padding: 0 20px; height: 44px; border-radius: 24px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    #sendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Bubbles */
+    .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; word-wrap: break-word; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 4px; }
+    .ai { align-self: flex-start; background: white; color: #333; border: 1px solid #e5e5e5; border-bottom-left-radius: 4px; }
   </style>
 </head>
 <body>
 
-  <!-- Main App Container -->
-  <div id="appCtn" style="display: flex; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-    
-    <!-- Header -->
-    <div style="padding: 15px 20px; border-bottom: 1px solid #e0e0e0; background: #ffffff; display: flex; align-items: center; justify-content: space-between;">
+  <div id="appCtn">
+    <div id="header">
       <div style="font-weight: 700; font-size: 1.2rem; color: #333;">AI Chat</div>
-      <div style="font-size: 0.85rem; color: #28a745; display: flex; align-items: center; gap: 5px;">
-        <span style="height: 8px; width: 8px; background-color: #28a745; border-radius: 50%; display: inline-block;"></span>
-        Online
-      </div>
+      <div class="status"><span class="dot"></span> Online</div>
     </div>
 
-    <!-- Chat History Area -->
-    <div id="messagesListEl" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background-color: #f9f9f9;">
-      <!-- Initial Greeting -->
-      <div style="align-self: flex-start; background: white; color: #333; padding: 12px 16px; border-radius: 18px 18px 18px 4px; max-width: 80%; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #eee;">
-        Hello! I am your AI assistant. Feel free to ask me anything.
-      </div>
+    <div id="messagesListEl">
+      <div class="msg ai">Hallo! Ich bin dein KI-Assistent. Wie kann ich dir heute helfen?</div>
     </div>
 
-    <!-- Input Area -->
-    <div style="padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; align-items: center;">
-      <input id="userInputEl" type="text" placeholder="Type your message..." 
-             style="flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 24px; outline: none; font-size: 15px; transition: border-color 0.2s;"
-             onfocus="this.style.borderColor='#007bff'" onblur="this.style.borderColor='#ccc'"
-             onkeydown="if(event.key === 'Enter') sendMessage()">
-      
-      <button id="sendBtn" onclick="sendMessage()" 
-              style="background-color: #007bff; color: white; border: none; padding: 0 20px; height: 44px; border-radius: 24px; font-weight: 600; cursor: pointer; font-size: 15px; transition: background 0.2s; display: flex; align-items: center; justify-content: center;">
-        Send
-      </button>
+    <div id="inputArea">
+      <input id="userInputEl" type="text" placeholder="Schreibe eine Nachricht..." autocomplete="off">
+      <button id="sendBtn">Senden</button>
     </div>
   </div>
 
-  <script type="module">
-    // Store the conversation history to maintain context
-    let chatHistory = []; 
+  <script>
+    const messagesListEl = document.getElementById('messagesListEl');
+    const userInputEl = document.getElementById('userInputEl');
+    const sendBtn = document.getElementById('sendBtn');
 
-    // Helper: Append a message bubble to the UI
-    function appendMessageToUI(role, text, id = null) {
-      let listEl = document.getElementById('messagesListEl');
-      let div = document.createElement('div');
-      if (id) div.id = id;
+    let chatHistory = [];
+
+    // Nachricht zur UI hinzufügen
+    function appendMessage(role, text) {
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
       div.innerText = text;
-      
-      if (role === 'user') {
-        // Style for User messages (Blue, Right)
-        div.style.cssText = "align-self: flex-end; background: #007bff; color: white; padding: 10px 16px; border-radius: 18px 18px 4px 18px; max-width: 75%; word-wrap: break-word; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.1);";
-      } else {
-        // Style for AI messages (White, Left)
-        div.style.cssText = "align-self: flex-start; background: white; color: #333; padding: 10px 16px; border-radius: 18px 18px 18px 4px; max-width: 75%; border: 1px solid #e5e5e5; word-wrap: break-word; line-height: 1.5; box-shadow: 0 1px 1px rgba(0,0,0,0.05);";
-      }
-      
-      listEl.appendChild(div);
-      listEl.scrollTop = listEl.scrollHeight; // Auto scroll to bottom
+      messagesListEl.appendChild(div);
+      messagesListEl.scrollTop = messagesListEl.scrollHeight;
+      return div;
     }
 
-    // Helper: Format history array into a string for the prompt
-    function getHistoryString() {
-      return chatHistory.map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`).join('\n');
+    // Kommunikation mit dem Perchance-Parent-Window
+    async function askAI(prompt) {
+      return new Promise((resolve, reject) => {
+        const requestId = Date.now().toString();
+        
+        // Listener für die Antwort vom Parent
+        const handler = (event) => {
+          if (event.data.type === "AI_RESPONSE" && event.data.requestId === requestId) {
+            window.removeEventListener("message", handler);
+            resolve(event.data.text);
+          } else if (event.data.type === "AI_ERROR" && event.data.requestId === requestId) {
+            window.removeEventListener("message", handler);
+            reject(event.data.error);
+          }
+        };
+        window.addEventListener("message", handler);
+
+        // Anfrage an Parent senden
+        window.parent.postMessage({
+          type: "AI_REQUEST",
+          instruction: prompt,
+          requestId: requestId
+        }, "*");
+      });
     }
 
-    // Main function to handle message sending
     async function sendMessage() {
-      let inputEl = document.getElementById('userInputEl');
-      let btnEl = document.getElementById('sendBtn');
-      let text = inputEl.value.trim();
+      const text = userInputEl.value.trim();
+      if (!text || sendBtn.disabled) return;
 
-      if (!text) return; // Ignore empty messages
-
-      // 1. Display User Message
-      appendMessageToUI('user', text);
-      chatHistory.push({ role: 'user', content: text });
+      // User Message anzeigen
+      appendMessage('user', text);
+      chatHistory.push(`User: ${text}`);
+      userInputEl.value = '';
       
-      // Clear input field
-      inputEl.value = '';
+      // UI Sperren
+      sendBtn.disabled = true;
+      sendBtn.innerText = '...';
 
-      // 2. Set Loading State
-      btnEl.disabled = true;
-      btnEl.innerText = '⏳'; // Loading indicator
-      btnEl.style.opacity = '0.7';
-
-      // 3. Prepare AI Message Placeholder
-      let aiMsgId = 'msg-' + Date.now();
-      appendMessageToUI('ai', 'Thinking...', aiMsgId);
-      let aiMsgEl = document.getElementById(aiMsgId);
-      
-      // Clear placeholder text immediately before streaming starts
-      aiMsgEl.innerText = '';
-      
-      let fullResponse = "";
-      let historyString = getHistoryString();
+      // Thinking Bubble
+      const thinkingBubble = appendMessage('ai', 'Überlegt...');
 
       try {
-        // 4. Generate Response using generateText
-        await root.ai({
-          instruction: `You are a helpful and intelligent AI assistant. Continue the conversation based on the history below. Respond naturally and concisely.\n\n${historyString}\nAI:`,
-          onChunk: (data) => {
-            // Stream text chunks into the element
-            fullResponse += data.textChunk;
-            aiMsgEl.innerText = fullResponse;
-            
-            // Keep scrolling down as text grows
-            let listEl = document.getElementById('messagesListEl');
-            listEl.scrollTop = listEl.scrollHeight;
-          }
-        });
-
-        // Add successful response to history
-        chatHistory.push({ role: 'ai', content: fullResponse });
-
-      } catch (error) {
-        aiMsgEl.innerText = "Sorry, I encountered an error generating a response.";
-        console.error(error);
+        const context = `Konversationsverlauf:\n${chatHistory.join('\n')}\nKI:`;
+        const response = await askAI(context);
+        
+        thinkingBubble.innerText = response;
+        chatHistory.push(`KI: ${response}`);
+      } catch (err) {
+        thinkingBubble.innerText = "Fehler: Die KI konnte nicht antworten.";
+        console.error(err);
       } finally {
-        // 5. Reset UI State
-        btnEl.disabled = false;
-        btnEl.innerText = 'Send';
-        btnEl.style.opacity = '1';
-        inputEl.focus(); // Refocus input for easy typing
+        sendBtn.disabled = false;
+        sendBtn.innerText = 'Senden';
+        userInputEl.focus();
       }
     }
 
-    // Expose function to global scope so HTML onclick attributes work
-    window.sendMessage = sendMessage;
+    sendBtn.onclick = sendMessage;
+    userInputEl.onkeydown = (e) => { if(e.key === 'Enter') sendMessage(); };
   </script>
 </body>
 </html>
