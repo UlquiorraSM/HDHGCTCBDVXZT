@@ -1,178 +1,172 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>AI Chat Interface</title>
-  <link rel="prefetch" href="index.html">
-  <link rel="prefetch" href="settings.html">
-  <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; height: 100vh; overflow: hidden; background-size: cover; background-position: center; background-attachment: fixed; opacity: 0; transition: opacity 0.4s ease-in-out; }
-    body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: -1; }
-    #appCtn { display: flex; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    #header { padding: 15px 20px; border-bottom: 1px solid #e0e0e0; background: #ffffff; display: flex; align-items: center; justify-content: space-between; }
-    .status { font-size: 0.85rem; color: #28a745; display: flex; align-items: center; gap: 5px; }
-    .dot { height: 8px; width: 8px; background-color: #28a745; border-radius: 50%; display: inline-block; }
-    #messagesListEl { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background-color: #f9f9f9; }
-    #inputArea { padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; align-items: center; }
-    #userInputEl { flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 24px; outline: none; font-size: 15px; }
-    #sendBtn { background-color: #007bff; color: white; border: none; padding: 0 20px; height: 44px; border-radius: 24px; font-weight: 600; cursor: pointer; }
-    #sendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; word-wrap: break-word; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 4px; }
-    .ai { align-self: flex-start; background: white; color: #333; border: 1px solid #e5e5e5; border-bottom-left-radius: 4px; }
-    #buttonArea button:hover { transform: scaleY(1.1); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoryKI - Hauptmenü</title>
+    <link rel="prefetch" href="Game.html">
+    <link rel="prefetch" href="settings.html">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+        }
+        
+        .menu-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            min-width: 300px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .menu-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .menu-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .menu-button:active {
+            transform: translateY(0);
+        }
+    </style>
 </head>
 <body>
-  <div id="appCtn">
-    <div id="header">
-      <div style="font-weight: 700; font-size: 1.2rem; color: #333;">StoryKI</div>
+    <div class="menu-container">
+        <h1>StoryKI</h1>
+        <div class="menu-buttons">
+            <button class="menu-button" onclick="continueGame()">Continue</button>
+            <button class="menu-button" onclick="newStory()">New Story</button>
+            <button class="menu-button" onclick="loadGame()">Load</button>
+            <button class="menu-button" onclick="openSettings()">Settings</button>
+        </div>
     </div>
-    <div id="messagesListEl">
-      <div class="msg ai">Hallo! Ich bin bereit. Wie kann ich helfen?</div>
-    </div>
-    <div id="inputArea">
-      <input id="userInputEl" type="text" placeholder="Schreibe eine Nachricht..." autocomplete="off">
-    </div>
-    <div id="buttonArea" style="padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; justify-content: center;">
-      <button id="sendBtn" style="background-color: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Senden</button>
-      <button id="retryBtn" style="background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Retry</button>
-      <button id="editBtn" style="background-color: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Edit</button>
-      <button id="continueBtn" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Continue</button>
-      <button id="eraseBtn" style="background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Erase</button>
-    </div>
-  </div>
 
-  <script>
-    // Hintergrund aus Settings laden
-    function loadBackground() {
-        const settings = localStorage.getItem('storyki_settings');
-        if (settings) {
-            const data = JSON.parse(settings);
-            const backgroundUrl = data.backgroundUrl;
-            if (backgroundUrl) {
-                document.body.style.backgroundImage = `url(${backgroundUrl})`;
-                document.body.style.backgroundSize = 'cover';
-                document.body.style.backgroundPosition = 'center';
-                document.body.style.backgroundAttachment = 'fixed';
+    <script>
+        // Hintergrund aus Settings laden
+        function loadBackground() {
+            const settings = localStorage.getItem('storyki_settings');
+            if (settings) {
+                const data = JSON.parse(settings);
+                const backgroundUrl = data.backgroundUrl;
+                if (backgroundUrl) {
+                    document.body.style.backgroundImage = `url(${backgroundUrl})`;
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundAttachment = 'fixed';
+                } else {
+                    // Default-Background verwenden
+                    document.body.style.backgroundImage = 'url(https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg)';
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundAttachment = 'fixed';
+                }
             } else {
-                // Default-Background verwenden
+                // Default-Background verwenden, wenn keine Settings existieren
                 document.body.style.backgroundImage = 'url(https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg)';
                 document.body.style.backgroundSize = 'cover';
                 document.body.style.backgroundPosition = 'center';
                 document.body.style.backgroundAttachment = 'fixed';
             }
-        } else {
-            // Default-Background verwenden, wenn keine Settings existieren
-            document.body.style.backgroundImage = 'url(https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg)';
+        }
+        
+        // Hintergrund beim Laden anwenden
+        window.addEventListener('load', loadBackground);
+        
+        // Auf Hintergrund-Änderungen von anderen Seiten reagieren
+        window.addEventListener('backgroundChanged', function(event) {
+            const backgroundUrl = event.detail.backgroundUrl;
+            document.body.style.backgroundImage = `url(${backgroundUrl})`;
             document.body.style.backgroundSize = 'cover';
             document.body.style.backgroundPosition = 'center';
             document.body.style.backgroundAttachment = 'fixed';
+        });
+        
+        // Regelmäßig prüfen, ob sich der Hintergrund geändert hat
+        setInterval(loadBackground, 1000);
+        
+        function continueGame() {
+            // Logik zum Fortsetzen des Spiels
+            console.log("Continue Game");
+            navigateWithTransition("Game.html");
         }
-    }
-    
-    // Auf Hintergrund-Änderungen von anderen Seiten reagieren
-    window.addEventListener('backgroundChanged', function(event) {
-        const backgroundUrl = event.detail.backgroundUrl;
-        document.body.style.backgroundImage = `url(${backgroundUrl})`;
-        document.body.style.backgroundSize = 'cover';
-        document.body.style.backgroundPosition = 'center';
-        document.body.style.backgroundAttachment = 'fixed';
-    });
-    
-    // Regelmäßig prüfen, ob sich der Hintergrund geändert hat
-    setInterval(loadBackground, 1000);
-    
-    const messagesListEl = document.getElementById('messagesListEl');
-    const userInputEl = document.getElementById('userInputEl');
-    const sendBtn = document.getElementById('sendBtn');
-    let chatHistory = [];
-
-    function appendMessage(role, text) {
-      const div = document.createElement('div');
-      div.className = `msg ${role}`;
-      div.innerText = text;
-      messagesListEl.appendChild(div);
-      messagesListEl.scrollTop = messagesListEl.scrollHeight;
-      return div;
-    }
-
-    async function askAI(prompt) {
-      return new Promise((resolve, reject) => {
-        const requestId = Math.random().toString(36).substring(7);
         
-        // Timeout nach 45 Sekunden
-        const timeout = setTimeout(() => {
-          window.removeEventListener("message", handler);
-          reject("Die KI hat zu lange zum Antworten gebraucht.");
-        }, 45000);
-
-        const handler = (event) => {
-          if (event.data.requestId === requestId) {
-            clearTimeout(timeout);
-            window.removeEventListener("message", handler);
-            if (event.data.type === "AI_RESPONSE") {
-              resolve(event.data.text);
-            } else {
-              reject(event.data.error || "Unbekannter Fehler");
-            }
-          }
-        };
-
-        window.addEventListener("message", handler);
-        window.parent.postMessage({
-          type: "AI_REQUEST",
-          instruction: prompt,
-          requestId: requestId
-        }, "*");
-      });
-    }
-
-    async function sendMessage() {
-      const text = userInputEl.value.trim();
-      if (!text || sendBtn.disabled) return;
-
-      appendMessage('user', text);
-      chatHistory.push(`User: ${text}`);
-      userInputEl.value = '';
-      sendBtn.disabled = true;
-      
-      const thinkingBubble = appendMessage('ai', 'KI denkt nach...');
-
-      try {
-        const historyText = chatHistory.join("\n") + "\nKI:";
-        const response = await askAI(historyText);
-        thinkingBubble.innerText = response;
-        chatHistory.push(`KI: ${response}`);
-      } catch (err) {
-        thinkingBubble.innerText = "Fehler: " + err;
-      } finally {
-        sendBtn.disabled = false;
-        userInputEl.focus();
-      }
-    }
-
-    sendBtn.onclick = sendMessage;
-    userInputEl.onkeydown = (e) => { if(e.key === 'Enter') sendMessage(); };
-    
-    // Hintergrund beim Laden
-    window.addEventListener('load', () => {
-        loadBackground();
-        // Fade in effect
-        setTimeout(() => {
-            document.body.style.opacity = '1';
-        }, 100);
-    });
-    
-    // Zurück zum Hauptmenü mit Übergang
-    function navigateToMenu() {
-        document.body.style.transition = 'opacity 0.4s ease-in-out';
-        document.body.style.opacity = '0';
+        function newStory() {
+            // Logik für eine neue Geschichte
+            console.log("New Story");
+            navigateWithTransition("Game.html");
+        }
         
-        setTimeout(() => {
-            window.location.href = "index.html";
-        }, 400);
-    }
-  </script>
+        function loadGame() {
+            // Logik zum Laden eines Spielstands
+            console.log("Load Game");
+            // Hier könnte ein Ladebildschirm geöffnet werden
+        }
+        
+        function openSettings() {
+            // Logik zum Öffnen der Einstellungen
+            console.log("Open Settings");
+            navigateWithTransition("settings.html");
+        }
+        
+        // Universelle Navigationsfunktion mit Übergang
+        function navigateWithTransition(url) {
+            // Fade out transition
+            document.body.style.transition = 'opacity 0.4s ease-in-out';
+            document.body.style.opacity = '0';
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 400);
+        }
+        
+        // Hintergrund beim Laden
+        window.addEventListener('load', loadBackground);
+    </script>
 </body>
 </html>
