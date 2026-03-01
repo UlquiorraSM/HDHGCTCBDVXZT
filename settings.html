@@ -134,6 +134,23 @@
             min-height: 100vh;
             max-height: 100vh;
             box-sizing: border-box;
+            position: relative;
+        }
+        
+        .fixed-title {
+            position: fixed;
+            top: 60px;
+            left: 240px;
+            color: #fff;
+            font-size: 1.8em;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            z-index: 50;
+            pointer-events: none;
+        }
+        
+        .content-padding {
+            margin-top: 80px;
         }
         
         /* Scrollbar unsichtbar machen */
@@ -332,48 +349,50 @@
     </div>
     
     <div class="settings-content">
-        <!-- Allgemein Section -->
-        <div id="general-section" class="settings-section active">
-            <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Allgemeine Einstellungen</h2>
-            
-            <div class="settings-group">
-                <h3>Hintergrund</h3>
-                <div class="setting-item">
-                    <span class="setting-label">Hintergrund URL</span>
-                    <div class="setting-control">
-                        <input type="url" id="background-url" placeholder="https://...">
+        <!-- Fixierter Titel für Allgemein -->
+        <div id="general-title" class="fixed-title">Allgemeine Einstellungen</div>
+        <div id="ai-title" class="fixed-title" style="display: none;">KI-Einstellungen</div>
+        <div id="interface-title" class="fixed-title" style="display: none;">Interface</div>
+        <div id="advanced-title" class="fixed-title" style="display: none;">Erweiterte Einstellungen</div>
+        
+        <div class="content-padding">
+            <!-- Allgemein Section -->
+            <div id="general-section" class="settings-section active">
+                <div class="settings-group">
+                    <h3>Hintergrund</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Hintergrund URL</span>
+                        <div class="setting-control">
+                            <input type="url" id="background-url" placeholder="https://...">
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="settings-group">
-                <h3>Anzeige</h3>
-                <div class="setting-item">
-                    <span class="setting-label">Sprache</span>
-                    <div class="setting-control">
-                        <select id="language">
-                            <option value="de">Deutsch</option>
-                            <option value="en">English</option>
-                        </select>
+                
+                <div class="settings-group">
+                    <h3>Anzeige</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Sprache</span>
+                        <div class="setting-control">
+                            <select id="language">
+                                <option value="de">Deutsch</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Thema</span>
+                        <div class="setting-control">
+                            <select id="theme">
+                                <option value="light">Hell</option>
+                                <option value="dark">Dunkel</option>
+                                <option value="auto">Auto</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="setting-item">
-                    <span class="setting-label">Thema</span>
-                    <div class="setting-control">
-                        <select id="theme">
-                            <option value="light">Hell</option>
-                            <option value="dark">Dunkel</option>
-                            <option value="auto">Auto</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-            
+            </div>    
             <!-- KI-Einstellungen Section -->
             <div id="ai-section" class="settings-section">
-                <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">KI-Einstellungen</h2>
-                
                 <div class="settings-group">
                     <h3>KI-Verhalten</h3>
                     <div class="setting-item">
@@ -405,8 +424,6 @@
             
             <!-- Interface Section -->
             <div id="interface-section" class="settings-section">
-                <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Interface</h2>
-                
                 <div class="settings-group">
                     <h3>Benachrichtigungen</h3>
                     <div class="setting-item">
@@ -448,8 +465,6 @@
             
             <!-- Erweitert Section -->
             <div id="advanced-section" class="settings-section">
-                <h2 style="margin-top: 20px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Erweiterte Einstellungen</h2>
-                
                 <div class="settings-group">
                     <h3>Daten</h3>
                     <div class="setting-item">
@@ -500,10 +515,12 @@
             // Remove active class from all tabs and sections
             document.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.settings-section').forEach(section => section.classList.remove('active'));
+            document.querySelectorAll('.fixed-title').forEach(title => title.style.display = 'none');
             
             // Add active class to selected tab and section
             document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
             document.getElementById(`${tabName}-section`).classList.add('active');
+            document.getElementById(`${tabName}-title`).style.display = 'block';
         }
         
         // Zusätzliches Preloading für index.html
@@ -565,29 +582,22 @@
         function applyBackground(isInitialLoad = false) {
             const backgroundUrl = document.getElementById('background-url').value;
             if (backgroundUrl) {
-                if (isInitialLoad) {
-                    // Kein Übergang beim initialen Laden
-                    document.body.style.backgroundImage = `url(${backgroundUrl})`;
-                    document.body.style.backgroundSize = 'cover';
-                    document.body.style.backgroundPosition = 'center';
-                    document.body.style.backgroundAttachment = 'fixed';
-                } else {
-                    // Fade out effect nur bei URL-Änderung
-                    document.body.style.transition = 'opacity 0.5s ease-in-out';
-                    document.body.style.opacity = '0';
-                    
-                    setTimeout(() => {
-                        document.body.style.backgroundImage = `url(${backgroundUrl})`;
-                        document.body.style.backgroundSize = 'cover';
-                        document.body.style.backgroundPosition = 'center';
-                        document.body.style.backgroundAttachment = 'fixed';
-                        
-                        // Fade in effect
-                        setTimeout(() => {
-                            document.body.style.opacity = '1';
-                        }, 50);
-                    }, 250);
-                }
+                // Hintergrund sofort auf allen Seiten anwenden
+                document.body.style.backgroundImage = `url(${backgroundUrl})`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundAttachment = 'fixed';
+                
+                // In localStorage speichern für andere Seiten
+                const settings = localStorage.getItem('storyki_settings') || '{}';
+                const data = JSON.parse(settings);
+                data.backgroundUrl = backgroundUrl;
+                localStorage.setItem('storyki_settings', JSON.stringify(data));
+                
+                // Event für andere Seiten auslösen (falls sie offen sind)
+                window.dispatchEvent(new CustomEvent('backgroundChanged', { 
+                    detail: { backgroundUrl } 
+                }));
             }
         }
         
