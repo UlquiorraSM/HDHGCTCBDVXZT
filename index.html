@@ -93,12 +93,30 @@
             const settings = localStorage.getItem('storyki_settings');
             if (settings) {
                 const data = JSON.parse(settings);
-                const backgroundUrl = data.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
-                document.body.style.backgroundImage = `url(${backgroundUrl})`;
-            } else {
-                document.body.style.backgroundImage = 'url(https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg)';
+                const backgroundUrl = data.backgroundUrl;
+                if (backgroundUrl) {
+                    document.body.style.backgroundImage = `url(${backgroundUrl})`;
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundAttachment = 'fixed';
+                }
             }
         }
+        
+        // Hintergrund beim Laden anwenden
+        window.addEventListener('load', loadBackground);
+        
+        // Auf Hintergrund-Änderungen von anderen Seiten reagieren
+        window.addEventListener('backgroundChanged', function(event) {
+            const backgroundUrl = event.detail.backgroundUrl;
+            document.body.style.backgroundImage = `url(${backgroundUrl})`;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundAttachment = 'fixed';
+        });
+        
+        // Regelmäßig prüfen, ob sich der Hintergrund geändert hat
+        setInterval(loadBackground, 1000);
         
         function continueGame() {
             // Logik zum Fortsetzen des Spiels
