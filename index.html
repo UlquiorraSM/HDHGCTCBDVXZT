@@ -79,6 +79,7 @@
         <div class="menu-buttons">
             <button class="menu-button" onclick="continueGame()">Continue</button>
             <button class="menu-button" onclick="newStory()">New Story</button>
+            <button class="menu-button" onclick="createStory()">Create</button>
             <button class="menu-button" onclick="loadGame()">Load</button>
             <button class="menu-button" onclick="openSettings()">Settings</button>
         </div>
@@ -137,6 +138,12 @@
             // Logik für eine neue Geschichte
             console.log("New Story");
             navigateWithTransition("Game.html");
+        }
+        
+        function createStory() {
+            // Logik für das Erstellen einer Story Card
+            console.log("Create Story");
+            navigateWithTransition("Create.html");
         }
         
         function loadGame() {
