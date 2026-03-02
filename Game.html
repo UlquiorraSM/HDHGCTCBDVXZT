@@ -1,169 +1,1931 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <title>AI Chat Interface</title>
-  <link rel="prefetch" href="index.html">
-  <link rel="prefetch" href="settings.html">
-  <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; height: 100vh; overflow: hidden; background-size: cover; background-position: center; background-attachment: fixed; opacity: 0; transition: opacity 0.4s ease-in-out; }
-    body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: -1; }
-    #appCtn { display: flex; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    #header { padding: 15px 20px; border-bottom: 1px solid #e0e0e0; background: #ffffff; display: flex; align-items: center; justify-content: space-between; }
-    .status { font-size: 0.85rem; color: #28a745; display: flex; align-items: center; gap: 5px; }
-    .dot { height: 8px; width: 8px; background-color: #28a745; border-radius: 50%; display: inline-block; }
-    #messagesListEl { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background-color: #f9f9f9; }
-    #inputArea { padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; align-items: center; }
-    #userInputEl { flex: 1; padding: 12px 15px; border: 1px solid #ccc; border-radius: 24px; outline: none; font-size: 15px; }
-    #sendBtn { background-color: #007bff; color: white; border: none; padding: 0 20px; height: 44px; border-radius: 24px; font-weight: 600; cursor: pointer; }
-    #sendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .msg { padding: 10px 16px; border-radius: 18px; max-width: 75%; word-wrap: break-word; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .user { align-self: flex-end; background: #007bff; color: white; border-bottom-right-radius: 4px; }
-    .ai { align-self: flex-start; background: white; color: #333; border: 1px solid #e5e5e5; border-bottom-left-radius: 4px; }
-    #buttonArea button:hover { transform: scaleY(1.1); }
-  </style>
-</head>
-<body>
-  <div id="appCtn">
-    <div id="header">
-      <div style="font-weight: 700; font-size: 1.2rem; color: #333;">StoryKI</div>
-    </div>
-    <div id="messagesListEl">
-      <div class="msg ai">Hallo! Ich bin bereit. Wie kann ich helfen?</div>
-    </div>
-    <div id="inputArea">
-      <input id="userInputEl" type="text" placeholder="Schreibe eine Nachricht..." autocomplete="off">
-    </div>
-    <div id="buttonArea" style="padding: 15px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; justify-content: center;">
-      <button id="sendBtn" style="background-color: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Senden</button>
-      <button id="retryBtn" style="background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Retry</button>
-      <button id="editBtn" style="background-color: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Edit</button>
-      <button id="continueBtn" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Continue</button>
-      <button id="eraseBtn" style="background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: transform 0.2s ease; transform-origin: bottom; min-width: 80px;">Erase</button>
-    </div>
-  </div>
-
-  <script>
-    // Hintergrund aus Settings laden
-    function loadBackground() {
-        const settings = localStorage.getItem('storyki_settings');
-        if (settings) {
-            const data = JSON.parse(settings);
-            const backgroundUrl = data.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
-            document.body.style.backgroundImage = `url(${backgroundUrl})`;
-            document.body.style.backgroundSize = 'cover';
-            document.body.style.backgroundPosition = 'center';
-            document.body.style.backgroundAttachment = 'fixed';
-        } else {
-            document.body.style.backgroundImage = 'url(https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg)';
-            document.body.style.backgroundSize = 'cover';
-            document.body.style.backgroundPosition = 'center';
-            document.body.style.backgroundAttachment = 'fixed';
-        }
-    }
-    
-    // Auf Hintergrund-Änderungen von anderen Seiten reagieren
-    window.addEventListener('backgroundChanged', function(event) {
-        const backgroundUrl = event.detail.backgroundUrl;
-        document.body.style.backgroundImage = `url(${backgroundUrl})`;
-        document.body.style.backgroundSize = 'cover';
-        document.body.style.backgroundPosition = 'center';
-        document.body.style.backgroundAttachment = 'fixed';
-    });
-    
-    // Regelmäßig prüfen, ob sich der Hintergrund geändert hat
-    setInterval(loadBackground, 1000);
-    
-    const messagesListEl = document.getElementById('messagesListEl');
-    const userInputEl = document.getElementById('userInputEl');
-    const sendBtn = document.getElementById('sendBtn');
-    let chatHistory = [];
-
-    function appendMessage(role, text) {
-      const div = document.createElement('div');
-      div.className = `msg ${role}`;
-      div.innerText = text;
-      messagesListEl.appendChild(div);
-      messagesListEl.scrollTop = messagesListEl.scrollHeight;
-      return div;
-    }
-
-    async function askAI(prompt) {
-      return new Promise((resolve, reject) => {
-        const requestId = Math.random().toString(36).substring(7);
-        
-        // Timeout nach 45 Sekunden
-        const timeout = setTimeout(() => {
-          window.removeEventListener("message", handler);
-          reject("Die KI hat zu lange zum Antworten gebraucht.");
-        }, 45000);
-
-        const handler = (event) => {
-          if (event.data.requestId === requestId) {
-            clearTimeout(timeout);
-            window.removeEventListener("message", handler);
-            if (event.data.type === "AI_RESPONSE") {
-              resolve(event.data.text);
-            } else {
-              reject(event.data.error || "Unbekannter Fehler");
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>StoryKI – Game</title>
+        <script src="traits.js"></script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
             }
-          }
-        };
+            *::-webkit-scrollbar {
+                width: 4px;
+            }
+            *::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            *::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.12);
+                border-radius: 2px;
+            }
 
-        window.addEventListener("message", handler);
-        window.parent.postMessage({
-          type: "AI_REQUEST",
-          instruction: prompt,
-          requestId: requestId
-        }, "*");
-      });
-    }
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                font-family: "Segoe UI", Arial, sans-serif;
+            }
 
-    async function sendMessage() {
-      const text = userInputEl.value.trim();
-      if (!text || sendBtn.disabled) return;
+            body {
+                background: #0a0a0a;
+                color: #fff;
+                opacity: 0;
+                transition: opacity 0.4s ease-in-out;
+            }
 
-      appendMessage('user', text);
-      chatHistory.push(`User: ${text}`);
-      userInputEl.value = '';
-      sendBtn.disabled = true;
-      
-      const thinkingBubble = appendMessage('ai', 'KI denkt nach...');
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.68);
+                z-index: 0;
+                pointer-events: none;
+            }
 
-      try {
-        const historyText = chatHistory.join("\n") + "\nKI:";
-        const response = await askAI(historyText);
-        thinkingBubble.innerText = response;
-        chatHistory.push(`KI: ${response}`);
-      } catch (err) {
-        thinkingBubble.innerText = "Fehler: " + err;
-      } finally {
-        sendBtn.disabled = false;
-        userInputEl.focus();
-      }
-    }
+            /* ─── Background Layer ─── */
+            #bg-layer {
+                position: fixed;
+                inset: 0;
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+                z-index: -1;
+                filter: blur(3px) brightness(0.38);
+                transition: background-image 0.6s ease;
+            }
 
-    sendBtn.onclick = sendMessage;
-    userInputEl.onkeydown = (e) => { if(e.key === 'Enter') sendMessage(); };
-    
-    // Hintergrund beim Laden
-    window.addEventListener('load', () => {
-        loadBackground();
-        // Fade in effect
-        setTimeout(() => {
-            document.body.style.opacity = '1';
-        }, 100);
-    });
-    
-    // Zurück zum Hauptmenü mit Übergang
-    function navigateToMenu() {
-        document.body.style.transition = 'opacity 0.4s ease-in-out';
-        document.body.style.opacity = '0';
-        
-        setTimeout(() => {
-            window.location.href = "index.html";
-        }, 400);
-    }
-  </script>
-</body>
+            /* ─── App Shell ─── */
+            #app {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                max-width: 820px;
+                margin: 0 auto;
+            }
+
+            /* ════════════════════════════════════
+               HEADER / TOP NAV
+            ════════════════════════════════════ */
+            #header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 20px;
+                flex-shrink: 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+                background: rgba(8, 8, 8, 0.55);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+            }
+
+            .nav-back-btn {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.18);
+                background: rgba(28, 28, 28, 0.75);
+                color: #fff;
+                font-size: 15px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+                flex-shrink: 0;
+            }
+            .nav-back-btn:hover {
+                background: rgba(55, 55, 55, 0.95);
+                border-color: rgba(255, 255, 255, 0.4);
+            }
+
+            #header-title {
+                flex: 1;
+            }
+            #header-title .story-label {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.35);
+                margin-bottom: 2px;
+            }
+            #header-title .story-name {
+                font-size: 15px;
+                font-weight: 700;
+                color: #fff;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 260px;
+            }
+
+            /* Character badge in header */
+            #char-badge {
+                display: none;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 12px;
+                background: rgba(30, 30, 40, 0.8);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
+                flex-shrink: 0;
+            }
+            #char-badge.visible {
+                display: flex;
+            }
+            .char-avatar-sm {
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 13px;
+                flex-shrink: 0;
+            }
+            .char-avatar-sm.male {
+                background: rgba(30, 60, 110, 0.9);
+                border: 1.5px solid rgba(80, 140, 220, 0.4);
+            }
+            .char-avatar-sm.female {
+                background: rgba(110, 30, 60, 0.9);
+                border: 1.5px solid rgba(220, 80, 140, 0.4);
+            }
+            .char-name-sm {
+                font-size: 12px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.8);
+            }
+            .char-race-sm {
+                font-size: 10px;
+                color: rgba(200, 160, 60, 0.85);
+                font-weight: 600;
+            }
+
+            /* Status indicator */
+            #status-dot-wrap {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                flex-shrink: 0;
+            }
+            .status-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: rgba(80, 200, 100, 0.9);
+                animation: pulse-dot 2.5s infinite;
+            }
+            .status-label {
+                font-size: 11px;
+                color: rgba(80, 200, 100, 0.85);
+                font-weight: 600;
+            }
+            @keyframes pulse-dot {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.35;
+                }
+            }
+
+            /* ════════════════════════════════════
+               MESSAGES
+            ════════════════════════════════════ */
+            #messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 24px 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+            }
+
+            .msg-row {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+            }
+            .msg-row.user {
+                align-items: flex-end;
+            }
+            .msg-row.ai {
+                align-items: flex-start;
+            }
+
+            .msg-sender {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                padding: 0 6px;
+            }
+            .msg-row.user .msg-sender {
+                color: rgba(100, 150, 220, 0.6);
+            }
+            .msg-row.ai .msg-sender {
+                color: rgba(255, 255, 255, 0.28);
+            }
+
+            .msg-bubble {
+                padding: 12px 17px;
+                border-radius: 16px;
+                max-width: 76%;
+                word-wrap: break-word;
+                line-height: 1.65;
+                font-size: 14px;
+                white-space: pre-wrap;
+            }
+            .msg-row.user .msg-bubble {
+                background: rgba(35, 80, 155, 0.88);
+                border: 1px solid rgba(70, 130, 220, 0.3);
+                border-bottom-right-radius: 4px;
+                color: #fff;
+            }
+            .msg-row.ai .msg-bubble {
+                background: rgba(26, 26, 26, 0.92);
+                border: 1px solid rgba(255, 255, 255, 0.09);
+                border-bottom-left-radius: 4px;
+                color: rgba(255, 255, 255, 0.88);
+            }
+            .msg-bubble.thinking {
+                color: rgba(255, 255, 255, 0.35);
+                font-style: italic;
+                animation: blink 1.4s infinite;
+            }
+            @keyframes blink {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
+
+            /* Typing dots */
+            .typing-dots {
+                display: inline-flex;
+                gap: 4px;
+                align-items: center;
+                height: 18px;
+            }
+            .typing-dots span {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.4);
+                animation: typing-bounce 1.2s infinite ease-in-out;
+            }
+            .typing-dots span:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+            .typing-dots span:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+            @keyframes typing-bounce {
+                0%,
+                80%,
+                100% {
+                    transform: translateY(0);
+                    opacity: 0.4;
+                }
+                40% {
+                    transform: translateY(-5px);
+                    opacity: 1;
+                }
+            }
+
+            /* Divider */
+            .chat-divider {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin: 6px 0;
+            }
+            .chat-divider::before,
+            .chat-divider::after {
+                content: "";
+                flex: 1;
+                height: 1px;
+                background: rgba(255, 255, 255, 0.07);
+            }
+            .chat-divider-label {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.2);
+            }
+
+            /* ════════════════════════════════════
+               INPUT AREA
+            ════════════════════════════════════ */
+            #input-section {
+                flex-shrink: 0;
+                background: rgba(8, 8, 8, 0.55);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border-top: 1px solid rgba(255, 255, 255, 0.07);
+            }
+
+            #input-area {
+                display: flex;
+                gap: 10px;
+                align-items: flex-end;
+                padding: 12px 16px 10px 16px;
+            }
+
+            #user-input {
+                flex: 1;
+                padding: 11px 16px;
+                background: rgba(20, 20, 20, 0.95);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 22px;
+                color: #fff;
+                font-size: 14px;
+                outline: none;
+                font-family: inherit;
+                resize: none;
+                line-height: 1.5;
+                max-height: 140px;
+                overflow-y: auto;
+                transition: border-color 0.2s;
+            }
+            #user-input::placeholder {
+                color: rgba(255, 255, 255, 0.22);
+            }
+            #user-input:focus {
+                border-color: rgba(255, 255, 255, 0.25);
+            }
+
+            #send-btn {
+                width: 42px;
+                height: 42px;
+                border-radius: 50%;
+                border: none;
+                background: rgba(35, 85, 165, 0.9);
+                color: #fff;
+                font-size: 17px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    background 0.2s,
+                    transform 0.15s,
+                    opacity 0.2s;
+                flex-shrink: 0;
+                margin-bottom: 1px;
+            }
+            #send-btn:hover:not(:disabled) {
+                background: rgba(50, 110, 200, 0.99);
+                transform: scale(1.06);
+            }
+            #send-btn:disabled {
+                opacity: 0.35;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            /* ─── Action Bar ─── */
+            #action-bar {
+                display: flex;
+                gap: 7px;
+                padding: 0 16px 14px 16px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .act-btn {
+                padding: 7px 16px;
+                border-radius: 18px;
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                background: rgba(24, 24, 24, 0.9);
+                color: rgba(255, 255, 255, 0.65);
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                letter-spacing: 0.02em;
+                white-space: nowrap;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s,
+                    color 0.2s,
+                    transform 0.15s;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .act-btn:hover {
+                background: rgba(40, 40, 40, 0.98);
+                border-color: rgba(255, 255, 255, 0.22);
+                color: #fff;
+                transform: translateY(-1px);
+            }
+            .act-btn:active {
+                transform: translateY(0);
+            }
+
+            .act-btn.btn-retry {
+                border-color: rgba(150, 150, 150, 0.2);
+            }
+            .act-btn.btn-edit {
+                border-color: rgba(100, 170, 230, 0.25);
+                color: rgba(130, 185, 240, 0.85);
+            }
+            .act-btn.btn-edit:hover {
+                background: rgba(30, 60, 100, 0.6);
+                color: #a8d0f8;
+            }
+            .act-btn.btn-continue {
+                border-color: rgba(60, 180, 80, 0.3);
+                color: rgba(100, 210, 120, 0.9);
+            }
+            .act-btn.btn-continue:hover {
+                background: rgba(20, 65, 30, 0.8);
+                color: #90e8a0;
+            }
+            .act-btn.btn-erase {
+                border-color: rgba(180, 60, 60, 0.3);
+                color: rgba(220, 100, 100, 0.85);
+            }
+            .act-btn.btn-erase:hover {
+                background: rgba(70, 20, 20, 0.7);
+                color: #ff9090;
+            }
+
+            /* ─── Toast ─── */
+            #toast {
+                position: fixed;
+                bottom: 28px;
+                left: 50%;
+                transform: translateX(-50%) translateY(80px);
+                background: rgba(40, 140, 80, 0.95);
+                color: #fff;
+                padding: 12px 24px;
+                border-radius: 9px;
+                font-size: 13px;
+                font-weight: 600;
+                z-index: 2000;
+                opacity: 0;
+                transition:
+                    transform 0.3s ease,
+                    opacity 0.3s ease;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                white-space: nowrap;
+                pointer-events: none;
+            }
+            #toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+
+            /* ─── Welcome screen overlay ─── */
+            #welcome-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 100;
+                background: rgba(0, 0, 0, 0.82);
+                backdrop-filter: blur(6px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 1;
+                transition: opacity 0.5s ease;
+            }
+            #welcome-overlay.hidden {
+                opacity: 0;
+                pointer-events: none;
+            }
+            .welcome-card {
+                background: rgba(18, 18, 18, 0.95);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 36px 40px;
+                max-width: 420px;
+                width: 90%;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            }
+            .welcome-icon {
+                font-size: 40px;
+                margin-bottom: 16px;
+            }
+            .welcome-title {
+                font-size: 22px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 8px;
+            }
+            .welcome-sub {
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.4);
+                line-height: 1.6;
+                margin-bottom: 24px;
+            }
+            .welcome-char-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 16px;
+                background: rgba(30, 30, 40, 0.8);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                margin-bottom: 24px;
+                text-align: left;
+            }
+            .welcome-avatar {
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 22px;
+                flex-shrink: 0;
+            }
+            .welcome-avatar.male {
+                background: rgba(30, 60, 110, 0.9);
+                border: 2px solid rgba(80, 140, 220, 0.4);
+            }
+            .welcome-avatar.female {
+                background: rgba(110, 30, 60, 0.9);
+                border: 2px solid rgba(220, 80, 140, 0.4);
+            }
+            .welcome-char-name {
+                font-size: 16px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 3px;
+            }
+            .welcome-char-meta {
+                font-size: 11px;
+                color: rgba(200, 160, 60, 0.85);
+                font-weight: 600;
+            }
+            .welcome-btn {
+                width: 100%;
+                padding: 14px 0;
+                border-radius: 10px;
+                border: none;
+                background: rgba(30, 80, 150, 0.9);
+                border: 1.5px solid rgba(70, 130, 220, 0.4);
+                color: #fff;
+                font-size: 15px;
+                font-weight: 700;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    transform 0.15s;
+                letter-spacing: 0.02em;
+            }
+            .welcome-btn:hover {
+                background: rgba(45, 105, 190, 0.99);
+                transform: translateY(-1px);
+            }
+            .welcome-btn:active {
+                transform: translateY(0);
+            }
+
+            /* ════════════════════════════════════
+               DEV BUTTON
+            ════════════════════════════════════ */
+            #dev-btn {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255, 200, 60, 0.35);
+                background: rgba(60, 45, 10, 0.75);
+                color: rgba(255, 200, 60, 0.85);
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                letter-spacing: 0.04em;
+                flex-shrink: 0;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s,
+                    color 0.2s;
+            }
+            #dev-btn:hover {
+                background: rgba(90, 65, 10, 0.9);
+                border-color: rgba(255, 200, 60, 0.7);
+                color: #ffd060;
+            }
+
+            /* ════════════════════════════════════
+               DEV SCENE (full-screen view)
+            ════════════════════════════════════ */
+            #dev-scene {
+                display: none;
+                position: relative;
+                z-index: 1;
+                flex-direction: column;
+                height: 100vh;
+                max-width: 820px;
+                margin: 0 auto;
+            }
+            #dev-scene.visible {
+                display: flex;
+            }
+
+            /* Scene top nav — mirrors #header */
+            #dev-nav {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 20px;
+                flex-shrink: 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+                background: rgba(8, 8, 8, 0.55);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+            }
+            #dev-nav-title {
+                flex: 1;
+            }
+            #dev-nav-title .dev-title {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(255, 200, 60, 0.7);
+                margin-bottom: 2px;
+            }
+            #dev-nav-title .dev-sub {
+                font-size: 15px;
+                font-weight: 700;
+                color: #fff;
+            }
+
+            /* Search */
+            #dev-search-wrap {
+                padding: 12px 20px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                flex-shrink: 0;
+            }
+            #dev-search {
+                width: 100%;
+                padding: 9px 14px;
+                background: rgba(22, 22, 22, 0.95);
+                border: 1.5px solid rgba(255, 255, 255, 0.09);
+                border-radius: 8px;
+                color: #fff;
+                font-size: 13px;
+                outline: none;
+                font-family: inherit;
+                transition: border-color 0.2s;
+            }
+            #dev-search::placeholder {
+                color: rgba(255, 255, 255, 0.22);
+            }
+            #dev-search:focus {
+                border-color: rgba(255, 200, 60, 0.4);
+            }
+
+            /* Stats bar */
+            #dev-stats {
+                display: flex;
+                gap: 8px;
+                padding: 10px 20px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                flex-shrink: 0;
+            }
+            .dev-stat {
+                flex: 1;
+                background: rgba(24, 24, 24, 0.9);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 7px;
+                padding: 8px 10px;
+                text-align: center;
+            }
+            .dev-stat-val {
+                font-size: 17px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 1px;
+            }
+            .dev-stat-lbl {
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.28);
+            }
+            .dev-stat-val.gold {
+                color: rgba(255, 200, 60, 0.9);
+            }
+            .dev-stat-val.green {
+                color: rgba(80, 210, 110, 0.9);
+            }
+            .dev-stat-val.blue {
+                color: rgba(80, 160, 230, 0.9);
+            }
+
+            /* Scroll area */
+            #dev-scroll {
+                flex: 1;
+                overflow-y: auto;
+                padding: 12px 20px 32px 20px;
+            }
+
+            /* Location group */
+            .dev-loc-group {
+                margin-bottom: 14px;
+            }
+            .dev-loc-header {
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                padding: 10px 14px;
+                background: rgba(28, 28, 28, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.08);
+                border-radius: 10px 10px 0 0;
+                cursor: pointer;
+                user-select: none;
+                transition: background 0.2s;
+            }
+            .dev-loc-header:hover {
+                background: rgba(38, 38, 38, 0.95);
+            }
+            .dev-loc-header.collapsed {
+                border-radius: 10px;
+            }
+            .dev-loc-icon {
+                font-size: 17px;
+                flex-shrink: 0;
+            }
+            .dev-loc-info {
+                flex: 1;
+                min-width: 0;
+            }
+            .dev-loc-name {
+                font-size: 13px;
+                font-weight: 700;
+                color: #fff;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .dev-loc-meta {
+                font-size: 10px;
+                color: rgba(255, 255, 255, 0.32);
+                margin-top: 2px;
+            }
+            .dev-loc-count {
+                background: rgba(40, 120, 60, 0.3);
+                border: 1px solid rgba(60, 180, 90, 0.3);
+                border-radius: 5px;
+                padding: 2px 8px;
+                font-size: 10px;
+                font-weight: 700;
+                color: rgba(80, 210, 110, 0.9);
+                flex-shrink: 0;
+            }
+            .dev-loc-chevron {
+                color: rgba(255, 255, 255, 0.3);
+                font-size: 11px;
+                flex-shrink: 0;
+                transition: transform 0.2s;
+            }
+            .dev-loc-header.collapsed .dev-loc-chevron {
+                transform: rotate(-90deg);
+            }
+
+            /* NPC list */
+            .dev-npc-list {
+                background: rgba(18, 18, 18, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.06);
+                border-top: none;
+                border-radius: 0 0 10px 10px;
+                overflow: hidden;
+            }
+            .dev-npc-list.hidden {
+                display: none;
+            }
+            .dev-npc-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 14px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+                transition: background 0.15s;
+            }
+            .dev-npc-row:last-child {
+                border-bottom: none;
+            }
+            .dev-npc-row:hover {
+                background: rgba(35, 35, 35, 0.9);
+            }
+            .dev-npc-avatar {
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                flex-shrink: 0;
+            }
+            .dev-npc-avatar.male {
+                background: rgba(30, 55, 100, 0.85);
+                border: 1.5px solid rgba(70, 130, 210, 0.35);
+            }
+            .dev-npc-avatar.female {
+                background: rgba(100, 30, 55, 0.85);
+                border: 1.5px solid rgba(210, 70, 130, 0.35);
+            }
+            .dev-npc-name {
+                flex: 1;
+                font-size: 12px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.85);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .dev-npc-race {
+                font-size: 10px;
+                font-weight: 600;
+                color: rgba(200, 160, 50, 0.75);
+                white-space: nowrap;
+            }
+            .dev-npc-gender {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.25);
+                flex-shrink: 0;
+            }
+
+            /* Traits row below NPC name */
+            .dev-npc-traits {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-top: 4px;
+            }
+
+            /* Appearance pill row */
+            .dev-npc-appearance {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-top: 3px;
+            }
+
+            /* Family role badge */
+            .dev-npc-role {
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                padding: 2px 6px;
+                border-radius: 4px;
+                flex-shrink: 0;
+            }
+            .dev-npc-role.role-parent {
+                background: rgba(40, 80, 40, 0.5);
+                border: 1px solid rgba(80, 160, 80, 0.3);
+                color: rgba(120, 200, 120, 0.85);
+            }
+            .dev-npc-role.role-child {
+                background: rgba(30, 50, 90, 0.5);
+                border: 1px solid rgba(70, 120, 200, 0.3);
+                color: rgba(120, 160, 220, 0.85);
+            }
+            .dev-npc-role.role-single {
+                background: rgba(50, 50, 50, 0.5);
+                border: 1px solid rgba(120, 120, 120, 0.3);
+                color: rgba(160, 160, 160, 0.75);
+            }
+
+            /* Age badge in main row */
+            .dev-npc-age {
+                font-size: 10px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.38);
+                background: rgba(28, 28, 28, 0.8);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 4px;
+                padding: 2px 7px;
+                flex-shrink: 0;
+                font-family: monospace;
+                letter-spacing: 0.03em;
+            }
+
+            /* Birthdate line in expanded detail */
+            .dev-npc-birthdate {
+                margin-top: 4px;
+                font-size: 10px;
+                color: rgba(255, 255, 255, 0.25);
+            }
+            .dev-npc-birthdate strong {
+                color: rgba(255, 255, 255, 0.55);
+                font-weight: 700;
+            }
+
+            /* Family info line in expanded detail */
+            .dev-npc-family {
+                margin-top: 5px;
+                font-size: 10px;
+                color: rgba(255, 255, 255, 0.3);
+            }
+            .dev-npc-family strong {
+                color: rgba(255, 200, 80, 0.65);
+                font-weight: 700;
+            }
+
+            /* Relations section in expanded detail */
+            .dev-npc-relations {
+                margin-top: 5px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                align-items: center;
+            }
+            .dev-rel-group-label {
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.22);
+                margin-right: 2px;
+                margin-left: 4px;
+            }
+            .dev-rel-group-label:first-child {
+                margin-left: 0;
+            }
+            .dev-rel-pill {
+                font-size: 10px;
+                font-weight: 600;
+                padding: 2px 7px;
+                border-radius: 4px;
+                background: rgba(35, 35, 45, 0.85);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                color: rgba(255, 255, 255, 0.55);
+                white-space: nowrap;
+            }
+
+            /* Expanded NPC card */
+            .dev-npc-row {
+                flex-wrap: wrap;
+            }
+            .dev-npc-row.expanded {
+                background: rgba(28, 28, 28, 0.98);
+            }
+            .dev-npc-row-main {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                width: 100%;
+                cursor: pointer;
+            }
+            .dev-npc-detail {
+                display: none;
+                width: 100%;
+                padding: 6px 0 4px 36px;
+            }
+            .dev-npc-row.expanded .dev-npc-detail {
+                display: block;
+            }
+
+            /* Empty state */
+            .dev-empty {
+                text-align: center;
+                padding: 48px 20px;
+                color: rgba(255, 255, 255, 0.25);
+                font-size: 13px;
+                line-height: 1.6;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="bg-layer"></div>
+
+        <!-- ─── Welcome Overlay ─── -->
+        <div id="welcome-overlay">
+            <div class="welcome-card">
+                <div class="welcome-icon">📖</div>
+                <div class="welcome-title">Your Story Begins</div>
+                <div class="welcome-sub">
+                    Your character is ready. The world awaits your decisions.
+                </div>
+                <div
+                    class="welcome-char-row"
+                    id="welcome-char-row"
+                    style="display: none"
+                >
+                    <div class="welcome-avatar male" id="welcome-avatar">♂</div>
+                    <div>
+                        <div class="welcome-char-name" id="welcome-char-name">
+                            —
+                        </div>
+                        <div class="welcome-char-meta" id="welcome-char-meta">
+                            —
+                        </div>
+                    </div>
+                </div>
+                <button class="welcome-btn" onclick="dismissWelcome()">
+                    ▶&nbsp; Begin Adventure
+                </button>
+            </div>
+        </div>
+
+        <!-- ─── Main App ─── -->
+        <div id="app">
+            <!-- Header -->
+            <div id="header">
+                <button class="nav-back-btn" onclick="goBack()" title="Back">
+                    &#8592;
+                </button>
+
+                <div id="header-title">
+                    <div class="story-label">StoryKI</div>
+                    <div class="story-name" id="story-name">Adventure</div>
+                </div>
+
+                <div id="char-badge">
+                    <div class="char-avatar-sm male" id="header-avatar">♂</div>
+                    <div>
+                        <div class="char-name-sm" id="header-char-name">—</div>
+                        <div class="char-race-sm" id="header-char-race">—</div>
+                    </div>
+                </div>
+
+                <div id="status-dot-wrap">
+                    <div class="status-dot" id="status-dot"></div>
+                    <span class="status-label" id="status-label">Online</span>
+                </div>
+
+                <button
+                    id="dev-btn"
+                    onclick="openDevPanel()"
+                    title="Dev Panel – NPC Viewer"
+                >
+                    DEV
+                </button>
+            </div>
+
+            <!-- Messages -->
+            <div id="messages">
+                <div class="chat-divider">
+                    <span class="chat-divider-label">Story Start</span>
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div id="input-section">
+                <div id="input-area">
+                    <textarea
+                        id="user-input"
+                        rows="1"
+                        placeholder="Was tust du als nächstes…"
+                        autocomplete="off"
+                    ></textarea>
+                    <button id="send-btn" title="Senden">&#10148;</button>
+                </div>
+                <div id="action-bar">
+                    <button class="act-btn btn-retry" id="retry-btn">
+                        ↺ Retry
+                    </button>
+                    <button class="act-btn btn-edit" id="edit-btn">
+                        ✎ Edit
+                    </button>
+                    <button class="act-btn btn-continue" id="continue-btn">
+                        ▶ Continue
+                    </button>
+                    <button class="act-btn btn-erase" id="erase-btn">
+                        ✕ Erase
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── DEV SCENE ─── -->
+        <div id="dev-scene">
+            <!-- Nav bar -->
+            <div id="dev-nav">
+                <button
+                    class="nav-back-btn"
+                    onclick="closeDevPanel()"
+                    title="Back to Story"
+                >
+                    &#8592;
+                </button>
+                <div id="dev-nav-title">
+                    <div class="dev-title">&#128295; DEV</div>
+                    <div class="dev-sub" id="dev-sub-text">NPC Viewer</div>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div id="dev-search-wrap">
+                <input
+                    id="dev-search"
+                    type="text"
+                    placeholder="Search NPC by name or race…"
+                    oninput="renderDevPanel()"
+                />
+            </div>
+
+            <!-- Stats -->
+            <div id="dev-stats">
+                <div class="dev-stat">
+                    <div class="dev-stat-val gold" id="dev-stat-locs">0</div>
+                    <div class="dev-stat-lbl">Locations</div>
+                </div>
+                <div class="dev-stat">
+                    <div class="dev-stat-val green" id="dev-stat-npcs">0</div>
+                    <div class="dev-stat-lbl">Total NPCs</div>
+                </div>
+                <div class="dev-stat">
+                    <div class="dev-stat-val blue" id="dev-stat-races">0</div>
+                    <div class="dev-stat-lbl">Races</div>
+                </div>
+            </div>
+
+            <!-- NPC list -->
+            <div id="dev-scroll">
+                <div class="dev-empty" id="dev-empty">
+                    No NPC data found.<br />
+                    <span style="font-size: 11px; opacity: 0.55">
+                        Start a New Story to generate world inhabitants.
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast"></div>
+
+        <script>
+            /* ═══════════════════════════════════════
+               CONSTANTS
+            ═══════════════════════════════════════ */
+            const SETTINGS_KEY = "storyki_settings";
+            const CHARS_KEY = "storyki_characters";
+            const CARDS_KEY = "storyki_storycards";
+
+            /* ═══════════════════════════════════════
+               STATE
+            ═══════════════════════════════════════ */
+            let chatHistory = [];
+            let isBusy = false;
+            let activeChar = null;
+
+            /* ═══════════════════════════════════════
+               BACKGROUND
+            ═══════════════════════════════════════ */
+            function loadBackground() {
+                const raw = localStorage.getItem(SETTINGS_KEY);
+                const url = raw
+                    ? JSON.parse(raw).backgroundUrl ||
+                      "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg"
+                    : "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg";
+                const el = document.getElementById("bg-layer");
+                if (el.style.backgroundImage !== `url(${url})`) {
+                    el.style.backgroundImage = `url(${url})`;
+                }
+            }
+
+            /* ═══════════════════════════════════════
+               CHARACTER LOAD
+            ═══════════════════════════════════════ */
+            function loadLatestCharacter() {
+                try {
+                    const chars = JSON.parse(
+                        localStorage.getItem(CHARS_KEY) || "[]",
+                    );
+                    if (!chars.length) return null;
+                    return chars[chars.length - 1];
+                } catch {
+                    return null;
+                }
+            }
+
+            function applyCharacter(ch) {
+                if (!ch) return;
+                activeChar = ch;
+
+                const fullName =
+                    [ch.firstName, ch.lastName].filter(Boolean).join(" ") ||
+                    "Unknown";
+                const isF = ch.gender === "female";
+                const icon = isF ? "♀" : "♂";
+                const avatarClass = isF ? "female" : "male";
+
+                // Header badge
+                const badge = document.getElementById("char-badge");
+                badge.classList.add("visible");
+                const av = document.getElementById("header-avatar");
+                av.textContent = icon;
+                av.className = `char-avatar-sm ${avatarClass}`;
+                document.getElementById("header-char-name").textContent =
+                    fullName;
+                document.getElementById("header-char-race").textContent =
+                    ch.raceName || "Unknown Race";
+
+                // Story name in header
+                document.getElementById("story-name").textContent =
+                    fullName + "'s Story";
+
+                // Welcome overlay
+                const wRow = document.getElementById("welcome-char-row");
+                wRow.style.display = "flex";
+                const wAv = document.getElementById("welcome-avatar");
+                wAv.textContent = icon;
+                wAv.className = `welcome-avatar ${avatarClass}`;
+                document.getElementById("welcome-char-name").textContent =
+                    fullName;
+
+                // Spawn name
+                let spawnName = "";
+                if (ch.spawnId) {
+                    try {
+                        const cards = JSON.parse(
+                            localStorage.getItem(CARDS_KEY) || "[]",
+                        );
+                        const spawn = cards.find((c) => c.id === ch.spawnId);
+                        if (spawn) spawnName = spawn.title;
+                    } catch {}
+                }
+                document.getElementById("welcome-char-meta").textContent = [
+                    ch.raceName,
+                    spawnName ? "@ " + spawnName : "",
+                ]
+                    .filter(Boolean)
+                    .join("  ·  ");
+            }
+
+            /* ═══════════════════════════════════════
+               WELCOME OVERLAY
+            ═══════════════════════════════════════ */
+            function dismissWelcome() {
+                const ov = document.getElementById("welcome-overlay");
+                ov.classList.add("hidden");
+                setTimeout(() => {
+                    ov.style.display = "none";
+                }, 600);
+
+                // Post opening narration
+                if (activeChar) {
+                    const fullName = [activeChar.firstName, activeChar.lastName]
+                        .filter(Boolean)
+                        .join(" ");
+                    triggerNarration(
+                        `Begin an immersive fantasy story. The player character is ${fullName}` +
+                            (activeChar.raceName
+                                ? `, a ${activeChar.raceName}`
+                                : "") +
+                            (activeChar.gender
+                                ? ` (${activeChar.gender})`
+                                : "") +
+                            ". Open with a vivid scene introduction and end with a choice or prompt for the player.",
+                    );
+                } else {
+                    addSystemDivider("Chapter 1");
+                    appendBubble(
+                        "ai",
+                        "Willkommen, Abenteurer! Deine Geschichte beginnt jetzt.\n\nWas möchtest du als erstes tun?",
+                    );
+                }
+            }
+
+            /* ═══════════════════════════════════════
+               MESSAGE HELPERS
+            ═══════════════════════════════════════ */
+            function appendBubble(role, text, cssExtra = "") {
+                const messagesEl = document.getElementById("messages");
+                const row = document.createElement("div");
+                row.className = `msg-row ${role}`;
+
+                const senderEl = document.createElement("div");
+                senderEl.className = "msg-sender";
+                senderEl.textContent =
+                    role === "user"
+                        ? activeChar
+                            ? [activeChar.firstName, activeChar.lastName]
+                                  .filter(Boolean)
+                                  .join(" ")
+                            : "You"
+                        : "Narrator";
+
+                const bubble = document.createElement("div");
+                bubble.className = `msg-bubble ${cssExtra}`;
+                bubble.textContent = text;
+
+                row.appendChild(senderEl);
+                row.appendChild(bubble);
+                messagesEl.appendChild(row);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+                return bubble;
+            }
+
+            function appendTypingIndicator() {
+                const messagesEl = document.getElementById("messages");
+                const row = document.createElement("div");
+                row.className = "msg-row ai";
+                row.id = "typing-row";
+
+                const senderEl = document.createElement("div");
+                senderEl.className = "msg-sender";
+                senderEl.textContent = "Narrator";
+
+                const bubble = document.createElement("div");
+                bubble.className = "msg-bubble";
+                bubble.innerHTML =
+                    '<div class="typing-dots"><span></span><span></span><span></span></div>';
+
+                row.appendChild(senderEl);
+                row.appendChild(bubble);
+                messagesEl.appendChild(row);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+                return row;
+            }
+
+            function removeTypingIndicator() {
+                const el = document.getElementById("typing-row");
+                if (el) el.remove();
+            }
+
+            function addSystemDivider(label) {
+                const messagesEl = document.getElementById("messages");
+                const div = document.createElement("div");
+                div.className = "chat-divider";
+                div.innerHTML = `<span class="chat-divider-label">${label}</span>`;
+                messagesEl.appendChild(div);
+            }
+
+            function setStatus(online) {
+                const dot = document.getElementById("status-dot");
+                const lbl = document.getElementById("status-label");
+                dot.style.background = online
+                    ? "rgba(80,200,100,0.9)"
+                    : "rgba(200,80,80,0.9)";
+                lbl.textContent = online ? "Online" : "Offline";
+                lbl.style.color = online
+                    ? "rgba(80,200,100,0.85)"
+                    : "rgba(200,80,80,0.85)";
+            }
+
+            /* ═══════════════════════════════════════
+               AI
+            ═══════════════════════════════════════ */
+            function askAI(prompt) {
+                return new Promise((resolve, reject) => {
+                    const requestId = Math.random().toString(36).substring(7);
+                    const timeout = setTimeout(() => {
+                        window.removeEventListener("message", handler);
+                        reject("Die KI hat zu lange gebraucht.");
+                    }, 45000);
+
+                    const handler = (event) => {
+                        if (event.data.requestId === requestId) {
+                            clearTimeout(timeout);
+                            window.removeEventListener("message", handler);
+                            if (event.data.type === "AI_RESPONSE")
+                                resolve(event.data.text);
+                            else
+                                reject(
+                                    event.data.error || "Unbekannter Fehler",
+                                );
+                        }
+                    };
+
+                    window.addEventListener("message", handler);
+                    window.parent.postMessage(
+                        { type: "AI_REQUEST", instruction: prompt, requestId },
+                        "*",
+                    );
+                });
+            }
+
+            async function triggerNarration(systemPrompt) {
+                if (isBusy) return;
+                isBusy = true;
+                setSendDisabled(true);
+                setStatus(false);
+
+                const typing = appendTypingIndicator();
+
+                try {
+                    const history =
+                        chatHistory.length > 0
+                            ? chatHistory.join("\n") + "\nNarrator:"
+                            : systemPrompt;
+                    const response = await askAI(
+                        chatHistory.length > 0 ? history : systemPrompt,
+                    );
+                    removeTypingIndicator();
+                    appendBubble("ai", response);
+                    chatHistory.push("Narrator: " + response);
+                } catch (err) {
+                    removeTypingIndicator();
+                    appendBubble("ai", "[ Fehler: " + err + " ]");
+                } finally {
+                    isBusy = false;
+                    setSendDisabled(false);
+                    setStatus(true);
+                }
+            }
+
+            async function sendMessage() {
+                const inputEl = document.getElementById("user-input");
+                const text = inputEl.value.trim();
+                if (!text || isBusy) return;
+
+                appendBubble("user", text);
+                chatHistory.push(
+                    (activeChar
+                        ? [activeChar.firstName, activeChar.lastName]
+                              .filter(Boolean)
+                              .join(" ")
+                        : "Player") +
+                        ": " +
+                        text,
+                );
+                inputEl.value = "";
+                inputEl.style.height = "auto";
+
+                isBusy = true;
+                setSendDisabled(true);
+                setStatus(false);
+
+                const typing = appendTypingIndicator();
+
+                try {
+                    const historyText = chatHistory.join("\n") + "\nNarrator:";
+                    const response = await askAI(historyText);
+                    removeTypingIndicator();
+                    appendBubble("ai", response);
+                    chatHistory.push("Narrator: " + response);
+                } catch (err) {
+                    removeTypingIndicator();
+                    appendBubble("ai", "[ Fehler: " + err + " ]");
+                } finally {
+                    isBusy = false;
+                    setSendDisabled(false);
+                    setStatus(true);
+                }
+            }
+
+            function setSendDisabled(v) {
+                document.getElementById("send-btn").disabled = v;
+            }
+
+            /* ═══════════════════════════════════════
+               ACTION BUTTONS
+            ═══════════════════════════════════════ */
+            document.getElementById("send-btn").onclick = sendMessage;
+
+            document
+                .getElementById("user-input")
+                .addEventListener("keydown", (e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                });
+
+            // Auto-resize textarea
+            document
+                .getElementById("user-input")
+                .addEventListener("input", function () {
+                    this.style.height = "auto";
+                    this.style.height = Math.min(this.scrollHeight, 140) + "px";
+                });
+
+            document.getElementById("retry-btn").onclick = async () => {
+                if (isBusy) return;
+                // Remove last AI message from DOM and history
+                const messagesEl = document.getElementById("messages");
+                const aiRows = messagesEl.querySelectorAll(".msg-row.ai");
+                if (!aiRows.length) return;
+                aiRows[aiRows.length - 1].remove();
+                // Remove last narrator entry from history
+                for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    if (chatHistory[i].startsWith("Narrator:")) {
+                        chatHistory.splice(i, 1);
+                        break;
+                    }
+                }
+                isBusy = true;
+                setSendDisabled(true);
+                setStatus(false);
+                appendTypingIndicator();
+                try {
+                    const histText = chatHistory.join("\n") + "\nNarrator:";
+                    const r = await askAI(histText);
+                    removeTypingIndicator();
+                    appendBubble("ai", r);
+                    chatHistory.push("Narrator: " + r);
+                } catch (e) {
+                    removeTypingIndicator();
+                    appendBubble("ai", "[ Fehler: " + e + " ]");
+                } finally {
+                    isBusy = false;
+                    setSendDisabled(false);
+                    setStatus(true);
+                }
+            };
+
+            document.getElementById("continue-btn").onclick = async () => {
+                if (isBusy) return;
+                isBusy = true;
+                setSendDisabled(true);
+                setStatus(false);
+                appendTypingIndicator();
+                try {
+                    const histText = chatHistory.join("\n") + "\nNarrator:";
+                    const r = await askAI(histText);
+                    removeTypingIndicator();
+                    appendBubble("ai", r);
+                    chatHistory.push("Narrator: " + r);
+                } catch (e) {
+                    removeTypingIndicator();
+                    appendBubble("ai", "[ Fehler: " + e + " ]");
+                } finally {
+                    isBusy = false;
+                    setSendDisabled(false);
+                    setStatus(true);
+                }
+            };
+
+            document.getElementById("edit-btn").onclick = () => {
+                const messagesEl = document.getElementById("messages");
+                const userRows = messagesEl.querySelectorAll(".msg-row.user");
+                if (!userRows.length) return;
+                const lastRow = userRows[userRows.length - 1];
+                const bubble = lastRow.querySelector(".msg-bubble");
+                const text = bubble ? bubble.textContent : "";
+                document.getElementById("user-input").value = text;
+                document.getElementById("user-input").focus();
+                // Remove from DOM
+                lastRow.remove();
+                // Remove from history
+                for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    const prefix =
+                        (activeChar
+                            ? [activeChar.firstName, activeChar.lastName]
+                                  .filter(Boolean)
+                                  .join(" ")
+                            : "Player") + ":";
+                    if (chatHistory[i].startsWith(prefix)) {
+                        chatHistory.splice(i, 1);
+                        break;
+                    }
+                }
+            };
+
+            document.getElementById("erase-btn").onclick = () => {
+                if (!confirm("Den gesamten Chat löschen?")) return;
+                chatHistory = [];
+                const messagesEl = document.getElementById("messages");
+                messagesEl.innerHTML = "";
+                addSystemDivider("Story Reset");
+                showToast("Chat gelöscht.", "#c04040");
+            };
+
+            /* ═══════════════════════════════════════
+               TOAST
+            ═══════════════════════════════════════ */
+            function showToast(msg, bg = "rgba(40,140,80,0.95)") {
+                const t = document.getElementById("toast");
+                t.textContent = msg;
+                t.style.background = bg;
+                t.classList.add("show");
+                clearTimeout(t._timer);
+                t._timer = setTimeout(() => t.classList.remove("show"), 2800);
+            }
+
+            /* ═══════════════════════════════════════
+               DEV PANEL
+            ═══════════════════════════════════════ */
+            const NPCS_KEY = "storyki_npcs";
+
+            const DEV_TYPE_ICON = {
+                village: "🏘️",
+                city: "🏙️",
+                country: "🗺️",
+                kingdom: "👑",
+            };
+
+            let devCollapsed = {};
+
+            function openDevPanel() {
+                document.getElementById("app").style.display = "none";
+                document.getElementById("dev-scene").classList.add("visible");
+                renderDevPanel();
+            }
+
+            function closeDevPanel() {
+                document
+                    .getElementById("dev-scene")
+                    .classList.remove("visible");
+                document.getElementById("app").style.display = "flex";
+            }
+
+            function renderDevPanel() {
+                const raw = localStorage.getItem(NPCS_KEY);
+                const scroll = document.getElementById("dev-scroll");
+                const empty = document.getElementById("dev-empty");
+                const term = (document.getElementById("dev-search").value || "")
+                    .toLowerCase()
+                    .trim();
+
+                if (!raw) {
+                    scroll.innerHTML = "";
+                    scroll.appendChild(empty);
+                    empty.style.display = "block";
+                    document.getElementById("dev-stat-locs").textContent = "0";
+                    document.getElementById("dev-stat-npcs").textContent = "0";
+                    document.getElementById("dev-stat-races").textContent = "0";
+                    return;
+                }
+
+                const allNPCs = JSON.parse(raw); // { locationId: NPC[] }
+                const locIds = Object.keys(allNPCs);
+                let totalNPCs = 0;
+                const raceSet = new Set();
+
+                locIds.forEach((lid) =>
+                    allNPCs[lid].forEach((n) => {
+                        totalNPCs++;
+                        if (n.raceName) raceSet.add(n.raceName);
+                    }),
+                );
+
+                document.getElementById("dev-stat-locs").textContent =
+                    locIds.length;
+                document.getElementById("dev-stat-npcs").textContent =
+                    totalNPCs.toLocaleString("de-DE");
+                document.getElementById("dev-stat-races").textContent =
+                    raceSet.size;
+                document.getElementById("dev-sub-text").textContent =
+                    `${totalNPCs.toLocaleString("de-DE")} NPCs · ${locIds.length} location(s)`;
+
+                /* Rebuild scroll content */
+                scroll.innerHTML = "";
+
+                if (locIds.length === 0) {
+                    scroll.appendChild(empty);
+                    empty.style.display = "block";
+                    return;
+                }
+
+                locIds.forEach((lid) => {
+                    let npcs = allNPCs[lid];
+                    if (!npcs || npcs.length === 0) return;
+
+                    /* Filter */
+                    if (term) {
+                        npcs = npcs.filter(
+                            (n) =>
+                                (n.firstName + " " + n.lastName)
+                                    .toLowerCase()
+                                    .includes(term) ||
+                                (n.raceName || "").toLowerCase().includes(term),
+                        );
+                        if (npcs.length === 0) return;
+                    }
+
+                    const locName = npcs[0].locationName || "Unknown Location";
+                    const locDetail = npcs[0].locationDetail || "location";
+                    const icon = DEV_TYPE_ICON[locDetail] || "📍";
+                    const isCollapsed = devCollapsed[lid] ?? false;
+
+                    /* Group wrapper */
+                    const group = document.createElement("div");
+                    group.className = "dev-loc-group";
+
+                    /* Header */
+                    const header = document.createElement("div");
+                    header.className =
+                        "dev-loc-header" + (isCollapsed ? " collapsed" : "");
+                    header.innerHTML = `
+                        <span class="dev-loc-icon">${icon}</span>
+                        <div class="dev-loc-info">
+                            <div class="dev-loc-name">${escDevHtml(locName)}</div>
+                            <div class="dev-loc-meta">${locDetail.toUpperCase()} · ${npcs.length} NPCs shown</div>
+                        </div>
+                        <span class="dev-loc-count">${npcs.length}</span>
+                        <span class="dev-loc-chevron">▾</span>
+                    `;
+                    header.addEventListener("click", () => {
+                        devCollapsed[lid] = !devCollapsed[lid];
+                        renderDevPanel();
+                    });
+
+                    /* NPC list */
+                    const list = document.createElement("div");
+                    list.className =
+                        "dev-npc-list" + (isCollapsed ? " hidden" : "");
+
+                    npcs.forEach((npc) => {
+                        const isF = npc.gender === "female";
+                        const avCls = isF ? "female" : "male";
+                        const icon = isF ? "♀" : "♂";
+                        const full = [npc.firstName, npc.lastName]
+                            .filter(Boolean)
+                            .join(" ");
+
+                        /* ── Personality badge HTML ── */
+                        let personalityHTML = "";
+                        if (npc.traits?.personality?.length) {
+                            personalityHTML = npc.traits.personality
+                                .map((t) =>
+                                    typeof buildTraitBadgeHTML === "function"
+                                        ? buildTraitBadgeHTML(t)
+                                        : `<span style="font-size:10px;color:#aaa">${escDevHtml(t.label ?? t)}</span>`,
+                                )
+                                .join(" ");
+                        }
+
+                        /* ── Appearance pill HTML ── */
+                        let appearanceHTML = "";
+                        if (npc.traits?.appearance) {
+                            const ap = npc.traits.appearance;
+                            const entries = [
+                                { key: "Hair", val: ap.hairColor },
+                                { key: "Eyes", val: ap.eyeColor },
+                                { key: "Skin", val: ap.skinColor },
+                            ];
+                            appearanceHTML = entries
+                                .filter((e) => e.val)
+                                .map((e) => {
+                                    const cssCol =
+                                        typeof getAppearanceCssColor ===
+                                        "function"
+                                            ? getAppearanceCssColor(e.val)
+                                            : "#888";
+                                    const pill =
+                                        typeof buildAppearancePillHTML ===
+                                        "function"
+                                            ? buildAppearancePillHTML(
+                                                  e.val,
+                                                  cssCol,
+                                              )
+                                            : `<span style="font-size:10px;color:#aaa">${escDevHtml(e.val)}</span>`;
+                                    return `<span style="font-size:9px;font-weight:700;letter-spacing:.05em;color:rgba(255,255,255,.25);margin-right:2px">${e.key}</span>${pill}`;
+                                })
+                                .join("  ");
+                        }
+
+                        /* ── Family role badge ── */
+                        const roleLabel = npc.role || "";
+                        const roleBadgeHTML = roleLabel
+                            ? `<span class="dev-npc-role role-${escDevHtml(roleLabel)}">${escDevHtml(roleLabel)}</span>`
+                            : "";
+
+                        /* ── Age badge ── */
+                        const ageBadgeHTML =
+                            npc.age != null
+                                ? `<span class="dev-npc-age">${npc.age}</span>`
+                                : "";
+
+                        /* ── Birthdate ── */
+                        let birthdateHTML = "";
+                        if (npc.birthdate) {
+                            birthdateHTML =
+                                `<div class="dev-npc-birthdate">` +
+                                `&#127874; Day <strong>${npc.birthdate.day}</strong>` +
+                                `, Month <strong>${npc.birthdate.month}</strong>` +
+                                `</div>`;
+                        }
+
+                        /* ── Family info line ── */
+                        let familyHTML = "";
+                        if (npc.familyName) {
+                            familyHTML = `<div class="dev-npc-family">Family&nbsp;<strong>${escDevHtml(npc.familyName)}</strong></div>`;
+                        }
+
+                        /* ── Relations ── */
+                        let relationsHTML = "";
+                        if (npc.relations && npc.relations.length > 0) {
+                            const grouped = {};
+                            npc.relations.forEach((r) => {
+                                if (!grouped[r.type]) grouped[r.type] = [];
+                                const relNpc = allNPCs[lid]?.find(
+                                    (n) => n.id === r.npcId,
+                                );
+                                if (relNpc) {
+                                    const relFull = [
+                                        relNpc.firstName,
+                                        relNpc.lastName,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(" ");
+                                    grouped[r.type].push(relFull);
+                                }
+                            });
+                            const parts = Object.entries(grouped).map(
+                                ([type, names]) =>
+                                    `<span class="dev-rel-group-label">${escDevHtml(type)}</span>` +
+                                    names
+                                        .map(
+                                            (n) =>
+                                                `<span class="dev-rel-pill">${escDevHtml(n)}</span>`,
+                                        )
+                                        .join(""),
+                            );
+                            if (parts.length > 0) {
+                                relationsHTML = `<div class="dev-npc-relations">${parts.join("")}</div>`;
+                            }
+                        }
+
+                        const row = document.createElement("div");
+                        row.className = "dev-npc-row";
+                        row.innerHTML = `
+                            <div class="dev-npc-row-main">
+                                <div class="dev-npc-avatar ${avCls}">${icon}</div>
+                                <span class="dev-npc-name">${escDevHtml(full)}</span>
+                                <span class="dev-npc-race">${escDevHtml(npc.raceName || "—")}</span>
+                                ${ageBadgeHTML}
+                                ${roleBadgeHTML}
+                                <span class="dev-npc-gender">${icon}</span>
+                            </div>
+                            <div class="dev-npc-detail">
+                                ${birthdateHTML}
+                                ${familyHTML}
+                                ${relationsHTML}
+                                ${
+                                    personalityHTML
+                                        ? `<div class="dev-npc-traits">${personalityHTML}</div>`
+                                        : ""
+                                }
+                                ${
+                                    appearanceHTML
+                                        ? `<div class="dev-npc-appearance">${appearanceHTML}</div>`
+                                        : ""
+                                }
+                            </div>
+                        `;
+
+                        /* Toggle expand on click */
+                        row.querySelector(".dev-npc-row-main").addEventListener(
+                            "click",
+                            () => row.classList.toggle("expanded"),
+                        );
+
+                        list.appendChild(row);
+                    });
+
+                    group.appendChild(header);
+                    if (!isCollapsed) group.appendChild(list);
+                    scroll.appendChild(group);
+                });
+
+                if (scroll.children.length === 0) {
+                    scroll.innerHTML = `<div class="dev-empty">No NPCs match "<em>${escDevHtml(term)}</em>".</div>`;
+                }
+            }
+
+            function escDevHtml(str) {
+                return (str || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
+            }
+
+            /* ═══════════════════════════════════════
+               NAVIGATION
+            ═══════════════════════════════════════ */
+            function goBack() {
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 400);
+            }
+
+            /* ═══════════════════════════════════════
+               INIT
+            ═══════════════════════════════════════ */
+            window.addEventListener("load", () => {
+                loadBackground();
+                setInterval(loadBackground, 2000);
+
+                const char = loadLatestCharacter();
+                if (char) applyCharacter(char);
+
+                setTimeout(() => {
+                    document.body.style.opacity = "1";
+                }, 100);
+            });
+        </script>
+    </body>
 </html>

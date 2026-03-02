@@ -439,44 +439,46 @@
             }
 
             /* ════════════════════════════════════
-           CREATE / EDIT FORM OVERLAY
-        ════════════════════════════════════ */
-            .form-overlay {
+               FORM VIEW (free, not a modal)
+            ════════════════════════════════════ */
+            #form-view {
                 display: none;
-                position: fixed;
-                inset: 0;
-                z-index: 500;
+                position: relative;
+                z-index: 1;
+                flex-direction: column;
+                height: 100vh;
                 align-items: center;
-                justify-content: center;
-                background: rgba(0, 0, 0, 0.55);
-                backdrop-filter: blur(4px);
+                width: 100%;
             }
 
-            .form-overlay.visible {
+            #form-view.visible {
                 display: flex;
             }
 
-            .form-panel {
-                background: rgba(22, 22, 22, 0.98);
-                border: 1.5px solid rgba(255, 255, 255, 0.12);
-                border-radius: 14px;
-                padding: 32px 30px 28px 30px;
-                width: 100%;
-                max-width: 560px;
-                max-height: 90vh;
+            .form-scroll {
+                flex: 1;
                 overflow-y: auto;
-                box-shadow: 0 16px 64px rgba(0, 0, 0, 0.7);
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
             }
 
-            .form-panel h2 {
-                font-size: 18px;
+            .form-title-row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 28px;
+            }
+
+            .form-title-row h2 {
+                font-size: 22px;
                 font-weight: 700;
                 color: #fff;
-                margin-bottom: 24px;
+                margin: 0;
             }
 
             .form-group {
-                margin-bottom: 18px;
+                margin-bottom: 20px;
             }
 
             .form-label {
@@ -485,18 +487,18 @@
                 font-weight: 700;
                 letter-spacing: 0.06em;
                 text-transform: uppercase;
-                color: rgba(255, 255, 255, 0.55);
-                margin-bottom: 7px;
+                color: rgba(255, 255, 255, 0.45);
+                margin-bottom: 8px;
             }
 
             .form-input,
             .form-textarea,
             .form-select {
                 width: 100%;
-                padding: 12px 14px;
-                background: rgba(14, 14, 14, 0.9);
-                border: 1.5px solid rgba(255, 255, 255, 0.12);
-                border-radius: 8px;
+                padding: 13px 16px;
+                background: rgba(18, 18, 18, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 9px;
                 color: #fff;
                 font-size: 14px;
                 outline: none;
@@ -508,18 +510,20 @@
 
             .form-input::placeholder,
             .form-textarea::placeholder {
-                color: rgba(255, 255, 255, 0.3);
+                color: rgba(255, 255, 255, 0.25);
             }
 
             .form-input:focus,
             .form-textarea:focus,
             .form-select:focus {
-                border-color: rgba(255, 255, 255, 0.35);
+                border-color: rgba(255, 255, 255, 0.32);
+                background: rgba(22, 22, 22, 0.95);
             }
 
             .form-textarea {
-                min-height: 110px;
+                min-height: 130px;
                 resize: vertical;
+                line-height: 1.6;
             }
 
             .form-select option {
@@ -530,16 +534,15 @@
             .form-actions {
                 display: flex;
                 gap: 10px;
-                margin-top: 24px;
-                justify-content: flex-end;
+                margin-top: 28px;
             }
 
             .btn-cancel {
-                padding: 10px 22px;
-                border-radius: 8px;
+                padding: 11px 24px;
+                border-radius: 9px;
                 border: 1.5px solid rgba(255, 255, 255, 0.15);
                 background: transparent;
-                color: rgba(255, 255, 255, 0.7);
+                color: rgba(255, 255, 255, 0.65);
                 font-size: 13px;
                 font-weight: 600;
                 cursor: pointer;
@@ -554,16 +557,15 @@
             }
 
             .btn-save {
-                padding: 10px 26px;
-                border-radius: 8px;
-                border: none;
+                padding: 11px 28px;
+                border-radius: 9px;
+                border: 1.5px solid rgba(180, 130, 40, 0.35);
                 background: rgba(60, 44, 14, 0.95);
                 color: #fff;
                 font-size: 13px;
                 font-weight: 700;
                 cursor: pointer;
                 transition: background 0.2s;
-                border: 1.5px solid rgba(180, 130, 40, 0.35);
             }
 
             .btn-save:hover {
@@ -571,10 +573,1153 @@
             }
 
             .form-id-row {
-                margin-top: 12px;
+                margin-top: 14px;
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.28);
+                font-family: monospace;
+            }
+
+            .form-two-col {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+
+            @media (max-width: 600px) {
+                .form-two-col {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* ─── Sublocation Button & Tags ─── */
+            .subloc-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 10px;
+                padding: 9px 18px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                background: rgba(28, 28, 28, 0.85);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .subloc-btn:hover {
+                background: rgba(50, 50, 50, 0.95);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+            .subloc-btn .subloc-icon {
+                font-size: 15px;
+            }
+
+            .subloc-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 10px;
+            }
+            .subloc-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 12px;
+                border-radius: 6px;
+                background: rgba(50, 50, 50, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .subloc-tag-remove {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.45);
+                cursor: pointer;
+                font-size: 14px;
+                padding: 0;
+                line-height: 1;
+                transition: color 0.15s;
+            }
+            .subloc-tag-remove:hover {
+                color: #ff7070;
+            }
+
+            /* ─── Sublocation Picker Panel ─── */
+            #subloc-picker {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 900;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(4px);
+            }
+            #subloc-picker.visible {
+                display: flex;
+            }
+            .subloc-picker-panel {
+                background: rgba(20, 20, 20, 0.98);
+                border: 1.5px solid rgba(255, 255, 255, 0.13);
+                border-radius: 14px;
+                padding: 28px 26px 24px 26px;
+                width: 100%;
+                max-width: 520px;
+                max-height: 80vh;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 16px 64px rgba(0, 0, 0, 0.7);
+            }
+            .subloc-picker-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 16px;
+            }
+            .subloc-picker-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #fff;
+            }
+            .subloc-picker-close {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 22px;
+                cursor: pointer;
+                line-height: 1;
+                transition: color 0.15s;
+            }
+            .subloc-picker-close:hover {
+                color: #fff;
+            }
+            .subloc-picker-search {
+                width: 100%;
+                padding: 10px 14px;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #fff;
+                font-size: 13px;
+                outline: none;
+                margin-bottom: 14px;
+                font-family: inherit;
+            }
+            .subloc-picker-search::placeholder {
+                color: rgba(255, 255, 255, 0.3);
+            }
+            .subloc-picker-list {
+                flex: 1;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .subloc-picker-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 14px;
+                border-radius: 9px;
+                border: 1.5px solid rgba(255, 255, 255, 0.07);
+                background: rgba(28, 28, 28, 0.88);
+                cursor: pointer;
+                transition:
+                    background 0.15s,
+                    border-color 0.15s;
+            }
+            .subloc-picker-item:hover {
+                background: rgba(45, 45, 45, 0.95);
+                border-color: rgba(255, 255, 255, 0.18);
+            }
+            .subloc-picker-item.selected {
+                border-color: rgba(180, 130, 40, 0.6);
+                background: rgba(60, 44, 14, 0.5);
+            }
+            .subloc-picker-item-name {
+                flex: 1;
+                font-size: 14px;
+                font-weight: 600;
+                color: #fff;
+            }
+            .subloc-picker-item-badge {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                text-transform: uppercase;
+                padding: 3px 9px;
+                border-radius: 5px;
+                background: rgba(70, 70, 70, 0.85);
+                color: rgba(255, 255, 255, 0.7);
+            }
+            .subloc-picker-check {
+                font-size: 16px;
+                color: #c8a040;
+            }
+            .subloc-picker-empty {
+                text-align: center;
+                color: rgba(255, 255, 255, 0.35);
+                font-size: 13px;
+                padding: 30px 0;
+            }
+            .subloc-picker-item.used-elsewhere {
+                opacity: 0.35;
+                cursor: not-allowed;
+                pointer-events: none;
+            }
+            .subloc-picker-item.used-elsewhere .subloc-picker-item-name::after {
+                content: " (already used)";
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.4);
+                font-weight: 400;
+            }
+            .subloc-picker-actions {
+                margin-top: 16px;
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+
+            /* ─── RacialCivilization ─── */
+            #racial-picker {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 950;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.65);
+                backdrop-filter: blur(4px);
+            }
+            #racial-picker.visible {
+                display: flex;
+            }
+            .racial-panel {
+                background: rgba(18, 18, 18, 0.99);
+                border: 1.5px solid rgba(255, 255, 255, 0.13);
+                border-radius: 14px;
+                padding: 28px 26px 24px 26px;
+                width: 100%;
+                max-width: 540px;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 16px 64px rgba(0, 0, 0, 0.75);
+            }
+            .racial-panel-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 18px;
+            }
+            .racial-panel-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #fff;
+            }
+            .racial-panel-close {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 22px;
+                cursor: pointer;
+                line-height: 1;
+                transition: color 0.15s;
+            }
+            .racial-panel-close:hover {
+                color: #fff;
+            }
+
+            .racial-rows {
+                flex: 1;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+            .racial-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: rgba(28, 28, 28, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.08);
+                border-radius: 9px;
+                padding: 10px 12px;
+            }
+            .racial-row-name {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 600;
+                color: #fff;
+            }
+            .racial-row-pct {
+                width: 68px;
+                padding: 6px 10px;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                border-radius: 7px;
+                color: #fff;
+                font-size: 13px;
+                font-weight: 600;
+                outline: none;
+                text-align: right;
+                font-family: inherit;
+                transition: border-color 0.2s;
+            }
+            .racial-row-pct:focus {
+                border-color: rgba(255, 255, 255, 0.35);
+            }
+            .racial-row-pct-label {
+                color: rgba(255, 255, 255, 0.45);
+                font-size: 13px;
+                font-weight: 600;
+                min-width: 14px;
+            }
+            .racial-row-remove {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.35);
+                font-size: 16px;
+                cursor: pointer;
+                padding: 0 2px;
+                transition: color 0.15s;
+            }
+            .racial-row-remove:hover {
+                color: #ff7070;
+            }
+
+            .racial-add-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 4px;
+            }
+            .racial-add-select {
+                flex: 1;
+                padding: 9px 12px;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #fff;
+                font-size: 13px;
+                outline: none;
+                -webkit-appearance: none;
+                appearance: none;
+                font-family: inherit;
+                transition: border-color 0.2s;
+            }
+            .racial-add-select:focus {
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+            .racial-add-select option {
+                background: #1a1a1a;
+            }
+            .racial-add-btn {
+                padding: 9px 16px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                background: rgba(40, 40, 40, 0.9);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                white-space: nowrap;
+                transition: background 0.2s;
+            }
+            .racial-add-btn:hover {
+                background: rgba(60, 60, 60, 0.95);
+            }
+
+            .racial-total-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 4px 0 4px;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                margin-top: 4px;
+            }
+            .racial-total-label {
+                font-size: 12px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.45);
+                letter-spacing: 0.05em;
+                text-transform: uppercase;
+            }
+            .racial-total-value {
+                font-size: 14px;
+                font-weight: 700;
+                color: #fff;
+                font-family: monospace;
+            }
+            .racial-total-value.over {
+                color: #ff6060;
+            }
+            .racial-total-value.exact {
+                color: #60c860;
+            }
+
+            .racial-panel-actions {
+                margin-top: 14px;
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+
+            /* ─── Name Generator Tabs ─── */
+            .namegen-tabs {
+                display: flex;
+                gap: 6px;
+                margin-bottom: 20px;
+            }
+            .namegen-tab {
+                padding: 9px 22px;
+                border-radius: 999px;
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                background: transparent;
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    color 0.2s,
+                    border-color 0.2s;
+                letter-spacing: 0.03em;
+            }
+            .namegen-tab:hover {
+                background: rgba(255, 255, 255, 0.07);
+                color: rgba(255, 255, 255, 0.8);
+            }
+            .namegen-tab.active {
+                background: rgba(255, 255, 255, 0.1);
+                color: #fff;
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+            .namegen-tab#tab-male.active {
+                background: rgba(40, 80, 140, 0.5);
+                border-color: rgba(80, 140, 220, 0.5);
+                color: #88b8f0;
+            }
+            .namegen-tab#tab-female.active {
+                background: rgba(140, 40, 80, 0.5);
+                border-color: rgba(220, 80, 140, 0.5);
+                color: #f088b8;
+            }
+            .namegen-section {
+                /* visible by default for male, hidden for female */
+            }
+
+            /* ─── Name Generator View ─── */
+            #namegen-view {
+                display: none;
+                position: relative;
+                z-index: 1;
+                flex-direction: column;
+                height: 100vh;
+                align-items: center;
+                width: 100%;
+            }
+            #namegen-view.visible {
+                display: flex;
+            }
+            .namegen-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+            }
+            .namegen-title-row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 28px;
+            }
+            .namegen-title-row h2 {
+                font-size: 22px;
+                font-weight: 700;
+                color: #fff;
+                margin: 0;
+            }
+            .namegen-title-row .namegen-race-badge {
+                padding: 4px 13px;
+                border-radius: 6px;
+                background: rgba(50, 38, 10, 0.9);
+                border: 1.5px solid rgba(180, 130, 40, 0.35);
+                color: #c8a040;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+            }
+            .namegen-cols {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+            @media (max-width: 640px) {
+                .namegen-cols {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .namegen-col {
+                background: rgba(20, 20, 20, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+                padding: 20px 18px 16px 18px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .namegen-col-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .namegen-col-title {
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.45);
+            }
+            .namegen-col-count {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.28);
+                font-family: monospace;
+            }
+            .namegen-input-row {
+                display: flex;
+                gap: 8px;
+            }
+            .namegen-input {
+                flex: 1;
+                padding: 9px 13px;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                color: #fff;
+                font-size: 13px;
+                outline: none;
+                font-family: inherit;
+                transition: border-color 0.2s;
+            }
+            .namegen-input:focus {
+                border-color: rgba(255, 255, 255, 0.32);
+            }
+            .namegen-input::placeholder {
+                color: rgba(255, 255, 255, 0.25);
+            }
+            .namegen-add-btn {
+                padding: 9px 15px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(180, 130, 40, 0.35);
+                background: rgba(60, 44, 14, 0.9);
+                color: #fff;
+                font-size: 15px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: background 0.2s;
+                flex-shrink: 0;
+            }
+            .namegen-add-btn:hover {
+                background: rgba(80, 58, 16, 0.99);
+            }
+            .namegen-list {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                max-height: 400px;
+                overflow-y: auto;
+            }
+            .namegen-list:empty::after {
+                content: "No names yet.";
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.2);
+                padding: 10px 2px;
+                font-style: italic;
+            }
+            .namegen-name-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 10px;
+                background: rgba(30, 30, 30, 0.85);
+                border: 1.5px solid rgba(255, 255, 255, 0.06);
+                border-radius: 7px;
+                transition: border-color 0.15s;
+            }
+            .namegen-name-row:hover {
+                border-color: rgba(255, 255, 255, 0.14);
+            }
+            .namegen-name-text {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 600;
+                color: #fff;
+            }
+            .namegen-name-remove {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.3);
+                font-size: 14px;
+                cursor: pointer;
+                padding: 0 2px;
+                line-height: 1;
+                transition: color 0.15s;
+                flex-shrink: 0;
+            }
+            .namegen-name-remove:hover {
+                color: #ff7070;
+            }
+            .namegen-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 24px;
+            }
+            /* Race buttons row (Name Generator + Lore side by side) */
+            .race-btn-row {
+                display: flex;
+                gap: 10px;
+                margin-top: 10px;
+                flex-wrap: wrap;
+            }
+            /* Name Generator button in form */
+            .namegen-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(180, 130, 40, 0.35);
+                background: rgba(50, 36, 10, 0.85);
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .namegen-btn:hover {
+                background: rgba(70, 52, 14, 0.95);
+                border-color: rgba(200, 150, 50, 0.5);
+            }
+            .namegen-btn-icon {
+                font-size: 15px;
+            }
+            /* Lore button in form */
+            .lore-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(80, 120, 200, 0.35);
+                background: rgba(20, 36, 70, 0.85);
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .lore-btn:hover {
+                background: rgba(30, 52, 100, 0.95);
+                border-color: rgba(100, 150, 240, 0.5);
+            }
+            .lore-btn-icon {
+                font-size: 15px;
+            }
+            .namegen-summary {
+                margin-top: 8px;
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.3);
+                font-family: monospace;
+            }
+            .lore-summary {
+                margin-top: 4px;
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.3);
+                font-family: monospace;
+            }
+            /* Skincolor button in form */
+            .skincolor-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(180, 90, 40, 0.35);
+                background: rgba(55, 28, 10, 0.85);
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .skincolor-btn:hover {
+                background: rgba(80, 42, 14, 0.95);
+                border-color: rgba(220, 120, 60, 0.5);
+            }
+            .skincolor-btn-icon {
+                font-size: 15px;
+            }
+            .skincolor-summary {
+                margin-top: 4px;
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.3);
+                font-family: monospace;
+            }
+
+            /* ─── Skincolor Picker ─── */
+            #skincolor-picker {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 960;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.65);
+                backdrop-filter: blur(4px);
+            }
+            #skincolor-picker.visible {
+                display: flex;
+            }
+            .skincolor-panel {
+                background: rgba(18, 18, 18, 0.99);
+                border: 1.5px solid rgba(255, 255, 255, 0.13);
+                border-radius: 14px;
+                padding: 26px 24px 22px 24px;
+                width: 100%;
+                max-width: 520px;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 16px 64px rgba(0, 0, 0, 0.75);
+            }
+            .skincolor-panel-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 10px;
+            }
+            .skincolor-panel-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #fff;
+            }
+            .skincolor-panel-close {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 22px;
+                cursor: pointer;
+                line-height: 1;
+                transition: color 0.15s;
+            }
+            .skincolor-panel-close:hover {
+                color: #fff;
+            }
+            .skincolor-panel-note {
                 font-size: 11px;
                 color: rgba(255, 255, 255, 0.35);
                 font-family: monospace;
+                margin-bottom: 8px;
+            }
+            .skincolor-select-row {
+                display: flex;
+                gap: 14px;
+                margin-bottom: 12px;
+            }
+            .skincolor-select-link {
+                font-size: 12px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.4);
+                cursor: pointer;
+                transition: color 0.15s;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+            }
+            .skincolor-select-link:hover {
+                color: rgba(255, 255, 255, 0.85);
+            }
+            .skincolor-grid {
+                flex: 1;
+                overflow-y: auto;
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                gap: 7px;
+                margin-bottom: 14px;
+            }
+            .skincolor-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 10px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255, 255, 255, 0.07);
+                background: rgba(28, 28, 28, 0.85);
+                cursor: pointer;
+                transition:
+                    background 0.15s,
+                    border-color 0.15s;
+                user-select: none;
+            }
+            .skincolor-item:hover {
+                background: rgba(44, 44, 44, 0.95);
+                border-color: rgba(255, 255, 255, 0.18);
+            }
+            .skincolor-item.selected {
+                background: rgba(60, 38, 18, 0.9);
+                border-color: rgba(220, 130, 60, 0.45);
+            }
+            .skincolor-swatch {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                flex-shrink: 0;
+            }
+            .skincolor-label {
+                flex: 1;
+                font-size: 12px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.75);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .skincolor-item.selected .skincolor-label {
+                color: #fff;
+            }
+            .skincolor-check {
+                font-size: 12px;
+                color: transparent;
+                transition: color 0.15s;
+                flex-shrink: 0;
+            }
+            .skincolor-item.selected .skincolor-check {
+                color: rgba(220, 150, 80, 0.9);
+            }
+            .skincolor-cat-header {
+                grid-column: 1 / -1;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.3);
+                padding: 4px 2px 2px 2px;
+                margin-top: 4px;
+            }
+            .skincolor-panel-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                margin-top: 4px;
+            }
+
+            /* ─── Lore View ─── */
+            #lore-view {
+                display: none;
+                position: relative;
+                z-index: 1;
+                flex-direction: column;
+                height: 100vh;
+                align-items: center;
+                width: 100%;
+            }
+            #lore-view.visible {
+                display: flex;
+            }
+            .lore-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+            }
+            .lore-title-row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 28px;
+            }
+            .lore-title-row h2 {
+                font-size: 22px;
+                font-weight: 700;
+                color: #fff;
+                margin: 0;
+            }
+            .lore-race-badge {
+                padding: 4px 13px;
+                border-radius: 6px;
+                background: rgba(20, 36, 80, 0.9);
+                border: 1.5px solid rgba(80, 120, 200, 0.4);
+                color: #88aaee;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+            }
+            .lore-editor-wrap {
+                background: rgba(18, 18, 18, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+                padding: 20px 18px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .lore-toolbar {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+                padding-bottom: 10px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            }
+            .lore-tool-btn {
+                padding: 5px 12px;
+                border-radius: 6px;
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                background: rgba(35, 35, 35, 0.9);
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 12px;
+                font-weight: 700;
+                cursor: pointer;
+                transition:
+                    background 0.15s,
+                    color 0.15s;
+            }
+            .lore-tool-btn:hover {
+                background: rgba(60, 60, 60, 0.95);
+                color: #fff;
+            }
+            .lore-textarea {
+                width: 100%;
+                min-height: 420px;
+                padding: 16px;
+                background: rgba(12, 12, 12, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.08);
+                border-radius: 9px;
+                color: #e8e8e8;
+                font-size: 14px;
+                line-height: 1.75;
+                outline: none;
+                resize: vertical;
+                font-family: "Segoe UI", Arial, sans-serif;
+                transition: border-color 0.2s;
+                box-sizing: border-box;
+            }
+            .lore-textarea:focus {
+                border-color: rgba(80, 120, 200, 0.45);
+            }
+            .lore-textarea::placeholder {
+                color: rgba(255, 255, 255, 0.2);
+                font-style: italic;
+            }
+            .lore-char-count {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.25);
+                text-align: right;
+                font-family: monospace;
+            }
+            .lore-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 24px;
+            }
+
+            /* ─── Can be Spawn Checkbox ─── */
+            .spawn-check-group {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-top: 14px;
+                padding: 13px 16px;
+                background: rgba(20, 20, 20, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.08);
+                border-radius: 9px;
+                cursor: pointer;
+                user-select: none;
+                transition:
+                    border-color 0.2s,
+                    background 0.2s;
+            }
+            .spawn-check-group:hover {
+                border-color: rgba(255, 255, 255, 0.18);
+                background: rgba(30, 30, 30, 0.92);
+            }
+            .spawn-check-group.active {
+                border-color: rgba(80, 180, 100, 0.5);
+                background: rgba(20, 50, 25, 0.7);
+            }
+            .spawn-checkbox {
+                width: 18px;
+                height: 18px;
+                border-radius: 5px;
+                border: 2px solid rgba(255, 255, 255, 0.25);
+                background: rgba(14, 14, 14, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                transition:
+                    border-color 0.2s,
+                    background 0.2s;
+            }
+            .spawn-check-group.active .spawn-checkbox {
+                border-color: rgba(80, 200, 100, 0.8);
+                background: rgba(50, 160, 70, 0.9);
+            }
+            .spawn-checkbox-tick {
+                color: #fff;
+                font-size: 12px;
+                font-weight: 900;
+                display: none;
+                line-height: 1;
+            }
+            .spawn-check-group.active .spawn-checkbox-tick {
+                display: block;
+            }
+            .spawn-check-label {
+                font-size: 13px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.65);
+                flex: 1;
+            }
+            .spawn-check-group.active .spawn-check-label {
+                color: #90e8a0;
+            }
+            .spawn-check-badge {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                padding: 3px 9px;
+                border-radius: 5px;
+                background: rgba(50, 160, 70, 0.25);
+                color: rgba(80, 200, 100, 0.8);
+                display: none;
+            }
+            .spawn-check-group.active .spawn-check-badge {
+                display: inline-block;
+            }
+
+            /* ─── Population Side Button ─── */
+            .zivil-side-layout {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 16px;
+                align-items: start;
+            }
+            .zivil-main-col {
+                display: flex;
+                flex-direction: column;
+                gap: 0;
+            }
+            .population-col {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                min-width: 160px;
+                padding-top: 0;
+            }
+            .population-box {
+                background: rgba(22, 22, 22, 0.92);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                padding: 16px 16px 14px 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .population-box-label {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.45);
+            }
+            .population-input-wrap {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .population-input {
+                width: 100%;
+                padding: 9px 12px;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                border-radius: 8px;
+                color: #fff;
+                font-size: 15px;
+                font-weight: 700;
+                outline: none;
+                font-family: inherit;
+                text-align: right;
+                transition: border-color 0.2s;
+            }
+            .population-input:focus {
+                border-color: rgba(255, 255, 255, 0.35);
+            }
+            .population-input::placeholder {
+                color: rgba(255, 255, 255, 0.2);
+                font-weight: 400;
+                font-size: 13px;
+            }
+            .population-unit {
+                font-size: 12px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.4);
+                white-space: nowrap;
+            }
+            .population-formatted {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.35);
+                text-align: right;
+                min-height: 16px;
+                font-family: monospace;
+            }
+
+            @media (max-width: 650px) {
+                .zivil-side-layout {
+                    grid-template-columns: 1fr;
+                }
+                .population-col {
+                    min-width: unset;
+                }
+            }
+
+            /* RacialCiv tags (shown in form) */
+            .racial-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 7px;
+                margin-top: 10px;
+            }
+            .racial-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 11px;
+                border-radius: 6px;
+                background: rgba(50, 38, 10, 0.9);
+                border: 1.5px solid rgba(180, 130, 40, 0.3);
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .racial-tag-pct {
+                color: #c8a040;
+                font-weight: 700;
             }
 
             /* ─── Success Toast ─── */
@@ -662,39 +1807,292 @@
         </div>
 
         <!-- ════════════════════════════════════
-         CREATE / EDIT FORM OVERLAY
-    ════════════════════════════════════ -->
-        <div class="form-overlay" id="form-overlay">
-            <div class="form-panel">
-                <h2 id="form-title">Add Entry</h2>
+             FORM VIEW (free scene, not a modal)
+        ════════════════════════════════════ -->
+        <div id="form-view">
+            <!-- shared top-nav (same structure as #app) -->
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="closeForm()" title="Back">
+                    &#8592;
+                </button>
+                <div class="nav-pills" id="form-nav-pills">
+                    <!-- label filled by JS -->
+                </div>
+                <div class="nav-count" id="form-nav-count">0</div>
+            </nav>
 
-                <div class="form-group">
-                    <label class="form-label">Name</label>
-                    <input
-                        type="text"
-                        class="form-input"
-                        id="f-name"
-                        placeholder="Enter a name..."
-                    />
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2 id="form-title">Add Entry</h2>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Type</label>
-                    <select class="form-select" id="f-type">
-                        <option value="">Select a type...</option>
-                        <option value="character">Character</option>
-                        <option value="location">Location</option>
+                <div class="form-two-col">
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input
+                            type="text"
+                            class="form-input"
+                            id="f-name"
+                            placeholder="Enter a name..."
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select
+                            class="form-select"
+                            id="f-type"
+                            onchange="onTypeChange()"
+                        >
+                            <option value="">Select a type...</option>
+                            <option value="location">Location</option>
+                            <option value="race">Race</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ── Location sub-dropdowns ── -->
+                <div
+                    class="form-group"
+                    id="location-sub-group"
+                    style="display: none"
+                >
+                    <label class="form-label">Location Type</label>
+                    <select
+                        class="form-select"
+                        id="f-location-sub"
+                        onchange="onLocationSubChange()"
+                    >
+                        <option value="">Select a location type...</option>
+                        <option value="structure">Structure</option>
+                        <option value="landmark">Landmark</option>
+                        <option value="forest">Forest</option>
+                        <option value="ocean">Ocean</option>
+                        <option value="building">Building</option>
+                        <option value="zivil">Zivil</option>
+                    </select>
+                </div>
+
+                <div
+                    class="form-group"
+                    id="zivil-sub-group"
+                    style="display: none"
+                >
+                    <label class="form-label">Zivil Type</label>
+                    <select
+                        class="form-select"
+                        id="f-zivil-sub"
+                        onchange="onZivilSubChange()"
+                    >
+                        <option value="">Select a zivil type...</option>
+                        <option value="village">Village</option>
                         <option value="city">City</option>
                         <option value="country">Country</option>
-                        <option value="buildings">Buildings</option>
-                        <option value="apartments">Apartments</option>
-                        <option value="object">Object</option>
-                        <option value="event">Event</option>
-                        <option value="dialogue">Dialogue</option>
-                        <option value="action">Action</option>
-                        <option value="description">Description</option>
-                        <option value="transition">Transition</option>
+                        <option value="kingdom">Kingdom</option>
                     </select>
+                </div>
+
+                <!-- ══ Village / City block ══ -->
+                <div id="village-city-block" style="display: none">
+                    <div class="zivil-side-layout">
+                        <!-- LEFT: RacialCiv + Sublocations -->
+                        <div class="zivil-main-col">
+                            <!-- RacialCivilization for Village / City -->
+                            <div
+                                class="form-group"
+                                id="racial-village-city-group"
+                            >
+                                <label class="form-label"
+                                    >RacialCivilization</label
+                                >
+                                <div
+                                    class="racial-tags"
+                                    id="racial-village-city-tags"
+                                ></div>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="openRacialPicker('village-city')"
+                                    style="margin-top: 8px"
+                                >
+                                    <span class="subloc-icon">&#9670;</span>
+                                    RacialCivilization
+                                </button>
+                            </div>
+
+                            <!-- Sublocations for Village / City -->
+                            <div
+                                class="form-group"
+                                id="subloc-village-city-group"
+                            >
+                                <label class="form-label">Sublocations</label>
+                                <div
+                                    class="subloc-tags"
+                                    id="subloc-village-city-tags"
+                                ></div>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="openSublocPicker('village-city')"
+                                >
+                                    <span class="subloc-icon">&#43;</span>
+                                    Sublocations
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT: Population -->
+                        <div class="population-col">
+                            <div class="population-box">
+                                <span class="population-box-label"
+                                    >Population</span
+                                >
+                                <div class="population-input-wrap">
+                                    <input
+                                        type="number"
+                                        class="population-input"
+                                        id="pop-village-city"
+                                        placeholder="0"
+                                        min="0"
+                                        oninput="
+                                            updatePopFormatted('village-city')
+                                        "
+                                    />
+                                </div>
+                                <div
+                                    class="population-formatted"
+                                    id="pop-village-city-fmt"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ Country / Kingdom block ══ -->
+                <div id="country-kingdom-block" style="display: none">
+                    <div class="zivil-side-layout">
+                        <!-- LEFT: RacialCiv + Sublocations -->
+                        <div class="zivil-main-col">
+                            <!-- RacialCivilization for Country / Kingdom -->
+                            <div
+                                class="form-group"
+                                id="racial-country-kingdom-group"
+                            >
+                                <label class="form-label"
+                                    >RacialCivilization</label
+                                >
+                                <div
+                                    class="racial-tags"
+                                    id="racial-country-kingdom-tags"
+                                ></div>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="
+                                        openRacialPicker('country-kingdom')
+                                    "
+                                    style="margin-top: 8px"
+                                >
+                                    <span class="subloc-icon">&#9670;</span>
+                                    RacialCivilization
+                                </button>
+                            </div>
+
+                            <!-- Sublocations for Country / Kingdom -->
+                            <div
+                                class="form-group"
+                                id="subloc-country-kingdom-group"
+                            >
+                                <label class="form-label">Sublocations</label>
+                                <div
+                                    class="subloc-tags"
+                                    id="subloc-country-kingdom-tags"
+                                ></div>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="
+                                        openSublocPicker('country-kingdom')
+                                    "
+                                >
+                                    <span class="subloc-icon">&#43;</span>
+                                    Sublocations
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT: Population -->
+                        <div class="population-col">
+                            <div class="population-box">
+                                <span class="population-box-label"
+                                    >Population</span
+                                >
+                                <div class="population-input-wrap">
+                                    <input
+                                        type="number"
+                                        class="population-input"
+                                        id="pop-country-kingdom"
+                                        placeholder="0"
+                                        min="0"
+                                        oninput="
+                                            updatePopFormatted(
+                                                'country-kingdom',
+                                            )
+                                        "
+                                    />
+                                </div>
+                                <div
+                                    class="population-formatted"
+                                    id="pop-country-kingdom-fmt"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="form-group"
+                    id="building-sub-group"
+                    style="display: none"
+                >
+                    <label class="form-label">Building Type</label>
+                    <select class="form-select" id="f-building-sub">
+                        <option value="">Select a building type...</option>
+                        <option value="custom">Custom</option>
+                        <option value="house">House</option>
+                        <option value="shop">Shop</option>
+                        <option value="school">School</option>
+                    </select>
+
+                    <!-- Can be Spawn -->
+                    <div
+                        class="spawn-check-group"
+                        id="spawn-check-group"
+                        onclick="toggleSpawnCheck()"
+                    >
+                        <div class="spawn-checkbox">
+                            <span class="spawn-checkbox-tick">&#10003;</span>
+                        </div>
+                        <span class="spawn-check-label">Can be Spawn</span>
+                        <span class="spawn-check-badge">SPAWN</span>
+                    </div>
+                </div>
+
+                <!-- Sublocations for Building (location-sub = building) -->
+                <div
+                    class="form-group"
+                    id="subloc-building-group"
+                    style="display: none"
+                >
+                    <label class="form-label">Sublocations</label>
+                    <div class="subloc-tags" id="subloc-building-tags"></div>
+                    <button
+                        type="button"
+                        class="subloc-btn"
+                        onclick="openSublocPicker('building')"
+                    >
+                        <span class="subloc-icon">&#43;</span> Sublocations
+                    </button>
                 </div>
 
                 <div class="form-group">
@@ -706,13 +2104,42 @@
                     ></textarea>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Start Scene</label>
-                    <textarea
-                        class="form-textarea"
-                        id="f-startscene"
-                        placeholder="The story begins with..."
-                    ></textarea>
+                <!-- Race tools: Name Generator + Lore (Race only) -->
+                <div
+                    class="form-group"
+                    id="namegen-form-group"
+                    style="display: none"
+                >
+                    <label class="form-label">Race Tools</label>
+                    <div class="namegen-summary" id="namegen-summary"></div>
+                    <div class="lore-summary" id="lore-summary"></div>
+                    <div class="skincolor-summary" id="skincolor-summary"></div>
+                    <div class="race-btn-row">
+                        <button
+                            type="button"
+                            class="namegen-btn"
+                            onclick="openNameGen()"
+                        >
+                            <span class="namegen-btn-icon">&#9997;</span>
+                            Name Generator
+                        </button>
+                        <button
+                            type="button"
+                            class="lore-btn"
+                            onclick="openLore()"
+                        >
+                            <span class="lore-btn-icon">&#128214;</span>
+                            Lore
+                        </button>
+                        <button
+                            type="button"
+                            class="skincolor-btn"
+                            onclick="openSkincolorPicker()"
+                        >
+                            <span class="skincolor-btn-icon">&#127775;</span>
+                            Skincolor
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-id-row" id="form-id-row"></div>
@@ -727,6 +2154,418 @@
                         onclick="saveEntry()"
                     >
                         Save
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+             LORE VIEW (4th scene)
+        ══════════════════════════════════════ -->
+        <div id="lore-view">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="closeLore()" title="Back">
+                    &#8592;
+                </button>
+                <div class="nav-pills" id="lore-nav-pills"></div>
+                <div class="nav-count" id="lore-nav-count">0</div>
+            </nav>
+
+            <div class="lore-scroll">
+                <div class="lore-title-row">
+                    <h2>Lore</h2>
+                    <span class="lore-race-badge" id="lore-race-label"
+                        >RACE</span
+                    >
+                </div>
+
+                <div class="lore-editor-wrap">
+                    <div class="lore-toolbar">
+                        <button
+                            class="lore-tool-btn"
+                            onclick="loreInsert('**', '**')"
+                            title="Bold"
+                        >
+                            B
+                        </button>
+                        <button
+                            class="lore-tool-btn"
+                            onclick="loreInsert('*', '*')"
+                            title="Italic"
+                            style="font-style: italic"
+                        >
+                            I
+                        </button>
+                        <button
+                            class="lore-tool-btn"
+                            onclick="loreInsert('# ', '', 'line')"
+                            title="Heading"
+                        >
+                            H1
+                        </button>
+                        <button
+                            class="lore-tool-btn"
+                            onclick="loreInsert('## ', '', 'line')"
+                            title="Heading 2"
+                        >
+                            H2
+                        </button>
+                        <button
+                            class="lore-tool-btn"
+                            onclick="loreInsert('### ', '', 'line')"
+                            title="Heading 3"
+                        >
+                            H3
+                        </button>
+                        <button
+                            class="lore-tool-btn"
+                            onclick="loreInsert('- ', '', 'line')"
+                            title="List item"
+                        >
+                            &#8226; List
+                        </button>
+                        <button
+                            class="lore-tool-btn"
+                            onclick="loreInsert('---', '', 'line')"
+                            title="Divider"
+                        >
+                            &#8212;
+                        </button>
+                        <button
+                            class="lore-tool-btn"
+                            onclick="loreInsert('> ', '', 'line')"
+                            title="Quote"
+                        >
+                            &#8220; Quote
+                        </button>
+                    </div>
+                    <textarea
+                        class="lore-textarea"
+                        id="lore-textarea"
+                        placeholder="Write the lore of this race here...&#10;&#10;Describe their origins, culture, history, beliefs, and anything else that defines them."
+                        oninput="updateLoreCount()"
+                    ></textarea>
+                    <div class="lore-char-count" id="lore-char-count">
+                        0 characters
+                    </div>
+                </div>
+
+                <div class="lore-actions">
+                    <button class="btn-cancel" onclick="closeLore()">
+                        Cancel
+                    </button>
+                    <button class="btn-save" onclick="saveLore()">
+                        Save Lore
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+             NAME GENERATOR VIEW (3rd scene)
+        ══════════════════════════════════════ -->
+        <div id="namegen-view">
+            <nav class="top-nav">
+                <button
+                    class="nav-back-btn"
+                    onclick="closeNameGen()"
+                    title="Back"
+                >
+                    &#8592;
+                </button>
+                <div class="nav-pills" id="namegen-nav-pills"></div>
+                <div class="nav-count" id="namegen-nav-count">0</div>
+            </nav>
+
+            <div class="namegen-scroll">
+                <div class="namegen-title-row">
+                    <h2>Name Generator</h2>
+                    <span class="namegen-race-badge" id="namegen-race-label"
+                        >RACE</span
+                    >
+                </div>
+
+                <!-- Gender Tabs -->
+                <div class="namegen-tabs">
+                    <button
+                        class="namegen-tab active"
+                        id="tab-male"
+                        onclick="switchNameGenTab('male')"
+                    >
+                        &#9794; Male
+                    </button>
+                    <button
+                        class="namegen-tab"
+                        id="tab-female"
+                        onclick="switchNameGenTab('female')"
+                    >
+                        &#9792; Female
+                    </button>
+                </div>
+
+                <!-- MALE SECTION -->
+                <div class="namegen-section" id="namegen-section-male">
+                    <div class="namegen-cols">
+                        <div class="namegen-col">
+                            <div class="namegen-col-header">
+                                <span class="namegen-col-title"
+                                    >&#9794; First Names</span
+                                >
+                                <span class="namegen-col-count" id="m-fn-count"
+                                    >0</span
+                                >
+                            </div>
+                            <div class="namegen-input-row">
+                                <input
+                                    type="text"
+                                    class="namegen-input"
+                                    id="m-fn-input"
+                                    placeholder="Enter a male first name..."
+                                    onkeydown="
+                                        if (event.key === 'Enter')
+                                            addNameGenEntry('male', 'first');
+                                    "
+                                />
+                                <button
+                                    class="namegen-add-btn"
+                                    onclick="addNameGenEntry('male', 'first')"
+                                >
+                                    &#43;
+                                </button>
+                            </div>
+                            <div class="namegen-list" id="m-fn-list"></div>
+                        </div>
+
+                        <div class="namegen-col">
+                            <div class="namegen-col-header">
+                                <span class="namegen-col-title"
+                                    >&#9794; Last Names</span
+                                >
+                                <span class="namegen-col-count" id="m-ln-count"
+                                    >0</span
+                                >
+                            </div>
+                            <div class="namegen-input-row">
+                                <input
+                                    type="text"
+                                    class="namegen-input"
+                                    id="m-ln-input"
+                                    placeholder="Enter a male last name..."
+                                    onkeydown="
+                                        if (event.key === 'Enter')
+                                            addNameGenEntry('male', 'last');
+                                    "
+                                />
+                                <button
+                                    class="namegen-add-btn"
+                                    onclick="addNameGenEntry('male', 'last')"
+                                >
+                                    &#43;
+                                </button>
+                            </div>
+                            <div class="namegen-list" id="m-ln-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FEMALE SECTION -->
+                <div
+                    class="namegen-section"
+                    id="namegen-section-female"
+                    style="display: none"
+                >
+                    <div class="namegen-cols">
+                        <div class="namegen-col">
+                            <div class="namegen-col-header">
+                                <span class="namegen-col-title"
+                                    >&#9792; First Names</span
+                                >
+                                <span class="namegen-col-count" id="f-fn-count"
+                                    >0</span
+                                >
+                            </div>
+                            <div class="namegen-input-row">
+                                <input
+                                    type="text"
+                                    class="namegen-input"
+                                    id="f-fn-input"
+                                    placeholder="Enter a female first name..."
+                                    onkeydown="
+                                        if (event.key === 'Enter')
+                                            addNameGenEntry('female', 'first');
+                                    "
+                                />
+                                <button
+                                    class="namegen-add-btn"
+                                    onclick="addNameGenEntry('female', 'first')"
+                                >
+                                    &#43;
+                                </button>
+                            </div>
+                            <div class="namegen-list" id="f-fn-list"></div>
+                        </div>
+
+                        <div class="namegen-col">
+                            <div class="namegen-col-header">
+                                <span class="namegen-col-title"
+                                    >&#9792; Last Names</span
+                                >
+                                <span class="namegen-col-count" id="f-ln-count"
+                                    >0</span
+                                >
+                            </div>
+                            <div class="namegen-input-row">
+                                <input
+                                    type="text"
+                                    class="namegen-input"
+                                    id="f-ln-input"
+                                    placeholder="Enter a female last name..."
+                                    onkeydown="
+                                        if (event.key === 'Enter')
+                                            addNameGenEntry('female', 'last');
+                                    "
+                                />
+                                <button
+                                    class="namegen-add-btn"
+                                    onclick="addNameGenEntry('female', 'last')"
+                                >
+                                    &#43;
+                                </button>
+                            </div>
+                            <div class="namegen-list" id="f-ln-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="namegen-actions">
+                    <button class="btn-cancel" onclick="closeNameGen()">
+                        Cancel
+                    </button>
+                    <button class="btn-save" onclick="saveNameGen()">
+                        Save Names
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SUBLOCATION PICKER ── -->
+        <div id="subloc-picker">
+            <div class="subloc-picker-panel">
+                <div class="subloc-picker-header">
+                    <span class="subloc-picker-title" id="subloc-picker-title"
+                        >Select Sublocations</span
+                    >
+                    <button
+                        class="subloc-picker-close"
+                        onclick="closeSublocPicker()"
+                    >
+                        &#10005;
+                    </button>
+                </div>
+                <input
+                    type="text"
+                    class="subloc-picker-search"
+                    id="subloc-picker-search"
+                    placeholder="Search..."
+                    oninput="renderSublocPickerList()"
+                />
+                <div class="subloc-picker-list" id="subloc-picker-list"></div>
+                <div class="subloc-picker-actions">
+                    <button class="btn-cancel" onclick="closeSublocPicker()">
+                        Cancel
+                    </button>
+                    <button class="btn-save" onclick="confirmSublocPicker()">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RACIAL CIVILIZATION PICKER ── -->
+        <div id="racial-picker">
+            <div class="racial-panel">
+                <div class="racial-panel-header">
+                    <span class="racial-panel-title" id="racial-panel-title"
+                        >RacialCivilization</span
+                    >
+                    <button
+                        class="racial-panel-close"
+                        onclick="closeRacialPicker()"
+                    >
+                        &#10005;
+                    </button>
+                </div>
+
+                <!-- Add a race row -->
+                <div class="racial-add-row">
+                    <select class="racial-add-select" id="racial-add-select">
+                        <option value="">Select a race to add...</option>
+                        <!-- filled dynamically from Race cards -->
+                    </select>
+                    <button class="racial-add-btn" onclick="racialAddRow()">
+                        &#43; Add
+                    </button>
+                </div>
+
+                <div class="racial-rows" id="racial-rows"></div>
+
+                <div class="racial-total-row">
+                    <span class="racial-total-label">Total</span>
+                    <span class="racial-total-value" id="racial-total"
+                        >0 %</span
+                    >
+                </div>
+
+                <div class="racial-panel-actions">
+                    <button class="btn-cancel" onclick="closeRacialPicker()">
+                        Cancel
+                    </button>
+                    <button class="btn-save" onclick="confirmRacialPicker()">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SKINCOLOR PICKER ── -->
+        <div id="skincolor-picker">
+            <div class="skincolor-panel">
+                <div class="skincolor-panel-header">
+                    <span class="skincolor-panel-title">Skincolor Traits</span>
+                    <button
+                        class="skincolor-panel-close"
+                        onclick="closeSkincolorPicker()"
+                    >
+                        &#10005;
+                    </button>
+                </div>
+                <div class="skincolor-panel-note" id="skincolor-note">
+                    Default: All skin colors are allowed
+                </div>
+                <div class="skincolor-select-row">
+                    <span
+                        class="skincolor-select-link"
+                        onclick="skincolorSelectAll()"
+                        >Select All</span
+                    >
+                    <span
+                        class="skincolor-select-link"
+                        onclick="skincolorSelectNone()"
+                        >Deselect All</span
+                    >
+                    <span
+                        class="skincolor-select-link"
+                        onclick="skincolorResetDefault()"
+                        >Reset to Default</span
+                    >
+                </div>
+                <div class="skincolor-grid" id="skincolor-picker-grid"></div>
+                <div class="skincolor-panel-actions">
+                    <button class="btn-cancel" onclick="closeSkincolorPicker()">
+                        Cancel
+                    </button>
+                    <button class="btn-save" onclick="confirmSkincolorPicker()">
+                        Done
                     </button>
                 </div>
             </div>
@@ -949,7 +2788,6 @@
         ───────────────────────────────────────── */
             function openForm(cardId) {
                 editingId = cardId;
-                const overlay = document.getElementById("form-overlay");
 
                 if (cardId) {
                     const card = getCards().find((c) => c.id === cardId);
@@ -960,30 +2798,1259 @@
                     document.getElementById("f-type").value = card.genre || "";
                     document.getElementById("f-description").value =
                         card.description || "";
-                    document.getElementById("f-startscene").value =
-                        card.startScene || "";
+                    // restore name generator data
+                    const ng = card.nameGenerator || {};
+                    nameGenData = {
+                        male: {
+                            first:
+                                ng.male && ng.male.first
+                                    ? [...ng.male.first]
+                                    : [],
+                            last:
+                                ng.male && ng.male.last
+                                    ? [...ng.male.last]
+                                    : [],
+                        },
+                        female: {
+                            first:
+                                ng.female && ng.female.first
+                                    ? [...ng.female.first]
+                                    : [],
+                            last:
+                                ng.female && ng.female.last
+                                    ? [...ng.female.last]
+                                    : [],
+                        },
+                    };
+                    updateNameGenSummary();
+                    // restore lore
+                    loreData = card.lore || "";
+                    updateLoreSummary();
+                    // restore skincolor
+                    skincolorData = card.skincolorAllowed
+                        ? [...card.skincolorAllowed]
+                        : [];
+                    updateSkincolorSummary();
+
                     document.getElementById("form-id-row").textContent =
                         "ID: " + card.id;
                     document.getElementById("btn-save").textContent = "Save";
+                    // restore location sub-dropdowns
+                    resetLocationSubtype();
+                    onTypeChange();
+                    if (card.genre === "location") applyLocationSubtype(card);
                 } else {
                     document.getElementById("form-title").textContent =
                         "Add Entry";
                     document.getElementById("f-name").value = "";
                     document.getElementById("f-type").value = "";
                     document.getElementById("f-description").value = "";
-                    document.getElementById("f-startscene").value = "";
+                    resetNameGen();
+                    loreData = "";
+                    updateLoreSummary();
+                    skincolorData = [];
+                    updateSkincolorSummary();
+
                     document.getElementById("form-id-row").textContent = "";
                     document.getElementById("btn-save").textContent = "Create";
+                    resetLocationSubtype();
                 }
 
-                overlay.classList.add("visible");
+                // Update the small badge pill in form nav
+                const total = getCards().length;
+                document.getElementById("form-nav-count").textContent = total;
+                const formPills = document.getElementById("form-nav-pills");
+                formPills.innerHTML = "";
+                const label = document.createElement("span");
+                label.style.cssText =
+                    "color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;padding:7px 4px;";
+                label.textContent = cardId ? "EDIT ENTRY" : "NEW ENTRY";
+                formPills.appendChild(label);
+
+                // Show/hide name generator button based on type
+                // (onTypeChange handles it when user picks type,
+                //  here we just sync on open for both new and edit)
+                document.getElementById("namegen-form-group").style.display =
+                    document.getElementById("f-type").value === "race"
+                        ? "block"
+                        : "none";
+
+                // Switch views
+                document.getElementById("app").style.display = "none";
+                document.getElementById("form-view").classList.add("visible");
+
+                // Focus name field
+                setTimeout(() => document.getElementById("f-name").focus(), 80);
             }
 
             function closeForm() {
                 document
-                    .getElementById("form-overlay")
+                    .getElementById("form-view")
                     .classList.remove("visible");
+                document
+                    .getElementById("namegen-view")
+                    .classList.remove("visible");
+                document
+                    .getElementById("lore-view")
+                    .classList.remove("visible");
+                document.getElementById("app").style.display = "flex";
                 editingId = null;
+                resetNameGen();
+                loreData = "";
+                updateLoreSummary();
+                skincolorData = [];
+                updateSkincolorSummary();
+                renderList();
+            }
+
+            /* ─────────────────────────────────────────
+               LOCATION SUB-DROPDOWNS
+            ───────────────────────────────────────── */
+            function onTypeChange() {
+                const type = document.getElementById("f-type").value;
+
+                // Show / hide Name Generator button
+                document.getElementById("namegen-form-group").style.display =
+                    type === "race" ? "block" : "none";
+
+                const locGroup = document.getElementById("location-sub-group");
+                const zivilGroup = document.getElementById("zivil-sub-group");
+                const buildingGroup =
+                    document.getElementById("building-sub-group");
+
+                if (type === "location") {
+                    locGroup.style.display = "block";
+                } else {
+                    locGroup.style.display = "none";
+                    zivilGroup.style.display = "none";
+                    buildingGroup.style.display = "none";
+                    document.getElementById("f-location-sub").value = "";
+                    document.getElementById("f-zivil-sub").value = "";
+                    document.getElementById("f-building-sub").value = "";
+                }
+            }
+
+            function onLocationSubChange() {
+                const sub = document.getElementById("f-location-sub").value;
+                const zivilGroup = document.getElementById("zivil-sub-group");
+                const buildingGroup =
+                    document.getElementById("building-sub-group");
+                const sublocBuildingGroup = document.getElementById(
+                    "subloc-building-group",
+                );
+
+                zivilGroup.style.display = sub === "zivil" ? "block" : "none";
+                buildingGroup.style.display =
+                    sub === "building" ? "block" : "none";
+                sublocBuildingGroup.style.display =
+                    sub === "building" ? "block" : "none";
+
+                if (sub !== "zivil") {
+                    document.getElementById("f-zivil-sub").value = "";
+                    // hide zivil-dependent subloc groups
+                    document.getElementById(
+                        "subloc-village-city-group",
+                    ).style.display = "none";
+                    document.getElementById(
+                        "subloc-country-kingdom-group",
+                    ).style.display = "none";
+                    sublocSelections["village-city"] = [];
+                    sublocSelections["country-kingdom"] = [];
+                    renderSublocTags("village-city");
+                    renderSublocTags("country-kingdom");
+                }
+                if (sub !== "building") {
+                    document.getElementById("f-building-sub").value = "";
+                    sublocSelections["building"] = [];
+                    renderSublocTags("building");
+                }
+            }
+
+            function getLocationSubtype() {
+                const sub = document.getElementById("f-location-sub").value;
+                if (sub === "zivil")
+                    return {
+                        locationSub: sub,
+                        locationDetail:
+                            document.getElementById("f-zivil-sub").value,
+                    };
+                if (sub === "building")
+                    return {
+                        locationSub: sub,
+                        locationDetail:
+                            document.getElementById("f-building-sub").value,
+                    };
+                return { locationSub: sub, locationDetail: "" };
+            }
+
+            function applyLocationSubtype(card) {
+                const type = document.getElementById("f-type").value;
+                if (type !== "location") return;
+                document.getElementById("f-location-sub").value =
+                    card.locationSub || "";
+                onLocationSubChange();
+                if (card.locationSub === "zivil") {
+                    document.getElementById("f-zivil-sub").value =
+                        card.locationDetail || "";
+                    onZivilSubChange();
+                    // restore subloc selections
+                    if (card.sublocations) {
+                        sublocSelections["village-city"] =
+                            card.sublocations["village-city"] || [];
+                        sublocSelections["country-kingdom"] =
+                            card.sublocations["country-kingdom"] || [];
+                        renderSublocTags("village-city");
+                        renderSublocTags("country-kingdom");
+                    }
+                    // restore racial selections
+                    if (card.racialCivilization) {
+                        racialSelections["village-city"] =
+                            card.racialCivilization["village-city"] || [];
+                        racialSelections["country-kingdom"] =
+                            card.racialCivilization["country-kingdom"] || [];
+                        renderRacialTags("village-city");
+                        renderRacialTags("country-kingdom");
+                    }
+                    // restore population
+                    if (card.population) {
+                        setPopulation(
+                            "village-city",
+                            card.population["village-city"] || 0,
+                        );
+                        setPopulation(
+                            "country-kingdom",
+                            card.population["country-kingdom"] || 0,
+                        );
+                    }
+                }
+                if (card.locationSub === "building") {
+                    document.getElementById("f-building-sub").value =
+                        card.locationDetail || "";
+                    if (card.sublocations) {
+                        sublocSelections["building"] =
+                            card.sublocations["building"] || [];
+                        renderSublocTags("building");
+                    }
+                    // restore canBeSpawn
+                    const grp = document.getElementById("spawn-check-group");
+                    if (card.canBeSpawn) grp.classList.add("active");
+                    else grp.classList.remove("active");
+                }
+            }
+
+            function resetLocationSubtype() {
+                document.getElementById("f-location-sub").value = "";
+                document.getElementById("f-zivil-sub").value = "";
+                document.getElementById("f-building-sub").value = "";
+                resetSpawnCheck();
+                document.getElementById("location-sub-group").style.display =
+                    "none";
+                document.getElementById("zivil-sub-group").style.display =
+                    "none";
+                document.getElementById("building-sub-group").style.display =
+                    "none";
+                resetSublocSelections();
+            }
+
+            /* ─────────────────────────────────────────
+               NAME GENERATOR
+            ───────────────────────────────────────── */
+            // Structure: { male: { first:[], last:[] }, female: { first:[], last:[] } }
+            const _emptyNameData = () => ({
+                male: { first: [], last: [] },
+                female: { first: [], last: [] },
+            });
+
+            let nameGenTemp = _emptyNameData();
+            let nameGenData = _emptyNameData();
+            let nameGenActiveTab = "male";
+
+            /* Summary shown in the form below the button */
+            function updateNameGenSummary() {
+                const s = document.getElementById("namegen-summary");
+                if (!s) return;
+                const mf = nameGenData.male.first.length;
+                const ml = nameGenData.male.last.length;
+                const ff = nameGenData.female.first.length;
+                const fl = nameGenData.female.last.length;
+                const total = mf + ml + ff + fl;
+                if (!total) {
+                    s.textContent = "";
+                    return;
+                }
+                s.textContent =
+                    "\u2642 " +
+                    mf +
+                    " first · " +
+                    ml +
+                    " last" +
+                    "   \u2640 " +
+                    ff +
+                    " first · " +
+                    fl +
+                    " last";
+            }
+
+            /* Switch Male / Female tab */
+            function switchNameGenTab(tab) {
+                nameGenActiveTab = tab;
+                document
+                    .getElementById("tab-male")
+                    .classList.toggle("active", tab === "male");
+                document
+                    .getElementById("tab-female")
+                    .classList.toggle("active", tab === "female");
+                document.getElementById("namegen-section-male").style.display =
+                    tab === "male" ? "block" : "none";
+                document.getElementById(
+                    "namegen-section-female",
+                ).style.display = tab === "female" ? "block" : "none";
+                // focus appropriate input
+                const focusId = tab === "male" ? "m-fn-input" : "f-fn-input";
+                setTimeout(() => document.getElementById(focusId).focus(), 60);
+            }
+
+            function openNameGen() {
+                // deep-copy
+                nameGenTemp = {
+                    male: {
+                        first: [...nameGenData.male.first],
+                        last: [...nameGenData.male.last],
+                    },
+                    female: {
+                        first: [...nameGenData.female.first],
+                        last: [...nameGenData.female.last],
+                    },
+                };
+                nameGenActiveTab = "male";
+
+                // Nav
+                const raceName =
+                    document.getElementById("f-name").value.trim() || "Race";
+                document.getElementById("namegen-race-label").textContent =
+                    raceName.toUpperCase();
+                const pills = document.getElementById("namegen-nav-pills");
+                pills.innerHTML = "";
+                const lbl = document.createElement("span");
+                lbl.style.cssText =
+                    "color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;padding:7px 4px;";
+                lbl.textContent = "NAME GENERATOR";
+                pills.appendChild(lbl);
+
+                // reset to male tab
+                document.getElementById("tab-male").classList.add("active");
+                document
+                    .getElementById("tab-female")
+                    .classList.remove("active");
+                document.getElementById("namegen-section-male").style.display =
+                    "block";
+                document.getElementById(
+                    "namegen-section-female",
+                ).style.display = "none";
+
+                document
+                    .getElementById("form-view")
+                    .classList.remove("visible");
+                document
+                    .getElementById("namegen-view")
+                    .classList.add("visible");
+
+                renderNameGenLists();
+                setTimeout(
+                    () => document.getElementById("m-fn-input").focus(),
+                    80,
+                );
+            }
+
+            function closeNameGen() {
+                document
+                    .getElementById("namegen-view")
+                    .classList.remove("visible");
+                document.getElementById("form-view").classList.add("visible");
+            }
+
+            function saveNameGen() {
+                nameGenData = {
+                    male: {
+                        first: [...nameGenTemp.male.first],
+                        last: [...nameGenTemp.male.last],
+                    },
+                    female: {
+                        first: [...nameGenTemp.female.first],
+                        last: [...nameGenTemp.female.last],
+                    },
+                };
+                updateNameGenSummary();
+                closeNameGen();
+            }
+
+            /* gender = "male"|"female"   nameType = "first"|"last" */
+            function addNameGenEntry(gender, nameType) {
+                const idMap = {
+                    "male-first": "m-fn-input",
+                    "male-last": "m-ln-input",
+                    "female-first": "f-fn-input",
+                    "female-last": "f-ln-input",
+                };
+                const inputEl = document.getElementById(
+                    idMap[gender + "-" + nameType],
+                );
+                const val = inputEl.value.trim();
+                if (!val) return;
+                const arr = nameGenTemp[gender][nameType];
+                if (arr.includes(val)) {
+                    showToast("Name already in list.", "#c04040");
+                    return;
+                }
+                arr.push(val);
+                inputEl.value = "";
+                renderNameGenLists();
+                inputEl.focus();
+            }
+
+            function removeNameGenEntry(gender, nameType, idx) {
+                nameGenTemp[gender][nameType].splice(idx, 1);
+                renderNameGenLists();
+            }
+
+            function renderNameGenLists() {
+                renderNameGenSide(
+                    "m-fn-list",
+                    "m-fn-count",
+                    nameGenTemp.male.first,
+                    "male",
+                    "first",
+                );
+                renderNameGenSide(
+                    "m-ln-list",
+                    "m-ln-count",
+                    nameGenTemp.male.last,
+                    "male",
+                    "last",
+                );
+                renderNameGenSide(
+                    "f-fn-list",
+                    "f-fn-count",
+                    nameGenTemp.female.first,
+                    "female",
+                    "first",
+                );
+                renderNameGenSide(
+                    "f-ln-list",
+                    "f-ln-count",
+                    nameGenTemp.female.last,
+                    "female",
+                    "last",
+                );
+                const total =
+                    nameGenTemp.male.first.length +
+                    nameGenTemp.male.last.length +
+                    nameGenTemp.female.first.length +
+                    nameGenTemp.female.last.length;
+                document.getElementById("namegen-nav-count").textContent =
+                    total;
+            }
+
+            function renderNameGenSide(listId, countId, arr, gender, nameType) {
+                const container = document.getElementById(listId);
+                const countEl = document.getElementById(countId);
+                if (!container) return;
+                countEl.textContent = arr.length;
+                container.innerHTML = "";
+                arr.forEach((name, idx) => {
+                    const row = document.createElement("div");
+                    row.className = "namegen-name-row";
+                    row.innerHTML = `
+                        <span class="namegen-name-text">${escHtml(name)}</span>
+                        <button class="namegen-name-remove"
+                            onclick="removeNameGenEntry('${gender}','${nameType}',${idx})"
+                            title="Remove">&#10005;</button>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            function resetNameGen() {
+                nameGenData = _emptyNameData();
+                nameGenTemp = _emptyNameData();
+                updateNameGenSummary();
+            }
+
+            /* ─────────────────────────────────────────
+               LORE
+            ───────────────────────────────────────── */
+            let loreData = ""; // saved lore text
+            let loreTempData = ""; // temp while lore-view is open
+
+            function updateLoreSummary() {
+                const s = document.getElementById("lore-summary");
+                if (!s) return;
+                const len = loreData.trim().length;
+                s.textContent =
+                    len > 0
+                        ? len.toLocaleString("de-DE") +
+                          " characters of lore written"
+                        : "";
+            }
+
+            function updateLoreCount() {
+                const ta = document.getElementById("lore-textarea");
+                const el = document.getElementById("lore-char-count");
+                if (!ta || !el) return;
+                const len = ta.value.length;
+                el.textContent =
+                    len.toLocaleString("de-DE") +
+                    " character" +
+                    (len !== 1 ? "s" : "");
+            }
+
+            function openLore() {
+                loreTempData = loreData;
+
+                // Nav
+                const raceName =
+                    document.getElementById("f-name").value.trim() || "Race";
+                document.getElementById("lore-race-label").textContent =
+                    raceName.toUpperCase();
+                const pills = document.getElementById("lore-nav-pills");
+                pills.innerHTML = "";
+                const lbl = document.createElement("span");
+                lbl.style.cssText =
+                    "color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;padding:7px 4px;";
+                lbl.textContent = "LORE";
+                pills.appendChild(lbl);
+
+                const wordCount = loreData.trim()
+                    ? loreData.trim().split(/\s+/).length
+                    : 0;
+                document.getElementById("lore-nav-count").textContent =
+                    wordCount;
+
+                // Fill textarea
+                document.getElementById("lore-textarea").value = loreTempData;
+                updateLoreCount();
+
+                // Switch views
+                document
+                    .getElementById("form-view")
+                    .classList.remove("visible");
+                document.getElementById("lore-view").classList.add("visible");
+                setTimeout(
+                    () => document.getElementById("lore-textarea").focus(),
+                    80,
+                );
+            }
+
+            function closeLore() {
+                document
+                    .getElementById("lore-view")
+                    .classList.remove("visible");
+                document.getElementById("form-view").classList.add("visible");
+            }
+
+            function saveLore() {
+                loreData = document.getElementById("lore-textarea").value;
+                updateLoreSummary();
+                // update word count badge
+                const wordCount = loreData.trim()
+                    ? loreData.trim().split(/\s+/).length
+                    : 0;
+                document.getElementById("lore-nav-count").textContent =
+                    wordCount;
+                closeLore();
+                showToast("Lore saved!");
+            }
+
+            /* Insert markdown helpers */
+            /* ─────────────────────────────────────────
+               SKINCOLOR PICKER
+            ───────────────────────────────────────── */
+            const SKINCOLOR_TRAITS = [
+                // Natural tones
+                { id: "pale", label: "Pale", hex: "#fce8d5", cat: "Natural" },
+                { id: "fair", label: "Fair", hex: "#f5cfa0", cat: "Natural" },
+                { id: "ivory", label: "Ivory", hex: "#ffe4c4", cat: "Natural" },
+                { id: "peach", label: "Peach", hex: "#ffcba4", cat: "Natural" },
+                { id: "beige", label: "Beige", hex: "#d4a574", cat: "Natural" },
+                { id: "tan", label: "Tan", hex: "#c68642", cat: "Natural" },
+                { id: "olive", label: "Olive", hex: "#8d7248", cat: "Natural" },
+                {
+                    id: "bronze",
+                    label: "Bronze",
+                    hex: "#cd7f32",
+                    cat: "Natural",
+                },
+                { id: "brown", label: "Brown", hex: "#7b4f2e", cat: "Natural" },
+                { id: "dark", label: "Dark", hex: "#4a2810", cat: "Natural" },
+                { id: "ebony", label: "Ebony", hex: "#2c1503", cat: "Natural" },
+                // Fantasy tones
+                { id: "ashen", label: "Ashen", hex: "#9a9a9a", cat: "Fantasy" },
+                {
+                    id: "ghostly",
+                    label: "Ghostly",
+                    hex: "#dce8f0",
+                    cat: "Fantasy",
+                },
+                {
+                    id: "obsidian",
+                    label: "Obsidian",
+                    hex: "#1a1a2e",
+                    cat: "Fantasy",
+                },
+                {
+                    id: "golden",
+                    label: "Golden",
+                    hex: "#d4a017",
+                    cat: "Fantasy",
+                },
+                {
+                    id: "silver",
+                    label: "Silver",
+                    hex: "#c0c0c0",
+                    cat: "Fantasy",
+                },
+                { id: "blue", label: "Blue", hex: "#4477bb", cat: "Fantasy" },
+                { id: "green", label: "Green", hex: "#3d6b3d", cat: "Fantasy" },
+                {
+                    id: "purple",
+                    label: "Purple",
+                    hex: "#7744aa",
+                    cat: "Fantasy",
+                },
+                {
+                    id: "crimson",
+                    label: "Crimson",
+                    hex: "#8b1a1a",
+                    cat: "Fantasy",
+                },
+                { id: "amber", label: "Amber", hex: "#cc7700", cat: "Fantasy" },
+                { id: "teal", label: "Teal", hex: "#2a8080", cat: "Fantasy" },
+            ];
+
+            let skincolorData = []; // [] = all allowed (default)
+            let skincolorTemp = [];
+
+            function openSkincolorPicker() {
+                skincolorTemp = [...skincolorData];
+                renderSkincolorPickerGrid();
+                document
+                    .getElementById("skincolor-picker")
+                    .classList.add("visible");
+            }
+
+            function closeSkincolorPicker() {
+                document
+                    .getElementById("skincolor-picker")
+                    .classList.remove("visible");
+            }
+
+            function confirmSkincolorPicker() {
+                skincolorData = [...skincolorTemp];
+                updateSkincolorSummary();
+                closeSkincolorPicker();
+            }
+
+            function toggleSkincolorItem(id) {
+                const idx = skincolorTemp.indexOf(id);
+                if (idx !== -1) {
+                    skincolorTemp.splice(idx, 1);
+                } else {
+                    skincolorTemp.push(id);
+                }
+                renderSkincolorPickerGrid();
+            }
+
+            function skincolorSelectAll() {
+                skincolorTemp = SKINCOLOR_TRAITS.map((t) => t.id);
+                renderSkincolorPickerGrid();
+            }
+
+            function skincolorSelectNone() {
+                skincolorTemp = [];
+                renderSkincolorPickerGrid();
+            }
+
+            function skincolorResetDefault() {
+                skincolorTemp = [];
+                renderSkincolorPickerGrid();
+            }
+
+            function renderSkincolorPickerGrid() {
+                const container = document.getElementById(
+                    "skincolor-picker-grid",
+                );
+                container.innerHTML = "";
+
+                let lastCat = null;
+                SKINCOLOR_TRAITS.forEach((trait) => {
+                    if (trait.cat !== lastCat) {
+                        lastCat = trait.cat;
+                        const hdr = document.createElement("div");
+                        hdr.className = "skincolor-cat-header";
+                        hdr.textContent = trait.cat;
+                        container.appendChild(hdr);
+                    }
+                    const selected =
+                        skincolorTemp.length === 0
+                            ? false
+                            : skincolorTemp.includes(trait.id);
+                    const div = document.createElement("div");
+                    div.className =
+                        "skincolor-item" + (selected ? " selected" : "");
+                    div.onclick = () => toggleSkincolorItem(trait.id);
+                    div.innerHTML =
+                        `<span class="skincolor-swatch" style="background:${trait.hex}"></span>` +
+                        `<span class="skincolor-label">${trait.label}</span>` +
+                        `<span class="skincolor-check">&#10003;</span>`;
+                    container.appendChild(div);
+                });
+
+                // Update note
+                const note = document.getElementById("skincolor-note");
+                if (skincolorTemp.length === 0) {
+                    note.textContent = "Default: All skin colors are allowed";
+                } else if (skincolorTemp.length === SKINCOLOR_TRAITS.length) {
+                    note.textContent =
+                        "All " +
+                        SKINCOLOR_TRAITS.length +
+                        " skin colors selected";
+                } else {
+                    note.textContent =
+                        skincolorTemp.length +
+                        " of " +
+                        SKINCOLOR_TRAITS.length +
+                        " skin colors selected";
+                }
+            }
+
+            function updateSkincolorSummary() {
+                const s = document.getElementById("skincolor-summary");
+                if (!s) return;
+                if (skincolorData.length === 0) {
+                    s.textContent = "";
+                } else {
+                    const names = skincolorData.map((id) => {
+                        const t = SKINCOLOR_TRAITS.find((x) => x.id === id);
+                        return t ? t.label : id;
+                    });
+                    s.textContent = "Skincolor: " + names.join(", ");
+                }
+            }
+
+            function loreInsert(before, after, mode) {
+                const ta = document.getElementById("lore-textarea");
+                const start = ta.selectionStart;
+                const end = ta.selectionEnd;
+                const sel = ta.value.substring(start, end);
+
+                let insert = "";
+                if (mode === "line") {
+                    // prefix at start of current line
+                    const lineStart = ta.value.lastIndexOf("\n", start - 1) + 1;
+                    const pre = ta.value.substring(0, lineStart);
+                    const line = ta.value.substring(lineStart);
+                    ta.value = pre + before + line;
+                    const pos = lineStart + before.length;
+                    ta.selectionStart = ta.selectionEnd = pos;
+                } else {
+                    insert = before + sel + after;
+                    ta.value =
+                        ta.value.substring(0, start) +
+                        insert +
+                        ta.value.substring(end);
+                    ta.selectionStart = start + before.length;
+                    ta.selectionEnd = start + before.length + sel.length;
+                }
+                ta.focus();
+                updateLoreCount();
+            }
+
+            /* ─────────────────────────────────────────
+               ZIVIL SUB → show/hide subloc groups
+            ───────────────────────────────────────── */
+            function onZivilSubChange() {
+                const val = document.getElementById("f-zivil-sub").value;
+
+                const vcGroup = document.getElementById(
+                    "subloc-village-city-group",
+                );
+                const ckGroup = document.getElementById(
+                    "subloc-country-kingdom-group",
+                );
+
+                // village / city block
+                const vcBlock = document.getElementById("village-city-block");
+                const ckBlock = document.getElementById(
+                    "country-kingdom-block",
+                );
+
+                vcBlock.style.display =
+                    val === "village" || val === "city" ? "block" : "none";
+                ckBlock.style.display =
+                    val === "country" || val === "kingdom" ? "block" : "none";
+
+                vcGroup.style.display =
+                    val === "village" || val === "city" ? "block" : "none";
+                ckGroup.style.display =
+                    val === "country" || val === "kingdom" ? "block" : "none";
+
+                // clear tags & population when hidden
+                if (val !== "village" && val !== "city") {
+                    sublocSelections["village-city"] = [];
+                    racialSelections["village-city"] = [];
+                    document.getElementById("pop-village-city").value = "";
+                    document.getElementById(
+                        "pop-village-city-fmt",
+                    ).textContent = "";
+                }
+                if (val !== "country" && val !== "kingdom") {
+                    sublocSelections["country-kingdom"] = [];
+                    racialSelections["country-kingdom"] = [];
+                    document.getElementById("pop-country-kingdom").value = "";
+                    document.getElementById(
+                        "pop-country-kingdom-fmt",
+                    ).textContent = "";
+                }
+                renderSublocTags("village-city");
+                renderSublocTags("country-kingdom");
+                renderRacialTags("village-city");
+                renderRacialTags("country-kingdom");
+            }
+
+            /* ─────────────────────────────────────────
+               POPULATION HELPERS
+            ───────────────────────────────────────── */
+            function updatePopFormatted(ctx) {
+                const inputId =
+                    ctx === "village-city"
+                        ? "pop-village-city"
+                        : "pop-country-kingdom";
+                const fmtId = inputId + "-fmt";
+                const val =
+                    parseInt(document.getElementById(inputId).value) || 0;
+                document.getElementById(fmtId).textContent =
+                    val > 0 ? val.toLocaleString("de-DE") + " inhabitants" : "";
+            }
+
+            function getPopulation(ctx) {
+                const inputId =
+                    ctx === "village-city"
+                        ? "pop-village-city"
+                        : "pop-country-kingdom";
+                return parseInt(document.getElementById(inputId).value) || 0;
+            }
+
+            function setPopulation(ctx, val) {
+                const inputId =
+                    ctx === "village-city"
+                        ? "pop-village-city"
+                        : "pop-country-kingdom";
+                document.getElementById(inputId).value = val || "";
+                updatePopFormatted(ctx);
+            }
+
+            /* ─────────────────────────────────────────
+               RACIAL CIVILIZATION STATE
+            ───────────────────────────────────────── */
+            // key → array of { id, name, pct }
+            const racialSelections = {
+                "village-city": [],
+                "country-kingdom": [],
+            };
+            let racialPickerContext = null;
+            let racialPickerTemp = []; // array of { id, name, pct }
+
+            function openRacialPicker(ctx) {
+                racialPickerContext = ctx;
+                // deep-copy current selection into temp
+                racialPickerTemp = (racialSelections[ctx] || []).map((r) => ({
+                    ...r,
+                }));
+
+                const titles = {
+                    "village-city": "RacialCivilization — Village / City",
+                    "country-kingdom": "RacialCivilization — Country / Kingdom",
+                };
+                document.getElementById("racial-panel-title").textContent =
+                    titles[ctx] || "RacialCivilization";
+
+                // Populate race select from Race cards
+                const raceCards = getCards().filter((c) => c.genre === "race");
+                const sel = document.getElementById("racial-add-select");
+                sel.innerHTML = `<option value="">Select a race to add...</option>`;
+                raceCards.forEach((c) => {
+                    const opt = document.createElement("option");
+                    opt.value = c.id;
+                    opt.textContent = c.title;
+                    sel.appendChild(opt);
+                });
+
+                document
+                    .getElementById("racial-picker")
+                    .classList.add("visible");
+                renderRacialPickerRows();
+            }
+
+            function closeRacialPicker() {
+                document
+                    .getElementById("racial-picker")
+                    .classList.remove("visible");
+                racialPickerContext = null;
+                racialPickerTemp = [];
+            }
+
+            function confirmRacialPicker() {
+                if (!racialPickerContext) return;
+                racialSelections[racialPickerContext] = racialPickerTemp.map(
+                    (r) => ({ ...r }),
+                );
+                renderRacialTags(racialPickerContext);
+                closeRacialPicker();
+            }
+
+            function racialAddRow() {
+                const sel = document.getElementById("racial-add-select");
+                const id = sel.value;
+                if (!id) return;
+                // prevent duplicate
+                if (racialPickerTemp.find((r) => r.id === id)) {
+                    showToast("Race already added.", "#c04040");
+                    return;
+                }
+                const card = getCards().find((c) => c.id === id);
+                if (!card) return;
+                racialPickerTemp.push({ id, name: card.title, pct: 0 });
+                sel.value = "";
+                renderRacialPickerRows();
+            }
+
+            function renderRacialPickerRows() {
+                const container = document.getElementById("racial-rows");
+                container.innerHTML = "";
+
+                racialPickerTemp.forEach((row, idx) => {
+                    const div = document.createElement("div");
+                    div.className = "racial-row";
+                    div.innerHTML = `
+                        <span class="racial-row-name">${escHtml(row.name)}</span>
+                        <input
+                            type="number"
+                            class="racial-row-pct"
+                            min="0" max="100" step="1"
+                            value="${row.pct}"
+                            oninput="racialUpdatePct(${idx}, this.value)"
+                        />
+                        <span class="racial-row-pct-label">%</span>
+                        <button class="racial-row-remove" onclick="racialRemoveRow(${idx})">&#10005;</button>
+                    `;
+                    container.appendChild(div);
+                });
+
+                updateRacialTotal();
+            }
+
+            function racialUpdatePct(idx, val) {
+                const v = Math.min(100, Math.max(0, parseInt(val) || 0));
+                racialPickerTemp[idx].pct = v;
+                updateRacialTotal();
+            }
+
+            function racialRemoveRow(idx) {
+                racialPickerTemp.splice(idx, 1);
+                renderRacialPickerRows();
+            }
+
+            function updateRacialTotal() {
+                const total = racialPickerTemp.reduce(
+                    (s, r) => s + (parseInt(r.pct) || 0),
+                    0,
+                );
+                const el = document.getElementById("racial-total");
+                el.textContent = total + " %";
+                el.className = "racial-total-value";
+                if (total > 100) el.classList.add("over");
+                else if (total === 100) el.classList.add("exact");
+            }
+
+            /* Render racial tags in the form */
+            function renderRacialTags(ctx) {
+                const tagMap = {
+                    "village-city": "racial-village-city-tags",
+                    "country-kingdom": "racial-country-kingdom-tags",
+                };
+                const container = document.getElementById(tagMap[ctx]);
+                if (!container) return;
+                const rows = racialSelections[ctx] || [];
+                container.innerHTML = "";
+                rows.forEach((r) => {
+                    const tag = document.createElement("div");
+                    tag.className = "racial-tag";
+                    tag.innerHTML = `
+                        <span>${escHtml(r.name)}</span>
+                        <span class="racial-tag-pct">${r.pct}%</span>
+                    `;
+                    container.appendChild(tag);
+                });
+            }
+
+            /* ─────────────────────────────────────────
+               SUBLOCATION STATE
+            ───────────────────────────────────────── */
+            // key → array of card IDs
+            const sublocSelections = {
+                "village-city": [], // Buildings only
+                "country-kingdom": [], // Village, City, Building
+                building: [], // Buildings (when location-sub = building) — future use
+            };
+            let sublocPickerContext = null; // which key is open
+            let sublocPickerTemp = []; // temp selection while picker is open
+
+            /* ─────────────────────────────────────────
+               RENDER TAGS
+            ───────────────────────────────────────── */
+            function renderSublocTags(ctx) {
+                const tagMap = {
+                    "village-city": "subloc-village-city-tags",
+                    "country-kingdom": "subloc-country-kingdom-tags",
+                    building: "subloc-building-tags",
+                };
+                const container = document.getElementById(tagMap[ctx]);
+                if (!container) return;
+
+                const ids = sublocSelections[ctx] || [];
+                const all = getCards();
+
+                container.innerHTML = "";
+                ids.forEach((id) => {
+                    const card = all.find((c) => c.id === id);
+                    if (!card) return;
+                    const tag = document.createElement("div");
+                    tag.className = "subloc-tag";
+                    tag.innerHTML = `
+                        <span>${escHtml(card.title)}</span>
+                        <button class="subloc-tag-remove" onclick="removeSublocTag('${ctx}','${id}')" title="Remove">&#10005;</button>
+                    `;
+                    container.appendChild(tag);
+                });
+            }
+
+            function removeSublocTag(ctx, id) {
+                sublocSelections[ctx] = (sublocSelections[ctx] || []).filter(
+                    (x) => x !== id,
+                );
+                renderSublocTags(ctx);
+            }
+
+            /* ─────────────────────────────────────────
+               PICKER OPEN / CLOSE
+            ───────────────────────────────────────── */
+            // Returns which locationSub values are allowed in a given picker context
+            function sublocAllowedTypes(ctx) {
+                if (ctx === "village-city") return ["building"];
+                if (ctx === "country-kingdom") return ["zivil", "building"]; // zivil-sub village/city + buildings
+                if (ctx === "building") return ["building"];
+                return [];
+            }
+
+            // For country-kingdom: which zivil-sub detail values count as "village/city"
+            function sublocAllowedDetails(ctx) {
+                if (ctx === "country-kingdom") return ["village", "city"];
+                return null; // null = don't filter by locationDetail
+            }
+
+            function openSublocPicker(ctx) {
+                sublocPickerContext = ctx;
+                sublocPickerTemp = [...(sublocSelections[ctx] || [])];
+
+                const titles = {
+                    "village-city": "Select Buildings",
+                    "country-kingdom": "Select Villages, Cities & Buildings",
+                    building: "Select Buildings",
+                };
+                document.getElementById("subloc-picker-title").textContent =
+                    titles[ctx] || "Select Sublocations";
+                document.getElementById("subloc-picker-search").value = "";
+                document
+                    .getElementById("subloc-picker")
+                    .classList.add("visible");
+                renderSublocPickerList();
+            }
+
+            function closeSublocPicker() {
+                document
+                    .getElementById("subloc-picker")
+                    .classList.remove("visible");
+                sublocPickerContext = null;
+                sublocPickerTemp = [];
+            }
+
+            function confirmSublocPicker() {
+                if (!sublocPickerContext) return;
+                sublocSelections[sublocPickerContext] = [...sublocPickerTemp];
+                renderSublocTags(sublocPickerContext);
+                closeSublocPicker();
+            }
+
+            /* ─────────────────────────────────────────
+               PICKER LIST RENDER
+            ───────────────────────────────────────── */
+            function renderSublocPickerList() {
+                const list = document.getElementById("subloc-picker-list");
+                const term = document
+                    .getElementById("subloc-picker-search")
+                    .value.toLowerCase()
+                    .trim();
+                const allowed = sublocAllowedTypes(sublocPickerContext);
+                const allowedDetails =
+                    sublocAllowedDetails(sublocPickerContext);
+                const all = getCards();
+
+                // Collect every ID that is already assigned somewhere across ALL cards
+                // (excluding the card currently being edited, since its own selections
+                //  are managed separately in sublocSelections)
+                const globallyUsed = new Set();
+                all.forEach((c) => {
+                    if (c.id === editingId) return;
+                    if (!c.sublocations) return;
+                    Object.values(c.sublocations).forEach((arr) => {
+                        (arr || []).forEach((id) => globallyUsed.add(id));
+                    });
+                });
+                // Also collect IDs already picked in OTHER contexts of the current form
+                // so the same card can't be added to two subloc groups at once
+                Object.entries(sublocSelections).forEach(([ctx, ids]) => {
+                    if (ctx === sublocPickerContext) return;
+                    (ids || []).forEach((id) => globallyUsed.add(id));
+                });
+
+                const candidates = all.filter((c) => {
+                    if (c.id === editingId) return false;
+                    if (c.genre !== "location") return false;
+
+                    // Must match one of the allowed locationSub values
+                    const subMatch = allowed.includes(c.locationSub);
+
+                    // For country-kingdom we also want village/city zivil entries:
+                    // those have locationSub="zivil" and locationDetail in ["village","city"]
+                    let detailMatch = false;
+                    if (allowedDetails) {
+                        detailMatch =
+                            c.locationSub === "zivil" &&
+                            allowedDetails.includes(c.locationDetail);
+                    }
+
+                    if (!subMatch && !detailMatch) return false;
+
+                    // Hide cards that are already used elsewhere (unless currently selected in this picker)
+                    if (
+                        globallyUsed.has(c.id) &&
+                        !sublocPickerTemp.includes(c.id)
+                    )
+                        return false;
+
+                    if (term && !(c.title || "").toLowerCase().includes(term))
+                        return false;
+                    return true;
+                });
+
+                list.innerHTML = "";
+
+                if (candidates.length === 0) {
+                    list.innerHTML = `<div class="subloc-picker-empty">No matching locations found.</div>`;
+                    return;
+                }
+
+                candidates.forEach((card) => {
+                    const selected = sublocPickerTemp.includes(card.id);
+
+                    // Grey out (disabled look) if globally used by another card
+                    // but still selectable if it's already in temp (picked here)
+                    const usedElsewhere =
+                        globallyUsed.has(card.id) &&
+                        !sublocPickerTemp.includes(card.id);
+
+                    const item = document.createElement("div");
+                    item.className =
+                        "subloc-picker-item" +
+                        (selected ? " selected" : "") +
+                        (usedElsewhere ? " used-elsewhere" : "");
+
+                    // Show the most specific label available
+                    const detailLabel = (
+                        card.locationDetail ||
+                        card.locationSub ||
+                        "location"
+                    ).toUpperCase();
+
+                    item.innerHTML = `
+                        <span class="subloc-picker-item-name">${escHtml(card.title)}</span>
+                        <span class="subloc-picker-item-badge">${escHtml(detailLabel)}</span>
+                        ${selected ? '<span class="subloc-picker-check">&#10003;</span>' : ""}
+                    `;
+
+                    item.addEventListener("click", () => {
+                        if (sublocPickerTemp.includes(card.id)) {
+                            sublocPickerTemp = sublocPickerTemp.filter(
+                                (x) => x !== card.id,
+                            );
+                        } else {
+                            sublocPickerTemp.push(card.id);
+                        }
+                        renderSublocPickerList();
+                    });
+
+                    list.appendChild(item);
+                });
+            }
+
+            /* ─────────────────────────────────────────
+               RESET SUBLOC STATE
+            ───────────────────────────────────────── */
+            /* ─── Can be Spawn ─── */
+            function toggleSpawnCheck() {
+                document
+                    .getElementById("spawn-check-group")
+                    .classList.toggle("active");
+            }
+
+            function resetSpawnCheck() {
+                document
+                    .getElementById("spawn-check-group")
+                    .classList.remove("active");
+            }
+
+            function resetSublocSelections() {
+                sublocSelections["village-city"] = [];
+                sublocSelections["country-kingdom"] = [];
+                sublocSelections["building"] = [];
+                renderSublocTags("village-city");
+                renderSublocTags("country-kingdom");
+                renderSublocTags("building");
+                document.getElementById(
+                    "subloc-village-city-group",
+                ).style.display = "none";
+                document.getElementById(
+                    "subloc-country-kingdom-group",
+                ).style.display = "none";
+                document.getElementById("subloc-building-group").style.display =
+                    "none";
+                // reset racial
+                racialSelections["village-city"] = [];
+                racialSelections["country-kingdom"] = [];
+                renderRacialTags("village-city");
+                renderRacialTags("country-kingdom");
+                // reset population
+                document.getElementById("pop-village-city").value = "";
+                document.getElementById("pop-village-city-fmt").textContent =
+                    "";
+                document.getElementById("pop-country-kingdom").value = "";
+                document.getElementById("pop-country-kingdom-fmt").textContent =
+                    "";
+                // hide blocks
+                document.getElementById("village-city-block").style.display =
+                    "none";
+                document.getElementById("country-kingdom-block").style.display =
+                    "none";
             }
 
             function saveEntry() {
@@ -992,14 +4059,80 @@
                 const desc = document
                     .getElementById("f-description")
                     .value.trim();
-                const startScene = document
-                    .getElementById("f-startscene")
-                    .value.trim();
 
                 if (!name || !type) {
                     showToast("Please fill in Name and Type.", "#c04040");
                     return;
                 }
+
+                const { locationSub, locationDetail } =
+                    type === "location"
+                        ? getLocationSubtype()
+                        : { locationSub: "", locationDetail: "" };
+
+                const sublocations =
+                    type === "location"
+                        ? {
+                              "village-city": [
+                                  ...(sublocSelections["village-city"] || []),
+                              ],
+                              "country-kingdom": [
+                                  ...(sublocSelections["country-kingdom"] ||
+                                      []),
+                              ],
+                              building: [
+                                  ...(sublocSelections["building"] || []),
+                              ],
+                          }
+                        : {};
+
+                const racialCivilization =
+                    type === "location"
+                        ? {
+                              "village-city": (
+                                  racialSelections["village-city"] || []
+                              ).map((r) => ({ ...r })),
+                              "country-kingdom": (
+                                  racialSelections["country-kingdom"] || []
+                              ).map((r) => ({ ...r })),
+                          }
+                        : {};
+
+                const population =
+                    type === "location"
+                        ? {
+                              "village-city": getPopulation("village-city"),
+                              "country-kingdom":
+                                  getPopulation("country-kingdom"),
+                          }
+                        : {};
+
+                const nameGenerator =
+                    type === "race"
+                        ? {
+                              male: {
+                                  first: [...nameGenData.male.first],
+                                  last: [...nameGenData.male.last],
+                              },
+                              female: {
+                                  first: [...nameGenData.female.first],
+                                  last: [...nameGenData.female.last],
+                              },
+                          }
+                        : {
+                              male: { first: [], last: [] },
+                              female: { first: [], last: [] },
+                          };
+
+                const lore = type === "race" ? loreData : "";
+                const skincolorAllowed =
+                    type === "race" ? [...skincolorData] : [];
+
+                const canBeSpawn =
+                    type === "location" &&
+                    document
+                        .getElementById("spawn-check-group")
+                        .classList.contains("active");
 
                 let cards = getCards();
 
@@ -1010,8 +4143,16 @@
                             ...cards[idx],
                             title: name,
                             genre: type,
+                            locationSub,
+                            locationDetail,
+                            canBeSpawn,
+                            sublocations,
+                            racialCivilization,
+                            population,
+                            nameGenerator,
+                            lore,
+                            skincolorAllowed,
                             description: desc,
-                            startScene: startScene,
                             updatedAt: new Date().toISOString(),
                         };
                         saveCards(cards);
@@ -1022,8 +4163,16 @@
                         id: generateId(),
                         title: name,
                         genre: type,
+                        locationSub,
+                        locationDetail,
+                        canBeSpawn,
+                        sublocations,
+                        racialCivilization,
+                        population,
+                        nameGenerator,
+                        lore,
+                        skincolorAllowed,
                         description: desc,
-                        startScene: startScene,
                         createdAt: new Date().toISOString(),
                         version: "1.0",
                     };
@@ -1033,7 +4182,6 @@
                 }
 
                 closeForm();
-                renderList();
             }
 
             /* ─────────────────────────────────────────
@@ -1100,13 +4248,6 @@
 
             // Close context menu on outside click
             document.addEventListener("click", () => closeContextMenu());
-
-            // Close form overlay on backdrop click
-            document
-                .getElementById("form-overlay")
-                .addEventListener("click", function (e) {
-                    if (e.target === this) closeForm();
-                });
 
             /* ─────────────────────────────────────────
            IMPORT / EXPORT

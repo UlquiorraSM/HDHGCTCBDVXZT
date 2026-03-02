@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>StoryKI – World Generation</title>
+        <script src="traits.js"></script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+            }
+            *::-webkit-scrollbar {
+                width: 4px;
+            }
+            *::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 2px;
+            }
+
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                font-family: "Segoe UI", Arial, sans-serif;
+            }
+
+            body {
+                background: #0a0a0a;
+                color: #fff;
+                opacity: 0;
+                transition: opacity 0.4s ease-in-out;
+            }
+
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.75);
+                z-index: 0;
+                pointer-events: none;
+            }
+
+            #bg-layer {
+                position: fixed;
+                inset: 0;
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+                z-index: -1;
+                filter: blur(3px) brightness(0.35);
+            }
+
+            /* ═══════════════════════════════════
+               CONTAINER
+            ═══════════════════════════════════ */
+            #container {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                padding: 24px;
+            }
+
+            /* ═══════════════════════════════════
+               MAIN CARD
+            ═══════════════════════════════════ */
+            .load-card {
+                background: rgba(14, 14, 14, 0.96);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 18px;
+                padding: 40px 36px 36px 36px;
+                max-width: 500px;
+                width: 100%;
+                box-shadow:
+                    0 24px 64px rgba(0, 0, 0, 0.7),
+                    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+            }
+
+            /* Header row */
+            .card-header {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 28px;
+            }
+
+            .header-icon {
+                font-size: 36px;
+                flex-shrink: 0;
+                transition: transform 0.4s ease;
+            }
+            .header-icon.done {
+                transform: scale(1.2);
+                animation: pop 0.4s ease;
+            }
+            @keyframes pop {
+                0% {
+                    transform: scale(0.5);
+                }
+                70% {
+                    transform: scale(1.3);
+                }
+                100% {
+                    transform: scale(1.2);
+                }
+            }
+
+            .header-text {
+                flex: 1;
+            }
+            .header-title {
+                font-size: 20px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 4px;
+            }
+            .header-sub {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.38);
+            }
+
+            /* ─── Progress Bar ─── */
+            .progress-track {
+                background: rgba(255, 255, 255, 0.06);
+                border-radius: 8px;
+                height: 7px;
+                overflow: hidden;
+                margin-bottom: 8px;
+            }
+            .progress-fill {
+                height: 100%;
+                width: 0%;
+                border-radius: 8px;
+                background: linear-gradient(
+                    90deg,
+                    rgba(50, 110, 220, 0.9),
+                    rgba(60, 200, 120, 0.9)
+                );
+                transition: width 0.25s ease;
+                position: relative;
+                overflow: hidden;
+            }
+            .progress-fill::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 60%;
+                height: 100%;
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.3),
+                    transparent
+                );
+                animation: shimmer 1.6s infinite;
+            }
+            @keyframes shimmer {
+                to {
+                    left: 200%;
+                }
+            }
+
+            .progress-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 18px;
+            }
+            .progress-action {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.5);
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                padding-right: 10px;
+            }
+            .progress-pct {
+                font-size: 12px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.7);
+                flex-shrink: 0;
+            }
+
+            /* ─── Stats Row ─── */
+            .stats-row {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+            .stat-box {
+                flex: 1;
+                background: rgba(28, 28, 28, 0.8);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 9px;
+                padding: 10px 14px;
+                text-align: center;
+            }
+            .stat-val {
+                font-size: 20px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 2px;
+            }
+            .stat-lbl {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.3);
+            }
+            .stat-val.green {
+                color: rgba(80, 210, 110, 0.9);
+            }
+            .stat-val.blue {
+                color: rgba(80, 150, 230, 0.9);
+            }
+            .stat-val.gold {
+                color: rgba(210, 170, 50, 0.9);
+            }
+
+            /* ─── Location Log ─── */
+            .log-label {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.25);
+                margin-bottom: 8px;
+            }
+
+            .loc-log {
+                max-height: 200px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .log-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 11px 14px;
+                background: rgba(24, 24, 24, 0.9);
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 9px;
+                opacity: 0;
+                transform: translateY(8px);
+                animation: slide-in 0.35s ease forwards;
+            }
+            @keyframes slide-in {
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .log-type-icon {
+                font-size: 18px;
+                flex-shrink: 0;
+                width: 28px;
+                text-align: center;
+            }
+
+            .log-body {
+                flex: 1;
+                min-width: 0;
+            }
+            .log-name {
+                font-size: 13px;
+                font-weight: 700;
+                color: #fff;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                margin-bottom: 3px;
+            }
+            .log-detail {
+                font-size: 10px;
+                color: rgba(255, 255, 255, 0.32);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .log-npc-count {
+                flex-shrink: 0;
+                background: rgba(40, 120, 60, 0.3);
+                border: 1px solid rgba(60, 180, 90, 0.3);
+                border-radius: 5px;
+                padding: 3px 9px;
+                font-size: 11px;
+                font-weight: 700;
+                color: rgba(80, 210, 110, 0.9);
+                white-space: nowrap;
+            }
+
+            /* ─── Skip / No Locations ─── */
+            .skip-msg {
+                text-align: center;
+                padding: 20px 0;
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.35);
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="bg-layer"></div>
+
+        <div id="container">
+            <div class="load-card">
+                <!-- Header -->
+                <div class="card-header">
+                    <div class="header-icon" id="header-icon">🌍</div>
+                    <div class="header-text">
+                        <div class="header-title" id="header-title">
+                            Generating World…
+                        </div>
+                        <div class="header-sub" id="header-sub">
+                            Creating inhabitants for your story
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div class="progress-track">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-row">
+                    <div class="progress-action" id="progress-action">
+                        Scanning locations…
+                    </div>
+                    <div class="progress-pct" id="progress-pct">0%</div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-val green" id="stat-locs">0</div>
+                        <div class="stat-lbl">Locations</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val blue" id="stat-npcs">0</div>
+                        <div class="stat-lbl">NPCs</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val gold" id="stat-races">0</div>
+                        <div class="stat-lbl">Races</div>
+                    </div>
+                </div>
+
+                <!-- Location log -->
+                <div class="log-label">Processed Locations</div>
+                <div class="loc-log" id="loc-log">
+                    <div class="skip-msg" id="log-placeholder">
+                        Scanning world data…
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            /* ═══════════════════════════════════════
+               CONSTANTS
+            ═══════════════════════════════════════ */
+            const SETTINGS_KEY = "storyki_settings";
+            const CARDS_KEY = "storyki_storycards";
+            const NPCS_KEY = "storyki_npcs";
+
+            /* Fallback first names if race has no name pool */
+            const FALLBACK_NAMES = [
+                "Arin",
+                "Beron",
+                "Cael",
+                "Daven",
+                "Elia",
+                "Faen",
+                "Garen",
+                "Hira",
+                "Isen",
+                "Jara",
+                "Kael",
+                "Lira",
+                "Mael",
+                "Nira",
+                "Orin",
+                "Pael",
+                "Qira",
+                "Rael",
+                "Sira",
+                "Tael",
+                "Urin",
+                "Vael",
+                "Wira",
+                "Xael",
+                "Yira",
+                "Zael",
+                "Aldor",
+                "Bina",
+                "Cara",
+                "Doran",
+                "Elsa",
+            ];
+
+            /* Fallback last names if race has no last-name pool */
+            const FALLBACK_LAST_NAMES = [
+                "Ashwood",
+                "Blackstone",
+                "Brightwell",
+                "Coldwater",
+                "Darkwood",
+                "Eastfield",
+                "Fairholm",
+                "Goldmane",
+                "Hillcrest",
+                "Ironforge",
+                "Kettlebrook",
+                "Longridge",
+                "Moorwood",
+                "Northvale",
+                "Oldbridge",
+                "Pinecrest",
+                "Quickwater",
+                "Redstone",
+                "Silverbrook",
+                "Thornwood",
+                "Underhill",
+                "Valewood",
+                "Westmere",
+                "Yarwood",
+                "Zarwell",
+                "Amberhill",
+                "Brookstone",
+                "Clayford",
+                "Dawnmere",
+                "Emberwick",
+                "Frostholm",
+                "Greymantle",
+            ];
+
+            /* ═══════════════════════════════════════
+               STATE
+            ═══════════════════════════════════════ */
+            let totalNPCsGenerated = 0;
+            let uniqueRaceIds = new Set();
+
+            /* ═══════════════════════════════════════
+               BACKGROUND
+            ═══════════════════════════════════════ */
+            function loadBackground() {
+                const raw = localStorage.getItem(SETTINGS_KEY);
+                const url = raw
+                    ? JSON.parse(raw).backgroundUrl ||
+                      "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg"
+                    : "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg";
+                document.getElementById("bg-layer").style.backgroundImage =
+                    `url(${url})`;
+            }
+
+            /* ═══════════════════════════════════════
+               DATA HELPERS
+            ═══════════════════════════════════════ */
+            function getCards() {
+                return JSON.parse(localStorage.getItem(CARDS_KEY) || "[]");
+            }
+
+            function generateId() {
+                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                let id = "";
+                for (let i = 0; i < 12; i++) {
+                    if (i > 0 && i % 4 === 0) id += "-";
+                    id += chars.charAt(
+                        Math.floor(Math.random() * chars.length),
+                    );
+                }
+                return id;
+            }
+
+            function getLocationPopulation(card) {
+                if (!card.population) return 0;
+                const d = card.locationDetail;
+                if (d === "village" || d === "city")
+                    return card.population["village-city"] || 0;
+                if (d === "country" || d === "kingdom")
+                    return card.population["country-kingdom"] || 0;
+                return 0;
+            }
+
+            function getLocationRacialData(card) {
+                if (!card.racialCivilization) return [];
+                const d = card.locationDetail;
+                if (d === "village" || d === "city")
+                    return card.racialCivilization["village-city"] || [];
+                if (d === "country" || d === "kingdom")
+                    return card.racialCivilization["country-kingdom"] || [];
+                return [];
+            }
+
+            /* ═══════════════════════════════════════
+               NPC GENERATION HELPERS
+            ═══════════════════════════════════════ */
+
+            /* Weighted random race pick */
+            function pickRace(racialData, raceCards) {
+                if (!racialData || racialData.length === 0) return null;
+
+                const total = racialData.reduce(
+                    (sum, r) => sum + (r.pct || 0),
+                    0,
+                );
+
+                if (total <= 0) {
+                    /* No percentages set — uniform distribution */
+                    const idx = Math.floor(Math.random() * racialData.length);
+                    return (
+                        raceCards.find((r) => r.id === racialData[idx].id) ||
+                        null
+                    );
+                }
+
+                let roll = Math.random() * total;
+                for (const entry of racialData) {
+                    roll -= entry.pct || 0;
+                    if (roll <= 0) {
+                        return raceCards.find((r) => r.id === entry.id) || null;
+                    }
+                }
+                return raceCards.find((r) => r.id === racialData[0].id) || null;
+            }
+
+            /* Generate a name from the race name pool */
+            function generateName(raceCard, gender) {
+                const ng = raceCard?.nameGenerator;
+                const pool = gender === "female" ? ng?.female : ng?.male;
+                const fallPool = gender === "female" ? ng?.male : ng?.female;
+
+                const firstPool = pool?.first?.length
+                    ? pool.first
+                    : fallPool?.first?.length
+                      ? fallPool.first
+                      : FALLBACK_NAMES;
+
+                const lastPool = pool?.last?.length
+                    ? pool.last
+                    : fallPool?.last?.length
+                      ? fallPool.last
+                      : [];
+
+                const first =
+                    firstPool[Math.floor(Math.random() * firstPool.length)];
+                const last = lastPool.length
+                    ? lastPool[Math.floor(Math.random() * lastPool.length)]
+                    : "";
+
+                return { first, last };
+            }
+
+            /* ─────────────────────────────────────
+               FAMILY NAME HELPERS
+            ───────────────────────────────────── */
+
+            /**
+             * Pick a shared last name for a family from the race's pool.
+             * Merges male+female last pools; falls back to FALLBACK_LAST_NAMES.
+             */
+            function generateFamilyLastName(raceCard) {
+                const ng = raceCard?.nameGenerator;
+                const mLast = ng?.male?.last || [];
+                const fLast = ng?.female?.last || [];
+                const combined = [...new Set([...mLast, ...fLast])];
+                if (combined.length > 0)
+                    return combined[
+                        Math.floor(Math.random() * combined.length)
+                    ];
+                if (FALLBACK_LAST_NAMES.length > 0)
+                    return FALLBACK_LAST_NAMES[
+                        Math.floor(Math.random() * FALLBACK_LAST_NAMES.length)
+                    ];
+                return "";
+            }
+
+            /**
+             * Pick a first name for a given gender from the race's pool.
+             */
+            function generateFirstName(raceCard, gender) {
+                const ng = raceCard?.nameGenerator;
+                const pool = gender === "female" ? ng?.female : ng?.male;
+                const fallPool = gender === "female" ? ng?.male : ng?.female;
+                const firstPool = pool?.first?.length
+                    ? pool.first
+                    : fallPool?.first?.length
+                      ? fallPool.first
+                      : FALLBACK_NAMES;
+                return firstPool[Math.floor(Math.random() * firstPool.length)];
+            }
+
+            /**
+             * Generate a random age and birthdate (day + month) for an NPC
+             * based on their family role.
+             *   parent → 25–55
+             *   child  →  1–17
+             *   single → 18–70
+             *
+             * @param {"parent"|"child"|"single"} role
+             * @returns {{ age: number, birthdate: { day: number, month: number } }}
+             */
+            function generateAgeBirthdate(role) {
+                let age;
+                if (role === "parent") {
+                    age = 25 + Math.floor(Math.random() * 31); // 25–55
+                } else if (role === "child") {
+                    age = 1 + Math.floor(Math.random() * 17); // 1–17
+                } else {
+                    age = 18 + Math.floor(Math.random() * 53); // 18–70
+                }
+                return {
+                    age,
+                    birthdate: {
+                        day: 1 + Math.floor(Math.random() * 28), // 1–28
+                        month: 1 + Math.floor(Math.random() * 12), // 1–12
+                    },
+                };
+            }
+
+            /* ─────────────────────────────────────
+               FAMILY BUILDER
+            ───────────────────────────────────── */
+
+            /**
+             * Build a single family of `size` NPCs.
+             * All members share the same lastName and familyId.
+             * Relations (spouse / parent / child / sibling) are wired up.
+             *
+             * Returns an array of NPC objects with traits already assigned.
+             *
+             * Family structures:
+             *   size 1  → single-person household
+             *   size 2  → couple (no children)
+             *   size 3+ → couple + (size-2) children
+             */
+            function buildFamily(race, loc, size) {
+                const familyId = generateId();
+                const lastName = generateFamilyLastName(race);
+                const familyName = lastName;
+
+                /* Pre-assign IDs so we can cross-reference relations */
+                const ids = Array.from({ length: size }, () => generateId());
+
+                /* Relations map: npcId → [{ npcId, type }, …] */
+                const relMap = {};
+                ids.forEach((id) => (relMap[id] = []));
+
+                function link(fromId, toId, type) {
+                    relMap[fromId].push({ npcId: toId, type });
+                }
+
+                /* Base fields shared by every member */
+                const base = {
+                    lastName,
+                    familyId,
+                    familyName,
+                    raceId: race?.id || "",
+                    raceName: race?.title || "Unknown",
+                    locationId: loc.id,
+                    locationName: loc.title,
+                    locationDetail: loc.locationDetail,
+                };
+
+                const rawMembers = [];
+
+                if (size === 1) {
+                    /* ── Single-person household ── */
+                    const gender = Math.random() < 0.5 ? "male" : "female";
+                    rawMembers.push({
+                        id: ids[0],
+                        gender,
+                        role: "single",
+                        firstName: generateFirstName(race, gender),
+                        ...generateAgeBirthdate("single"),
+                    });
+                } else {
+                    /* ── Couple (+ optional children) ── */
+
+                    /* Parent 1 — male */
+                    const p1Id = ids[0];
+                    rawMembers.push({
+                        id: p1Id,
+                        gender: "male",
+                        role: "parent",
+                        firstName: generateFirstName(race, "male"),
+                        ...generateAgeBirthdate("parent"),
+                    });
+
+                    /* Parent 2 — female */
+                    const p2Id = ids[1];
+                    rawMembers.push({
+                        id: p2Id,
+                        gender: "female",
+                        role: "parent",
+                        firstName: generateFirstName(race, "female"),
+                        ...generateAgeBirthdate("parent"),
+                    });
+
+                    link(p1Id, p2Id, "spouse");
+                    link(p2Id, p1Id, "spouse");
+
+                    /* Children */
+                    const childIds = [];
+                    for (let c = 2; c < size; c++) {
+                        const cId = ids[c];
+                        const cGender = Math.random() < 0.5 ? "male" : "female";
+                        rawMembers.push({
+                            id: cId,
+                            gender: cGender,
+                            role: "child",
+                            firstName: generateFirstName(race, cGender),
+                            ...generateAgeBirthdate("child"),
+                        });
+
+                        /* Parent ↔ child */
+                        link(p1Id, cId, "child");
+                        link(p2Id, cId, "child");
+                        link(cId, p1Id, "parent");
+                        link(cId, p2Id, "parent");
+
+                        /* Sibling ↔ sibling */
+                        childIds.forEach((sibId) => {
+                            link(cId, sibId, "sibling");
+                            link(sibId, cId, "sibling");
+                        });
+                        childIds.push(cId);
+                    }
+                }
+
+                /* Assemble full NPC objects and assign traits */
+                return rawMembers.map((m) =>
+                    assignNPCTraits({
+                        id: m.id,
+                        firstName: m.firstName,
+                        role: m.role,
+                        gender: m.gender,
+                        age: m.age,
+                        birthdate: m.birthdate,
+                        relations: relMap[m.id] || [],
+                        ...base,
+                    }),
+                );
+            }
+
+            /* ═══════════════════════════════════════
+               UI HELPERS
+            ═══════════════════════════════════════ */
+            function setProgress(pct, action) {
+                document.getElementById("progress-fill").style.width =
+                    pct + "%";
+                document.getElementById("progress-pct").textContent =
+                    Math.round(pct) + "%";
+                if (action != null) {
+                    document.getElementById("progress-action").textContent =
+                        action;
+                }
+            }
+
+            function updateStats(npcs, races) {
+                document.getElementById("stat-npcs").textContent =
+                    npcs.toLocaleString("de-DE");
+                document.getElementById("stat-races").textContent = races;
+            }
+
+            function addLogItem(icon, name, detail, npcCount) {
+                const log = document.getElementById("loc-log");
+
+                /* Remove placeholder */
+                const ph = document.getElementById("log-placeholder");
+                if (ph) ph.remove();
+
+                const item = document.createElement("div");
+                item.className = "log-item";
+                item.innerHTML = `
+                    <span class="log-type-icon">${icon}</span>
+                    <div class="log-body">
+                        <div class="log-name">${escHtml(name)}</div>
+                        <div class="log-detail">${escHtml(detail)}</div>
+                    </div>
+                    <span class="log-npc-count">+${npcCount.toLocaleString("de-DE")}</span>
+                `;
+                log.appendChild(item);
+                log.scrollTop = log.scrollHeight;
+            }
+
+            function escHtml(str) {
+                return (str || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
+            }
+
+            function sleep(ms) {
+                return new Promise((r) => setTimeout(r, ms));
+            }
+
+            /* ═══════════════════════════════════════
+               MAIN WORLD GENERATION
+            ═══════════════════════════════════════ */
+            async function generateWorld() {
+                const cards = getCards();
+                const raceCards = cards.filter((c) => c.genre === "race");
+
+                /* Find qualifying locations */
+                const locations = cards.filter(
+                    (c) =>
+                        c.genre === "location" &&
+                        c.locationSub === "zivil" &&
+                        ["village", "city", "country", "kingdom"].includes(
+                            c.locationDetail,
+                        ) &&
+                        getLocationPopulation(c) > 1,
+                );
+
+                document.getElementById("stat-locs").textContent =
+                    locations.length;
+
+                /* No locations → skip straight to game */
+                if (locations.length === 0) {
+                    setProgress(100, "No populated locations found.");
+                    document.getElementById("log-placeholder").textContent =
+                        "No villages, cities or kingdoms with population > 1 found. Skipping…";
+                    await sleep(1200);
+                    navigateToGame();
+                    return;
+                }
+
+                const TYPE_ICON = {
+                    village: "🏘️",
+                    city: "🏙️",
+                    country: "🗺️",
+                    kingdom: "👑",
+                };
+
+                const allNPCs = {};
+
+                for (let i = 0; i < locations.length; i++) {
+                    const loc = locations[i];
+                    const population = getLocationPopulation(loc);
+                    const racialData = getLocationRacialData(loc);
+                    const npcCount = population;
+                    const icon = TYPE_ICON[loc.locationDetail] || "📍";
+
+                    const pctBase = (i / locations.length) * 100;
+                    const pctSlice = (1 / locations.length) * 100;
+
+                    setProgress(pctBase, `Processing ${loc.title}…`);
+                    await sleep(20);
+
+                    const npcs = [];
+                    const BATCH = 25;
+                    let remaining = npcCount;
+
+                    while (remaining > 0) {
+                        /* Pick a race for the entire family */
+                        const race = pickRace(racialData, raceCards);
+                        if (race?.id) uniqueRaceIds.add(race.id);
+
+                        /* Determine family size (weighted distribution) */
+                        const roll = Math.random();
+                        let familySize;
+                        if (roll < 0.12) familySize = 1;
+                        else if (roll < 0.25) familySize = 2;
+                        else if (roll < 0.45) familySize = 3;
+                        else if (roll < 0.65) familySize = 4;
+                        else if (roll < 0.8) familySize = 5;
+                        else if (roll < 0.9) familySize = 6;
+                        else familySize = 7 + Math.floor(Math.random() * 4);
+
+                        /* Never overshoot the target population */
+                        familySize = Math.min(familySize, remaining);
+
+                        /* Build the family and push all members */
+                        const family = buildFamily(race, loc, familySize);
+                        npcs.push(...family);
+                        remaining -= familySize;
+
+                        /* Yield to browser every ~BATCH NPCs */
+                        const soFar = npcCount - remaining;
+                        if (soFar % BATCH < familySize || remaining === 0) {
+                            const inner =
+                                pctBase + (soFar / npcCount) * pctSlice;
+                            setProgress(
+                                inner,
+                                `${loc.title}: ${soFar} / ${npcCount} NPCs…`,
+                            );
+                            updateStats(
+                                totalNPCsGenerated + soFar,
+                                uniqueRaceIds.size,
+                            );
+                            await sleep(4);
+                        }
+                    }
+
+                    allNPCs[loc.id] = npcs;
+                    totalNPCsGenerated += npcs.length;
+
+                    updateStats(totalNPCsGenerated, uniqueRaceIds.size);
+                    setProgress(pctBase + pctSlice, `✓ ${loc.title}`);
+
+                    /* Build detail string for log */
+                    const raceList =
+                        racialData.length > 0
+                            ? racialData
+                                  .slice(0, 3)
+                                  .map((r) => `${r.name} ${r.pct}%`)
+                                  .join("  ·  ") +
+                              (racialData.length > 3 ? "  …" : "")
+                            : "No racial data";
+
+                    const detailStr =
+                        `${loc.locationDetail.toUpperCase()}  ·  ` +
+                        `Pop. ${population.toLocaleString("de-DE")}  ·  ${raceList}`;
+
+                    addLogItem(icon, loc.title, detailStr, npcs.length);
+                    await sleep(30);
+                }
+
+                /* Persist */
+                localStorage.setItem(NPCS_KEY, JSON.stringify(allNPCs));
+
+                /* Done state */
+                setProgress(100, "World generation complete!");
+                document.getElementById("header-icon").textContent = "✅";
+                document.getElementById("header-icon").classList.add("done");
+                document.getElementById("header-title").textContent =
+                    "World Ready!";
+                document.getElementById("header-sub").textContent =
+                    `${totalNPCsGenerated.toLocaleString("de-DE")} NPCs across ${locations.length} location(s) generated.`;
+
+                await sleep(1400);
+                navigateToGame();
+            }
+
+            /* ═══════════════════════════════════════
+               NAVIGATION
+            ═══════════════════════════════════════ */
+            function navigateToGame() {
+                document.body.style.transition = "opacity 0.4s ease-in-out";
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "Game.html";
+                }, 420);
+            }
+
+            /* ═══════════════════════════════════════
+               INIT
+            ═══════════════════════════════════════ */
+            window.addEventListener("load", () => {
+                loadBackground();
+                setTimeout(() => {
+                    document.body.style.opacity = "1";
+                }, 80);
+                setTimeout(() => {
+                    generateWorld();
+                }, 400);
+            });
+        </script>
+    </body>
+</html>

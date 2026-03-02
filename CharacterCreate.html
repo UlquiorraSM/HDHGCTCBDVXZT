@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>StoryKI - Character Creator</title>
+        <link rel="prefetch" href="index.html" />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            *::-webkit-scrollbar {
+                display: none;
+            }
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                font-family: "Segoe UI", Arial, sans-serif;
+            }
+            body {
+                background: #0a0a0a;
+                color: #fff;
+                opacity: 0;
+                transition: opacity 0.4s ease-in-out;
+            }
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.72);
+                z-index: 0;
+            }
+
+            /* ─── Background ─── */
+            #bg-layer {
+                position: fixed;
+                inset: 0;
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+                z-index: -1;
+                filter: blur(2px) brightness(0.4);
+            }
+
+            /* ─── App Shell ─── */
+            #app {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                align-items: center;
+            }
+
+            /* ════════════════════════════════════
+               TOP NAV
+            ════════════════════════════════════ */
+            .top-nav {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 18px 24px 12px 24px;
+                width: 100%;
+                max-width: 900px;
+                flex-shrink: 0;
+            }
+            .nav-back-btn {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.25);
+                background: rgba(30, 30, 30, 0.7);
+                color: #fff;
+                font-size: 16px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+                flex-shrink: 0;
+            }
+            .nav-back-btn:hover {
+                background: rgba(60, 60, 60, 0.9);
+                border-color: rgba(255, 255, 255, 0.5);
+            }
+            .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+            }
+            .nav-count {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                background: rgba(60, 60, 60, 0.85);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                border: 2px solid rgba(255, 255, 255, 0.12);
+            }
+
+            /* ════════════════════════════════════
+               SCROLL AREA
+            ════════════════════════════════════ */
+            .page-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 900px;
+                padding: 0 24px 40px 24px;
+            }
+
+            /* ─── Page Title ─── */
+            .page-title-row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 32px;
+            }
+            .page-title-row h1 {
+                font-size: 26px;
+                font-weight: 700;
+                color: #fff;
+                margin: 0;
+            }
+            .page-title-badge {
+                padding: 4px 13px;
+                border-radius: 6px;
+                background: rgba(40, 60, 100, 0.9);
+                border: 1.5px solid rgba(80, 120, 200, 0.4);
+                color: #88aaee;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+            }
+
+            /* ════════════════════════════════════
+               FORM SECTIONS
+            ════════════════════════════════════ */
+            .section {
+                background: rgba(20, 20, 20, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+                padding: 24px 22px 20px 22px;
+                margin-bottom: 18px;
+            }
+            .section-title {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.4);
+                margin-bottom: 16px;
+            }
+
+            /* ─── Form Elements ─── */
+            .form-group {
+                margin-bottom: 16px;
+            }
+            .form-group:last-child {
+                margin-bottom: 0;
+            }
+            .form-label {
+                display: block;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.45);
+                margin-bottom: 8px;
+            }
+            .form-input,
+            .form-select {
+                width: 100%;
+                padding: 13px 16px;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 9px;
+                color: #fff;
+                font-size: 14px;
+                outline: none;
+                transition: border-color 0.2s;
+                -webkit-appearance: none;
+                appearance: none;
+                font-family: inherit;
+            }
+            .form-input::placeholder {
+                color: rgba(255, 255, 255, 0.25);
+            }
+            .form-input:focus,
+            .form-select:focus {
+                border-color: rgba(255, 255, 255, 0.32);
+                background: rgba(18, 18, 18, 0.95);
+            }
+            .form-select option {
+                background: #1a1a1a;
+                color: #fff;
+            }
+            .two-col {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+            @media (max-width: 580px) {
+                .two-col {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* ─── Race Card Preview ─── */
+            .race-preview {
+                display: none;
+                margin-top: 12px;
+                padding: 14px 16px;
+                background: rgba(50, 38, 10, 0.5);
+                border: 1.5px solid rgba(180, 130, 40, 0.3);
+                border-radius: 9px;
+                gap: 10px;
+                flex-direction: column;
+            }
+            .race-preview.visible {
+                display: flex;
+            }
+            .race-preview-name {
+                font-size: 15px;
+                font-weight: 700;
+                color: #f0cc70;
+            }
+            .race-preview-lore {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.5);
+                line-height: 1.6;
+                max-height: 80px;
+                overflow: hidden;
+                position: relative;
+            }
+            .race-preview-lore::after {
+                content: "";
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 28px;
+                background: linear-gradient(transparent, rgba(50, 38, 10, 0.5));
+            }
+
+            /* ─── Gender Toggle ─── */
+            .gender-toggle {
+                display: flex;
+                gap: 8px;
+            }
+            .gender-btn {
+                flex: 1;
+                padding: 11px 0;
+                border-radius: 9px;
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                background: rgba(14, 14, 14, 0.9);
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s,
+                    color 0.2s;
+                letter-spacing: 0.03em;
+            }
+            .gender-btn:hover {
+                background: rgba(35, 35, 35, 0.95);
+                color: rgba(255, 255, 255, 0.8);
+            }
+            .gender-btn.active-male {
+                background: rgba(40, 80, 140, 0.55);
+                border-color: rgba(80, 140, 220, 0.55);
+                color: #88b8f0;
+            }
+            .gender-btn.active-female {
+                background: rgba(140, 40, 80, 0.55);
+                border-color: rgba(220, 80, 140, 0.55);
+                color: #f088b8;
+            }
+
+            /* ─── Spawn Card List ─── */
+            .spawn-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .spawn-item {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 14px 16px;
+                background: rgba(28, 28, 28, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.07);
+                border-radius: 10px;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .spawn-item:hover {
+                background: rgba(42, 42, 42, 0.95);
+                border-color: rgba(255, 255, 255, 0.15);
+            }
+            .spawn-item.selected {
+                border-color: rgba(80, 200, 100, 0.55);
+                background: rgba(20, 50, 25, 0.6);
+            }
+            .spawn-radio {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.25);
+                background: rgba(14, 14, 14, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                transition:
+                    border-color 0.2s,
+                    background 0.2s;
+            }
+            .spawn-item.selected .spawn-radio {
+                border-color: rgba(80, 200, 100, 0.9);
+                background: rgba(50, 160, 70, 0.9);
+            }
+            .spawn-radio-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: #fff;
+                display: none;
+            }
+            .spawn-item.selected .spawn-radio-dot {
+                display: block;
+            }
+            .spawn-item-info {
+                flex: 1;
+            }
+            .spawn-item-name {
+                font-size: 14px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 3px;
+            }
+            .spawn-item-detail {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.38);
+                font-family: monospace;
+            }
+            .spawn-item-badge {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                padding: 3px 9px;
+                border-radius: 5px;
+                background: rgba(50, 160, 70, 0.2);
+                color: rgba(80, 200, 100, 0.85);
+                border: 1px solid rgba(80, 200, 100, 0.25);
+            }
+            .spawn-empty {
+                text-align: center;
+                padding: 30px 16px;
+                color: rgba(255, 255, 255, 0.3);
+                font-size: 13px;
+            }
+
+            /* ─── Name Roll Preview ─── */
+            .name-roll-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 10px;
+            }
+            .name-roll-btn {
+                padding: 8px 16px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                background: rgba(35, 35, 35, 0.9);
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s;
+                white-space: nowrap;
+            }
+            .name-roll-btn:hover {
+                background: rgba(55, 55, 55, 0.95);
+                color: #fff;
+            }
+            .name-roll-hint {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.28);
+                font-style: italic;
+            }
+
+            /* ─── Summary Preview ─── */
+            .summary-card {
+                display: none;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                padding: 18px 18px;
+                margin-top: 14px;
+                gap: 10px;
+                flex-direction: column;
+            }
+            .summary-card.visible {
+                display: flex;
+            }
+            .summary-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .summary-key {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.35);
+                min-width: 80px;
+            }
+            .summary-val {
+                font-size: 13px;
+                font-weight: 600;
+                color: #fff;
+            }
+            .summary-val.green {
+                color: #80d890;
+            }
+            .summary-val.gold {
+                color: #d4a840;
+            }
+            .summary-val.blue {
+                color: #88b8f0;
+            }
+            .summary-val.pink {
+                color: #f088b8;
+            }
+
+            /* ─── Action Buttons ─── */
+            .form-actions {
+                display: flex;
+                gap: 12px;
+                margin-top: 8px;
+            }
+            .btn-cancel {
+                padding: 12px 26px;
+                border-radius: 9px;
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                background: transparent;
+                color: rgba(255, 255, 255, 0.65);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    color 0.2s;
+            }
+            .btn-cancel:hover {
+                background: rgba(255, 255, 255, 0.07);
+                color: #fff;
+            }
+            .btn-create {
+                padding: 12px 32px;
+                border-radius: 9px;
+                border: 1.5px solid rgba(80, 200, 100, 0.4);
+                background: rgba(30, 90, 45, 0.9);
+                color: #fff;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .btn-create:hover {
+                background: rgba(40, 120, 60, 0.99);
+            }
+
+            /* ─── Toast ─── */
+            .toast {
+                position: fixed;
+                bottom: 28px;
+                left: 50%;
+                transform: translateX(-50%) translateY(80px);
+                background: rgba(40, 140, 80, 0.95);
+                color: #fff;
+                padding: 13px 26px;
+                border-radius: 9px;
+                font-size: 14px;
+                font-weight: 600;
+                z-index: 2000;
+                opacity: 0;
+                transition:
+                    transform 0.3s ease,
+                    opacity 0.3s ease;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                white-space: nowrap;
+            }
+            .toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+
+            /* ─── Main View ─── */
+            #main-view {
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                align-items: center;
+                position: relative;
+                z-index: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="bg-layer"></div>
+
+        <!-- ══════════════════════════════
+             CHARACTER CREATE VIEW
+        ══════════════════════════════ -->
+        <div id="main-view">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="goBack()" title="Back">
+                    &#8592;
+                </button>
+                <span class="nav-title">NEW CHARACTER</span>
+                <div class="nav-count" id="create-count">0</div>
+            </nav>
+
+            <div class="page-scroll">
+                <div class="page-title-row">
+                    <h1 id="create-title">Create Character</h1>
+                    <span class="page-title-badge">CHARACTER</span>
+                </div>
+
+                <!-- ── IDENTITY ── -->
+                <div class="section">
+                    <div class="section-title">Identity</div>
+
+                    <!-- Race -->
+                    <div class="form-group">
+                        <label class="form-label">Race</label>
+                        <select
+                            class="form-select"
+                            id="c-race"
+                            onchange="onRaceChange()"
+                        >
+                            <option value="">Select a race...</option>
+                        </select>
+                        <div class="race-preview" id="race-preview">
+                            <div
+                                class="race-preview-name"
+                                id="race-preview-name"
+                            ></div>
+                            <div
+                                class="race-preview-lore"
+                                id="race-preview-lore"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <!-- Gender -->
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <div class="gender-toggle">
+                            <button
+                                class="gender-btn active-male"
+                                id="btn-male"
+                                onclick="setGender('male')"
+                            >
+                                &#9794; Male
+                            </button>
+                            <button
+                                class="gender-btn"
+                                id="btn-female"
+                                onclick="setGender('female')"
+                            >
+                                &#9792; Female
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Name -->
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <div class="two-col">
+                            <div>
+                                <input
+                                    type="text"
+                                    class="form-input"
+                                    id="c-firstname"
+                                    placeholder="First name..."
+                                    oninput="updateSummary()"
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    class="form-input"
+                                    id="c-lastname"
+                                    placeholder="Last name..."
+                                    oninput="updateSummary()"
+                                />
+                            </div>
+                        </div>
+                        <div class="name-roll-row">
+                            <button class="name-roll-btn" onclick="rollName()">
+                                &#127922; Roll Name
+                            </button>
+                            <span class="name-roll-hint" id="roll-hint"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── SPAWN LOCATION ── -->
+                <div class="section">
+                    <div class="section-title">Spawn Location</div>
+                    <div class="spawn-list" id="spawn-list">
+                        <div class="spawn-empty" id="spawn-empty">
+                            No spawn locations available.<br />
+                            <span style="font-size: 11px; opacity: 0.6"
+                                >Add Buildings with "Can be Spawn" checked in
+                                the World Creator.</span
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── SUMMARY ── -->
+                <div class="section">
+                    <div class="section-title">Summary</div>
+                    <div class="summary-card visible" id="summary-card">
+                        <div class="summary-row">
+                            <span class="summary-key">Name</span>
+                            <span class="summary-val" id="sum-name">—</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-key">Race</span>
+                            <span class="summary-val gold" id="sum-race"
+                                >—</span
+                            >
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-key">Gender</span>
+                            <span class="summary-val" id="sum-gender">—</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-key">Spawn</span>
+                            <span class="summary-val green" id="sum-spawn"
+                                >—</span
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn-cancel" onclick="goBack()">
+                            ← Back
+                        </button>
+                        <button
+                            class="btn-create"
+                            id="btn-create-char"
+                            onclick="startGame()"
+                        >
+                            Play ▶
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TOAST ── -->
+        <div class="toast" id="toast"></div>
+
+        <script>
+            /* ═══════════════════════════════════════
+               CONSTANTS & STATE
+            ═══════════════════════════════════════ */
+            const CARDS_KEY = "storyki_storycards";
+            const CHARS_KEY = "storyki_characters";
+            const SETTINGS_KEY = "storyki_settings";
+
+            let selectedGender = "male";
+            let selectedSpawnId = null;
+
+            /* ═══════════════════════════════════════
+               BACKGROUND
+            ═══════════════════════════════════════ */
+            function loadBackground() {
+                const raw = localStorage.getItem(SETTINGS_KEY);
+                const url = raw
+                    ? JSON.parse(raw).backgroundUrl ||
+                      "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg"
+                    : "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg";
+                const el = document.getElementById("bg-layer");
+                el.style.backgroundImage = `url(${url})`;
+                el.style.backgroundSize = "cover";
+                el.style.backgroundPosition = "center";
+            }
+
+            /* ═══════════════════════════════════════
+               DATA HELPERS
+            ═══════════════════════════════════════ */
+            function getCards() {
+                return JSON.parse(localStorage.getItem(CARDS_KEY) || "[]");
+            }
+
+            function getCharacters() {
+                return JSON.parse(localStorage.getItem(CHARS_KEY) || "[]");
+            }
+
+            function saveCharacters(chars) {
+                localStorage.setItem(CHARS_KEY, JSON.stringify(chars));
+            }
+
+            function generateId() {
+                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                let id = "";
+                for (let i = 0; i < 12; i++) {
+                    if (i > 0 && i % 4 === 0) id += "-";
+                    id += chars.charAt(
+                        Math.floor(Math.random() * chars.length),
+                    );
+                }
+                return id;
+            }
+
+            function escHtml(str) {
+                return (str || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;");
+            }
+
+            /* Spawn buildings = location cards with canBeSpawn = true */
+            function getSpawnBuildings() {
+                return getCards().filter(
+                    (c) =>
+                        c.genre === "location" &&
+                        c.locationSub === "building" &&
+                        c.canBeSpawn === true,
+                );
+            }
+
+            /* Race cards */
+            function getRaceCards() {
+                return getCards().filter((c) => c.genre === "race");
+            }
+
+            /* ═══════════════════════════════════════
+               INIT FORM
+            ═══════════════════════════════════════ */
+            function initForm() {
+                // Populate race dropdown
+                const raceSelect = document.getElementById("c-race");
+                raceSelect.innerHTML = `<option value="">Select a race...</option>`;
+                getRaceCards().forEach((r) => {
+                    const opt = document.createElement("option");
+                    opt.value = r.id;
+                    opt.textContent = r.title;
+                    raceSelect.appendChild(opt);
+                });
+
+                setGender("male");
+                renderSpawnList(null);
+                updateSummary();
+
+                document.getElementById("create-count").textContent =
+                    getCharacters().length;
+            }
+
+            /* ─── Race Change ─── */
+            function onRaceChange() {
+                const id = document.getElementById("c-race").value;
+                const preview = document.getElementById("race-preview");
+                const nameEl = document.getElementById("race-preview-name");
+                const loreEl = document.getElementById("race-preview-lore");
+
+                if (!id) {
+                    preview.classList.remove("visible");
+                    updateSummary();
+                    return;
+                }
+                const card = getCards().find((c) => c.id === id);
+                if (!card) {
+                    preview.classList.remove("visible");
+                    return;
+                }
+
+                nameEl.textContent = card.title;
+                loreEl.textContent = card.lore
+                    ? card.lore.substring(0, 300)
+                    : "No lore written yet.";
+                preview.classList.add("visible");
+
+                // Update roll hint
+                const ng = card.nameGenerator;
+                const hasMale =
+                    ng &&
+                    ng.male &&
+                    (ng.male.first.length || ng.male.last.length);
+                const hasFemale =
+                    ng &&
+                    ng.female &&
+                    (ng.female.first.length || ng.female.last.length);
+                document.getElementById("roll-hint").textContent =
+                    hasMale || hasFemale
+                        ? "Uses race name pool"
+                        : "No name pool defined for this race";
+
+                updateSummary();
+            }
+
+            /* ─── Gender ─── */
+            function setGender(g) {
+                selectedGender = g;
+                document.getElementById("btn-male").className =
+                    "gender-btn" + (g === "male" ? " active-male" : "");
+                document.getElementById("btn-female").className =
+                    "gender-btn" + (g === "female" ? " active-female" : "");
+                updateSummary();
+            }
+
+            /* ─── Roll Name ─── */
+            function rollName() {
+                const raceId = document.getElementById("c-race").value;
+                if (!raceId) {
+                    showToast("Select a race first.", "#c04040");
+                    return;
+                }
+
+                const card = getCards().find((c) => c.id === raceId);
+                if (!card || !card.nameGenerator) {
+                    showToast("This race has no name pool.", "#c04040");
+                    return;
+                }
+
+                const ng = card.nameGenerator;
+                const pool = selectedGender === "female" ? ng.female : ng.male;
+
+                const firstNames =
+                    pool && pool.first && pool.first.length ? pool.first : [];
+                const lastNames =
+                    pool && pool.last && pool.last.length ? pool.last : [];
+
+                if (!firstNames.length && !lastNames.length) {
+                    showToast("No names in pool for this gender.", "#c04040");
+                    return;
+                }
+
+                if (firstNames.length) {
+                    document.getElementById("c-firstname").value =
+                        firstNames[
+                            Math.floor(Math.random() * firstNames.length)
+                        ];
+                }
+                if (lastNames.length) {
+                    document.getElementById("c-lastname").value =
+                        lastNames[Math.floor(Math.random() * lastNames.length)];
+                }
+                updateSummary();
+            }
+
+            /* ─── Spawn List ─── */
+            function renderSpawnList(selectedId) {
+                const container = document.getElementById("spawn-list");
+                const emptyEl = document.getElementById("spawn-empty");
+                const spawns = getSpawnBuildings();
+
+                // Remove old items (keep empty placeholder)
+                Array.from(container.querySelectorAll(".spawn-item")).forEach(
+                    (el) => el.remove(),
+                );
+
+                if (spawns.length === 0) {
+                    emptyEl.style.display = "block";
+                    return;
+                }
+                emptyEl.style.display = "none";
+
+                spawns.forEach((b) => {
+                    const isSelected = selectedId === b.id;
+                    const item = document.createElement("div");
+                    item.className =
+                        "spawn-item" + (isSelected ? " selected" : "");
+                    item.dataset.id = b.id;
+
+                    const detail = b.locationDetail
+                        ? b.locationDetail.toUpperCase()
+                        : "BUILDING";
+
+                    item.innerHTML = `
+                        <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
+                        <div class="spawn-item-info">
+                            <div class="spawn-item-name">${escHtml(b.title)}</div>
+                            <div class="spawn-item-detail">${detail}</div>
+                        </div>
+                        <span class="spawn-item-badge">SPAWN</span>
+                    `;
+
+                    item.addEventListener("click", () => {
+                        selectedSpawnId = b.id;
+                        renderSpawnList(b.id);
+                        updateSummary();
+                    });
+
+                    container.appendChild(item);
+                });
+            }
+
+            /* ─── Summary ─── */
+            function updateSummary() {
+                const fn = document.getElementById("c-firstname").value.trim();
+                const ln = document.getElementById("c-lastname").value.trim();
+                const fullName = [fn, ln].filter(Boolean).join(" ") || "—";
+
+                const raceId = document.getElementById("c-race").value;
+                const raceCard = raceId
+                    ? getCards().find((c) => c.id === raceId)
+                    : null;
+                const raceName = raceCard ? raceCard.title : "—";
+
+                const spawnCard = selectedSpawnId
+                    ? getCards().find((c) => c.id === selectedSpawnId)
+                    : null;
+                const spawnName = spawnCard ? spawnCard.title : "—";
+
+                document.getElementById("sum-name").textContent = fullName;
+                document.getElementById("sum-race").textContent = raceName;
+
+                const genderEl = document.getElementById("sum-gender");
+                genderEl.textContent =
+                    selectedGender === "female" ? "♀ Female" : "♂ Male";
+                genderEl.className =
+                    "summary-val " +
+                    (selectedGender === "female" ? "pink" : "blue");
+
+                document.getElementById("sum-spawn").textContent = spawnName;
+            }
+
+            /* ─── Save & Start Game ─── */
+            function startGame() {
+                const fn = document.getElementById("c-firstname").value.trim();
+                const ln = document.getElementById("c-lastname").value.trim();
+                const raceId = document.getElementById("c-race").value;
+
+                if (!fn) {
+                    showToast("Please enter a first name.", "#c04040");
+                    return;
+                }
+                if (!raceId) {
+                    showToast("Please select a race.", "#c04040");
+                    return;
+                }
+
+                const raceCard = getCards().find((c) => c.id === raceId);
+                const chars = getCharacters();
+                const newChar = {
+                    id: generateId(),
+                    firstName: fn,
+                    lastName: ln,
+                    raceId,
+                    raceName: raceCard ? raceCard.title : "",
+                    gender: selectedGender,
+                    spawnId: selectedSpawnId || null,
+                    createdAt: new Date().toISOString(),
+                };
+                chars.push(newChar);
+                saveCharacters(chars);
+
+                // Navigate to loading screen (NPC generation)
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "Loading.html";
+                }, 400);
+            }
+
+            /* ═══════════════════════════════════════
+               NAVIGATION
+            ═══════════════════════════════════════ */
+            function goBack() {
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 400);
+            }
+
+            /* ═══════════════════════════════════════
+               TOAST
+            ═══════════════════════════════════════ */
+            function showToast(msg, bg = "rgba(40,140,80,0.95)") {
+                const t = document.getElementById("toast");
+                t.textContent = msg;
+                t.style.background = bg;
+                t.classList.add("show");
+                clearTimeout(t._timer);
+                t._timer = setTimeout(() => t.classList.remove("show"), 2500);
+            }
+
+            /* ═══════════════════════════════════════
+               INIT
+            ═══════════════════════════════════════ */
+            window.addEventListener("load", () => {
+                loadBackground();
+                setInterval(loadBackground, 2000);
+                initForm();
+                setTimeout(() => {
+                    document.body.style.opacity = "1";
+                }, 100);
+            });
+        </script>
+    </body>
+</html>
