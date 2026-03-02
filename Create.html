@@ -1,0 +1,1206 @@
+<!doctype html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>StoryKI - Story Cards</title>
+        <link rel="prefetch" href="index.html" />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+
+            *::-webkit-scrollbar {
+                display: none;
+            }
+
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                font-family: "Segoe UI", Arial, sans-serif;
+            }
+
+            body {
+                background: #0a0a0a;
+                color: #fff;
+                opacity: 0;
+                transition: opacity 0.4s ease-in-out;
+            }
+
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.72);
+                z-index: 0;
+            }
+
+            /* ─── Background Image ─── */
+            #bg-layer {
+                position: fixed;
+                inset: 0;
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+                z-index: -1;
+                filter: blur(2px) brightness(0.4);
+            }
+
+            /* ─── Wrapper ─── */
+            #app {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                align-items: center;
+            }
+
+            /* ════════════════════════════════════
+           TOP PILL NAVIGATION
+        ════════════════════════════════════ */
+            .top-nav {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 18px 24px 12px 24px;
+                width: 100%;
+                max-width: 1000px;
+                flex-shrink: 0;
+            }
+
+            .nav-back-btn {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.25);
+                background: rgba(30, 30, 30, 0.7);
+                color: #fff;
+                font-size: 16px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+                flex-shrink: 0;
+            }
+
+            .nav-back-btn:hover {
+                background: rgba(60, 60, 60, 0.9);
+                border-color: rgba(255, 255, 255, 0.5);
+            }
+
+            .nav-pills {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                flex: 1;
+                flex-wrap: wrap;
+            }
+
+            .nav-pill {
+                padding: 7px 16px;
+                border-radius: 999px;
+                border: none;
+                background: transparent;
+                color: rgba(255, 255, 255, 0.65);
+                font-size: 13px;
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    color 0.2s;
+                white-space: nowrap;
+            }
+
+            .nav-pill:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: #fff;
+            }
+
+            .nav-pill.active {
+                background: #fff;
+                color: #111;
+            }
+
+            .nav-count {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                background: rgba(60, 60, 60, 0.85);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                border: 2px solid rgba(255, 255, 255, 0.12);
+            }
+
+            /* ════════════════════════════════════
+           SEARCH BAR + IMPORT / EXPORT
+        ════════════════════════════════════ */
+            .search-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                max-width: 1000px;
+                padding: 6px 24px 16px 24px;
+                flex-shrink: 0;
+            }
+
+            .search-wrap {
+                flex: 1;
+                position: relative;
+            }
+
+            .search-icon {
+                position: absolute;
+                left: 14px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #4ea8de;
+                font-size: 15px;
+                pointer-events: none;
+            }
+
+            .search-input {
+                width: 100%;
+                padding: 13px 16px 13px 40px;
+                background: rgba(22, 22, 22, 0.92);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                color: #fff;
+                font-size: 14px;
+                outline: none;
+                transition: border-color 0.2s;
+            }
+
+            .search-input::placeholder {
+                color: rgba(255, 255, 255, 0.38);
+            }
+
+            .search-input:focus {
+                border-color: rgba(255, 255, 255, 0.35);
+            }
+
+            .action-btn {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                padding: 11px 18px;
+                border-radius: 9px;
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                background: rgba(28, 28, 28, 0.85);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                white-space: nowrap;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+                flex-shrink: 0;
+            }
+
+            .action-btn:hover {
+                background: rgba(50, 50, 50, 0.95);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+
+            .action-btn .btn-icon {
+                font-size: 15px;
+            }
+
+            /* ════════════════════════════════════
+           ADD BANNER BUTTON
+        ════════════════════════════════════ */
+            .add-banner {
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 18px 24px;
+                flex-shrink: 0;
+            }
+
+            .add-banner-btn {
+                width: 100%;
+                padding: 17px 24px;
+                background: rgba(60, 44, 14, 0.9);
+                border: 1.5px solid rgba(180, 130, 40, 0.35);
+                border-radius: 10px;
+                color: #fff;
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
+                text-align: center;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+                letter-spacing: 0.01em;
+            }
+
+            .add-banner-btn:hover {
+                background: rgba(80, 58, 16, 0.95);
+                border-color: rgba(200, 150, 50, 0.55);
+            }
+
+            /* ════════════════════════════════════
+           LIST OF ENTRIES
+        ════════════════════════════════════ */
+            .list-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 30px 24px;
+            }
+
+            .entry-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .entry-item {
+                display: flex;
+                align-items: center;
+                background: rgba(28, 28, 28, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.07);
+                border-radius: 10px;
+                padding: 17px 18px;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+                gap: 12px;
+            }
+
+            .entry-item:hover {
+                background: rgba(42, 42, 42, 0.95);
+                border-color: rgba(255, 255, 255, 0.15);
+            }
+
+            .entry-name {
+                flex: 1;
+                font-size: 15px;
+                font-weight: 700;
+                color: #fff;
+                letter-spacing: 0.01em;
+            }
+
+            .entry-badge {
+                padding: 4px 11px;
+                border-radius: 6px;
+                background: rgba(70, 70, 70, 0.85);
+                color: rgba(255, 255, 255, 0.75);
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                text-transform: uppercase;
+                flex-shrink: 0;
+            }
+
+            /* Badge color variants */
+            .badge-character {
+                background: rgba(55, 55, 70, 0.9);
+                color: #b0b8d8;
+            }
+            .badge-location {
+                background: rgba(30, 65, 50, 0.9);
+                color: #80c8a0;
+            }
+            .badge-city {
+                background: rgba(40, 40, 65, 0.9);
+                color: #9090c8;
+            }
+            .badge-country {
+                background: rgba(55, 45, 30, 0.9);
+                color: #c8a870;
+            }
+            .badge-buildings {
+                background: rgba(55, 35, 35, 0.9);
+                color: #c89090;
+            }
+            .badge-apartments {
+                background: rgba(30, 55, 55, 0.9);
+                color: #70c0c8;
+            }
+            .badge-object {
+                background: rgba(50, 50, 30, 0.9);
+                color: #c0c070;
+            }
+            .badge-event {
+                background: rgba(55, 30, 55, 0.9);
+                color: #c070c0;
+            }
+            .badge-dialogue {
+                background: rgba(30, 50, 30, 0.9);
+                color: #70c870;
+            }
+            .badge-action {
+                background: rgba(55, 40, 20, 0.9);
+                color: #d0a060;
+            }
+            .badge-description {
+                background: rgba(30, 45, 55, 0.9);
+                color: #60a8c8;
+            }
+            .badge-transition {
+                background: rgba(45, 30, 55, 0.9);
+                color: #a870c8;
+            }
+
+            .entry-menu-btn {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.45);
+                font-size: 18px;
+                cursor: pointer;
+                padding: 2px 6px;
+                border-radius: 5px;
+                transition:
+                    color 0.2s,
+                    background 0.2s;
+                flex-shrink: 0;
+                letter-spacing: 2px;
+            }
+
+            .entry-menu-btn:hover {
+                color: #fff;
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+            /* ─── Context Menu ─── */
+            .context-menu {
+                position: fixed;
+                background: rgba(32, 32, 32, 0.98);
+                border: 1.5px solid rgba(255, 255, 255, 0.13);
+                border-radius: 10px;
+                padding: 6px 0;
+                z-index: 1000;
+                min-width: 160px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+                display: none;
+            }
+
+            .context-menu.visible {
+                display: block;
+            }
+
+            .context-menu-item {
+                padding: 10px 18px;
+                font-size: 13px;
+                font-weight: 500;
+                color: rgba(255, 255, 255, 0.8);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                transition: background 0.15s;
+            }
+
+            .context-menu-item:hover {
+                background: rgba(255, 255, 255, 0.08);
+                color: #fff;
+            }
+
+            .context-menu-item.danger {
+                color: #e06060;
+            }
+
+            .context-menu-item.danger:hover {
+                background: rgba(200, 60, 60, 0.15);
+                color: #ff8080;
+            }
+
+            .context-menu-sep {
+                height: 1px;
+                background: rgba(255, 255, 255, 0.1);
+                margin: 4px 0;
+            }
+
+            /* ─── Empty State ─── */
+            .empty-state {
+                text-align: center;
+                padding: 60px 20px;
+                color: rgba(255, 255, 255, 0.4);
+                font-size: 14px;
+            }
+
+            /* ════════════════════════════════════
+           CREATE / EDIT FORM OVERLAY
+        ════════════════════════════════════ */
+            .form-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 500;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.55);
+                backdrop-filter: blur(4px);
+            }
+
+            .form-overlay.visible {
+                display: flex;
+            }
+
+            .form-panel {
+                background: rgba(22, 22, 22, 0.98);
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                border-radius: 14px;
+                padding: 32px 30px 28px 30px;
+                width: 100%;
+                max-width: 560px;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 16px 64px rgba(0, 0, 0, 0.7);
+            }
+
+            .form-panel h2 {
+                font-size: 18px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 24px;
+            }
+
+            .form-group {
+                margin-bottom: 18px;
+            }
+
+            .form-label {
+                display: block;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.55);
+                margin-bottom: 7px;
+            }
+
+            .form-input,
+            .form-textarea,
+            .form-select {
+                width: 100%;
+                padding: 12px 14px;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                border-radius: 8px;
+                color: #fff;
+                font-size: 14px;
+                outline: none;
+                transition: border-color 0.2s;
+                -webkit-appearance: none;
+                appearance: none;
+                font-family: inherit;
+            }
+
+            .form-input::placeholder,
+            .form-textarea::placeholder {
+                color: rgba(255, 255, 255, 0.3);
+            }
+
+            .form-input:focus,
+            .form-textarea:focus,
+            .form-select:focus {
+                border-color: rgba(255, 255, 255, 0.35);
+            }
+
+            .form-textarea {
+                min-height: 110px;
+                resize: vertical;
+            }
+
+            .form-select option {
+                background: #1a1a1a;
+                color: #fff;
+            }
+
+            .form-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 24px;
+                justify-content: flex-end;
+            }
+
+            .btn-cancel {
+                padding: 10px 22px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                background: transparent;
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    color 0.2s;
+            }
+
+            .btn-cancel:hover {
+                background: rgba(255, 255, 255, 0.07);
+                color: #fff;
+            }
+
+            .btn-save {
+                padding: 10px 26px;
+                border-radius: 8px;
+                border: none;
+                background: rgba(60, 44, 14, 0.95);
+                color: #fff;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: background 0.2s;
+                border: 1.5px solid rgba(180, 130, 40, 0.35);
+            }
+
+            .btn-save:hover {
+                background: rgba(80, 58, 16, 0.99);
+            }
+
+            .form-id-row {
+                margin-top: 12px;
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.35);
+                font-family: monospace;
+            }
+
+            /* ─── Success Toast ─── */
+            .toast {
+                position: fixed;
+                bottom: 28px;
+                left: 50%;
+                transform: translateX(-50%) translateY(80px);
+                background: rgba(40, 140, 80, 0.95);
+                color: #fff;
+                padding: 13px 26px;
+                border-radius: 9px;
+                font-size: 14px;
+                font-weight: 600;
+                z-index: 2000;
+                opacity: 0;
+                transition:
+                    transform 0.3s ease,
+                    opacity 0.3s ease;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                white-space: nowrap;
+            }
+
+            .toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        </style>
+    </head>
+    <body>
+        <div id="bg-layer"></div>
+
+        <div id="app">
+            <!-- ── TOP NAVIGATION ── -->
+            <nav class="top-nav">
+                <button
+                    class="nav-back-btn"
+                    onclick="backToMenu()"
+                    title="Zurück"
+                >
+                    &#8592;
+                </button>
+                <div class="nav-pills" id="nav-pills">
+                    <!-- dynamically filled by JS -->
+                </div>
+                <div class="nav-count" id="nav-count">0</div>
+            </nav>
+
+            <!-- ── SEARCH ROW ── -->
+            <div class="search-row">
+                <div class="search-wrap">
+                    <span class="search-icon">&#128269;</span>
+                    <input
+                        type="text"
+                        class="search-input"
+                        id="search-input"
+                        placeholder="Search"
+                        oninput="renderList()"
+                    />
+                </div>
+                <button class="action-btn" onclick="importCards()">
+                    <span class="btn-icon">&#128193;</span> Import
+                </button>
+                <button class="action-btn" onclick="exportCards()">
+                    <span class="btn-icon">&#128190;</span> Export
+                </button>
+            </div>
+
+            <!-- ── ADD BANNER ── -->
+            <div class="add-banner">
+                <button class="add-banner-btn" onclick="openForm(null)">
+                    + Add character info, location, faction, and more
+                </button>
+            </div>
+
+            <!-- ── ENTRY LIST ── -->
+            <div class="list-scroll">
+                <div class="entry-list" id="entry-list">
+                    <!-- filled by JS -->
+                </div>
+                <div class="empty-state" id="empty-state" style="display: none">
+                    No entries yet. Click the button above to add one.
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════
+         CREATE / EDIT FORM OVERLAY
+    ════════════════════════════════════ -->
+        <div class="form-overlay" id="form-overlay">
+            <div class="form-panel">
+                <h2 id="form-title">Add Entry</h2>
+
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input
+                        type="text"
+                        class="form-input"
+                        id="f-name"
+                        placeholder="Enter a name..."
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" id="f-type">
+                        <option value="">Select a type...</option>
+                        <option value="character">Character</option>
+                        <option value="location">Location</option>
+                        <option value="city">City</option>
+                        <option value="country">Country</option>
+                        <option value="buildings">Buildings</option>
+                        <option value="apartments">Apartments</option>
+                        <option value="object">Object</option>
+                        <option value="event">Event</option>
+                        <option value="dialogue">Dialogue</option>
+                        <option value="action">Action</option>
+                        <option value="description">Description</option>
+                        <option value="transition">Transition</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea
+                        class="form-textarea"
+                        id="f-description"
+                        placeholder="Describe this entry..."
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Start Scene</label>
+                    <textarea
+                        class="form-textarea"
+                        id="f-startscene"
+                        placeholder="The story begins with..."
+                    ></textarea>
+                </div>
+
+                <div class="form-id-row" id="form-id-row"></div>
+
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="closeForm()">
+                        Cancel
+                    </button>
+                    <button
+                        class="btn-save"
+                        id="btn-save"
+                        onclick="saveEntry()"
+                    >
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── CONTEXT MENU ── -->
+        <div class="context-menu" id="context-menu">
+            <div class="context-menu-item" onclick="ctxEdit()">
+                &#9998;&nbsp; Edit
+            </div>
+            <div class="context-menu-item" onclick="ctxPlay()">
+                &#9654;&nbsp; Play
+            </div>
+            <div class="context-menu-sep"></div>
+            <div class="context-menu-item danger" onclick="ctxDelete()">
+                &#128465;&nbsp; Delete
+            </div>
+        </div>
+
+        <!-- ── TOAST ── -->
+        <div class="toast" id="toast"></div>
+
+        <script>
+            /* ─────────────────────────────────────────
+           STATE
+        ───────────────────────────────────────── */
+            const STORAGE_KEY = "storyki_storycards";
+            let activeFilter = "all";
+            let editingId = null; // null = new entry
+            let ctxTargetId = null; // for context-menu
+
+            /* ─────────────────────────────────────────
+           BACKGROUND
+        ───────────────────────────────────────── */
+            function loadBackground() {
+                const raw = localStorage.getItem("storyki_settings");
+                const url = raw
+                    ? JSON.parse(raw).backgroundUrl ||
+                      "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg"
+                    : "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg";
+                const el = document.getElementById("bg-layer");
+                el.style.backgroundImage = `url(${url})`;
+                el.style.backgroundSize = "cover";
+                el.style.backgroundPosition = "center";
+            }
+
+            /* ─────────────────────────────────────────
+           DATA HELPERS
+        ───────────────────────────────────────── */
+            function getCards() {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+            }
+
+            function saveCards(cards) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+            }
+
+            function generateId() {
+                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                let id = "";
+                for (let i = 0; i < 12; i++) {
+                    if (i > 0 && i % 4 === 0) id += "-";
+                    id += chars.charAt(
+                        Math.floor(Math.random() * chars.length),
+                    );
+                }
+                return id;
+            }
+
+            /* ─────────────────────────────────────────
+           FILTER / SEARCH
+        ───────────────────────────────────────── */
+            function setFilter(f) {
+                activeFilter = f;
+                document.querySelectorAll(".nav-pill").forEach((p) => {
+                    p.classList.toggle("active", p.dataset.filter === f);
+                });
+                renderList();
+            }
+
+            function renderNavPills() {
+                const pills = document.getElementById("nav-pills");
+                const cards = getCards();
+
+                // Collect unique genres that actually exist
+                const usedGenres = [
+                    ...new Set(cards.map((c) => c.genre).filter(Boolean)),
+                ];
+                usedGenres.sort();
+
+                // Rebuild pills: ALL first, then one per used genre
+                pills.innerHTML = "";
+
+                const allBtn = document.createElement("button");
+                allBtn.className =
+                    "nav-pill" + (activeFilter === "all" ? " active" : "");
+                allBtn.dataset.filter = "all";
+                allBtn.textContent = "ALL";
+                allBtn.onclick = () => setFilter("all");
+                pills.appendChild(allBtn);
+
+                usedGenres.forEach((genre) => {
+                    const btn = document.createElement("button");
+                    btn.className =
+                        "nav-pill" + (activeFilter === genre ? " active" : "");
+                    btn.dataset.filter = genre;
+                    btn.textContent = genre.toUpperCase();
+                    btn.onclick = () => setFilter(genre);
+                    pills.appendChild(btn);
+                });
+
+                // If the currently active filter no longer exists, reset to 'all'
+                if (
+                    activeFilter !== "all" &&
+                    !usedGenres.includes(activeFilter)
+                ) {
+                    activeFilter = "all";
+                    pills
+                        .querySelector('[data-filter="all"]')
+                        .classList.add("active");
+                }
+            }
+
+            function getFilteredCards() {
+                const term = document
+                    .getElementById("search-input")
+                    .value.toLowerCase()
+                    .trim();
+                let cards = getCards();
+
+                if (activeFilter !== "all") {
+                    cards = cards.filter((c) => c.genre === activeFilter);
+                }
+
+                if (term) {
+                    cards = cards.filter(
+                        (c) =>
+                            (c.title || "").toLowerCase().includes(term) ||
+                            (c.genre || "").toLowerCase().includes(term) ||
+                            (c.description || "").toLowerCase().includes(term),
+                    );
+                }
+
+                return cards;
+            }
+
+            /* ─────────────────────────────────────────
+           RENDER
+        ───────────────────────────────────────── */
+            function badgeClass(genre) {
+                const map = {
+                    character: "badge-character",
+                    location: "badge-location",
+                    city: "badge-city",
+                    country: "badge-country",
+                    buildings: "badge-buildings",
+                    apartments: "badge-apartments",
+                    object: "badge-object",
+                    event: "badge-event",
+                    dialogue: "badge-dialogue",
+                    action: "badge-action",
+                    description: "badge-description",
+                    transition: "badge-transition",
+                };
+                return map[genre] || "";
+            }
+
+            function renderList() {
+                const list = document.getElementById("entry-list");
+                const empty = document.getElementById("empty-state");
+                const cards = getFilteredCards();
+                const all = getCards();
+
+                renderNavPills();
+                document.getElementById("nav-count").textContent = all.length;
+
+                list.innerHTML = "";
+
+                if (cards.length === 0) {
+                    empty.style.display = "block";
+                    return;
+                }
+                empty.style.display = "none";
+
+                cards.forEach((card) => {
+                    const item = document.createElement("div");
+                    item.className = "entry-item";
+                    item.dataset.id = card.id;
+
+                    const bClass = badgeClass(card.genre);
+                    const bLabel = (card.genre || "UNKNOWN").toUpperCase();
+
+                    item.innerHTML = `
+                    <span class="entry-name">${escHtml(card.title)}</span>
+                    <span class="entry-badge ${bClass}">${bLabel}</span>
+                    <button class="entry-menu-btn" title="Options" onclick="openContextMenu(event,'${card.id}')">&#8943;</button>
+                `;
+
+                    // Click on the row (not the "..." button) → edit
+                    item.addEventListener("click", (e) => {
+                        if (e.target.classList.contains("entry-menu-btn"))
+                            return;
+                        openForm(card.id);
+                    });
+
+                    list.appendChild(item);
+                });
+            }
+
+            function escHtml(str) {
+                return (str || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;");
+            }
+
+            /* ─────────────────────────────────────────
+           FORM
+        ───────────────────────────────────────── */
+            function openForm(cardId) {
+                editingId = cardId;
+                const overlay = document.getElementById("form-overlay");
+
+                if (cardId) {
+                    const card = getCards().find((c) => c.id === cardId);
+                    if (!card) return;
+                    document.getElementById("form-title").textContent =
+                        "Edit Entry";
+                    document.getElementById("f-name").value = card.title || "";
+                    document.getElementById("f-type").value = card.genre || "";
+                    document.getElementById("f-description").value =
+                        card.description || "";
+                    document.getElementById("f-startscene").value =
+                        card.startScene || "";
+                    document.getElementById("form-id-row").textContent =
+                        "ID: " + card.id;
+                    document.getElementById("btn-save").textContent = "Save";
+                } else {
+                    document.getElementById("form-title").textContent =
+                        "Add Entry";
+                    document.getElementById("f-name").value = "";
+                    document.getElementById("f-type").value = "";
+                    document.getElementById("f-description").value = "";
+                    document.getElementById("f-startscene").value = "";
+                    document.getElementById("form-id-row").textContent = "";
+                    document.getElementById("btn-save").textContent = "Create";
+                }
+
+                overlay.classList.add("visible");
+            }
+
+            function closeForm() {
+                document
+                    .getElementById("form-overlay")
+                    .classList.remove("visible");
+                editingId = null;
+            }
+
+            function saveEntry() {
+                const name = document.getElementById("f-name").value.trim();
+                const type = document.getElementById("f-type").value;
+                const desc = document
+                    .getElementById("f-description")
+                    .value.trim();
+                const startScene = document
+                    .getElementById("f-startscene")
+                    .value.trim();
+
+                if (!name || !type) {
+                    showToast("Please fill in Name and Type.", "#c04040");
+                    return;
+                }
+
+                let cards = getCards();
+
+                if (editingId) {
+                    const idx = cards.findIndex((c) => c.id === editingId);
+                    if (idx !== -1) {
+                        cards[idx] = {
+                            ...cards[idx],
+                            title: name,
+                            genre: type,
+                            description: desc,
+                            startScene: startScene,
+                            updatedAt: new Date().toISOString(),
+                        };
+                        saveCards(cards);
+                        showToast("Entry updated!");
+                    }
+                } else {
+                    const newCard = {
+                        id: generateId(),
+                        title: name,
+                        genre: type,
+                        description: desc,
+                        startScene: startScene,
+                        createdAt: new Date().toISOString(),
+                        version: "1.0",
+                    };
+                    cards.push(newCard);
+                    saveCards(cards);
+                    showToast("Entry created!");
+                }
+
+                closeForm();
+                renderList();
+            }
+
+            /* ─────────────────────────────────────────
+           CONTEXT MENU
+        ───────────────────────────────────────── */
+            function openContextMenu(e, cardId) {
+                e.stopPropagation();
+                ctxTargetId = cardId;
+
+                const menu = document.getElementById("context-menu");
+                menu.classList.add("visible");
+
+                let x = e.clientX;
+                let y = e.clientY;
+
+                // Keep inside viewport
+                if (x + 180 > window.innerWidth) x = window.innerWidth - 190;
+                if (y + 140 > window.innerHeight) y = window.innerHeight - 150;
+
+                menu.style.left = x + "px";
+                menu.style.top = y + "px";
+            }
+
+            function closeContextMenu() {
+                document
+                    .getElementById("context-menu")
+                    .classList.remove("visible");
+                ctxTargetId = null;
+            }
+
+            function ctxEdit() {
+                const id = ctxTargetId;
+                closeContextMenu();
+                if (id) openForm(id);
+            }
+
+            function ctxPlay() {
+                const id = ctxTargetId;
+                closeContextMenu();
+                if (!id) return;
+                const card = getCards().find((c) => c.id === id);
+                if (card) {
+                    localStorage.setItem(
+                        "storyki_current_story",
+                        JSON.stringify(card),
+                    );
+                    document.body.style.opacity = "0";
+                    setTimeout(() => {
+                        window.location.href = "Game.html";
+                    }, 400);
+                }
+            }
+
+            function ctxDelete() {
+                const id = ctxTargetId;
+                closeContextMenu();
+                if (!id) return;
+                if (!confirm("Delete this entry?")) return;
+                const cards = getCards().filter((c) => c.id !== id);
+                saveCards(cards);
+                showToast("Entry deleted.", "#c04040");
+                renderList();
+            }
+
+            // Close context menu on outside click
+            document.addEventListener("click", () => closeContextMenu());
+
+            // Close form overlay on backdrop click
+            document
+                .getElementById("form-overlay")
+                .addEventListener("click", function (e) {
+                    if (e.target === this) closeForm();
+                });
+
+            /* ─────────────────────────────────────────
+           IMPORT / EXPORT
+        ───────────────────────────────────────── */
+            function exportCards() {
+                const cards = getCards();
+                if (cards.length === 0) {
+                    showToast("Nothing to export.", "#c04040");
+                    return;
+                }
+                const blob = new Blob([JSON.stringify(cards, null, 2)], {
+                    type: "application/json",
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "storyki_cards.json";
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast("Exported!");
+            }
+
+            function importCards() {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = ".json";
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        try {
+                            const imported = JSON.parse(ev.target.result);
+                            if (!Array.isArray(imported))
+                                throw new Error("Invalid format");
+                            const existing = getCards();
+                            const existingIds = new Set(
+                                existing.map((c) => c.id),
+                            );
+                            let added = 0;
+                            imported.forEach((card) => {
+                                if (!existingIds.has(card.id)) {
+                                    existing.push(card);
+                                    added++;
+                                }
+                            });
+                            saveCards(existing);
+                            renderList();
+                            showToast(`Imported ${added} new entries.`);
+                        } catch {
+                            showToast(
+                                "Import failed: invalid file.",
+                                "#c04040",
+                            );
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            }
+
+            /* ─────────────────────────────────────────
+           TOAST
+        ───────────────────────────────────────── */
+            function showToast(msg, bg = "rgba(40,140,80,0.95)") {
+                const t = document.getElementById("toast");
+                t.textContent = msg;
+                t.style.background = bg;
+                t.classList.add("show");
+                clearTimeout(t._timer);
+                t._timer = setTimeout(() => t.classList.remove("show"), 2500);
+            }
+
+            /* ─────────────────────────────────────────
+           NAVIGATION
+        ───────────────────────────────────────── */
+            function backToMenu() {
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 400);
+            }
+
+            /* ─────────────────────────────────────────
+           INIT
+        ───────────────────────────────────────── */
+            window.addEventListener("load", () => {
+                loadBackground();
+                setInterval(loadBackground, 2000);
+                renderList();
+                setTimeout(() => {
+                    document.body.style.opacity = "1";
+                }, 100);
+            });
+        </script>
+    </body>
+</html>
