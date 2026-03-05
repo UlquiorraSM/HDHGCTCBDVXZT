@@ -1344,7 +1344,7 @@
 
             function processAICommands(text) {
                 if (!text) return "";
-                const cmdRegex = /\[\[(.*?)\]\]/g;
+                const cmdRegex = /\[\[(.*?)\]\]/gi;
                 let newText = text.replace(cmdRegex, (match, content) => {
                     const parts = content.split(",").map((s) => s.trim());
                     parts.forEach((part) => {
@@ -1369,6 +1369,7 @@
                 if (!activeChar.startingDate) activeChar.startingDate = {};
                 const d = activeChar.startingDate;
                 key = key.toLowerCase();
+                console.log(`[AI Command] ${key} = ${val}`);
 
                 if (key === "time") {
                     d.time = val;
@@ -1651,24 +1652,23 @@
 
                 const typing = appendTypingIndicator();
 
+                const d = activeChar?.startingDate || {};
+                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const curTime = d.time || "00:00";
+                const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
+
+                const systemInst =
+                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
+                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
+                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
+                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
+
                 try {
-                    const d = activeChar?.startingDate || {};
-                    const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
-                    const curTime = d.time || "00:00";
-                    const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
-
-                    const systemInst =
-                        `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
-                        `You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] or [[location: The Forest]] (hidden from user) at the end of your response. ` +
-                        `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. IMPORTANT: If time passes or the location changes, ALWAYS use a command to reflect it.`;
-
                     const history =
                         chatHistory.length > 0
-                            ? systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `${e.sender}: ${e.text}`).join("\n") + "\nNarrator:"
-                            : systemInst + "\n" + systemPrompt;
-                    const response = await askAI(
-                        chatHistory.length > 0 ? history : systemPrompt,
-                    );
+                            ? systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time}] ${e.sender}: ${e.text}`).join("\n") + "\nNarrator:"
+                            : systemInst + "\n" + systemPrompt + "\nNarrator:";
+                    const response = await askAI(history);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
                     appendBubble("ai", cleanResponse);
@@ -1704,19 +1704,20 @@
 
                 const typing = appendTypingIndicator();
 
+                const d = activeChar?.startingDate || {};
+                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const curTime = d.time || "00:00";
+                const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
+
+                const systemInst =
+                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
+                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
+                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
+                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
+
                 try {
-                    const d = activeChar?.startingDate || {};
-                    const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
-                    const curTime = d.time || "00:00";
-                    const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
-
-                    const systemInst =
-                        `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
-                        `You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] or [[location: The Forest]] (hidden from user) at the end of your response. ` +
-                        `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. IMPORTANT: If time passes or the location changes, ALWAYS use a command to reflect it.`;
-
                     const historyText =
-                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
+                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time}] ${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
                     const response = await askAI(historyText);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
@@ -1787,12 +1788,13 @@
 
                 const systemInst =
                     `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
-                    `You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] or [[location: The Forest]] (hidden from user) at the end of your response. ` +
-                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. IMPORTANT: If time passes or the location changes, ALWAYS use a command to reflect it.`;
+                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
+                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
+                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
 
                 try {
                     const histText =
-                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
+                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time}] ${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
@@ -1822,12 +1824,13 @@
 
                 const systemInst =
                     `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
-                    `You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] or [[location: The Forest]] (hidden from user) at the end of your response. ` +
-                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. IMPORTANT: If time passes or the location changes, ALWAYS use a command to reflect it.`;
+                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
+                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
+                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
 
                 try {
                     const histText =
-                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
+                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time}] ${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
