@@ -244,6 +244,9 @@
             .msg-row.ai {
                 align-items: flex-start;
             }
+            .msg-row.follow-up {
+                margin-top: -8px;
+            }
 
             .msg-sender {
                 font-size: 10px;
@@ -1251,15 +1254,8 @@
                         messagesEl.innerHTML = "";
                         chatHistory.forEach((entry) => {
                             if (typeof entry === "string") {
-                                // Old format support or divider
-                                if (entry.startsWith("Narrator: ")) {
-                                    appendBubble("ai", entry.replace("Narrator: ", ""), "", false);
-                                } else if (entry.includes(": ")) {
-                                    const parts = entry.split(": ");
-                                    appendBubble("user", parts[1], "", false);
-                                } else {
-                                    addSystemDivider(entry);
-                                }
+                                // Divider
+                                addSystemDivider(entry, false);
                             } else {
                                 // New object format
                                 const role = entry.sender === "Narrator" ? "ai" : "user";
@@ -1537,25 +1533,31 @@
             ═══════════════════════════════════════ */
             function appendBubble(role, text, cssExtra = "", scroll = true) {
                 const messagesEl = document.getElementById("messages");
+                
+                // Determine sender label
+                const senderLabel = role === "user" ? "You" : "Narrator";
+
+                // Check if the previous message was from the same sender
+                const lastRow = messagesEl.lastElementChild;
+                const isSameSender = lastRow && lastRow.classList.contains("msg-row") && lastRow.classList.contains(role);
+
                 const row = document.createElement("div");
                 row.className = `msg-row ${role}`;
 
-                const senderEl = document.createElement("div");
-                senderEl.className = "msg-sender";
-                senderEl.textContent =
-                    role === "user"
-                        ? activeChar
-                            ? [activeChar.firstName, activeChar.lastName]
-                                  .filter(Boolean)
-                                  .join(" ")
-                            : "You"
-                        : "Narrator";
+                if (!isSameSender) {
+                    const senderEl = document.createElement("div");
+                    senderEl.className = "msg-sender";
+                    senderEl.textContent = senderLabel;
+                    row.appendChild(senderEl);
+                } else {
+                    // Optional: add a class to indicate it's a follow-up message for tighter spacing if needed
+                    row.classList.add("follow-up");
+                }
 
                 const bubble = document.createElement("div");
                 bubble.className = `msg-bubble ${cssExtra}`;
                 bubble.textContent = text;
 
-                row.appendChild(senderEl);
                 row.appendChild(bubble);
                 messagesEl.appendChild(row);
                 if (scroll) messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -1564,20 +1566,29 @@
 
             function appendTypingIndicator() {
                 const messagesEl = document.getElementById("messages");
+                
+                // Check if the previous message was from Narrator
+                const lastRow = messagesEl.lastElementChild;
+                const isSameSender = lastRow && lastRow.classList.contains("msg-row") && lastRow.classList.contains("ai");
+
                 const row = document.createElement("div");
                 row.className = "msg-row ai";
                 row.id = "typing-row";
 
-                const senderEl = document.createElement("div");
-                senderEl.className = "msg-sender";
-                senderEl.textContent = "Narrator";
+                if (!isSameSender) {
+                    const senderEl = document.createElement("div");
+                    senderEl.className = "msg-sender";
+                    senderEl.textContent = "Narrator";
+                    row.appendChild(senderEl);
+                } else {
+                    row.classList.add("follow-up");
+                }
 
                 const bubble = document.createElement("div");
                 bubble.className = "msg-bubble";
                 bubble.innerHTML =
                     '<div class="typing-dots"><span></span><span></span><span></span></div>';
 
-                row.appendChild(senderEl);
                 row.appendChild(bubble);
                 messagesEl.appendChild(row);
                 messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -1589,15 +1600,17 @@
                 if (el) el.remove();
             }
 
-            function addSystemDivider(label) {
+            function addSystemDivider(label, updateLog = true) {
                 const messagesEl = document.getElementById("messages");
                 const div = document.createElement("div");
                 div.className = "chat-divider";
                 div.innerHTML = `<span class="chat-divider-label">${label}</span>`;
                 messagesEl.appendChild(div);
                 
-                chatHistory.push(label);
-                saveStoryLog();
+                if (updateLog) {
+                    chatHistory.push(label);
+                    saveStoryLog();
+                }
             }
 
             function setStatus(online) {
@@ -1880,13 +1893,18 @@
             };
 
             document.getElementById("erase-btn").onclick = () => {
-                if (!confirm("Den gesamten Chat löschen?")) return;
-                chatHistory = [];
-                saveStoryLog();
                 const messagesEl = document.getElementById("messages");
-                messagesEl.innerHTML = "";
-                addSystemDivider("Story Reset");
-                showToast("Chat gelöscht.", "#c04040");
+                const rows = Array.from(messagesEl.children).filter(c => c.classList.contains("msg-row") || c.classList.contains("chat-divider"));
+                if (!rows.length) return;
+
+                const lastRow = rows[rows.length - 1];
+                lastRow.remove();
+
+                if (chatHistory.length > 0) {
+                    chatHistory.pop();
+                    saveStoryLog();
+                    showToast("Nachricht gelöscht.", "rgba(180, 60, 60, 0.85)");
+                }
             };
 
             /* ═══════════════════════════════════════
