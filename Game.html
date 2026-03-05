@@ -1289,12 +1289,18 @@
                     parts.forEach((part) => {
                         // try key=val or key:val
                         let [k, v] = part.split("=").map((s) => s.trim());
-                        if (!v) [k, v] = part.split(":").map((s) => s.trim());
+                        if (!v) {
+                            const colonIdx = part.indexOf(":");
+                            if (colonIdx !== -1) {
+                                k = part.substring(0, colonIdx).trim();
+                                v = part.substring(colonIdx + 1).trim();
+                            }
+                        }
                         if (k && v) handleCommand(k, v);
                     });
                     return "";
                 });
-                return newText.trim();
+                return newText.replace(/\s+/g, " ").trim();
             }
 
             function handleCommand(key, val) {
