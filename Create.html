@@ -1847,7 +1847,73 @@
                             <option value="">Select a type...</option>
                             <option value="location">Location</option>
                             <option value="race">Race</option>
+                            <option value="character">Character</option>
                         </select>
+                    </div>
+                </div>
+
+                <div id="character-block" style="display: none">
+                    <div class="form-group">
+                        <label class="form-label">Appearance</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-char-appearance"
+                            placeholder="Describe how the character looks..."
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Personality</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-char-personality"
+                            placeholder="Describe the character's personality..."
+                        ></textarea>
+                    </div>
+                    <div class="form-two-col">
+                        <div class="form-group">
+                            <label class="form-label">Age</label>
+                            <input
+                                type="number"
+                                class="form-input"
+                                id="f-char-age"
+                                placeholder="Age"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Gender</label>
+                            <select class="form-select" id="f-char-gender">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Birthdate</label>
+                        <div class="form-two-col">
+                            <input
+                                type="number"
+                                class="form-input"
+                                id="f-char-birth-day"
+                                placeholder="Day (1-31)"
+                                min="1"
+                                max="31"
+                            />
+                            <select class="form-select" id="f-char-birth-month">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -2781,6 +2847,28 @@
                     document.getElementById("f-type").value = card.genre || "";
                     document.getElementById("f-description").value =
                         card.description || "";
+
+                    // restore character data
+                    if (card.genre === "character") {
+                        document.getElementById("f-char-appearance").value =
+                            card.appearance || "";
+                        document.getElementById("f-char-personality").value =
+                            card.personality || "";
+                        document.getElementById("f-char-age").value =
+                            card.age || "";
+                        document.getElementById("f-char-gender").value =
+                            card.gender || "male";
+                        if (card.birthdate) {
+                            document.getElementById("f-char-birth-day").value =
+                                card.birthdate.day || "";
+                            document.getElementById(
+                                "f-char-birth-month",
+                            ).value = card.birthdate.month || "1";
+                        }
+                    } else {
+                        resetCharacterFields();
+                    }
+
                     // restore name generator data
                     const ng = card.nameGenerator || {};
                     nameGenData = {
@@ -2837,6 +2925,7 @@
                     document.getElementById("form-id-row").textContent = "";
                     document.getElementById("btn-save").textContent = "Create";
                     resetLocationSubtype();
+                    resetCharacterFields();
                 }
 
                 // Update the small badge pill in form nav
@@ -2883,7 +2972,17 @@
                 updateLoreSummary();
                 skincolorData = [];
                 updateSkincolorSummary();
+                resetCharacterFields();
                 renderList();
+            }
+
+            function resetCharacterFields() {
+                document.getElementById("f-char-appearance").value = "";
+                document.getElementById("f-char-personality").value = "";
+                document.getElementById("f-char-age").value = "";
+                document.getElementById("f-char-gender").value = "male";
+                document.getElementById("f-char-birth-day").value = "";
+                document.getElementById("f-char-birth-month").value = "1";
             }
 
             /* ─────────────────────────────────────────
@@ -2895,6 +2994,10 @@
                 // Show / hide Name Generator button
                 document.getElementById("namegen-form-group").style.display =
                     type === "race" ? "block" : "none";
+
+                // Show / hide Character block
+                document.getElementById("character-block").style.display =
+                    type === "character" ? "block" : "none";
 
                 const locGroup = document.getElementById("location-sub-group");
                 const zivilGroup = document.getElementById("zivil-sub-group");
@@ -4117,6 +4220,40 @@
                         .getElementById("spawn-check-group")
                         .classList.contains("active");
 
+                // Character fields
+                const appearance =
+                    type === "character"
+                        ? document.getElementById("f-char-appearance").value.trim()
+                        : "";
+                const personality =
+                    type === "character"
+                        ? document.getElementById("f-char-personality").value.trim()
+                        : "";
+                const age =
+                    type === "character"
+                        ? parseInt(document.getElementById("f-char-age").value) || 0
+                        : 0;
+                const gender =
+                    type === "character"
+                        ? document.getElementById("f-char-gender").value
+                        : "";
+                const birthdate =
+                    type === "character"
+                        ? {
+                              day:
+                                  parseInt(
+                                      document.getElementById("f-char-birth-day")
+                                          .value,
+                                  ) || 1,
+                              month:
+                                  parseInt(
+                                      document.getElementById(
+                                          "f-char-birth-month",
+                                      ).value,
+                                  ) || 1,
+                          }
+                        : null;
+
                 let cards = getCards();
 
                 if (editingId) {
@@ -4135,6 +4272,11 @@
                             nameGenerator,
                             lore,
                             skincolorAllowed,
+                            appearance,
+                            personality,
+                            age,
+                            gender,
+                            birthdate,
                             description: desc,
                             updatedAt: new Date().toISOString(),
                         };
@@ -4155,6 +4297,11 @@
                         nameGenerator,
                         lore,
                         skincolorAllowed,
+                        appearance,
+                        personality,
+                        age,
+                        gender,
+                        birthdate,
                         description: desc,
                         createdAt: new Date().toISOString(),
                         version: "1.0",
