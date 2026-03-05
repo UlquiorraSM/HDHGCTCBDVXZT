@@ -4,7 +4,6 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>StoryKI – Game</title>
-        <script src="traits.js"></script>
         <style>
             * {
                 margin: 0;
@@ -108,9 +107,6 @@
                 border-color: rgba(255, 255, 255, 0.4);
             }
 
-            #header-title {
-                flex: 1;
-            }
             #header-title .story-label {
                 font-size: 11px;
                 font-weight: 700;
@@ -127,6 +123,30 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
                 max-width: 260px;
+            }
+
+            /* Info Block (Time/Loc) */
+            #header-info {
+                flex: 1;
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                margin: 0 10px;
+                text-align: center;
+            }
+            #header-location {
+                font-size: 12px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.9);
+                letter-spacing: 0.05em;
+                text-transform: uppercase;
+            }
+            #header-time {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.5);
+                font-family: monospace;
+                margin-top: 2px;
             }
 
             /* Character badge in header */
@@ -1059,6 +1079,11 @@
                     <div class="story-name" id="story-name">Adventure</div>
                 </div>
 
+                <div id="header-info">
+                    <div id="header-location">—</div>
+                    <div id="header-time">—</div>
+                </div>
+
                 <div id="char-badge">
                     <div class="char-avatar-sm male" id="header-avatar">♂</div>
                     <div>
@@ -1189,6 +1214,121 @@
             let activeChar = null;
 
             /* ═══════════════════════════════════════
+               TIME & COMMAND SYSTEM
+            ═══════════════════════════════════════ */
+            function saveActiveCharacter() {
+                if (!activeChar) return;
+                try {
+                    const chars = JSON.parse(
+                        localStorage.getItem(CHARS_KEY) || "[]",
+                    );
+                    const idx = chars.findIndex((c) => c.id === activeChar.id);
+                    if (idx !== -1) {
+                        chars[idx] = activeChar;
+                        localStorage.setItem(CHARS_KEY, JSON.stringify(chars));
+                    }
+                } catch (e) {
+                    console.error("Failed to save character", e);
+                }
+            }
+
+            function updateHeaderTime() {
+                if (!activeChar) return;
+                const d = activeChar.startingDate || {};
+                const day = String(d.day || 1).padStart(2, "0");
+                const mon = String(d.month || 1).padStart(2, "0");
+                const yr = d.year || 1983;
+                const tm = d.time || "00:00";
+                const el = document.getElementById("header-time");
+                if (el) el.textContent = `${day}.${mon}.${yr} — ${tm}`;
+            }
+
+            function addMinutes(mins) {
+                if (!activeChar) return;
+                if (!activeChar.startingDate) activeChar.startingDate = {};
+                const d = activeChar.startingDate;
+
+                let [h, m] = (d.time || "00:00").split(":").map(Number);
+                let totalMins = h * 60 + m + mins;
+
+                // Handle negative
+                if (totalMins < 0) {
+                    // Not fully robust for multi-day backward, but basic support
+                    totalMins += 24 * 60;
+                }
+
+                let extraDays = Math.floor(totalMins / (24 * 60));
+                totalMins = totalMins % (24 * 60);
+
+                h = Math.floor(totalMins / 60);
+                m = totalMins % 60;
+
+                d.time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+
+                if (extraDays > 0) {
+                    d.day = (d.day || 1) + extraDays;
+                    // Simple month overflow (30 days logic for simplicity)
+                    while (d.day > 30) {
+                        d.day -= 30;
+                        d.month = (d.month || 1) + 1;
+                        if (d.month > 12) {
+                            d.month = 1;
+                            d.year = (d.year || 1983) + 1;
+                        }
+                    }
+                }
+                updateHeaderTime();
+                saveActiveCharacter();
+            }
+
+            function processAICommands(text) {
+                if (!text) return "";
+                const cmdRegex = /\[\[(.*?)\]\]/g;
+                let newText = text.replace(cmdRegex, (match, content) => {
+                    const parts = content.split(",").map((s) => s.trim());
+                    parts.forEach((part) => {
+                        // try key=val or key:val
+                        let [k, v] = part.split("=").map((s) => s.trim());
+                        if (!v) [k, v] = part.split(":").map((s) => s.trim());
+                        if (k && v) handleCommand(k, v);
+                    });
+                    return "";
+                });
+                return newText.trim();
+            }
+
+            function handleCommand(key, val) {
+                if (!activeChar) return;
+                if (!activeChar.startingDate) activeChar.startingDate = {};
+                const d = activeChar.startingDate;
+                key = key.toLowerCase();
+
+                if (key === "time") {
+                    d.time = val;
+                } else if (key === "day") {
+                    d.day = parseInt(val) || d.day;
+                } else if (key === "month") {
+                    d.month = parseInt(val) || d.month;
+                } else if (key === "year") {
+                    d.year = parseInt(val) || d.year;
+                } else if (
+                    key === "add_m" ||
+                    key === "add_min" ||
+                    key === "add_minutes"
+                ) {
+                    addMinutes(parseInt(val) || 0);
+                } else if (
+                    key === "add_h" ||
+                    key === "add_hour" ||
+                    key === "add_hours"
+                ) {
+                    addMinutes((parseInt(val) || 0) * 60);
+                }
+                updateHeaderTime();
+                saveActiveCharacter();
+            }
+
+            /* ═══════════════════════════════════════
                BACKGROUND
             ═══════════════════════════════════════ */
             function loadBackground() {
@@ -1218,6 +1358,10 @@
                 }
             }
 
+            function getCards() {
+                return JSON.parse(localStorage.getItem(CARDS_KEY) || "[]");
+            }
+
             function applyCharacter(ch) {
                 if (!ch) return;
                 activeChar = ch;
@@ -1239,6 +1383,18 @@
                     fullName;
                 document.getElementById("header-char-race").textContent =
                     ch.raceName || "Unknown Race";
+
+                // Time & Location
+                updateHeaderTime();
+
+                let locName = "UNKNOWN LOCATION";
+                if (ch.spawnId) {
+                    const cards = getCards();
+                    const loc = cards.find((c) => c.id === ch.spawnId);
+                    if (loc) locName = loc.title;
+                }
+                document.getElementById("header-location").textContent = locName;
+                document.getElementById("header-info").style.display = "flex";
 
                 // Story name in header
                 document.getElementById("story-name").textContent =
@@ -1424,16 +1580,19 @@
                 const typing = appendTypingIndicator();
 
                 try {
+                    const systemInst =
+                        "SYSTEM: You are the Narrator. You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] (hidden from user) at the end of your response. Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N.";
                     const history =
                         chatHistory.length > 0
-                            ? chatHistory.join("\n") + "\nNarrator:"
-                            : systemPrompt;
+                            ? systemInst + "\n" + chatHistory.join("\n") + "\nNarrator:"
+                            : systemInst + "\n" + systemPrompt;
                     const response = await askAI(
                         chatHistory.length > 0 ? history : systemPrompt,
                     );
                     removeTypingIndicator();
-                    appendBubble("ai", response);
-                    chatHistory.push("Narrator: " + response);
+                    const cleanResponse = processAICommands(response);
+                    appendBubble("ai", cleanResponse);
+                    chatHistory.push("Narrator: " + cleanResponse);
                 } catch (err) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + err + " ]");
@@ -1469,11 +1628,15 @@
                 const typing = appendTypingIndicator();
 
                 try {
-                    const historyText = chatHistory.join("\n") + "\nNarrator:";
+                    const systemInst =
+                        "SYSTEM: You are the Narrator. You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] (hidden from user) at the end of your response. Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N.";
+                    const historyText =
+                        systemInst + "\n" + chatHistory.join("\n") + "\nNarrator:";
                     const response = await askAI(historyText);
                     removeTypingIndicator();
-                    appendBubble("ai", response);
-                    chatHistory.push("Narrator: " + response);
+                    const cleanResponse = processAICommands(response);
+                    appendBubble("ai", cleanResponse);
+                    chatHistory.push("Narrator: " + cleanResponse);
                 } catch (err) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + err + " ]");
@@ -1528,12 +1691,16 @@
                 setSendDisabled(true);
                 setStatus(false);
                 appendTypingIndicator();
+                const systemInst =
+                    "SYSTEM: You are the Narrator. You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] (hidden from user) at the end of your response. Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N.";
                 try {
-                    const histText = chatHistory.join("\n") + "\nNarrator:";
+                    const histText =
+                        systemInst + "\n" + chatHistory.join("\n") + "\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
-                    appendBubble("ai", r);
-                    chatHistory.push("Narrator: " + r);
+                    const cleanR = processAICommands(r);
+                    appendBubble("ai", cleanR);
+                    chatHistory.push("Narrator: " + cleanR);
                 } catch (e) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + e + " ]");
@@ -1550,12 +1717,16 @@
                 setSendDisabled(true);
                 setStatus(false);
                 appendTypingIndicator();
+                const systemInst =
+                    "SYSTEM: You are the Narrator. You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] (hidden from user) at the end of your response. Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N.";
                 try {
-                    const histText = chatHistory.join("\n") + "\nNarrator:";
+                    const histText =
+                        systemInst + "\n" + chatHistory.join("\n") + "\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
-                    appendBubble("ai", r);
-                    chatHistory.push("Narrator: " + r);
+                    const cleanR = processAICommands(r);
+                    appendBubble("ai", cleanR);
+                    chatHistory.push("Narrator: " + cleanR);
                 } catch (e) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + e + " ]");
