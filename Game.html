@@ -1210,6 +1210,14 @@
             const CARDS_KEY = "storyki_storycards";
             const LOG_KEY = "storyki_storylog";
 
+            // Storage Helper (Non-persistent session storage)
+            const Storage = {
+                get: (key) => sessionStorage.getItem(key),
+                set: (key, val) => sessionStorage.setItem(key, val),
+                remove: (key) => sessionStorage.removeItem(key),
+                clear: () => sessionStorage.clear()
+            };
+
             /* ═══════════════════════════════════════
                STATE
             ═══════════════════════════════════════ */
@@ -1224,12 +1232,12 @@
                 if (!activeChar) return;
                 try {
                     const chars = JSON.parse(
-                        localStorage.getItem(CHARS_KEY) || "[]",
+                        Storage.get(CHARS_KEY) || "[]",
                     );
                     const idx = chars.findIndex((c) => c.id === activeChar.id);
                     if (idx !== -1) {
                         chars[idx] = activeChar;
-                        localStorage.setItem(CHARS_KEY, JSON.stringify(chars));
+                        Storage.set(CHARS_KEY, JSON.stringify(chars));
                     }
                 } catch (e) {
                     console.error("Failed to save character", e);
@@ -1238,7 +1246,7 @@
 
             function saveStoryLog() {
                 try {
-                    localStorage.setItem(LOG_KEY, JSON.stringify(chatHistory));
+                    Storage.set(LOG_KEY, JSON.stringify(chatHistory));
                 } catch (e) {
                     console.error("Failed to save story log", e);
                 }
@@ -1246,7 +1254,7 @@
 
             function loadStoryLog() {
                 try {
-                    const raw = localStorage.getItem(LOG_KEY);
+                    const raw = Storage.get(LOG_KEY);
                     if (raw) {
                         chatHistory = JSON.parse(raw);
                         // Render log
@@ -1399,7 +1407,7 @@
                BACKGROUND
             ═══════════════════════════════════════ */
             function loadBackground() {
-                const raw = localStorage.getItem(SETTINGS_KEY);
+                const raw = Storage.get(SETTINGS_KEY);
                 const url = raw
                     ? JSON.parse(raw).backgroundUrl ||
                       "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg"
@@ -1416,7 +1424,7 @@
             function loadLatestCharacter() {
                 try {
                     const chars = JSON.parse(
-                        localStorage.getItem(CHARS_KEY) || "[]",
+                        Storage.get(CHARS_KEY) || "[]",
                     );
                     if (!chars.length) return null;
                     return chars[chars.length - 1];
@@ -1426,7 +1434,7 @@
             }
 
             function getCards() {
-                return JSON.parse(localStorage.getItem(CARDS_KEY) || "[]");
+                return JSON.parse(Storage.get(CARDS_KEY) || "[]");
             }
 
             function applyCharacter(ch) {
@@ -1481,7 +1489,7 @@
                 if (ch.spawnId) {
                     try {
                         const cards = JSON.parse(
-                            localStorage.getItem(CARDS_KEY) || "[]",
+                            Storage.get(CARDS_KEY) || "[]",
                         );
                         const spawn = cards.find((c) => c.id === ch.spawnId);
                         if (spawn) spawnName = spawn.title;
@@ -1947,7 +1955,7 @@
             }
 
             function renderDevPanel() {
-                const raw = localStorage.getItem(NPCS_KEY);
+                const raw = Storage.get(NPCS_KEY);
                 const scroll = document.getElementById("dev-scroll");
                 const empty = document.getElementById("dev-empty");
                 const term = (document.getElementById("dev-search").value || "")
@@ -2225,10 +2233,19 @@
                 loadBackground();
                 setInterval(loadBackground, 2000);
 
+                const params = new URLSearchParams(window.location.search);
+                const isContinue = params.get("mode") === "continue";
+
                 const char = loadLatestCharacter();
                 if (char) {
                     applyCharacter(char);
                     loadStoryLog();
+                    
+                    if (isContinue) {
+                        // Directly show the game, no welcome
+                        const ov = document.getElementById("welcome-overlay");
+                        ov.style.display = "none";
+                    }
                 }
 
                 setTimeout(() => {

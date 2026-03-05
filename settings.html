@@ -531,7 +531,15 @@
             document.head.appendChild(link);
         }
         
-        // Seite preloaden wenn settings geladen wird
+        // Storage Helper (Non-persistent session storage)
+        const Storage = {
+            get: (key) => sessionStorage.getItem(key),
+            set: (key, val) => sessionStorage.setItem(key, val),
+            remove: (key) => sessionStorage.removeItem(key),
+            clear: () => sessionStorage.clear()
+        };
+
+        // Preload
         window.addEventListener('load', () => {
             preloadPage('index.html');
             preloadPage('Game.html');
@@ -539,7 +547,7 @@
         
         // Einstellungen laden
         function loadSettings() {
-            const settings = localStorage.getItem('storyki_settings');
+            const settings = Storage.get('storyki_settings');
             if (settings) {
                 const data = JSON.parse(settings);
                 // Allgemein
@@ -588,11 +596,11 @@
                 document.body.style.backgroundPosition = 'center';
                 document.body.style.backgroundAttachment = 'fixed';
                 
-                // In localStorage speichern für andere Seiten
-                const settings = localStorage.getItem('storyki_settings') || '{}';
+                // In Storage speichern für andere Seiten
+                const settings = Storage.get('storyki_settings') || '{}';
                 const data = JSON.parse(settings);
                 data.backgroundUrl = backgroundUrl;
-                localStorage.setItem('storyki_settings', JSON.stringify(data));
+                Storage.set('storyki_settings', JSON.stringify(data));
                 
                 // Event für andere Seiten auslösen (falls sie offen sind)
                 window.dispatchEvent(new CustomEvent('backgroundChanged', { 
@@ -626,20 +634,69 @@
                 console: document.getElementById('console').checked
             };
             
-            localStorage.setItem('storyki_settings', JSON.stringify(settings));
+            Storage.set('storyki_settings', JSON.stringify(settings));
             applyBackground(false);
             alert('Einstellungen wurden gespeichert!');
         }
         
         // Einstellungen zurücksetzen
         function resetSettings() {
-            if (confirm('Möchtest du wirklich alle Einstellungen zurücksetzen?')) {
-                localStorage.removeItem('storyki_settings');
-                document.getElementById('background-url').value = 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
-                document.getElementById('creativity').value = 50;
-                updateCreativityValue();
-                applyBackground(true);
-                alert('Einstellungen wurden zurückgesetzt!');
+            if (confirm('Möchten Sie wirklich alle Einstellungen auf die Standardwerte zurücksetzen?')) {
+                Storage.remove('storyki_settings');
+                loadSettings();
+                alert('Einstellungen wurden zurückgesetzt.');
+            }
+        }
+        
+        // Debug-Informationen anzeigen
+        function showDebugInfo() {
+            const settings = Storage.get('storyki_settings');
+            console.log('Aktuelle Einstellungen:', settings ? JSON.parse(settings) : 'Keine Einstellungen gefunden');
+            
+            const cards = Storage.get('storyki_storycards');
+            console.log('Anzahl Story Cards:', cards ? JSON.parse(cards).length : 0);
+            
+            const characters = Storage.get('storyki_characters');
+            console.log('Anzahl Charaktere:', characters ? JSON.parse(characters).length : 0);
+        }
+        
+        // Export / Import
+        function exportData() {
+            const data = {
+                settings: JSON.parse(Storage.get('storyki_settings') || '{}'),
+                cards: JSON.parse(Storage.get('storyki_storycards') || '[]'),
+                characters: JSON.parse(Storage.get('storyki_characters') || '[]'),
+                logs: JSON.parse(Storage.get('storyki_storylog') || '[]')
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'storyki_data_export.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function importData(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.settings) Storage.set('storyki_settings', JSON.stringify(data.settings));
+                        if (data.cards) Storage.set('storyki_storycards', JSON.stringify(data.cards));
+                        if (data.characters) Storage.set('storyki_characters', JSON.stringify(data.characters));
+                        if (data.logs) Storage.set('storyki_storylog', JSON.stringify(data.logs));
+                        
+                        loadSettings();
+                        alert('Daten erfolgreich importiert!');
+                    } catch (err) {
+                        alert('Fehler beim Importieren der Datei.');
+                    }
+                };
+                reader.readAsText(file);
             }
         }
         
@@ -674,14 +731,14 @@
         // Cache leeren
         function clearCache() {
             if (confirm('Möchtest du wirklich den Cache leeren?')) {
-                localStorage.clear();
+                Storage.clear();
                 alert('Cache wurde geleert!');
             }
         }
         
         // Einstellungen exportieren
         function exportSettings() {
-            const settings = localStorage.getItem('storyki_settings');
+            const settings = Storage.get('storyki_settings');
             if (settings) {
                 const blob = new Blob([settings], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -707,7 +764,7 @@
                     reader.onload = (e) => {
                         try {
                             const settings = JSON.parse(e.target.result);
-                            localStorage.setItem('storyki_settings', JSON.stringify(settings));
+                            Storage.set('storyki_settings', JSON.stringify(settings));
                             loadSettings();
                             alert('Einstellungen wurden importiert!');
                         } catch (err) {

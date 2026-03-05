@@ -2567,6 +2567,15 @@
            STATE
         ───────────────────────────────────────── */
             const STORAGE_KEY = "storyki_storycards";
+
+            // Storage Helper (Non-persistent session storage)
+            const Storage = {
+                get: (key) => sessionStorage.getItem(key),
+                set: (key, val) => sessionStorage.setItem(key, val),
+                remove: (key) => sessionStorage.removeItem(key),
+                clear: () => sessionStorage.clear()
+            };
+
             let activeFilter = "all";
             let editingId = null; // null = new entry
             let ctxTargetId = null; // for context-menu
@@ -2575,7 +2584,7 @@
            BACKGROUND
         ───────────────────────────────────────── */
             function loadBackground() {
-                const raw = localStorage.getItem("storyki_settings");
+                const raw = Storage.get("storyki_settings");
                 const url = raw
                     ? JSON.parse(raw).backgroundUrl ||
                       "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg"
@@ -2590,11 +2599,11 @@
            DATA HELPERS
         ───────────────────────────────────────── */
             function getCards() {
-                return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+                return JSON.parse(Storage.get(STORAGE_KEY) || "[]");
             }
 
             function saveCards(cards) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+                Storage.set(STORAGE_KEY, JSON.stringify(cards));
             }
 
             function generateId() {
@@ -4198,7 +4207,7 @@
                 if (!id) return;
                 const card = getCards().find((c) => c.id === id);
                 if (card) {
-                    localStorage.setItem(
+                    Storage.set(
                         "storyki_current_story",
                         JSON.stringify(card),
                     );

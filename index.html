@@ -86,7 +86,16 @@
                 <button class="menu-button" onclick="createStory()">
                     Create
                 </button>
-                <button class="menu-button" onclick="loadGame()">Load</button>
+                <button class="menu-button" onclick="document.getElementById('file-input').click()">
+                    Load (.json)
+                </button>
+                <input
+                    type="file"
+                    id="file-input"
+                    style="display: none"
+                    accept=".json"
+                    onchange="loadGame(event)"
+                />
                 <button class="menu-button" onclick="saveGame()">Save</button>
                 <button class="menu-button" onclick="openSettings()">
                     Settings
@@ -95,9 +104,17 @@
         </div>
 
         <script>
+            // Storage Helper (Non-persistent session storage)
+            const Storage = {
+                get: (key) => sessionStorage.getItem(key),
+                set: (key, val) => sessionStorage.setItem(key, val),
+                remove: (key) => sessionStorage.removeItem(key),
+                clear: () => sessionStorage.clear()
+            };
+
             // Hintergrund aus Settings laden
             function loadBackground() {
-                const settings = localStorage.getItem("storyki_settings");
+                const settings = Storage.get("storyki_settings");
                 if (settings) {
                     const data = JSON.parse(settings);
                     const backgroundUrl = data.backgroundUrl;
@@ -140,13 +157,33 @@
             setInterval(loadBackground, 1000);
 
             function continueGame() {
-                // Logik zum Fortsetzen des Spiels
+                const log = Storage.get("storyki_storylog");
+                const chars = Storage.get("storyki_characters");
+                
+                if (!log && (!chars || JSON.parse(chars).length === 0)) {
+                    alert("You currently have no story!");
+                    return;
+                }
+                
                 console.log("Continue Game");
-                navigateWithTransition("Game.html");
+                // Pass a flag to Game.html to skip welcome/narration
+                navigateWithTransition("Game.html?mode=continue");
             }
 
             function newStory() {
-                // Logik für eine neue Geschichte
+                const log = Storage.get("storyki_storylog");
+                const chars = Storage.get("storyki_characters");
+                const hasExisting = log || (chars && JSON.parse(chars).length > 0);
+
+                if (hasExisting) {
+                    if (!confirm("Do you want to delete your existing story and start a new one?")) {
+                        return;
+                    }
+                    // Clear existing story data but keep settings and cards
+                    Storage.remove("storyki_storylog");
+                    Storage.remove("storyki_characters");
+                }
+
                 console.log("New Story");
                 navigateWithTransition("CharacterCreate.html");
             }
@@ -157,10 +194,33 @@
                 navigateWithTransition("Create.html");
             }
 
-            function loadGame() {
-                // Logik zum Laden eines Spielstands
-                console.log("Load Game");
-                // Hier könnte ein Ladebildschirm geöffnet werden
+            function loadGame(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        // Import state into sessionStorage
+                        if (data.create) {
+                            Storage.set("storyki_storycards", JSON.stringify(data.create));
+                        }
+                        if (data.story) {
+                            if (data.story.storyLog) Storage.set("storyki_storylog", JSON.stringify(data.story.storyLog));
+                            if (data.story.characters) Storage.set("storyki_characters", JSON.stringify(data.story.characters));
+                            if (data.story.settings) Storage.set("storyki_settings", JSON.stringify(data.story.settings));
+                        }
+                        
+                        alert("Spielstand erfolgreich geladen!");
+                        loadBackground(); // Update background immediately
+                    } catch (err) {
+                        console.error("Failed to parse JSON", err);
+                        alert("Fehler beim Laden der Datei. Ist es eine gültige StoryKI JSON?");
+                    }
+                };
+                reader.readAsText(file);
             }
 
             function openSettings() {
@@ -171,10 +231,10 @@
 
             function saveGame() {
                 try {
-                    const cards = JSON.parse(localStorage.getItem("storyki_storycards") || "[]");
-                    const log = JSON.parse(localStorage.getItem("storyki_storylog") || "[]");
-                    const chars = JSON.parse(localStorage.getItem("storyki_characters") || "[]");
-                    const settings = JSON.parse(localStorage.getItem("storyki_settings") || "{}");
+                    const cards = JSON.parse(Storage.get("storyki_storycards") || "[]");
+                    const log = JSON.parse(Storage.get("storyki_storylog") || "[]");
+                    const chars = JSON.parse(Storage.get("storyki_characters") || "[]");
+                    const settings = JSON.parse(Storage.get("storyki_settings") || "{}");
 
                     const exportData = {
                         create: cards,

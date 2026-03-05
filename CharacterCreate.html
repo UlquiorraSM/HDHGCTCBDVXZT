@@ -729,6 +729,14 @@
             const CHARS_KEY = "storyki_characters";
             const SETTINGS_KEY = "storyki_settings";
 
+            // Storage Helper (Non-persistent session storage)
+            const Storage = {
+                get: (key) => sessionStorage.getItem(key),
+                set: (key, val) => sessionStorage.setItem(key, val),
+                remove: (key) => sessionStorage.removeItem(key),
+                clear: () => sessionStorage.clear()
+            };
+
             let selectedGender = "male";
             let selectedSpawnId = null;
 
@@ -736,7 +744,7 @@
                BACKGROUND
             ═══════════════════════════════════════ */
             function loadBackground() {
-                const raw = localStorage.getItem(SETTINGS_KEY);
+                const raw = Storage.get(SETTINGS_KEY);
                 const url = raw
                     ? JSON.parse(raw).backgroundUrl ||
                       "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg"
@@ -751,15 +759,15 @@
                DATA HELPERS
             ═══════════════════════════════════════ */
             function getCards() {
-                return JSON.parse(localStorage.getItem(CARDS_KEY) || "[]");
+                return JSON.parse(Storage.get(CARDS_KEY) || "[]");
             }
 
             function getCharacters() {
-                return JSON.parse(localStorage.getItem(CHARS_KEY) || "[]");
+                return JSON.parse(Storage.get(CHARS_KEY) || "[]");
             }
 
             function saveCharacters(chars) {
-                localStorage.setItem(CHARS_KEY, JSON.stringify(chars));
+                Storage.set(CHARS_KEY, JSON.stringify(chars));
             }
 
             function generateId() {

@@ -451,6 +451,14 @@
             /* ═══════════════════════════════════════
                STATE
             ═══════════════════════════════════════ */
+            // Storage Helper (Non-persistent session storage)
+            const Storage = {
+                get: (key) => sessionStorage.getItem(key),
+                set: (key, val) => sessionStorage.setItem(key, val),
+                remove: (key) => sessionStorage.removeItem(key),
+                clear: () => sessionStorage.clear()
+            };
+
             let totalNPCsGenerated = 0;
             let uniqueRaceIds = new Set();
 
@@ -458,7 +466,7 @@
                BACKGROUND
             ═══════════════════════════════════════ */
             function loadBackground() {
-                const raw = localStorage.getItem(SETTINGS_KEY);
+                const raw = Storage.get(SETTINGS_KEY);
                 const url = raw
                     ? JSON.parse(raw).backgroundUrl ||
                       "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg"
@@ -471,7 +479,7 @@
                DATA HELPERS
             ═══════════════════════════════════════ */
             function getCards() {
-                return JSON.parse(localStorage.getItem(CARDS_KEY) || "[]");
+                return JSON.parse(Storage.get(CARDS_KEY) || "[]");
             }
 
             function generateId() {
