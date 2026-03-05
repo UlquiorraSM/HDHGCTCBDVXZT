@@ -87,6 +87,7 @@
                     Create
                 </button>
                 <button class="menu-button" onclick="loadGame()">Load</button>
+                <button class="menu-button" onclick="saveGame()">Save</button>
                 <button class="menu-button" onclick="openSettings()">
                     Settings
                 </button>
@@ -166,6 +167,41 @@
                 // Logik zum Öffnen der Einstellungen
                 console.log("Open Settings");
                 navigateWithTransition("settings.html");
+            }
+
+            function saveGame() {
+                try {
+                    const cards = JSON.parse(localStorage.getItem("storyki_storycards") || "[]");
+                    const log = JSON.parse(localStorage.getItem("storyki_storylog") || "[]");
+                    const chars = JSON.parse(localStorage.getItem("storyki_characters") || "[]");
+                    const settings = JSON.parse(localStorage.getItem("storyki_settings") || "{}");
+
+                    const exportData = {
+                        create: cards,
+                        story: {
+                            create: cards,
+                            storyLog: log,
+                            characters: chars,
+                            settings: settings
+                        }
+                    };
+
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+                    a.href = url;
+                    a.download = `StoryKI_Save_${timestamp}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    console.log("Game saved successfully");
+                } catch (e) {
+                    console.error("Failed to save game", e);
+                    alert("Fehler beim Speichern des Spielstands.");
+                }
             }
 
             // Universelle Navigationsfunktion mit Übergang

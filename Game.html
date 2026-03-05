@@ -1205,6 +1205,7 @@
             const SETTINGS_KEY = "storyki_settings";
             const CHARS_KEY = "storyki_characters";
             const CARDS_KEY = "storyki_storycards";
+            const LOG_KEY = "storyki_storylog";
 
             /* ═══════════════════════════════════════
                STATE
@@ -1230,6 +1231,66 @@
                 } catch (e) {
                     console.error("Failed to save character", e);
                 }
+            }
+
+            function saveStoryLog() {
+                try {
+                    localStorage.setItem(LOG_KEY, JSON.stringify(chatHistory));
+                } catch (e) {
+                    console.error("Failed to save story log", e);
+                }
+            }
+
+            function loadStoryLog() {
+                try {
+                    const raw = localStorage.getItem(LOG_KEY);
+                    if (raw) {
+                        chatHistory = JSON.parse(raw);
+                        // Render log
+                        const messagesEl = document.getElementById("messages");
+                        messagesEl.innerHTML = "";
+                        chatHistory.forEach((entry) => {
+                            if (typeof entry === "string") {
+                                // Old format support or divider
+                                if (entry.startsWith("Narrator: ")) {
+                                    appendBubble("ai", entry.replace("Narrator: ", ""), "", false);
+                                } else if (entry.includes(": ")) {
+                                    const parts = entry.split(": ");
+                                    appendBubble("user", parts[1], "", false);
+                                } else {
+                                    addSystemDivider(entry);
+                                }
+                            } else {
+                                // New object format
+                                const role = entry.sender === "Narrator" ? "ai" : "user";
+                                appendBubble(role, entry.text, "", false);
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error("Failed to load story log", e);
+                }
+            }
+
+            function addToStoryLog(sender, text) {
+                const d = activeChar?.startingDate || {};
+                const day = String(d.day || 1).padStart(2, "0");
+                const mon = String(d.month || 1).padStart(2, "0");
+                const yr = d.year || 1983;
+                const tm = d.time || "00:00";
+                const loc = document.getElementById("header-location")?.textContent || "Unknown Location";
+
+                const entry = {
+                    sender: sender,
+                    text: text,
+                    date: `${day}.${mon}.${yr}`,
+                    time: tm,
+                    location: loc,
+                    timestamp: Date.now()
+                };
+
+                chatHistory.push(entry);
+                saveStoryLog();
             }
 
             function updateHeaderTime() {
@@ -1461,17 +1522,16 @@
                     );
                 } else {
                     addSystemDivider("Chapter 1");
-                    appendBubble(
-                        "ai",
-                        "Willkommen, Abenteurer! Deine Geschichte beginnt jetzt.\n\nWas möchtest du als erstes tun?",
-                    );
+                    const welcomeText = "Willkommen, Abenteurer! Deine Geschichte beginnt jetzt.\n\nWas möchtest du als erstes tun?";
+                    appendBubble("ai", welcomeText);
+                    addToStoryLog("Narrator", welcomeText);
                 }
             }
 
             /* ═══════════════════════════════════════
                MESSAGE HELPERS
             ═══════════════════════════════════════ */
-            function appendBubble(role, text, cssExtra = "") {
+            function appendBubble(role, text, cssExtra = "", scroll = true) {
                 const messagesEl = document.getElementById("messages");
                 const row = document.createElement("div");
                 row.className = `msg-row ${role}`;
@@ -1494,7 +1554,7 @@
                 row.appendChild(senderEl);
                 row.appendChild(bubble);
                 messagesEl.appendChild(row);
-                messagesEl.scrollTop = messagesEl.scrollHeight;
+                if (scroll) messagesEl.scrollTop = messagesEl.scrollHeight;
                 return bubble;
             }
 
@@ -1531,6 +1591,9 @@
                 div.className = "chat-divider";
                 div.innerHTML = `<span class="chat-divider-label">${label}</span>`;
                 messagesEl.appendChild(div);
+                
+                chatHistory.push(label);
+                saveStoryLog();
             }
 
             function setStatus(online) {
@@ -1590,7 +1653,7 @@
                         "SYSTEM: You are the Narrator. You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] (hidden from user) at the end of your response. Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N.";
                     const history =
                         chatHistory.length > 0
-                            ? systemInst + "\n" + chatHistory.join("\n") + "\nNarrator:"
+                            ? systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `${e.sender}: ${e.text}`).join("\n") + "\nNarrator:"
                             : systemInst + "\n" + systemPrompt;
                     const response = await askAI(
                         chatHistory.length > 0 ? history : systemPrompt,
@@ -1598,7 +1661,7 @@
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
                     appendBubble("ai", cleanResponse);
-                    chatHistory.push("Narrator: " + cleanResponse);
+                    addToStoryLog("Narrator", cleanResponse);
                 } catch (err) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + err + " ]");
@@ -1615,15 +1678,12 @@
                 if (!text || isBusy) return;
 
                 appendBubble("user", text);
-                chatHistory.push(
-                    (activeChar
-                        ? [activeChar.firstName, activeChar.lastName]
-                              .filter(Boolean)
-                              .join(" ")
-                        : "Player") +
-                        ": " +
-                        text,
-                );
+                const senderName = activeChar
+                    ? [activeChar.firstName, activeChar.lastName]
+                          .filter(Boolean)
+                          .join(" ")
+                    : "Player";
+                addToStoryLog(senderName, text);
                 inputEl.value = "";
                 inputEl.style.height = "auto";
 
@@ -1637,12 +1697,12 @@
                     const systemInst =
                         "SYSTEM: You are the Narrator. You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] (hidden from user) at the end of your response. Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N.";
                     const historyText =
-                        systemInst + "\n" + chatHistory.join("\n") + "\nNarrator:";
+                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
                     const response = await askAI(historyText);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
                     appendBubble("ai", cleanResponse);
-                    chatHistory.push("Narrator: " + cleanResponse);
+                    addToStoryLog("Narrator", cleanResponse);
                 } catch (err) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + err + " ]");
@@ -1688,11 +1748,14 @@
                 aiRows[aiRows.length - 1].remove();
                 // Remove last narrator entry from history
                 for (let i = chatHistory.length - 1; i >= 0; i--) {
-                    if (chatHistory[i].startsWith("Narrator:")) {
+                    const entry = chatHistory[i];
+                    const isNarrator = typeof entry === 'string' ? entry.startsWith("Narrator:") : entry.sender === "Narrator";
+                    if (isNarrator) {
                         chatHistory.splice(i, 1);
                         break;
                     }
                 }
+                saveStoryLog();
                 isBusy = true;
                 setSendDisabled(true);
                 setStatus(false);
@@ -1701,12 +1764,12 @@
                     "SYSTEM: You are the Narrator. You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] (hidden from user) at the end of your response. Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N.";
                 try {
                     const histText =
-                        systemInst + "\n" + chatHistory.join("\n") + "\nNarrator:";
+                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
                     appendBubble("ai", cleanR);
-                    chatHistory.push("Narrator: " + cleanR);
+                    addToStoryLog("Narrator", cleanR);
                 } catch (e) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + e + " ]");
@@ -1727,12 +1790,12 @@
                     "SYSTEM: You are the Narrator. You can update the in-game time by adding commands like [[time: 14:30]] or [[add_m: 30]] or [[day: 2]] (hidden from user) at the end of your response. Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N.";
                 try {
                     const histText =
-                        systemInst + "\n" + chatHistory.join("\n") + "\nNarrator:";
+                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
                     appendBubble("ai", cleanR);
-                    chatHistory.push("Narrator: " + cleanR);
+                    addToStoryLog("Narrator", cleanR);
                 } catch (e) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + e + " ]");
@@ -1756,14 +1819,21 @@
                 lastRow.remove();
                 // Remove from history
                 for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    const entry = chatHistory[i];
                     const prefix =
                         (activeChar
                             ? [activeChar.firstName, activeChar.lastName]
                                   .filter(Boolean)
                                   .join(" ")
                             : "Player") + ":";
-                    if (chatHistory[i].startsWith(prefix)) {
+                    
+                    const matches = typeof entry === 'string' 
+                        ? entry.startsWith(prefix)
+                        : entry.sender === (activeChar ? [activeChar.firstName, activeChar.lastName].filter(Boolean).join(" ") : "Player");
+
+                    if (matches) {
                         chatHistory.splice(i, 1);
+                        saveStoryLog();
                         break;
                     }
                 }
@@ -1772,6 +1842,7 @@
             document.getElementById("erase-btn").onclick = () => {
                 if (!confirm("Den gesamten Chat löschen?")) return;
                 chatHistory = [];
+                saveStoryLog();
                 const messagesEl = document.getElementById("messages");
                 messagesEl.innerHTML = "";
                 addSystemDivider("Story Reset");
@@ -2097,7 +2168,10 @@
                 setInterval(loadBackground, 2000);
 
                 const char = loadLatestCharacter();
-                if (char) applyCharacter(char);
+                if (char) {
+                    applyCharacter(char);
+                    loadStoryLog();
+                }
 
                 setTimeout(() => {
                     document.body.style.opacity = "1";
