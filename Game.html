@@ -1292,6 +1292,89 @@
                 }
             }
 
+            function buildRelationshipSummary() {
+                try {
+                    const cards = getCards();
+                    const bar = document.getElementById("present-npcs-bar");
+                    if (!bar || !bar.classList.contains("visible")) return "";
+
+                    // Get IDs of NPCs currently present
+                    const presentNpcIds = Array.from(
+                        bar.querySelectorAll(".npc-item"),
+                    )
+                        .map((item) => {
+                            // Find the original NPC card by name from the bar
+                            const name = item
+                                .querySelector(".npc-name-xs")
+                                .textContent.trim();
+                            const card = cards.find(
+                                (c) => c.genre === "character" && c.title === name,
+                            );
+                            return card ? card.id : null;
+                        })
+                        .filter(Boolean);
+
+                    if (presentNpcIds.length === 0) return "";
+
+                    let summary = "\nCharacter Relationships:\n";
+                    const playerFullName = activeChar
+                        ? [activeChar.firstName, activeChar.lastName]
+                              .filter(Boolean)
+                              .join(" ")
+                        : "Player";
+
+                    presentNpcIds.forEach((npcId) => {
+                        const npc = cards.find((c) => c.id === npcId);
+                        if (!npc) return;
+
+                        // 1. Relation NPC to Player
+                        let playerRel = "Stranger (Unknown)";
+                        if (npc.relations) {
+                            const relObj = npc.relations.find(
+                                (r) =>
+                                    r.targetName.toLowerCase() ===
+                                    playerFullName.toLowerCase(),
+                            );
+                            if (relObj && relObj.relation !== "Unknown") {
+                                playerRel =
+                                    relObj.relation === "Family"
+                                        ? relObj.familySub
+                                        : relObj.relation;
+                            }
+                        }
+                        summary += `- ${npc.title} to ${playerFullName}: ${playerRel}\n`;
+
+                        // 2. Relation NPC to other present NPCs
+                        presentNpcIds.forEach((otherId) => {
+                            if (npcId === otherId) return;
+                            const other = cards.find((c) => c.id === otherId);
+                            if (!other) return;
+
+                            let npcRel = "Stranger (Unknown)";
+                            if (npc.relations) {
+                                const relObj = npc.relations.find(
+                                    (r) => r.targetId === otherId,
+                                );
+                                if (relObj && relObj.relation !== "Unknown") {
+                                    npcRel =
+                                        relObj.relation === "Family"
+                                            ? relObj.familySub
+                                            : relObj.relation;
+                                }
+                            }
+                            summary += `  * ${npc.title} to ${other.title}: ${npcRel}\n`;
+                        });
+                    });
+
+                    summary +=
+                        "IMPORTANT: If a relationship is 'Stranger (Unknown)', the characters do NOT know each other and should act accordingly.\n";
+                    return summary;
+                } catch (e) {
+                    console.error("Relationship summary error", e);
+                    return "";
+                }
+            }
+
             function updateLocation(nameOrId) {
                 const cards = getCards();
                 let card = cards.find(
@@ -1448,6 +1531,7 @@
                 const curTime = d.time || "00:00";
                 const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
                 const worldHierarchy = buildLocationHierarchy();
+                const relationshipSummary = buildRelationshipSummary();
                 const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
                 
                 const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
@@ -1468,6 +1552,7 @@
                     `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
                     (presentNPCs ? `Present NPCs: ${presentNPCs}. ` : "") +
                     `${worldHierarchy} ` +
+                    `${relationshipSummary} ` +
                     `You MUST write EXCLUSIVELY in ${aiLang}. ` +
                     `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
                     `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
@@ -1519,6 +1604,7 @@
                 const curTime = d.time || "00:00";
                 const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
                 const worldHierarchy = buildLocationHierarchy();
+                const relationshipSummary = buildRelationshipSummary();
                 const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
 
                 const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
@@ -1539,6 +1625,7 @@
                     `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
                     (presentNPCs ? `Present NPCs: ${presentNPCs}. ` : "") +
                     `${worldHierarchy} ` +
+                    `${relationshipSummary} ` +
                     `You MUST write EXCLUSIVELY in ${aiLang}. ` +
                     `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
                     `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
