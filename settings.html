@@ -338,6 +338,24 @@
         .btn-danger {
             background: linear-gradient(45deg, #dc3545, #c82333);
         }
+
+        .settings-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .footer-left, .footer-right {
+            display: flex;
+            gap: 15px;
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body>
@@ -521,8 +539,16 @@
             </div>
         </div>
         
-        <!-- Fixierter Zurück-Button -->
-        <button class="btn btn-danger back-button-fixed" onclick="backToMenu()">Zurück</button>
+        <!-- Footer mit Save und Zurück Button -->
+        <div class="settings-footer">
+            <div class="footer-left">
+                <button class="btn btn-danger" onclick="backToMenu()">Zurück</button>
+                <button class="btn" onclick="saveSettings()">Speichern</button>
+            </div>
+            <div class="footer-right">
+                <button class="btn btn-secondary" onclick="resetSettings()">Zurücksetzen</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -720,7 +746,55 @@
         
         // Zurück zum Hauptmenü
         function backToMenu() {
+            if (hasUnsavedChanges()) {
+                if (confirm('Du hast ungespeicherte Änderungen. Möchtest du diese speichern, bevor du zurückgehst?')) {
+                    saveSettings();
+                }
+            }
             navigateWithTransition("index.html");
+        }
+
+        // Prüfen auf ungespeicherte Änderungen
+        function hasUnsavedChanges() {
+            const currentSettings = {
+                backgroundUrl: document.getElementById('background-url').value,
+                language: document.getElementById('language').value,
+                theme: document.getElementById('theme').value,
+                creativity: document.getElementById('creativity').value,
+                speed: document.getElementById('speed').value,
+                temperature: document.getElementById('temperature').value,
+                aiLanguage: document.getElementById('ai-language').value,
+                sound: document.getElementById('sound').checked,
+                autosave: document.getElementById('autosave').checked,
+                animations: document.getElementById('animations').checked,
+                timestamps: document.getElementById('timestamps').checked,
+                charlimit: document.getElementById('charlimit').value,
+                debug: document.getElementById('debug').checked,
+                console: document.getElementById('console').checked
+            };
+            
+            const savedSettingsRaw = Storage.get('storyki_settings');
+            if (!savedSettingsRaw) return true;
+            
+            const savedSettings = JSON.parse(savedSettingsRaw);
+            
+            // Vergleiche alle Felder
+            return (
+                currentSettings.backgroundUrl !== (savedSettings.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg') ||
+                currentSettings.language !== (savedSettings.language || 'de') ||
+                currentSettings.theme !== (savedSettings.theme || 'light') ||
+                currentSettings.creativity !== String(savedSettings.creativity || 50) ||
+                currentSettings.speed !== (savedSettings.speed || 'normal') ||
+                currentSettings.temperature !== String(savedSettings.temperature || 70) ||
+                currentSettings.aiLanguage !== (savedSettings.aiLanguage || 'en') ||
+                currentSettings.sound !== (savedSettings.sound !== false) ||
+                currentSettings.autosave !== (savedSettings.autosave !== false) ||
+                currentSettings.animations !== (savedSettings.animations !== false) ||
+                currentSettings.timestamps !== (savedSettings.timestamps || false) ||
+                currentSettings.charlimit !== String(savedSettings.charlimit || 1000) ||
+                currentSettings.debug !== (savedSettings.debug || false) ||
+                currentSettings.console !== (savedSettings.console || false)
+            );
         }
         
         // Universelle Navigationsfunktion mit Übergang (genau wie in index.html)
