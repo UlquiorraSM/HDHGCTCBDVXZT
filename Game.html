@@ -1449,11 +1449,26 @@
                 const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
                 const worldHierarchy = buildLocationHierarchy();
                 const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
+                
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                const aiLangMap = {
+                    "de": "German",
+                    "en": "English",
+                    "ja": "Japanese",
+                    "fr": "French",
+                    "es": "Spanish",
+                    "it": "Italian",
+                    "ru": "Russian",
+                    "ko": "Korean",
+                    "zh": "Chinese"
+                };
+                const aiLang = aiLangMap[settings.aiLanguage] || "English";
 
                 const systemInst =
                     `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
                     (presentNPCs ? `Present NPCs: ${presentNPCs}. ` : "") +
                     `${worldHierarchy} ` +
+                    `You MUST write EXCLUSIVELY in ${aiLang}. ` +
                     `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
                     `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
                     `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
@@ -1506,10 +1521,25 @@
                 const worldHierarchy = buildLocationHierarchy();
                 const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
 
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                const aiLangMap = {
+                    "de": "German",
+                    "en": "English",
+                    "ja": "Japanese",
+                    "fr": "French",
+                    "es": "Spanish",
+                    "it": "Italian",
+                    "ru": "Russian",
+                    "ko": "Korean",
+                    "zh": "Chinese"
+                };
+                const aiLang = aiLangMap[settings.aiLanguage] || "English";
+
                 const systemInst =
                     `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
                     (presentNPCs ? `Present NPCs: ${presentNPCs}. ` : "") +
                     `${worldHierarchy} ` +
+                    `You MUST write EXCLUSIVELY in ${aiLang}. ` +
                     `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
                     `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
                     `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;

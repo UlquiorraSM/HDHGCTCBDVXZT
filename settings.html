@@ -419,6 +419,22 @@
                             <span id="temperature-value">70</span>
                         </div>
                     </div>
+                    <div class="setting-item">
+                        <span class="setting-label">KI-Sprache</span>
+                        <div class="setting-control">
+                            <select id="ai-language">
+                                <option value="en" selected>English</option>
+                                <option value="de">German</option>
+                                <option value="ja">Japanese</option>
+                                <option value="fr">French</option>
+                                <option value="es">Spanish</option>
+                                <option value="it">Italian</option>
+                                <option value="ru">Russian</option>
+                                <option value="ko">Korean</option>
+                                <option value="zh">Chinese</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -559,6 +575,7 @@
                 document.getElementById('creativity').value = data.creativity || 50;
                 document.getElementById('speed').value = data.speed || 'normal';
                 document.getElementById('temperature').value = data.temperature || 70;
+                document.getElementById('ai-language').value = data.aiLanguage || 'en';
                 updateCreativityValue();
                 updateTemperatureValue();
                 
@@ -621,6 +638,7 @@
                 creativity: document.getElementById('creativity').value,
                 speed: document.getElementById('speed').value,
                 temperature: document.getElementById('temperature').value,
+                aiLanguage: document.getElementById('ai-language').value,
                 
                 // Interface
                 sound: document.getElementById('sound').checked,
