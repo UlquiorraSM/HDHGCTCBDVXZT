@@ -2005,6 +2005,29 @@
                                     Sublocations
                                 </button>
                             </div>
+
+                            <!-- Residents for Village / City -->
+                            <div
+                                class="form-group"
+                                id="resident-village-city-group"
+                                style="display: none; margin-top: 14px"
+                            >
+                                <label class="form-label"
+                                    >Residents (NPCs)</label
+                                >
+                                <div
+                                    class="subloc-tags"
+                                    id="resident-village-city-tags"
+                                ></div>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="openSublocPicker('village-city-resident')"
+                                >
+                                    <span class="subloc-icon">&#128100;</span>
+                                    Resident
+                                </button>
+                            </div>
                         </div>
 
                         <!-- RIGHT: Population -->
@@ -2085,6 +2108,29 @@
                                     Sublocations
                                 </button>
                             </div>
+
+                            <!-- Residents for Country / Kingdom -->
+                            <div
+                                class="form-group"
+                                id="resident-country-kingdom-group"
+                                style="display: none; margin-top: 14px"
+                            >
+                                <label class="form-label"
+                                    >Residents (NPCs)</label
+                                >
+                                <div
+                                    class="subloc-tags"
+                                    id="resident-country-kingdom-tags"
+                                ></div>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="openSublocPicker('country-kingdom-resident')"
+                                >
+                                    <span class="subloc-icon">&#128100;</span>
+                                    Resident
+                                </button>
+                            </div>
                         </div>
 
                         <!-- RIGHT: Population -->
@@ -2122,13 +2168,22 @@
                     style="display: none"
                 >
                     <label class="form-label">Building Type</label>
-                    <select class="form-select" id="f-building-sub">
+                    <select class="form-select" id="f-building-sub" onchange="onBuildingSubChange()">
                         <option value="">Select a building type...</option>
                         <option value="custom">Custom</option>
                         <option value="house">House</option>
                         <option value="shop">Shop</option>
                         <option value="school">School</option>
                     </select>
+
+                    <!-- Residents for House -->
+                    <div id="house-residents-group" style="display: none; margin-top: 14px;">
+                        <label class="form-label">Residents (NPCs)</label>
+                        <div class="subloc-tags" id="house-resident-tags"></div>
+                        <button type="button" class="subloc-btn" onclick="openResidentPicker()">
+                            <span class="subloc-icon">&#128100;</span> Resident
+                        </button>
+                    </div>
 
                     <!-- Can be Spawn -->
                     <div
@@ -3049,6 +3104,32 @@
                     document.getElementById("f-building-sub").value = "";
                     sublocSelections["building"] = [];
                     renderSublocTags("building");
+                    onBuildingSubChange();
+                }
+            }
+
+            function onBuildingSubChange() {
+                const sub = document.getElementById("f-building-sub").value;
+                const resGroup = document.getElementById("house-residents-group");
+                if (resGroup) {
+                    resGroup.style.display = sub === "house" ? "block" : "none";
+                }
+                if (sub !== "house") {
+                    // Only clear if not a zivil type that has residents
+                    const locSub =
+                        document.getElementById("f-location-sub").value;
+                    const zivilDetail =
+                        document.getElementById("f-zivil-sub").value;
+                    const hasResidents =
+                        locSub === "zivil" &&
+                        ["village", "city", "kingdom"].includes(zivilDetail);
+
+                    if (!hasResidents) {
+                        residentSelections = [];
+                        renderSublocTags("resident");
+                        renderSublocTags("village-city-resident");
+                        renderSublocTags("country-kingdom-resident");
+                    }
                 }
             }
 
@@ -3108,14 +3189,25 @@
                             card.population["country-kingdom"] || 0,
                         );
                     }
+                    // restore residents for village, city, kingdom
+                    if (card.residents) {
+                        residentSelections = [...(card.residents || [])];
+                        renderSublocTags("village-city-resident");
+                        renderSublocTags("country-kingdom-resident");
+                    }
                 }
                 if (card.locationSub === "building") {
                     document.getElementById("f-building-sub").value =
                         card.locationDetail || "";
+                    onBuildingSubChange();
                     if (card.sublocations) {
                         sublocSelections["building"] =
                             card.sublocations["building"] || [];
                         renderSublocTags("building");
+                    }
+                    if (card.residents) {
+                        residentSelections = [...(card.residents || [])];
+                        renderSublocTags("resident");
                     }
                     // restore canBeSpawn
                     const grp = document.getElementById("spawn-check-group");
@@ -3128,6 +3220,7 @@
                 document.getElementById("f-location-sub").value = "";
                 document.getElementById("f-zivil-sub").value = "";
                 document.getElementById("f-building-sub").value = "";
+                onBuildingSubChange();
                 resetSpawnCheck();
                 document.getElementById("location-sub-group").style.display =
                     "none";
@@ -3680,10 +3773,41 @@
                 ckGroup.style.display =
                     val === "country" || val === "kingdom" ? "block" : "none";
 
+                // Resident blocks
+                const resVcGroup = document.getElementById(
+                    "resident-village-city-group",
+                );
+                const resCkGroup = document.getElementById(
+                    "resident-country-kingdom-group",
+                );
+                if (resVcGroup)
+                    resVcGroup.style.display =
+                        val === "village" || val === "city" ? "block" : "none";
+                if (resCkGroup)
+                    resCkGroup.style.display = val === "kingdom" ? "block" : "none";
+
                 // clear tags & population when hidden
                 if (val !== "village" && val !== "city") {
                     sublocSelections["village-city"] = [];
                     racialSelections["village-city"] = [];
+                    // clear residentSelections if not house & not city/village
+                    const sub = document.getElementById("f-location-sub").value;
+                    const buildDetail =
+                        document.getElementById("f-building-sub").value;
+                    const zivilDetail =
+                        document.getElementById("f-zivil-sub").value;
+                    const hasResidents =
+                        (sub === "building" && buildDetail === "house") ||
+                        (sub === "zivil" &&
+                            ["village", "city", "kingdom"].includes(
+                                zivilDetail,
+                            ));
+                    if (!hasResidents) {
+                        residentSelections = [];
+                        renderSublocTags("resident");
+                        renderSublocTags("village-city-resident");
+                        renderSublocTags("country-kingdom-resident");
+                    }
                     document.getElementById("pop-village-city").value = "";
                     document.getElementById(
                         "pop-village-city-fmt",
@@ -3888,7 +4012,8 @@
                 "country-kingdom": [], // Village, City, Building
                 building: [], // Buildings (when location-sub = building) — future use
             };
-            let sublocPickerContext = null; // which key is open
+            let residentSelections = []; // array of card IDs for characters
+            let sublocPickerContext = null; // which key is open or "resident"
             let sublocPickerTemp = []; // temp selection while picker is open
 
             /* ─────────────────────────────────────────
@@ -3899,11 +4024,14 @@
                     "village-city": "subloc-village-city-tags",
                     "country-kingdom": "subloc-country-kingdom-tags",
                     building: "subloc-building-tags",
+                    resident: "house-resident-tags",
+                    "village-city-resident": "resident-village-city-tags",
+                    "country-kingdom-resident": "resident-country-kingdom-tags",
                 };
                 const container = document.getElementById(tagMap[ctx]);
                 if (!container) return;
 
-                const ids = sublocSelections[ctx] || [];
+                const ids = ctx === "resident" ? residentSelections : (sublocSelections[ctx] || []);
                 const all = getCards();
 
                 container.innerHTML = "";
@@ -3921,9 +4049,15 @@
             }
 
             function removeSublocTag(ctx, id) {
-                sublocSelections[ctx] = (sublocSelections[ctx] || []).filter(
-                    (x) => x !== id,
-                );
+                if (ctx === "resident" || ctx.endsWith("-resident")) {
+                    residentSelections = residentSelections.filter(
+                        (x) => x !== id,
+                    );
+                } else {
+                    sublocSelections[ctx] = (
+                        sublocSelections[ctx] || []
+                    ).filter((x) => x !== id);
+                }
                 renderSublocTags(ctx);
             }
 
@@ -3935,6 +4069,8 @@
                 if (ctx === "village-city") return ["building"];
                 if (ctx === "country-kingdom") return ["zivil", "building"]; // zivil-sub village/city + buildings
                 if (ctx === "building") return ["building"];
+                if (ctx === "resident" || ctx.endsWith("-resident"))
+                    return ["character"];
                 return [];
             }
 
@@ -3946,12 +4082,18 @@
 
             function openSublocPicker(ctx) {
                 sublocPickerContext = ctx;
-                sublocPickerTemp = [...(sublocSelections[ctx] || [])];
+                sublocPickerTemp =
+                    ctx === "resident" || ctx.endsWith("-resident")
+                        ? [...residentSelections]
+                        : [...(sublocSelections[ctx] || [])];
 
                 const titles = {
                     "village-city": "Select Buildings",
                     "country-kingdom": "Select Villages, Cities & Buildings",
                     building: "Select Buildings",
+                    resident: "Select Residents (NPCs)",
+                    "village-city-resident": "Select Residents (NPCs)",
+                    "country-kingdom-resident": "Select Residents (NPCs)",
                 };
                 document.getElementById("subloc-picker-title").textContent =
                     titles[ctx] || "Select Sublocations";
@@ -3960,6 +4102,10 @@
                     .getElementById("subloc-picker")
                     .classList.add("visible");
                 renderSublocPickerList();
+            }
+
+            function openResidentPicker() {
+                openSublocPicker("resident");
             }
 
             function closeSublocPicker() {
@@ -3972,7 +4118,16 @@
 
             function confirmSublocPicker() {
                 if (!sublocPickerContext) return;
-                sublocSelections[sublocPickerContext] = [...sublocPickerTemp];
+                if (
+                    sublocPickerContext === "resident" ||
+                    sublocPickerContext.endsWith("-resident")
+                ) {
+                    residentSelections = [...sublocPickerTemp];
+                } else {
+                    sublocSelections[sublocPickerContext] = [
+                        ...sublocPickerTemp,
+                    ];
+                }
                 renderSublocTags(sublocPickerContext);
                 closeSublocPicker();
             }
@@ -3991,16 +4146,48 @@
                     sublocAllowedDetails(sublocPickerContext);
                 const all = getCards();
 
+                let parentCard = null;
+                if (sublocPickerContext === "resident") {
+                    const type = document.getElementById("f-type").value;
+                    const sub = document.getElementById("f-location-sub").value;
+                    const detail =
+                        document.getElementById("f-building-sub").value;
+
+                    if (
+                        type === "location" &&
+                        sub === "building" &&
+                        detail === "house"
+                    ) {
+                        // Find the parent location of this House
+                        parentCard = all.find((c) => {
+                            if (c.sublocations) {
+                                return Object.values(c.sublocations).some(
+                                    (arr) => (arr || []).includes(editingId),
+                                );
+                            }
+                            return false;
+                        });
+                    }
+                }
+
                 // Collect every ID that is already assigned somewhere across ALL cards
                 // (excluding the card currently being edited, since its own selections
                 //  are managed separately in sublocSelections)
                 const globallyUsed = new Set();
                 all.forEach((c) => {
                     if (c.id === editingId) return;
-                    if (!c.sublocations) return;
-                    Object.values(c.sublocations).forEach((arr) => {
-                        (arr || []).forEach((id) => globallyUsed.add(id));
-                    });
+                    if (c.sublocations) {
+                        Object.values(c.sublocations).forEach((arr) => {
+                            (arr || []).forEach((id) => globallyUsed.add(id));
+                        });
+                    }
+                    if (c.residents) {
+                        // If we are picking residents for a house, don't count the parent's
+                        // residents as "globally used" (we want to be able to pick them!)
+                        if (parentCard && c.id === parentCard.id) return;
+
+                        (c.residents || []).forEach((id) => globallyUsed.add(id));
+                    }
                 });
                 // Also collect IDs already picked in OTHER contexts of the current form
                 // so the same card can't be added to two subloc groups at once
@@ -4008,24 +4195,45 @@
                     if (ctx === sublocPickerContext) return;
                     (ids || []).forEach((id) => globallyUsed.add(id));
                 });
+                if (
+                    sublocPickerContext !== "resident" &&
+                    !sublocPickerContext.endsWith("-resident")
+                ) {
+                    residentSelections.forEach((id) => globallyUsed.add(id));
+                }
+
+                const parentResidents =
+                    parentCard && parentCard.residents
+                        ? parentCard.residents
+                        : null;
 
                 const candidates = all.filter((c) => {
                     if (c.id === editingId) return false;
-                    if (c.genre !== "location") return false;
 
-                    // Must match one of the allowed locationSub values
-                    const subMatch = allowed.includes(c.locationSub);
+                    if (
+                        sublocPickerContext === "resident" ||
+                        sublocPickerContext.endsWith("-resident")
+                    ) {
+                        if (c.genre !== "character") return false;
+                        if (parentResidents && !parentResidents.includes(c.id))
+                            return false;
+                    } else {
+                        if (c.genre !== "location") return false;
 
-                    // For country-kingdom we also want village/city zivil entries:
-                    // those have locationSub="zivil" and locationDetail in ["village","city"]
-                    let detailMatch = false;
-                    if (allowedDetails) {
-                        detailMatch =
-                            c.locationSub === "zivil" &&
-                            allowedDetails.includes(c.locationDetail);
+                        // Must match one of the allowed locationSub values
+                        const subMatch = allowed.includes(c.locationSub);
+
+                        // For country-kingdom we also want village/city zivil entries:
+                        // those have locationSub="zivil" and locationDetail in ["village","city"]
+                        let detailMatch = false;
+                        if (allowedDetails) {
+                            detailMatch =
+                                c.locationSub === "zivil" &&
+                                allowedDetails.includes(c.locationDetail);
+                        }
+
+                        if (!subMatch && !detailMatch) return false;
                     }
-
-                    if (!subMatch && !detailMatch) return false;
 
                     // Hide cards that are already used elsewhere (unless currently selected in this picker)
                     if (
@@ -4042,7 +4250,12 @@
                 list.innerHTML = "";
 
                 if (candidates.length === 0) {
-                    list.innerHTML = `<div class="subloc-picker-empty">No matching locations found.</div>`;
+                    list.innerHTML = `<div class="subloc-picker-empty">No matching ${
+                        sublocPickerContext === "resident" ||
+                        sublocPickerContext.endsWith("-resident")
+                            ? "characters"
+                            : "locations"
+                    } found.</div>`;
                     return;
                 }
 
@@ -4062,11 +4275,15 @@
                         (usedElsewhere ? " used-elsewhere" : "");
 
                     // Show the most specific label available
-                    const detailLabel = (
-                        card.locationDetail ||
-                        card.locationSub ||
-                        "location"
-                    ).toUpperCase();
+                    const detailLabel =
+                        sublocPickerContext === "resident" ||
+                        sublocPickerContext.endsWith("-resident")
+                            ? "CHARACTER"
+                            : (
+                                  card.locationDetail ||
+                                  card.locationSub ||
+                                  "location"
+                              ).toUpperCase();
 
                     item.innerHTML = `
                         <span class="subloc-picker-item-name">${escHtml(card.title)}</span>
@@ -4109,9 +4326,13 @@
                 sublocSelections["village-city"] = [];
                 sublocSelections["country-kingdom"] = [];
                 sublocSelections["building"] = [];
+                residentSelections = [];
                 renderSublocTags("village-city");
                 renderSublocTags("country-kingdom");
                 renderSublocTags("building");
+                renderSublocTags("resident");
+                renderSublocTags("village-city-resident");
+                renderSublocTags("country-kingdom-resident");
                 document.getElementById(
                     "subloc-village-city-group",
                 ).style.display = "none";
@@ -4120,6 +4341,12 @@
                 ).style.display = "none";
                 document.getElementById("subloc-building-group").style.display =
                     "none";
+                document.getElementById(
+                    "resident-village-city-group",
+                ).style.display = "none";
+                document.getElementById(
+                    "resident-country-kingdom-group",
+                ).style.display = "none";
                 // reset racial
                 racialSelections["village-city"] = [];
                 racialSelections["country-kingdom"] = [];
@@ -4192,6 +4419,16 @@
                                   getPopulation("country-kingdom"),
                           }
                         : {};
+
+                const residents =
+                    type === "location" &&
+                    ((locationSub === "building" && locationDetail === "house") ||
+                        (locationSub === "zivil" &&
+                            ["village", "city", "kingdom"].includes(
+                                locationDetail,
+                            )))
+                        ? [...residentSelections]
+                        : [];
 
                 const nameGenerator =
                     type === "race"
@@ -4269,6 +4506,7 @@
                             sublocations,
                             racialCivilization,
                             population,
+                            residents,
                             nameGenerator,
                             lore,
                             skincolorAllowed,
@@ -4294,6 +4532,7 @@
                         sublocations,
                         racialCivilization,
                         population,
+                        residents,
                         nameGenerator,
                         lore,
                         skincolorAllowed,
