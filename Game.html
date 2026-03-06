@@ -192,7 +192,55 @@
                 font-weight: 600;
             }
 
-            /* Status indicator */
+            /* NPCs Present Bar */
+            #present-npcs-bar {
+                display: none;
+                background: rgba(12, 12, 12, 0.4);
+                backdrop-filter: blur(8px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                padding: 8px 20px;
+                overflow-x: auto;
+                white-space: nowrap;
+                gap: 12px;
+                align-items: center;
+                flex-shrink: 0;
+            }
+            #present-npcs-bar.visible {
+                display: flex;
+            }
+            .npc-item {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                background: rgba(40, 40, 50, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 4px 10px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .npc-item:hover {
+                background: rgba(60, 60, 80, 0.8);
+            }
+            .npc-avatar-xs {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                font-size: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+            }
+            .npc-avatar-xs.male { background: #1e3c6e; }
+            .npc-avatar-xs.female { background: #6e1e3c; }
+            .npc-name-xs {
+                font-size: 12px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.9);
+            }
+
+            /* ─── Status indicator ─── */
             #status-dot-wrap {
                 display: flex;
                 align-items: center;
@@ -689,6 +737,9 @@
                 </div>
             </div>
 
+            <!-- Present NPCs -->
+            <div id="present-npcs-bar"></div>
+
             <!-- Messages -->
             <div id="messages">
                 <div class="chat-divider">
@@ -750,6 +801,7 @@
             let chatHistory = [];
             let isBusy = false;
             let activeChar = null;
+            let currentLocationId = null;
 
             /* ═══════════════════════════════════════
                TIME & COMMAND SYSTEM
@@ -922,8 +974,7 @@
                 ) {
                     addMinutes((parseInt(val) || 0) * 60);
                 } else if (key === "location" || key === "loc") {
-                    const el = document.getElementById("header-location");
-                    if (el) el.textContent = val.toUpperCase();
+                    updateLocation(val);
                 }
                 updateHeaderTime();
                 saveActiveCharacter();
@@ -988,13 +1039,12 @@
                 // Time & Location
                 updateHeaderTime();
 
-                let locName = "UNKNOWN LOCATION";
                 if (ch.spawnId) {
-                    const cards = getCards();
-                    const loc = cards.find((c) => c.id === ch.spawnId);
-                    if (loc) locName = loc.title;
+                    updateLocation(ch.spawnId);
+                } else {
+                    document.getElementById("header-location").textContent = "UNKNOWN LOCATION";
+                    updatePresentNPCs();
                 }
-                document.getElementById("header-location").textContent = locName;
                 document.getElementById("header-info").style.display = "flex";
 
                 // Story name in header
@@ -1242,6 +1292,120 @@
                 }
             }
 
+            function updateLocation(nameOrId) {
+                const cards = getCards();
+                let card = cards.find(
+                    (c) => c.genre === "location" && c.id === nameOrId,
+                );
+                if (!card) {
+                    // Try by title
+                    const search = nameOrId.toLowerCase();
+                    card = cards.find(
+                        (c) =>
+                            c.genre === "location" &&
+                            (c.title || "").toLowerCase() === search,
+                    );
+                }
+
+                const el = document.getElementById("header-location");
+                if (card) {
+                    currentLocationId = card.id;
+                    if (el) el.textContent = card.title.toUpperCase();
+                } else {
+                    currentLocationId = null;
+                    if (el) el.textContent = nameOrId.toUpperCase();
+                }
+                updatePresentNPCs();
+            }
+
+            function updatePresentNPCs() {
+                const bar = document.getElementById("present-npcs-bar");
+                if (!currentLocationId) {
+                    bar.classList.remove("visible");
+                    bar.innerHTML = "";
+                    return;
+                }
+
+                const cards = getCards();
+                const currentLoc = cards.find((c) => c.id === currentLocationId);
+                if (!currentLoc) {
+                    bar.classList.remove("visible");
+                    return;
+                }
+
+                // Find all ancestors
+                const ancestors = [];
+                let current = currentLoc;
+
+                while (current) {
+                    ancestors.push(current);
+                    // find parent
+                    const parent = cards.find((c) => {
+                        if (c.genre !== "location" || !c.sublocations)
+                            return false;
+                        return Object.values(c.sublocations).some((arr) =>
+                            (arr || []).includes(current.id),
+                        );
+                    });
+                    current = parent;
+                }
+
+                // Collect residents from current and all ancestors
+                const residentIds = new Set();
+                ancestors.forEach((loc) => {
+                    if (loc.residents) {
+                        loc.residents.forEach((id) => residentIds.add(id));
+                    }
+                });
+
+                const presentNPCs = [];
+                residentIds.forEach((id) => {
+                    const char = cards.find(
+                        (c) => c.genre === "character" && c.id === id,
+                    );
+                    if (char) presentNPCs.push(char);
+                });
+
+                if (presentNPCs.length === 0) {
+                    bar.classList.remove("visible");
+                    bar.innerHTML = "";
+                    return;
+                }
+
+                bar.innerHTML = "";
+                presentNPCs.forEach((npc) => {
+                    const item = document.createElement("div");
+                    item.className = "npc-item";
+                    const isF = npc.gender === "female";
+                    const icon = isF ? "♀" : "♂";
+                    const avatarClass = isF ? "female" : "male";
+
+                    item.innerHTML = `
+                        <div class="npc-avatar-xs ${avatarClass}">${icon}</div>
+                        <div class="npc-name-xs">${npc.title}</div>
+                    `;
+                    item.onclick = () => showNPCInfo(npc.id);
+                    bar.appendChild(item);
+                });
+                bar.classList.add("visible");
+            }
+
+            function showNPCInfo(id) {
+                const cards = getCards();
+                const npc = cards.find((c) => c.id === id);
+                if (!npc) return;
+
+                // Simple alert for now, could be a modal
+                let info = `${npc.title}\n`;
+                if (npc.raceName) info += `Race: ${npc.raceName}\n`;
+                if (npc.gender) info += `Gender: ${npc.gender}\n`;
+                if (npc.age) info += `Age: ${npc.age}\n`;
+                if (npc.personality) info += `\nPersonality:\n${npc.personality}\n`;
+                if (npc.appearance) info += `\nAppearance:\n${npc.appearance}\n`;
+                
+                alert(info);
+            }
+
             function askAI(prompt) {
                 return new Promise((resolve, reject) => {
                     const requestId = Math.random().toString(36).substring(7);
@@ -1284,9 +1448,12 @@
                 const curTime = d.time || "00:00";
                 const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
                 const worldHierarchy = buildLocationHierarchy();
+                const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
 
                 const systemInst =
-                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ${worldHierarchy} ` +
+                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
+                    (presentNPCs ? `Present NPCs: ${presentNPCs}. ` : "") +
+                    `${worldHierarchy} ` +
                     `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
                     `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
                     `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
@@ -1337,9 +1504,12 @@
                 const curTime = d.time || "00:00";
                 const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
                 const worldHierarchy = buildLocationHierarchy();
+                const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
 
                 const systemInst =
-                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ${worldHierarchy} ` +
+                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
+                    (presentNPCs ? `Present NPCs: ${presentNPCs}. ` : "") +
+                    `${worldHierarchy} ` +
                     `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
                     `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
                     `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
