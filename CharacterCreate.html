@@ -527,10 +527,232 @@
                 position: relative;
                 z-index: 1;
             }
+
+            /* ─── Relation Button & Picker ─── */
+            .subloc-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 10px;
+                padding: 9px 18px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                background: rgba(28, 28, 28, 0.85);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .subloc-btn:hover {
+                background: rgba(50, 50, 50, 0.95);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+            .subloc-btn.relation-btn {
+                background: rgba(80, 50, 110, 0.6);
+                border-color: rgba(160, 100, 220, 0.3);
+                margin-top: 14px;
+            }
+            .subloc-btn.relation-btn:hover {
+                background: rgba(100, 60, 140, 0.8);
+                border-color: rgba(160, 100, 220, 0.5);
+            }
+            .subloc-icon {
+                font-size: 15px;
+            }
+
+            #relation-picker {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 2000;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.75);
+                backdrop-filter: blur(8px);
+            }
+            #relation-picker.visible {
+                display: flex;
+            }
+            .relation-panel {
+                background: rgba(20, 20, 25, 0.98);
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                border-radius: 18px;
+                width: 90%;
+                max-width: 550px;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+                overflow: hidden;
+            }
+            .relation-panel-header {
+                padding: 20px 24px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-shrink: 0;
+            }
+            .relation-panel-title {
+                font-size: 18px;
+                font-weight: 700;
+                color: #fff;
+                letter-spacing: 0.02em;
+            }
+            .relation-panel-close {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.4);
+                font-size: 20px;
+                cursor: pointer;
+                transition: color 0.2s;
+            }
+            .relation-panel-close:hover {
+                color: #fff;
+            }
+            .relation-add-row {
+                padding: 16px 24px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                display: flex;
+                gap: 10px;
+                background: rgba(255, 255, 255, 0.02);
+            }
+            .relation-add-select {
+                flex: 1;
+                background: rgba(15, 15, 20, 0.8);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 8px;
+                color: #fff;
+                padding: 10px 12px;
+                font-size: 14px;
+                outline: none;
+            }
+            .relation-add-btn {
+                background: rgba(102, 126, 234, 0.8);
+                border: none;
+                border-radius: 8px;
+                color: #fff;
+                padding: 0 16px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .relation-add-btn:hover {
+                background: rgba(102, 126, 234, 1);
+            }
+            .relation-rows {
+                flex: 1;
+                overflow-y: auto;
+                padding: 16px 24px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .relation-row {
+                background: rgba(35, 35, 45, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 12px;
+                padding: 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .relation-row-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .relation-target-name {
+                font-weight: 700;
+                font-size: 14px;
+                color: rgba(255, 255, 255, 0.9);
+            }
+            .relation-row-remove {
+                background: none;
+                border: none;
+                color: rgba(255, 80, 80, 0.6);
+                cursor: pointer;
+                font-size: 14px;
+                transition: color 0.2s;
+            }
+            .relation-row-remove:hover {
+                color: rgba(255, 80, 80, 0.9);
+            }
+            .relation-controls {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .relation-select {
+                flex: 1;
+                min-width: 120px;
+                background: rgba(15, 15, 20, 0.8);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 8px;
+                color: #fff;
+                padding: 8px 10px;
+                font-size: 13px;
+                outline: none;
+            }
+            .relation-panel-actions {
+                padding: 20px 24px;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                display: flex;
+                justify-content: flex-end;
+                gap: 12px;
+                flex-shrink: 0;
+            }
+            .relation-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 10px;
+            }
+            .relation-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 12px;
+                border-radius: 6px;
+                background: rgba(80, 50, 110, 0.4);
+                border: 1.5px solid rgba(160, 100, 220, 0.2);
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 12px;
+                font-weight: 600;
+            }
         </style>
     </head>
     <body>
         <div id="bg-layer"></div>
+
+        <!-- ── RELATION PICKER ── -->
+        <div id="relation-picker">
+            <div class="relation-panel">
+                <div class="relation-panel-header">
+                    <span class="relation-panel-title">Manage Relations</span>
+                    <button class="relation-panel-close" onclick="closeRelationPicker()">&#10005;</button>
+                </div>
+
+                <div class="relation-add-row">
+                    <select class="relation-add-select" id="relation-add-select">
+                        <option value="">Select NPC to add relation...</option>
+                    </select>
+                    <button class="relation-add-btn" onclick="relationAddRow()">&#43; Add</button>
+                </div>
+
+                <div class="relation-rows" id="relation-rows">
+                    <!-- filled dynamically -->
+                </div>
+
+                <div class="relation-panel-actions">
+                    <button class="btn-cancel" onclick="closeRelationPicker()">Cancel</button>
+                    <button class="btn-create" onclick="confirmRelationPicker()">Done</button>
+                </div>
+            </div>
+        </div>
 
         <!-- ══════════════════════════════
              CHARACTER CREATE VIEW
@@ -659,6 +881,15 @@
                                 />
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Relations -->
+                    <div class="form-group" style="margin-top: 24px;">
+                        <label class="form-label">Relations</label>
+                        <div class="relation-tags" id="char-relation-tags"></div>
+                        <button type="button" class="subloc-btn relation-btn" onclick="openRelationPicker()">
+                            <span class="subloc-icon">&#128101;</span> Relation
+                        </button>
                     </div>
                 </div>
 
@@ -790,6 +1021,133 @@
                     .replace(/"/g, "&quot;");
             }
 
+            /* ─────────────────────────────────────────
+               RELATION STATE
+            ───────────────────────────────────────── */
+            let relationSelections = [];
+            let relationPickerTemp = [];
+
+            function openRelationPicker() {
+                relationPickerTemp = relationSelections.map((r) => ({ ...r }));
+
+                // Populate NPC select
+                const npcCards = getCards().filter((c) => c.genre === "character");
+                const sel = document.getElementById("relation-add-select");
+                sel.innerHTML = `<option value="">Select NPC to add relation...</option>`;
+                npcCards.forEach((c) => {
+                    const opt = document.createElement("option");
+                    opt.value = c.id;
+                    opt.textContent = c.title;
+                    sel.appendChild(opt);
+                });
+
+                document.getElementById("relation-picker").classList.add("visible");
+                renderRelationPickerRows();
+            }
+
+            function closeRelationPicker() {
+                document.getElementById("relation-picker").classList.remove("visible");
+                relationPickerTemp = [];
+            }
+
+            function confirmRelationPicker() {
+                relationSelections = relationPickerTemp.map((r) => ({ ...r }));
+                renderRelationTags();
+                closeRelationPicker();
+            }
+
+            function relationAddRow() {
+                const sel = document.getElementById("relation-add-select");
+                const id = sel.value;
+                if (!id) return;
+                if (relationPickerTemp.find((r) => r.targetId === id)) {
+                    showToast("Relation already added.", "#c04040");
+                    return;
+                }
+                const card = getCards().find((c) => c.id === id);
+                if (!card) return;
+                relationPickerTemp.push({
+                    targetId: id,
+                    targetName: card.title,
+                    relation: "Unknown",
+                    familySub: "",
+                });
+                sel.value = "";
+                renderRelationPickerRows();
+            }
+
+            function renderRelationPickerRows() {
+                const container = document.getElementById("relation-rows");
+                container.innerHTML = "";
+
+                relationPickerTemp.forEach((row, idx) => {
+                    const div = document.createElement("div");
+                    div.className = "relation-row";
+                    const isFamily = row.relation === "Family";
+
+                    div.innerHTML = `
+                        <div class="relation-row-header">
+                            <span class="relation-target-name">${escHtml(row.targetName)}</span>
+                            <button class="relation-row-remove" onclick="relationRemoveRow(${idx})">Remove</button>
+                        </div>
+                        <div class="relation-controls">
+                            <select class="relation-select" onchange="relationUpdateType(${idx}, this.value)">
+                                <option value="Unknown" ${row.relation === "Unknown" ? "selected" : ""}>Unknown</option>
+                                <option value="Friends" ${row.relation === "Friends" ? "selected" : ""}>Friends</option>
+                                <option value="Lover" ${row.relation === "Lover" ? "selected" : ""}>Lover</option>
+                                <option value="Husband" ${row.relation === "Husband" ? "selected" : ""}>Husband</option>
+                                <option value="Family" ${row.relation === "Family" ? "selected" : ""}>Family</option>
+                            </select>
+                            <select class="relation-select family-sub-select" 
+                                style="display: ${isFamily ? "block" : "none"}"
+                                onchange="relationUpdateFamilySub(${idx}, this.value)">
+                                <option value="">Select family role...</option>
+                                <option value="Parents" ${row.familySub === "Parents" ? "selected" : ""}>Parents</option>
+                                <option value="Child" ${row.familySub === "Child" ? "selected" : ""}>Child</option>
+                                <option value="Sibling" ${row.familySub === "Sibling" ? "selected" : ""}>Sibling</option>
+                                <option value="Aunt/Uncle" ${row.familySub === "Aunt/Uncle" ? "selected" : ""}>Aunt/Uncle</option>
+                                <option value="Cousin" ${row.familySub === "Cousin" ? "selected" : ""}>Cousin</option>
+                                <option value="Grandparents" ${row.familySub === "Grandparents" ? "selected" : ""}>Grandparents</option>
+                            </select>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            function relationUpdateType(idx, val) {
+                relationPickerTemp[idx].relation = val;
+                if (val !== "Family") {
+                    relationPickerTemp[idx].familySub = "";
+                }
+                renderRelationPickerRows();
+            }
+
+            function relationUpdateFamilySub(idx, val) {
+                relationPickerTemp[idx].familySub = val;
+            }
+
+            function relationRemoveRow(idx) {
+                relationPickerTemp.splice(idx, 1);
+                renderRelationPickerRows();
+            }
+
+            function renderRelationTags() {
+                const container = document.getElementById("char-relation-tags");
+                if (!container) return;
+                container.innerHTML = "";
+                relationSelections.forEach((rel) => {
+                    const tag = document.createElement("div");
+                    tag.className = "relation-tag";
+                    let label = rel.relation;
+                    if (rel.relation === "Family" && rel.familySub) {
+                        label = rel.familySub;
+                    }
+                    tag.innerHTML = `<span>${escHtml(rel.targetName)}: ${label}</span>`;
+                    container.appendChild(tag);
+                });
+            }
+
             /* Spawn buildings = location cards with canBeSpawn = true */
             function getSpawnBuildings() {
                 return getCards().filter(
@@ -919,6 +1277,7 @@
                     (selectedGender === "female" ? "pink" : "blue");
 
                 document.getElementById("sum-spawn").textContent = spawnName;
+                renderRelationTags();
             }
 
             /* ─── Save & Start Game ─── */
@@ -951,6 +1310,7 @@
                     raceName: raceCard ? raceCard.title : "",
                     gender: selectedGender,
                     spawnId: selectedSpawnId || null,
+                    relations: [...relationSelections],
                     startingDate: { day, month, year, time },
                     createdAt: new Date().toISOString(),
                 };
