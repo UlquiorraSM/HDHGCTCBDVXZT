@@ -976,7 +976,13 @@
                 console.log(`[AI Command] ${key} = ${val}`);
 
                 if (key === "time") {
-                    d.time = val;
+                    if (val.startsWith("+")) {
+                        addMinutes(parseInt(val.substring(1)) || 0);
+                    } else if (val.startsWith("-")) {
+                        addMinutes(-(parseInt(val.substring(1)) || 0));
+                    } else {
+                        d.time = val;
+                    }
                 } else if (key === "day") {
                     d.day = parseInt(val) || d.day;
                 } else if (key === "month") {
@@ -1488,7 +1494,7 @@
                 const aiLang = aiLangMap[settings.aiLanguage] || "English";
 
                 return `[SYSTEM INSTRUCTIONS]
-You are the Narrator of an interactive story. You must drive the plot forward based on player actions.
+You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
 
 # CURRENT WORLD STATE
 - DATE: ${curDate}
@@ -1506,25 +1512,29 @@ ${relationshipSummary}
 
 # ROLEPLAY RULES
 1. Write EXCLUSIVELY in ${aiLang}.
-2. Be descriptive and immersive.
-3. Follow the 'IMPORTANT RELATIONSHIP RULES'.
-4. STRICTLY handle Strangers as people who have never met.
+2. Be descriptive, vivid, and maintain a consistent tone.
+3. Follow the 'IMPORTANT RELATIONSHIP RULES' strictly.
+4. Strangers (Unknown) have NO shared past. Do NOT invent friendship or shared memories for them.
 
-# LOCATION & TIME MANAGEMENT
-1. You are responsible for the flow of time and movement.
-2. If the player moves, enters a house, or leaves a region, you MUST update the location.
+# TIME & LOCATION MANAGEMENT (CRITICAL)
+1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
+2. You MUST track movement. If a player enters or leaves a building/area, you MUST update the location.
 3. Available Location Names: ${allLocNames}
-4. For outside areas in a region, use: "Region Name (Outside)"
+4. For outdoor areas within a region, use: "Region Name (Outside)"
 
-# MANDATORY RESPONSE FORMAT
-Every single response MUST end with a metadata block in double brackets [[ ]] on a new line. 
-This block MUST contain the current time and location, even if they haven't changed.
-Format: [[TIME: HH:MM, LOCATION: "Exact Name"]]
+# RESPONSE FORMAT (MANDATORY)
+Your response MUST consist of two parts:
+1. The narration text (storytelling).
+2. A single metadata block on a NEW line at the very end of your response.
 
-# STATE VERIFICATION
-- If you change the time (e.g., from 12:00 to 12:30), the metadata block MUST reflect the NEW time.
-- If you move the player, the metadata block MUST reflect the NEW location.
-- If you do not include this block, the player cannot continue their journey.`;
+The metadata block MUST follow this EXACT format:
+[[TIME: HH:MM, LOCATION: "Exact Name"]]
+
+Example:
+"You walk into the forest, the leaves crunching under your boots..."
+[[TIME: 14:15, LOCATION: "Forest"]]
+
+[STRICT REQUIREMENT]: You MUST include this block in EVERY response. If you fail to include it, the world state will break. Use the CURRENT time and location if nothing changed.`;
             }
 
             function buildRelationshipSummary() {
@@ -1656,7 +1666,7 @@ Format: [[TIME: HH:MM, LOCATION: "Exact Name"]]
                 if (card) {
                     currentLocationId = card.id;
                     if (activeChar) activeChar.currentLocationId = card.id; // Save to activeChar
-                    if (el) el.textContent = nameOrId.toUpperCase();
+                    if (el) el.textContent = card.title.toUpperCase(); // Fixed: Show TITLE, not ID
                 } else {
                     // Fallback: If no card found, keep the text but try to find a parent if possible
                     // Or just keep the text and null the ID (AI will lose character context)
@@ -1787,6 +1797,17 @@ Format: [[TIME: HH:MM, LOCATION: "Exact Name"]]
                 });
             }
 
+            async function askAIWithRetry(prompt) {
+                while (true) {
+                    try {
+                        return await askAI(prompt);
+                    } catch (err) {
+                        console.warn("AI Request failed, retrying in 2 seconds...", err);
+                        await new Promise((resolve) => setTimeout(resolve, 2000));
+                    }
+                }
+            }
+
             async function triggerNarration(systemPrompt) {
                 if (isBusy) return;
                 isBusy = true;
@@ -1799,18 +1820,22 @@ Format: [[TIME: HH:MM, LOCATION: "Exact Name"]]
                 const systemInst = buildSystemPrompt();
 
                 try {
-                    const history =
-                        chatHistory.length > 0
-                            ? chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n\n" + systemInst + "\n\nNarrator:"
-                            : systemInst + "\n" + systemPrompt + "\nNarrator:";
-                    const response = await askAI(history);
+                    const recentHistory = chatHistory.slice(-10);
+                    const historyLines = recentHistory.map(e => {
+                        if (typeof e === 'string') return `--- ${e} ---`;
+                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
+                    }).join("\n");
+                    const finalPrompt = systemInst + "\n\n### RECENT STORY HISTORY ###\n" + (chatHistory.length > 10 ? "...(older history omitted)...\n" : "") + historyLines + "\n\nNarrator:";
+                    
+                    const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
                     appendBubble("ai", cleanResponse);
                     addToStoryLog("Narrator", cleanResponse);
                 } catch (err) {
                     removeTypingIndicator();
-                    appendBubble("ai", "[ Fehler: " + err + " ]");
+                    // No error bubble displayed to user
+                    console.error("Narration failed even with retries (unexpected)", err);
                 } finally {
                     isBusy = false;
                     setSendDisabled(false);
@@ -1843,16 +1868,22 @@ Format: [[TIME: HH:MM, LOCATION: "Exact Name"]]
                 const systemInst = buildSystemPrompt();
 
                 try {
-                    const historyText =
-                        chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n\n" + systemInst + "\n\nNarrator:";
-                    const response = await askAI(historyText);
+                    const recentHistory = chatHistory.slice(-10); // Limit history to last 10 entries for focus
+                    const historyLines = recentHistory.map(e => {
+                        if (typeof e === 'string') return `--- ${e} ---`;
+                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
+                    }).join("\n");
+                    const finalPrompt = systemInst + "\n\n### RECENT STORY HISTORY ###\n" + (chatHistory.length > 10 ? "...(older history omitted)...\n" : "") + historyLines + "\n\nNarrator:";
+                    
+                    const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
                     appendBubble("ai", cleanResponse);
                     addToStoryLog("Narrator", cleanResponse);
                 } catch (err) {
                     removeTypingIndicator();
-                    appendBubble("ai", "[ Fehler: " + err + " ]");
+                    // No error bubble displayed to user
+                    console.error("Message failed even with retries (unexpected)", err);
                 } finally {
                     isBusy = false;
                     setSendDisabled(false);
@@ -1922,16 +1953,22 @@ Format: [[TIME: HH:MM, LOCATION: "Exact Name"]]
                 const systemInst = buildSystemPrompt();
 
                 try {
-                    const histText =
-                        chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n\n" + systemInst + "\n\nNarrator:";
-                    const r = await askAI(histText);
+                    const recentHistory = chatHistory.slice(-10);
+                    const historyLines = recentHistory.map(e => {
+                        if (typeof e === 'string') return `--- ${e} ---`;
+                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
+                    }).join("\n");
+                    const finalPrompt = systemInst + "\n\n### RECENT STORY HISTORY ###\n" + (chatHistory.length > 10 ? "...(older history omitted)...\n" : "") + historyLines + "\n\nNarrator:";
+                    
+                    const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
                     appendBubble("ai", cleanR);
                     addToStoryLog("Narrator", cleanR);
                 } catch (e) {
                     removeTypingIndicator();
-                    appendBubble("ai", "Fehler beim Laden der KI-Antwort.");
+                    // No error bubble displayed to user
+                    console.error("Retry failed even with retries (unexpected)", e);
                 } finally {
                     isBusy = false;
                     setSendDisabled(false);
@@ -1951,16 +1988,22 @@ Format: [[TIME: HH:MM, LOCATION: "Exact Name"]]
                 const systemInst = buildSystemPrompt();
 
                 try {
-                    const histText =
-                        chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n\n" + systemInst + "\n\nNarrator:";
-                    const r = await askAI(histText);
+                    const recentHistory = chatHistory.slice(-10);
+                    const historyLines = recentHistory.map(e => {
+                        if (typeof e === 'string') return `--- ${e} ---`;
+                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
+                    }).join("\n");
+                    const finalPrompt = systemInst + "\n\n### RECENT STORY HISTORY ###\n" + (chatHistory.length > 10 ? "...(older history omitted)...\n" : "") + historyLines + "\n\nNarrator:";
+                    
+                    const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
                     appendBubble("ai", cleanR);
                     addToStoryLog("Narrator", cleanR);
                 } catch (e) {
                     removeTypingIndicator();
-                    appendBubble("ai", "[ Fehler: " + e + " ]");
+                    // No error bubble displayed to user
+                    console.error("Continue failed even with retries (unexpected)", e);
                 } finally {
                     isBusy = false;
                     setSendDisabled(false);
