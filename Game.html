@@ -1469,9 +1469,16 @@
                     `${itemContext} ` +
                     `${relationshipSummary} ` +
                     `You MUST write EXCLUSIVELY in ${aiLang}. ` +
-                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
-                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
-                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
+                    `You MUST follow the 'IMPORTANT RELATIONSHIP RULES' provided in the Relationship Summary section above. ` +
+                    `\nLOCATION MANAGEMENT:\n` +
+                    `1. You are responsible for moving the player between locations. If the player goes home, enters a shop, or leaves a building, you MUST update the location.\n` +
+                    `2. Use the exact name of a location from the hierarchy if it exists (e.g., [[location: ${activeChar?.firstName || "Player"}'s House]]). \n` +
+                    `3. If the player is outside in a village/city, use the format: [[location: Village Name (Outside)]].\n` +
+                    `4. Always place location/time commands at the VERY END of your response in [[ ]] brackets.\n` +
+                    `\nCOMMANDS:\n` +
+                    `- time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N\n` +
+                    `- location: "Exact Name" or "Region (Outside)"\n` +
+                    `IMPORTANT: If time passes or the location changes, ALWAYS use a command. If you don't send a command, state remains frozen!`;
             }
 
             function buildRelationshipSummary() {
@@ -1509,8 +1516,10 @@
                         const npc = cards.find((c) => c.id === npcId);
                         if (!npc) return;
 
-                        // 1. Relation NPC to Player
+                        // 1. Relation NPC to Player (Check NPC side and Player side)
                         let playerRel = "Stranger (Unknown)";
+                        
+                        // Check NPC's side
                         if (npc.relations) {
                             const relObj = npc.relations.find(
                                 (r) =>
@@ -1524,6 +1533,20 @@
                                         : relObj.relation;
                             }
                         }
+                        
+                        // Check Player's side if still unknown
+                        if (playerRel === "Stranger (Unknown)" && activeChar && activeChar.relations) {
+                            const relObj = activeChar.relations.find(
+                                (r) => r.targetId === npcId || r.targetName.toLowerCase() === npc.title.toLowerCase()
+                            );
+                            if (relObj && relObj.relation !== "Unknown") {
+                                playerRel =
+                                    relObj.relation === "Family"
+                                        ? relObj.familySub
+                                        : relObj.relation;
+                            }
+                        }
+                        
                         summary += `- ${npc.title} to ${playerFullName}: ${playerRel}\n`;
 
                         // 2. Relation NPC to other present NPCs
@@ -1549,7 +1572,10 @@
                     });
 
                     summary +=
-                        "IMPORTANT: If a relationship is 'Stranger (Unknown)', the characters do NOT know each other and should act accordingly.\n";
+                        "\nIMPORTANT RELATIONSHIP RULES:\n" +
+                        "1. If a relationship is 'Stranger (Unknown)', the characters are COMPLETE STRANGERS. They have never met before.\n" +
+                        "2. Strangers should act with caution, politeness, or distance, depending on their personality, but NEVER like friends, family, or lovers.\n" +
+                        "3. Do NOT mention any past shared experiences or close bonds if the relationship is 'Stranger (Unknown)'.\n";
                     return summary;
                 } catch (e) {
                     console.error("Relationship summary error", e);
