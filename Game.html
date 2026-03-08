@@ -537,29 +537,6 @@
                 background: rgba(70, 20, 20, 0.7);
                 color: #ff9090;
             }
-
-            .act-select {
-                padding: 7px 12px;
-                border-radius: 18px;
-                border: 1.5px solid rgba(255, 255, 255, 0.1);
-                background: rgba(24, 24, 24, 0.9);
-                color: rgba(255, 255, 255, 0.65);
-                font-size: 12px;
-                font-weight: 600;
-                cursor: pointer;
-                outline: none;
-                transition: all 0.2s;
-                max-width: 150px;
-            }
-            .act-select:hover {
-                border-color: rgba(255, 255, 255, 0.22);
-                color: #fff;
-            }
-            .act-select option {
-                background: #181818;
-                color: #fff;
-            }
-
             .act-btn.locked {
                 opacity: 0.5;
                 cursor: not-allowed !important;
@@ -799,9 +776,6 @@
                     <button class="act-btn btn-erase" id="erase-btn">
                         ✕ Erase
                     </button>
-                    <select class="act-select" id="location-select" onchange="manualLocationChange()">
-                        <option value="">Nothing</option>
-                    </select>
                 </div>
             </div>
         </div>
@@ -1053,7 +1027,7 @@
                 const isF = ch.gender === "female";
                 const icon = isF ? "♀" : "♂";
                 const avatarClass = isF ? "female" : "male";
-                
+
                 // Header badge
                 const badge = document.getElementById("char-badge");
                 badge.classList.add("visible");
@@ -1106,8 +1080,6 @@
                 ]
                     .filter(Boolean)
                     .join("  ·  ");
-
-                updateLocationDropdown();
             }
 
             /* ═══════════════════════════════════════
@@ -1643,54 +1615,6 @@
                     if (el) el.textContent = nameOrId.toUpperCase();
                 }
                 updatePresentNPCs();
-                updateLocationDropdown();
-            }
-
-            function updateLocationDropdown() {
-                const select = document.getElementById("location-select");
-                if (!select) return;
-                
-                // Clear and add "Nothing"
-                select.innerHTML = '<option value="">Nothing</option>';
-                
-                const cards = getCards();
-                const currentLoc = cards.find(c => c.id === currentLocationId);
-                
-                let options = [];
-
-                if (currentLoc) {
-                    // 1. Find Parents
-                    const parents = cards.filter(c => {
-                        if (c.genre !== "location" || !c.sublocations) return false;
-                        return Object.values(c.sublocations).some(arr => (arr || []).includes(currentLoc.id));
-                    });
-                    parents.forEach(p => options.push({ id: p.id, title: `↑ ${p.title}` }));
-
-                    // 2. Find Sublocations
-                    if (currentLoc.sublocations) {
-                        const subIds = Object.values(currentLoc.sublocations).flat();
-                        const subLocs = cards.filter(c => c.genre === "location" && subIds.includes(c.id));
-                        subLocs.forEach(s => options.push({ id: s.id, title: `↓ ${s.title}` }));
-                    }
-                } else {
-                    // If no current location, maybe show top-level locations?
-                    // Or just keep it empty as per request "standart is Nothing"
-                }
-
-                options.forEach(opt => {
-                    const el = document.createElement("option");
-                    el.value = opt.id;
-                    el.textContent = opt.title;
-                    select.appendChild(el);
-                });
-            }
-
-            function manualLocationChange() {
-                const select = document.getElementById("location-select");
-                const val = select.value;
-                if (val) {
-                    updateLocation(val);
-                }
             }
 
             function updatePresentNPCs() {
@@ -1831,10 +1755,6 @@
                     const cleanResponse = processAICommands(response);
                     appendBubble("ai", cleanResponse);
                     addToStoryLog("Narrator", cleanResponse);
-                    
-                    // Reset location dropdown to "Nothing" after generation
-                    const locSelect = document.getElementById("location-select");
-                    if (locSelect) locSelect.value = "";
                 } catch (err) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + err + " ]");
@@ -1956,10 +1876,6 @@
                     const cleanR = processAICommands(r);
                     appendBubble("ai", cleanR);
                     addToStoryLog("Narrator", cleanR);
-
-                    // Reset location dropdown to "Nothing" after generation
-                    const locSelect = document.getElementById("location-select");
-                    if (locSelect) locSelect.value = "";
                 } catch (e) {
                     removeTypingIndicator();
                     appendBubble("ai", "Fehler beim Laden der KI-Antwort.");
@@ -1989,10 +1905,6 @@
                     const cleanR = processAICommands(r);
                     appendBubble("ai", cleanR);
                     addToStoryLog("Narrator", cleanR);
-                    
-                    // Reset location dropdown to "Nothing" after generation
-                    const locSelect = document.getElementById("location-select");
-                    if (locSelect) locSelect.value = "";
                 } catch (e) {
                     removeTypingIndicator();
                     appendBubble("ai", "[ Fehler: " + e + " ]");
