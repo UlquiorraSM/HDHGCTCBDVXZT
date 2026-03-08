@@ -1102,7 +1102,6 @@
                     if (activeChar.introduction && activeChar.introduction.trim()) {
                         // Use user's custom introduction as the first message
                         isFirstMessageProtected = true;
-                        addSystemDivider("Chapter 1");
                         appendBubble("ai", activeChar.introduction.trim());
                         addToStoryLog("Narrator", activeChar.introduction.trim());
                     } else {
@@ -1120,7 +1119,6 @@
                         );
                     }
                 } else {
-                    addSystemDivider("Chapter 1");
                     const welcomeText = "Willkommen, Abenteurer! Deine Geschichte beginnt jetzt.\n\nWas möchtest du als erstes tun?";
                     appendBubble("ai", welcomeText);
                     addToStoryLog("Narrator", welcomeText);
