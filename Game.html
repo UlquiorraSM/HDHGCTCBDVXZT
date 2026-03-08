@@ -916,7 +916,7 @@
 
                 if (extraDays > 0) {
                     d.day = (d.day || 1) + extraDays;
-                    // Simple month overflow (30 days logic for simplicity)
+                    // Simple month overflow (roughly 30 days)
                     while (d.day > 30) {
                         d.day -= 30;
                         d.month = (d.month || 1) + 1;
@@ -928,27 +928,24 @@
                 }
                 updateHeaderTime();
                 saveActiveCharacter();
+                console.log(`[Time Update] New Time: ${d.day}.${d.month}.${d.year} ${d.time}`);
             }
 
             function processAICommands(text) {
                 if (!text) return "";
-                const cmdRegex = /\[\[(.*?)\]\]/gi;
+                // Catch [[cmd]] or [cmd] formats
+                const cmdRegex = /\[{1,2}(.*?)\]{1,2}/gi;
                 let newText = text.replace(cmdRegex, (match, content) => {
+                    // Split multiple commands if they are in one bracket: [[time: 12, loc: Market]]
                     const parts = content.split(",").map((s) => s.trim());
                     parts.forEach((part) => {
                         // try key=val or key:val
-                        let [k, v] = part.split("=").map((s) => s.trim());
-                        if (!v) {
-                            const colonIdx = part.indexOf(":");
-                            if (colonIdx !== -1) {
-                                k = part.substring(0, colonIdx).trim();
-                                v = part.substring(colonIdx + 1).trim();
-                            }
-                        }
+                        let [k, v] = part.split(/[=:]/).map((s) => s.trim());
                         if (k && v) handleCommand(k, v);
                     });
                     return "";
                 });
+                // Clean up any double spaces and trim
                 return newText.replace(/\s+/g, " ").trim();
             }
 
@@ -1447,6 +1444,12 @@
                 const relationshipSummary = buildRelationshipSummary();
                 const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
                 
+                const cards = getCards();
+                const allLocNames = cards
+                    .filter(c => c.genre === "location")
+                    .map(c => c.title)
+                    .join(", ");
+
                 const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
                 const aiLangMap = {
                     "de": "German",
@@ -1472,13 +1475,13 @@
                     `You MUST follow the 'IMPORTANT RELATIONSHIP RULES' provided in the Relationship Summary section above. ` +
                     `\nLOCATION MANAGEMENT:\n` +
                     `1. You are responsible for moving the player between locations. If the player goes home, enters a shop, or leaves a building, you MUST update the location.\n` +
-                    `2. Use the exact name of a location from the hierarchy if it exists (e.g., [[location: ${activeChar?.firstName || "Player"}'s House]]). \n` +
-                    `3. If the player is outside in a village/city, use the format: [[location: Village Name (Outside)]].\n` +
-                    `4. Always place location/time commands at the VERY END of your response in [[ ]] brackets.\n` +
-                    `\nCOMMANDS:\n` +
+                    `2. Use these exact names for locations: ${allLocNames}. \n` +
+                    `3. If a location is not in the list, use a descriptive name or the format: [[location: Region Name (Outside)]].\n` +
+                    `4. Place all commands at the VERY END of your response in [[ ]] brackets.\n` +
+                    `\nCOMMANDS (MANDATORY if state changes):\n` +
                     `- time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N\n` +
-                    `- location: "Exact Name" or "Region (Outside)"\n` +
-                    `IMPORTANT: If time passes or the location changes, ALWAYS use a command. If you don't send a command, state remains frozen!`;
+                    `- location: "Exact Name"\n` +
+                    `IMPORTANT: If time passes or the location changes in your narration, you MUST send the corresponding command. If you do not send a command, the world's time and location will NEVER update.`;
             }
 
             function buildRelationshipSummary() {
@@ -1740,7 +1743,7 @@
                 try {
                     const history =
                         chatHistory.length > 0
-                            ? systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time}] ${e.sender}: ${e.text}`).join("\n") + "\nNarrator:"
+                            ? systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n(Reminder: Always end with [[time: HH:MM, location: Name]] if something changed)\nNarrator:"
                             : systemInst + "\n" + systemPrompt + "\nNarrator:";
                     const response = await askAI(history);
                     removeTypingIndicator();
@@ -1783,7 +1786,7 @@
 
                 try {
                     const historyText =
-                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time}] ${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
+                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n(Reminder: Always end with [[time: HH:MM, location: Name]] if something changed)\nNarrator:";
                     const response = await askAI(historyText);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
@@ -1862,7 +1865,7 @@
 
                 try {
                     const histText =
-                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time}] ${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
+                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n(Reminder: Always end with [[time: HH:MM, location: Name]] if something changed)\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
@@ -1891,7 +1894,7 @@
 
                 try {
                     const histText =
-                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time}] ${e.sender}: ${e.text}`).join("\n") + "\nNarrator:";
+                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n(Reminder: Always end with [[time: HH:MM, location: Name]] if something changed)\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
