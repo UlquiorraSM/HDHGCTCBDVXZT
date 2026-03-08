@@ -911,9 +911,8 @@
 
                 h = Math.floor(totalMins / 60);
                 m = totalMins % 60;
-
                 d.time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-
+                
                 if (extraDays > 0) {
                     d.day = (d.day || 1) + extraDays;
                     // Simple month overflow (roughly 30 days)
@@ -933,20 +932,40 @@
 
             function processAICommands(text) {
                 if (!text) return "";
-                // Catch [[cmd]] or [cmd] formats
+                
+                // Unified regex for [[...]] and [...]
                 const cmdRegex = /\[{1,2}(.*?)\]{1,2}/gi;
-                let newText = text.replace(cmdRegex, (match, content) => {
-                    // Split multiple commands if they are in one bracket: [[time: 12, loc: Market]]
-                    const parts = content.split(",").map((s) => s.trim());
-                    parts.forEach((part) => {
-                        // try key=val or key:val
-                        let [k, v] = part.split(/[=:]/).map((s) => s.trim());
-                        if (k && v) handleCommand(k, v);
+                let newText = text;
+                
+                let match;
+                while ((match = cmdRegex.exec(text)) !== null) {
+                    const content = match[1];
+                    // Split by comma or semicolon
+                    const parts = content.split(/[,;]/).map(s => s.trim());
+                    
+                    parts.forEach(part => {
+                        // Look for key: value or key = value or key value
+                        // Support for quoted values: location: "Village (Outside)"
+                        const kvMatch = part.match(/(\w+)\s*[:=]\s*["']?([^"']+)["']?/i);
+                        if (kvMatch) {
+                            const k = kvMatch[1].toLowerCase();
+                            const v = kvMatch[2].trim();
+                            handleCommand(k, v);
+                        } else {
+                            // Try a simpler split if regex fails
+                            const simpleParts = part.split(/\s+/);
+                            if (simpleParts.length >= 2) {
+                                const k = simpleParts[0].toLowerCase();
+                                const v = part.substring(simpleParts[0].length).trim();
+                                handleCommand(k, v);
+                            }
+                        }
                     });
-                    return "";
-                });
-                // Clean up any double spaces and trim
-                return newText.replace(/\s+/g, " ").trim();
+                }
+
+                // Remove all command blocks from the final display text
+                newText = newText.replace(cmdRegex, "").replace(/\s+/g, " ").trim();
+                return newText;
             }
 
             function handleCommand(key, val) {
@@ -979,6 +998,7 @@
                 } else if (key === "location" || key === "loc") {
                     updateLocation(val);
                 }
+                
                 updateHeaderTime();
                 saveActiveCharacter();
             }
@@ -1042,7 +1062,9 @@
                 // Time & Location
                 updateHeaderTime();
 
-                if (ch.spawnId) {
+                if (ch.currentLocationId) {
+                    updateLocation(ch.currentLocationId);
+                } else if (ch.spawnId) {
                     updateLocation(ch.spawnId);
                 } else {
                     document.getElementById("header-location").textContent = "UNKNOWN LOCATION";
@@ -1436,6 +1458,8 @@
                 const curTime = d.time || "00:00";
                 
                 const curLocPath = getCurrentLocationPath();
+                const curLocName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                
                 const worldHierarchy = buildLocationHierarchy();
                 const charContext = buildCharacterContext();
                 const raceContext = buildRaceContext();
@@ -1463,27 +1487,44 @@
                 };
                 const aiLang = aiLangMap[settings.aiLanguage] || "English";
 
-                return `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location Path=${curLocPath}. ` +
-                    (presentNPCs ? `Present NPCs (in this location and its parent locations): ${presentNPCs}. ` : "") +
-                    `${worldHierarchy} ` +
-                    `${charContext} ` +
-                    `${raceContext} ` +
-                    `${itemContext} ` +
-                    `${relationshipSummary} ` +
-                    `You MUST write EXCLUSIVELY in ${aiLang}. \n` +
-                    `\nSTRICT ROLEPLAY RULES:\n` +
-                    `1. You MUST follow the 'IMPORTANT RELATIONSHIP RULES' provided above. \n` +
-                    `2. If characters are Strangers, they do NOT have a shared history. Do NOT narrate past celebrations, shared memories, or friendship-like interactions.\n` +
-                    `3. If you ignore the Stranger status, the immersion is broken. Treat Strangers as people who are meeting for the FIRST TIME.\n` +
-                    `\nLOCATION MANAGEMENT:\n` +
-                    `1. You are responsible for moving the player between locations. If the player goes home, enters a shop, or leaves a building, you MUST update the location.\n` +
-                    `2. Use these exact names for locations: ${allLocNames}. \n` +
-                    `3. If a location is not in the list, use a descriptive name or the format: [[location: Region Name (Outside)]].\n` +
-                    `4. Place all commands at the VERY END of your response in [[ ]] brackets.\n` +
-                    `\nCOMMANDS (MANDATORY if state changes):\n` +
-                    `- time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N\n` +
-                    `- location: "Exact Name"\n` +
-                    `IMPORTANT: If time passes or the location changes in your narration, you MUST send the corresponding command. If you do not send a command, the world's time and location will NEVER update.`;
+                return `[SYSTEM INSTRUCTIONS]
+You are the Narrator of an interactive story. You must drive the plot forward based on player actions.
+
+# CURRENT WORLD STATE
+- DATE: ${curDate}
+- TIME: ${curTime}
+- CURRENT LOCATION: ${curLocName}
+- LOCATION PATH: ${curLocPath}
+- PRESENT NPCs: ${presentNPCs || "None"}
+
+# WORLD KNOWLEDGE
+${worldHierarchy}
+${charContext}
+${raceContext}
+${itemContext}
+${relationshipSummary}
+
+# ROLEPLAY RULES
+1. Write EXCLUSIVELY in ${aiLang}.
+2. Be descriptive and immersive.
+3. Follow the 'IMPORTANT RELATIONSHIP RULES'.
+4. STRICTLY handle Strangers as people who have never met.
+
+# LOCATION & TIME MANAGEMENT
+1. You are responsible for the flow of time and movement.
+2. If the player moves, enters a house, or leaves a region, you MUST update the location.
+3. Available Location Names: ${allLocNames}
+4. For outside areas in a region, use: "Region Name (Outside)"
+
+# MANDATORY RESPONSE FORMAT
+Every single response MUST end with a metadata block in double brackets [[ ]] on a new line. 
+This block MUST contain the current time and location, even if they haven't changed.
+Format: [[TIME: HH:MM, LOCATION: "Exact Name"]]
+
+# STATE VERIFICATION
+- If you change the time (e.g., from 12:00 to 12:30), the metadata block MUST reflect the NEW time.
+- If you move the player, the metadata block MUST reflect the NEW location.
+- If you do not include this block, the player cannot continue their journey.`;
             }
 
             function buildRelationshipSummary() {
@@ -1592,29 +1633,41 @@
             }
 
             function updateLocation(nameOrId) {
+                if (!nameOrId) return;
                 const cards = getCards();
-                let card = cards.find(
-                    (c) => c.genre === "location" && c.id === nameOrId,
-                );
+                let card = null;
+
+                // 1. Try exact ID
+                card = cards.find((c) => c.genre === "location" && c.id === nameOrId);
+                
+                // 2. Try exact title
                 if (!card) {
-                    // Try by title
-                    const search = nameOrId.toLowerCase();
-                    card = cards.find(
-                        (c) =>
-                            c.genre === "location" &&
-                            (c.title || "").toLowerCase() === search,
-                    );
+                    const search = nameOrId.toLowerCase().trim();
+                    card = cards.find((c) => c.genre === "location" && (c.title || "").toLowerCase() === search);
+                }
+
+                // 3. Try to handle "Region (Outside)" format
+                if (!card && nameOrId.includes("(")) {
+                    const regionName = nameOrId.split("(")[0].trim().toLowerCase();
+                    card = cards.find((c) => c.genre === "location" && (c.title || "").toLowerCase() === regionName);
                 }
 
                 const el = document.getElementById("header-location");
                 if (card) {
                     currentLocationId = card.id;
-                    if (el) el.textContent = card.title.toUpperCase();
-                } else {
-                    currentLocationId = null;
+                    if (activeChar) activeChar.currentLocationId = card.id; // Save to activeChar
                     if (el) el.textContent = nameOrId.toUpperCase();
+                } else {
+                    // Fallback: If no card found, keep the text but try to find a parent if possible
+                    // Or just keep the text and null the ID (AI will lose character context)
+                    currentLocationId = null;
+                    if (activeChar) activeChar.currentLocationId = null; // Save to activeChar
+                    if (el) el.textContent = nameOrId.toUpperCase();
+                    console.warn(`[Location] No card found for: ${nameOrId}`);
                 }
+                
                 updatePresentNPCs();
+                saveActiveCharacter(); // Save the location state
             }
 
             function updatePresentNPCs() {
@@ -1748,7 +1801,7 @@
                 try {
                     const history =
                         chatHistory.length > 0
-                            ? systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n(Reminder: Always end with [[time: HH:MM, location: Name]] if something changed)\nNarrator:"
+                            ? chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n\n" + systemInst + "\n\nNarrator:"
                             : systemInst + "\n" + systemPrompt + "\nNarrator:";
                     const response = await askAI(history);
                     removeTypingIndicator();
@@ -1791,7 +1844,7 @@
 
                 try {
                     const historyText =
-                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n(Reminder: Always end with [[time: HH:MM, location: Name]] if something changed)\nNarrator:";
+                        chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n\n" + systemInst + "\n\nNarrator:";
                     const response = await askAI(historyText);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
@@ -1870,7 +1923,7 @@
 
                 try {
                     const histText =
-                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n(Reminder: Always end with [[time: HH:MM, location: Name]] if something changed)\nNarrator:";
+                        chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n\n" + systemInst + "\n\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
@@ -1899,7 +1952,7 @@
 
                 try {
                     const histText =
-                        systemInst + "\n" + chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n(Reminder: Always end with [[time: HH:MM, location: Name]] if something changed)\nNarrator:";
+                        chatHistory.map(e => typeof e === 'string' ? e : `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`).join("\n") + "\n\n" + systemInst + "\n\nNarrator:";
                     const r = await askAI(histText);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
