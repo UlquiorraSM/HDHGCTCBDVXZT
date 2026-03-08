@@ -1232,7 +1232,7 @@
             ═══════════════════════════════════════ */
             function buildLocationHierarchy() {
                 try {
-                    const cards = JSON.parse(Storage.get(CARDS_KEY) || "[]");
+                    const cards = getCards();
                     const locations = cards.filter((c) => c.genre === "location");
                     const characters = cards.filter(
                         (c) => c.genre === "character",
@@ -1270,7 +1270,10 @@
                             loc.locationSub ||
                             "Location"
                         ).toUpperCase();
-                        let str = `${indent}- ${loc.title} (${type})\n`;
+                        let str = `${indent}- ${loc.title} (${type})`;
+                        if (loc.description) str += `: ${loc.description}`;
+                        str += "\n";
+                        if (loc.lore) str += `${indent}  Lore: ${loc.lore}\n`;
 
                         // Residents
                         if (loc.residents && loc.residents.length > 0) {
@@ -1292,7 +1295,7 @@
                         return str;
                     }
 
-                    let result = "\nWorld Hierarchy:\n";
+                    let result = "\nWORLD LOCATIONS HIERARCHY:\n";
                     if (roots.length === 0 && locations.length > 0) {
                         locations.forEach((l) => {
                             result += renderNode(l.id);
@@ -1308,6 +1311,114 @@
                     console.error("Hierarchy error", e);
                     return "\nWorld Hierarchy: (Error loading)";
                 }
+            }
+
+            function buildCharacterContext() {
+                try {
+                    const cards = getCards();
+                    const characters = cards.filter((c) => c.genre === "character");
+                    if (characters.length === 0) return "";
+
+                    let context = "\nWORLD CHARACTERS:\n";
+                    characters.forEach((c) => {
+                        context += `- ${c.title} (${c.raceName || "Unknown Race"})\n`;
+                        if (c.description) context += `  Description: ${c.description}\n`;
+                        if (c.personality) context += `  Personality: ${c.personality}\n`;
+                        if (c.appearance) context += `  Appearance: ${c.appearance}\n`;
+                        if (c.lore) context += `  Lore/History: ${c.lore}\n`;
+                    });
+                    return context;
+                } catch (e) {
+                    console.error("Character context error", e);
+                    return "";
+                }
+            }
+
+            function buildRaceContext() {
+                try {
+                    const cards = getCards();
+                    const races = cards.filter((c) => c.genre === "race");
+                    if (races.length === 0) return "";
+
+                    let context = "\nWORLD RACES:\n";
+                    races.forEach((r) => {
+                        context += `- ${r.title}\n`;
+                        if (r.description) context += `  Description: ${r.description}\n`;
+                        if (r.lore) context += `  Lore: ${r.lore}\n`;
+                    });
+                    return context;
+                } catch (e) {
+                    console.error("Race context error", e);
+                    return "";
+                }
+            }
+
+            function getCurrentLocationPath() {
+                if (!currentLocationId) return "Unknown Location";
+                try {
+                    const cards = getCards();
+                    const currentLoc = cards.find((c) => c.id === currentLocationId);
+                    if (!currentLoc) return "Unknown Location";
+
+                    const path = [];
+                    let current = currentLoc;
+
+                    while (current) {
+                        path.unshift(current.title);
+                        // find parent
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations)
+                                return false;
+                            return Object.values(c.sublocations).some((arr) =>
+                                (arr || []).includes(current.id),
+                            );
+                        });
+                        current = parent;
+                    }
+
+                    return path.join(" > ");
+                } catch (e) {
+                    console.error("Path error", e);
+                    return "Unknown Location";
+                }
+            }
+
+            function buildSystemPrompt() {
+                const d = activeChar?.startingDate || {};
+                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const curTime = d.time || "00:00";
+                
+                const curLocPath = getCurrentLocationPath();
+                const worldHierarchy = buildLocationHierarchy();
+                const charContext = buildCharacterContext();
+                const raceContext = buildRaceContext();
+                const relationshipSummary = buildRelationshipSummary();
+                const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
+                
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                const aiLangMap = {
+                    "de": "German",
+                    "en": "English",
+                    "ja": "Japanese",
+                    "fr": "French",
+                    "es": "Spanish",
+                    "it": "Italian",
+                    "ru": "Russian",
+                    "ko": "Korean",
+                    "zh": "Chinese"
+                };
+                const aiLang = aiLangMap[settings.aiLanguage] || "English";
+
+                return `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location Path=${curLocPath}. ` +
+                    (presentNPCs ? `Present NPCs (in this location and its parent locations): ${presentNPCs}. ` : "") +
+                    `${worldHierarchy} ` +
+                    `${charContext} ` +
+                    `${raceContext} ` +
+                    `${relationshipSummary} ` +
+                    `You MUST write EXCLUSIVELY in ${aiLang}. ` +
+                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
+                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
+                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
             }
 
             function buildRelationshipSummary() {
@@ -1545,37 +1656,7 @@
 
                 const typing = appendTypingIndicator();
 
-                const d = activeChar?.startingDate || {};
-                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
-                const curTime = d.time || "00:00";
-                const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
-                const worldHierarchy = buildLocationHierarchy();
-                const relationshipSummary = buildRelationshipSummary();
-                const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
-                
-                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
-                const aiLangMap = {
-                    "de": "German",
-                    "en": "English",
-                    "ja": "Japanese",
-                    "fr": "French",
-                    "es": "Spanish",
-                    "it": "Italian",
-                    "ru": "Russian",
-                    "ko": "Korean",
-                    "zh": "Chinese"
-                };
-                const aiLang = aiLangMap[settings.aiLanguage] || "English";
-
-                const systemInst =
-                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
-                    (presentNPCs ? `Present NPCs: ${presentNPCs}. ` : "") +
-                    `${worldHierarchy} ` +
-                    `${relationshipSummary} ` +
-                    `You MUST write EXCLUSIVELY in ${aiLang}. ` +
-                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
-                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
-                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
+                const systemInst = buildSystemPrompt();
 
                 try {
                     const history =
@@ -1619,37 +1700,7 @@
 
                 const typing = appendTypingIndicator();
 
-                const d = activeChar?.startingDate || {};
-                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
-                const curTime = d.time || "00:00";
-                const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
-                const worldHierarchy = buildLocationHierarchy();
-                const relationshipSummary = buildRelationshipSummary();
-                const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
-
-                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
-                const aiLangMap = {
-                    "de": "German",
-                    "en": "English",
-                    "ja": "Japanese",
-                    "fr": "French",
-                    "es": "Spanish",
-                    "it": "Italian",
-                    "ru": "Russian",
-                    "ko": "Korean",
-                    "zh": "Chinese"
-                };
-                const aiLang = aiLangMap[settings.aiLanguage] || "English";
-
-                const systemInst =
-                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
-                    (presentNPCs ? `Present NPCs: ${presentNPCs}. ` : "") +
-                    `${worldHierarchy} ` +
-                    `${relationshipSummary} ` +
-                    `You MUST write EXCLUSIVELY in ${aiLang}. ` +
-                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
-                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
-                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
+                const systemInst = buildSystemPrompt();
 
                 try {
                     const historyText =
@@ -1728,16 +1779,7 @@
                 lockAllButtons(); // Lock buttons during retry
                 appendTypingIndicator();
 
-                const d = activeChar?.startingDate || {};
-                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
-                const curTime = d.time || "00:00";
-                const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
-
-                const systemInst =
-                    `SYSTEM: You are Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
-                    `You MUST update in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
-                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
-                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If AI does not send a command, time stands still!`;
+                const systemInst = buildSystemPrompt();
 
                 try {
                     const histText =
@@ -1766,16 +1808,7 @@
                 lockAllButtons(); // Lock buttons during continue
                 appendTypingIndicator();
 
-                const d = activeChar?.startingDate || {};
-                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
-                const curTime = d.time || "00:00";
-                const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
-
-                const systemInst =
-                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
-                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
-                    `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
-                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
+                const systemInst = buildSystemPrompt();
 
                 try {
                     const histText =
