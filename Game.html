@@ -537,6 +537,11 @@
                 background: rgba(70, 20, 20, 0.7);
                 color: #ff9090;
             }
+            .act-btn.locked {
+                opacity: 0.5;
+                cursor: not-allowed !important;
+                pointer-events: none;
+            }
 
             /* ─── Toast ─── */
             #toast {
@@ -802,6 +807,7 @@
             let isBusy = false;
             let activeChar = null;
             let currentLocationId = null;
+            let isFirstMessageProtected = false;
 
             /* ═══════════════════════════════════════
                TIME & COMMAND SYSTEM
@@ -1094,16 +1100,28 @@
                     const fullName = [activeChar.firstName, activeChar.lastName]
                         .filter(Boolean)
                         .join(" ");
-                    triggerNarration(
-                        `Begin an immersive fantasy story. The player character is ${fullName}` +
-                            (activeChar.raceName
-                                ? `, a ${activeChar.raceName}`
-                                : "") +
-                            (activeChar.gender
-                                ? ` (${activeChar.gender})`
-                                : "") +
-                            ". Open with a vivid scene introduction and end with a choice or prompt for the player.",
-                    );
+                    
+                    // Check if user provided a custom introduction
+                    if (activeChar.introduction && activeChar.introduction.trim()) {
+                        // Use user's custom introduction as the first message
+                        isFirstMessageProtected = true;
+                        addSystemDivider("Chapter 1");
+                        appendBubble("ai", activeChar.introduction.trim());
+                        addToStoryLog("Narrator", activeChar.introduction.trim());
+                    } else {
+                        // Fall back to AI-generated introduction
+                        isFirstMessageProtected = true;
+                        triggerNarration(
+                            `Begin an immersive fantasy story. The player character is ${fullName}` +
+                                (activeChar.raceName
+                                    ? `, a ${activeChar.raceName}`
+                                    : "") +
+                                (activeChar.gender
+                                    ? ` (${activeChar.gender})`
+                                    : "") +
+                                ". Open with a vivid scene introduction and end with a choice or prompt for the player.",
+                        );
+                    }
                 } else {
                     addSystemDivider("Chapter 1");
                     const welcomeText = "Willkommen, Abenteurer! Deine Geschichte beginnt jetzt.\n\nWas möchtest du als erstes tun?";
@@ -1523,6 +1541,7 @@
                 isBusy = true;
                 setSendDisabled(true);
                 setStatus(false);
+                lockAllButtons(); // Lock all buttons during generation
 
                 const typing = appendTypingIndicator();
 
@@ -1575,6 +1594,7 @@
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
+                    unlockAllButtons(); // Unlock buttons when generation is complete
                 }
             }
 
@@ -1677,10 +1697,20 @@
 
             document.getElementById("retry-btn").onclick = async () => {
                 if (isBusy) return;
-                // Remove last AI message from DOM and history
+                
+                // Check if we're trying to retry the first message
                 const messagesEl = document.getElementById("messages");
                 const aiRows = messagesEl.querySelectorAll(".msg-row.ai");
+                
                 if (!aiRows.length) return;
+                
+                // If this is the first AI message and it's protected, show lock icon
+                if (isFirstMessageProtected && aiRows.length === 1) {
+                    showToast("🔒 The first message is protected.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                
+                // Remove last AI message from DOM and history
                 aiRows[aiRows.length - 1].remove();
                 // Remove last narrator entry from history
                 for (let i = chatHistory.length - 1; i >= 0; i--) {
@@ -1695,6 +1725,7 @@
                 isBusy = true;
                 setSendDisabled(true);
                 setStatus(false);
+                lockAllButtons(); // Lock buttons during retry
                 appendTypingIndicator();
 
                 const d = activeChar?.startingDate || {};
@@ -1703,10 +1734,10 @@
                 const curLoc = document.getElementById("header-location")?.textContent || "Unknown Location";
 
                 const systemInst =
-                    `SYSTEM: You are the Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
-                    `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
+                    `SYSTEM: You are Narrator. Current state: Date=${curDate}, Time=${curTime}, Location=${curLoc}. ` +
+                    `You MUST update in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
                     `Commands: time: HH:MM, day: N, month: N, year: N, add_m: N, add_h: N, location: Text. ` +
-                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If the AI does not send a command, time stands still!`;
+                    `IMPORTANT: If time passes in your narration, ALWAYS use a command. If AI does not send a command, time stands still!`;
 
                 try {
                     const histText =
@@ -1718,11 +1749,12 @@
                     addToStoryLog("Narrator", cleanR);
                 } catch (e) {
                     removeTypingIndicator();
-                    appendBubble("ai", "[ Fehler: " + e + " ]");
+                    appendBubble("ai", "Fehler beim Laden der KI-Antwort.");
                 } finally {
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
+                    unlockAllButtons(); // Unlock buttons when retry is complete
                 }
             };
 
@@ -1731,6 +1763,7 @@
                 isBusy = true;
                 setSendDisabled(true);
                 setStatus(false);
+                lockAllButtons(); // Lock buttons during continue
                 appendTypingIndicator();
 
                 const d = activeChar?.startingDate || {};
@@ -1759,6 +1792,7 @@
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
+                    unlockAllButtons(); // Unlock buttons when continue is complete
                 }
             };
 
@@ -1801,18 +1835,55 @@
                 if (!rows.length) return;
 
                 const lastRow = rows[rows.length - 1];
+                
+                // Check if this is the first AI message and it's protected
+                const aiRows = messagesEl.querySelectorAll(".msg-row.ai");
+                if (isFirstMessageProtected && aiRows.length === 1 && lastRow.classList.contains("ai")) {
+                    showToast("🔒 The first message is protected.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                
                 lastRow.remove();
 
                 if (chatHistory.length > 0) {
                     chatHistory.pop();
                     saveStoryLog();
-                    showToast("Nachricht gelöscht.", "rgba(180, 60, 60, 0.85)");
+                    showToast("Message deleted.", "rgba(180, 60, 60, 0.85)");
                 }
             };
 
             /* ═══════════════════════════════════════
-               TOAST
+               BUTTON LOCKING DURING GENERATION
             ═══════════════════════════════════════ */
+            function lockAllButtons() {
+                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn'];
+                buttons.forEach(btnId => {
+                    const btn = document.getElementById(btnId);
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.classList.add('locked');
+                        // Store original text
+                        btn.dataset.originalText = btn.textContent.trim();
+                        btn.textContent = '🔒 ' + btn.dataset.originalText;
+                    }
+                });
+            }
+
+            function unlockAllButtons() {
+                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn'];
+                buttons.forEach(btnId => {
+                    const btn = document.getElementById(btnId);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('locked');
+                        // Restore original text
+                        if (btn.dataset.originalText) {
+                            btn.textContent = btn.dataset.originalText;
+                            delete btn.dataset.originalText;
+                        }
+                    }
+                });
+            }
             function showToast(msg, bg = "rgba(40,140,80,0.95)") {
                 const t = document.getElementById("toast");
                 t.textContent = msg;

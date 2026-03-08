@@ -898,6 +898,21 @@
                         </div>
                     </div>
 
+                    <!-- Story Introduction -->
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label class="form-label">Story Introduction (Optional)</label>
+                        <textarea
+                            class="form-input"
+                            id="c-introduction"
+                            placeholder="Enter an introduction for your story... This will appear at the beginning of your adventure."
+                            rows="4"
+                            style="resize: vertical; min-height: 100px;"
+                        ></textarea>
+                        <div style="font-size: 11px; color: rgba(255, 255, 255, 0.3); margin-top: 6px;">
+                            This text will be displayed when your story begins in Game.html
+                        </div>
+                    </div>
+
                     <div class="form-actions">
                         <button class="btn-cancel" onclick="goBack()">
                             ← Back
@@ -1156,6 +1171,9 @@
                 renderSpawnList(null);
                 updateSummary();
 
+                // Initialize introduction field
+                document.getElementById("c-introduction").value = "";
+
                 document.getElementById("create-count").textContent =
                     getCharacters().length;
             }
@@ -1265,6 +1283,7 @@
                 const month = parseInt(document.getElementById("c-month").value) || 1;
                 const year = parseInt(document.getElementById("c-year").value) || 1983;
                 const time = document.getElementById("c-time").value || "00:00";
+                const introduction = document.getElementById("c-introduction").value.trim();
 
                 if (!fn) {
                     showToast("Please enter a first name.", "#c04040");
@@ -1287,6 +1306,7 @@
                     spawnId: selectedSpawnId || null,
                     relations: [...relationSelections],
                     startingDate: { day, month, year, time },
+                    introduction: introduction,
                     createdAt: new Date().toISOString(),
                 };
                 chars.push(newChar);
