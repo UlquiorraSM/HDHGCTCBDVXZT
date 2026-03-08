@@ -1848,6 +1848,57 @@
                 white-space: nowrap;
             }
 
+            /* Item Tags Style */
+            .item-tag-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 10px;
+                min-height: 32px;
+                padding: 10px;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            .item-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 12px;
+                background: rgba(100, 100, 100, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 20px;
+                color: #fff;
+                font-size: 13px;
+                font-weight: 500;
+                transition: all 0.2s;
+            }
+            .item-tag:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+            .item-tag-remove {
+                cursor: pointer;
+                color: rgba(255, 255, 255, 0.4);
+                font-size: 16px;
+                line-height: 1;
+                margin-left: 4px;
+            }
+            .item-tag-remove:hover {
+                color: #ff5555;
+            }
+            .item-tag-input-wrapper {
+                display: flex;
+                gap: 8px;
+                margin-top: 8px;
+            }
+            .item-tag-count {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.3);
+                text-align: right;
+                margin-top: 4px;
+            }
+
             .toast.show {
                 opacity: 1;
                 transform: translateX(-50%) translateY(0);
@@ -1953,7 +2004,29 @@
                             <option value="location">Location</option>
                             <option value="race">Race</option>
                             <option value="character">Character</option>
+                            <option value="item">Item</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- ── Item Block ── -->
+                <div id="item-block" style="display: none">
+                    <div class="form-group">
+                        <label class="form-label">Tags (Bullet points for AI, max 10)</label>
+                        <div class="item-tag-container" id="item-tags-container">
+                            <!-- Tags will be rendered here -->
+                        </div>
+                        <div class="item-tag-input-wrapper">
+                            <input
+                                type="text"
+                                class="form-input"
+                                id="f-item-tag-input"
+                                placeholder="Add a tag and press Enter..."
+                                onkeydown="if(event.key === 'Enter') addItemTag()"
+                            />
+                            <button type="button" class="subloc-btn" onclick="addItemTag()" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
+                        </div>
+                        <div class="item-tag-count" id="item-tag-count">0 / 10 tags</div>
                     </div>
                 </div>
 
@@ -2340,6 +2413,26 @@
                 <!-- Race tools: Name Generator + Lore (Race only) -->
                 <div class="form-group" id="namegen-form-group" style="display: none">
                     <label class="form-label">Race Tools</label>
+                    
+                    <!-- Race Tags -->
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label class="form-label" style="font-size: 12px; color: rgba(255,255,255,0.4);">Tags (Bullet points for AI, max 10)</label>
+                        <div class="item-tag-container" id="race-tags-container">
+                            <!-- Tags will be rendered here -->
+                        </div>
+                        <div class="item-tag-input-wrapper">
+                            <input
+                                type="text"
+                                class="form-input"
+                                id="f-race-tag-input"
+                                placeholder="Add a tag and press Enter..."
+                                onkeydown="if(event.key === 'Enter') addGenericTag('race')"
+                            />
+                            <button type="button" class="subloc-btn" onclick="addGenericTag('race')" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
+                        </div>
+                        <div class="item-tag-count" id="race-tag-count">0 / 10 tags</div>
+                    </div>
+
                     <div class="lore-summary" id="lore-summary"></div>
                     <div class="race-btn-row">
                         <button type="button" class="lore-btn" onclick="openLore()">
@@ -2857,6 +2950,8 @@
             let activeFilter = "all";
             let editingId = null; // null = new entry
             let ctxTargetId = null; // for context-menu
+            let itemTags = []; // for item tags
+            let raceTags = []; // for race tags
 
             /* ─────────────────────────────────────────
            BACKGROUND
@@ -2878,6 +2973,17 @@
         ───────────────────────────────────────── */
             function getCards() {
                 return JSON.parse(Storage.get(STORAGE_KEY) || "[]");
+            }
+
+            function isSublocationOfAnything(cardId) {
+                if (!cardId) return false;
+                const cards = getCards();
+                return cards.some((c) => {
+                    if (c.id === cardId || !c.sublocations) return false;
+                    return Object.values(c.sublocations).some((arr) =>
+                        (arr || []).includes(cardId),
+                    );
+                });
             }
 
             function saveCards(cards) {
@@ -3230,6 +3336,24 @@
                         resetCharacterFields();
                     }
 
+                    // restore item data
+                    if (card.genre === "item") {
+                        itemTags = card.tags ? [...card.tags] : [];
+                        renderItemTags();
+                    } else {
+                        itemTags = [];
+                        renderItemTags();
+                    }
+
+                    // restore race tags
+                    if (card.genre === "race") {
+                        raceTags = card.tags ? [...card.tags] : [];
+                        renderGenericTags("race");
+                    } else {
+                        raceTags = [];
+                        renderGenericTags("race");
+                    }
+
                     // restore name generator data
                     const ng = card.nameGenerator || {};
                     nameGenData = {
@@ -3334,6 +3458,10 @@
                 skincolorData = [];
                 updateSkincolorSummary();
                 resetCharacterFields();
+                itemTags = [];
+                renderItemTags();
+                raceTags = [];
+                renderGenericTags("race");
                 renderList();
             }
 
@@ -3361,6 +3489,10 @@
                 // Show / hide Character block
                 document.getElementById("character-block").style.display =
                     type === "character" ? "block" : "none";
+
+                // Show / hide Item block
+                document.getElementById("item-block").style.display =
+                    type === "item" ? "block" : "none";
 
                 const locGroup = document.getElementById("location-sub-group");
                 const zivilGroup = document.getElementById("zivil-sub-group");
@@ -3420,7 +3552,9 @@
                 const sub = document.getElementById("f-building-sub").value;
                 const resGroup = document.getElementById("house-residents-group");
                 if (resGroup) {
-                    resGroup.style.display = sub === "house" ? "block" : "none";
+                    const isHouse = sub === "house";
+                    const isSub = isSublocationOfAnything(editingId);
+                    resGroup.style.display = (isHouse && isSub) ? "block" : "none";
                 }
                 if (sub !== "house") {
                     // Only clear if not a zivil type that has residents
@@ -4023,6 +4157,64 @@
                     s.textContent = "Skincolor: " + names.join(", ");
                 }
             }
+
+            /* ─────────────────────────────────────────
+               GENERIC TAGS (Items, Races)
+            ───────────────────────────────────────── */
+            function addGenericTag(type) {
+                const inputId = type === "item" ? "f-item-tag-input" : "f-race-tag-input";
+                const input = document.getElementById(inputId);
+                const tag = input.value.trim();
+                if (!tag) return;
+
+                let tagArray = type === "item" ? itemTags : raceTags;
+                if (tagArray.length >= 10) {
+                    showToast("Maximum 10 tags allowed.", "rgba(180, 60, 60, 0.9)");
+                    return;
+                }
+                if (tagArray.includes(tag)) {
+                    input.value = "";
+                    return;
+                }
+                tagArray.push(tag);
+                input.value = "";
+                renderGenericTags(type);
+            }
+
+            function removeGenericTag(type, tag) {
+                if (type === "item") {
+                    itemTags = itemTags.filter((t) => t !== tag);
+                } else {
+                    raceTags = raceTags.filter((t) => t !== tag);
+                }
+                renderGenericTags(type);
+            }
+
+            function renderGenericTags(type) {
+                const containerId = type === "item" ? "item-tags-container" : "race-tags-container";
+                const countId = type === "item" ? "item-tag-count" : "race-tag-count";
+                const container = document.getElementById(containerId);
+                const tagArray = type === "item" ? itemTags : raceTags;
+
+                if (!container) return;
+                container.innerHTML = "";
+                tagArray.forEach((tag) => {
+                    const div = document.createElement("div");
+                    div.className = "item-tag";
+                    div.innerHTML = `
+                        <span>${escHtml(tag)}</span>
+                        <span class="item-tag-remove" onclick="removeGenericTag('${type}', '${escHtml(tag)}')">&times;</span>
+                    `;
+                    container.appendChild(div);
+                });
+                const countEl = document.getElementById(countId);
+                if (countEl) countEl.textContent = `${tagArray.length} / 10 tags`;
+            }
+
+            // Old Item-specific functions (can be removed if not used elsewhere, but I'll keep them as wrappers for now to avoid breaking existing UI calls)
+            function addItemTag() { addGenericTag("item"); }
+            function removeItemTag(tag) { removeGenericTag("item", tag); }
+            function renderItemTags() { renderGenericTags("item"); }
 
             function loreInsert(before, after, mode) {
                 const ta = document.getElementById("lore-textarea");
@@ -4799,6 +4991,9 @@
                           }
                         : null;
 
+                const tags =
+                    type === "item" ? [...itemTags] : (type === "race" ? [...raceTags] : []);
+
                 let cards = getCards();
 
                 if (editingId) {
@@ -4824,6 +5019,7 @@
                             age,
                             gender,
                             birthdate,
+                            tags,
                             description: desc,
                             updatedAt: new Date().toISOString(),
                         };
@@ -4851,6 +5047,7 @@
                         age,
                         gender,
                         birthdate,
+                        tags,
                         description: desc,
                         createdAt: new Date().toISOString(),
                         version: "1.0",

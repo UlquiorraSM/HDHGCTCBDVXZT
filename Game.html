@@ -1316,10 +1316,37 @@
             function buildCharacterContext() {
                 try {
                     const cards = getCards();
-                    const characters = cards.filter((c) => c.genre === "character");
+                    if (!currentLocationId) return "";
+
+                    const currentLoc = cards.find((c) => c.id === currentLocationId);
+                    if (!currentLoc) return "";
+
+                    // Find all ancestors
+                    const ancestors = [];
+                    let current = currentLoc;
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+
+                    // Collect all resident IDs from this location and its ancestors
+                    const residentIds = new Set();
+                    ancestors.forEach((loc) => {
+                        if (loc.residents) {
+                            loc.residents.forEach((id) => residentIds.add(id));
+                        }
+                    });
+
+                    if (residentIds.size === 0) return "";
+
+                    const characters = cards.filter((c) => c.genre === "character" && residentIds.has(c.id));
                     if (characters.length === 0) return "";
 
-                    let context = "\nWORLD CHARACTERS:\n";
+                    let context = "\nPRESENT CHARACTERS (Residents of this location and its parent regions):\n";
                     characters.forEach((c) => {
                         context += `- ${c.title} (${c.raceName || "Unknown Race"})\n`;
                         if (c.description) context += `  Description: ${c.description}\n`;
@@ -1344,11 +1371,35 @@
                     races.forEach((r) => {
                         context += `- ${r.title}\n`;
                         if (r.description) context += `  Description: ${r.description}\n`;
+                        if (r.tags && r.tags.length > 0) {
+                            context += `  Race Traits: ${r.tags.join(", ")}\n`;
+                        }
                         if (r.lore) context += `  Lore: ${r.lore}\n`;
                     });
                     return context;
                 } catch (e) {
                     console.error("Race context error", e);
+                    return "";
+                }
+            }
+
+            function buildItemContext() {
+                try {
+                    const cards = getCards();
+                    const items = cards.filter((c) => c.genre === "item");
+                    if (items.length === 0) return "";
+
+                    let context = "\nWORLD ITEMS:\n";
+                    items.forEach((item) => {
+                        context += `- ${item.title}\n`;
+                        if (item.description) context += `  Description: ${item.description}\n`;
+                        if (item.tags && item.tags.length > 0) {
+                            context += `  Properties (AI Knowledge): ${item.tags.join(", ")}\n`;
+                        }
+                    });
+                    return context;
+                } catch (e) {
+                    console.error("Item context error", e);
                     return "";
                 }
             }
@@ -1392,6 +1443,7 @@
                 const worldHierarchy = buildLocationHierarchy();
                 const charContext = buildCharacterContext();
                 const raceContext = buildRaceContext();
+                const itemContext = buildItemContext();
                 const relationshipSummary = buildRelationshipSummary();
                 const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
                 
@@ -1414,6 +1466,7 @@
                     `${worldHierarchy} ` +
                     `${charContext} ` +
                     `${raceContext} ` +
+                    `${itemContext} ` +
                     `${relationshipSummary} ` +
                     `You MUST write EXCLUSIVELY in ${aiLang}. ` +
                     `You MUST update the in-game time or location by adding commands like [[time: 14:30]], [[add_m: 30]], [[day: 2]], or [[location: The Forest]] (hidden from user) at the VERY END of your response. ` +
