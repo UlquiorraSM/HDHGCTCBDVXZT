@@ -1448,13 +1448,25 @@
             </div>
         </div>
         
-        <!-- Overlay: NPC Setup (Spawn + Date/Time + Intro) -->
-        <div id="npc-setup-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:4100;">
-            <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:20px; padding:24px; width:100%; max-width:700px; display:flex; flex-direction:column; gap:16px;">
-                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">NPC Setup</div>
-                
-                <div>
-                    <div class="section-title" style="margin:0 0 8px 0;">Spawn Location</div>
+        <!-- ══════════════════════════════
+             NPC SETUP VIEW (Scene)
+        ══════════════════════════════ -->
+        <div id="npc-setup-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="cancelNPCSetup()" title="Back">
+                    &#8592;
+                </button>
+                <span class="nav-title">NPC SETUP</span>
+                <div class="nav-count">—</div>
+            </nav>
+            <div class="page-scroll">
+                <div class="page-title-row">
+                    <h1>NPC Setup</h1>
+                    <span class="page-title-badge">PLAY AS NPC</span>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Spawn Location</div>
                     <div class="spawn-list" id="npc-spawn-list">
                         <div class="spawn-empty" id="npc-spawn-empty">
                             No spawn locations available.<br />
@@ -1462,9 +1474,9 @@
                         </div>
                     </div>
                 </div>
-                
-                <div>
-                    <div class="section-title" style="margin:8px 0;">Starting Date & Time</div>
+
+                <div class="section">
+                    <div class="section-title">Starting Date & Time</div>
                     <div class="two-col">
                         <div style="display:flex; gap:8px;">
                             <input type="number" class="form-input" id="npc-day" placeholder="DD" min="1" max="31" style="width:70px; text-align:center;">
@@ -1489,15 +1501,17 @@
                         </div>
                     </div>
                 </div>
-                
-                <div>
-                    <div class="section-title" style="margin:8px 0;">Story Introduction (Optional)</div>
+
+                <div class="section">
+                    <div class="section-title">Story Introduction (Optional)</div>
                     <textarea class="form-input" id="npc-introduction" rows="4" style="resize:vertical; min-height:100px;" placeholder="Enter an introduction for your story..."></textarea>
                 </div>
-                
-                <div style="display:flex; gap:10px;">
-                    <button onclick="cancelNPCSetup()" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">Back</button>
-                    <button onclick="confirmNPCSetup()" style="flex:1; padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;">Play ▶</button>
+
+                <div class="section">
+                    <div class="form-actions">
+                        <button class="btn-cancel" onclick="cancelNPCSetup()">← Back</button>
+                        <button class="btn-create" onclick="confirmNPCSetup()">Play ▶</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1530,10 +1544,14 @@
                 document.getElementById("npc-year").value = "1983";
                 document.getElementById("npc-time").value = "00:00";
                 document.getElementById("npc-introduction").value = "";
-                document.getElementById("npc-setup-overlay").style.display = "flex";
+                // Scene switch: hide main, show npc setup
+                document.getElementById("main-view").style.display = "none";
+                document.getElementById("relations-view").style.display = "none";
+                document.getElementById("npc-setup-view").style.display = "flex";
             }
             function cancelNPCSetup() {
-                document.getElementById("npc-setup-overlay").style.display = "none";
+                document.getElementById("npc-setup-view").style.display = "none";
+                // Show playable choice again
                 // Back to playable choice list
                 try {
                     const playable = getCards().filter(c => c.genre === "character" && c.isPlayable);
@@ -1581,7 +1599,7 @@
                 const filtered = cards.filter(c => c.id !== selectedNPCId);
                 Storage.set(CARDS_KEY, JSON.stringify(filtered));
 
-                document.getElementById("npc-setup-overlay").style.display = "none";
+                document.getElementById("npc-setup-view").style.display = "none";
                 document.body.style.opacity = "0";
                 setTimeout(() => { window.location.href = "Loading.html"; }, 400);
             }
