@@ -932,40 +932,138 @@
 
             function processAICommands(text) {
                 if (!text) return "";
-                
-                // Unified regex for [[...]] and [...]
-                const cmdRegex = /\[{1,2}(.*?)\]{1,2}/gi;
-                let newText = text;
-                
+                if (!activeChar) return text.replace(/\[\[.*?\]\]/g, "").trim();
+                if (!activeChar.startingDate) activeChar.startingDate = {};
+                const d = activeChar.startingDate;
+                if (!d.day) d.day = 1;
+                if (!d.month) d.month = 1;
+                if (!d.year) d.year = 1983;
+                if (!d.time) d.time = "00:00";
+
+                const tagPattern = /\[\[(.*?)\]\]/g;
                 let match;
-                while ((match = cmdRegex.exec(text)) !== null) {
-                    const content = match[1];
-                    // Split by comma or semicolon
-                    const parts = content.split(/[,;]/).map(s => s.trim());
-                    
-                    parts.forEach(part => {
-                        // Look for key: value or key = value or key value
-                        // Support for quoted values: location: "Village (Outside)"
-                        const kvMatch = part.match(/(\w+)\s*[:=]\s*["']?([^"']+)["']?/i);
-                        if (kvMatch) {
-                            const k = kvMatch[1].toLowerCase();
-                            const v = kvMatch[2].trim();
-                            handleCommand(k, v);
-                        } else {
-                            // Try a simpler split if regex fails
-                            const simpleParts = part.split(/\s+/);
-                            if (simpleParts.length >= 2) {
-                                const k = simpleParts[0].toLowerCase();
-                                const v = part.substring(simpleParts[0].length).trim();
-                                handleCommand(k, v);
+                let timeChanged = false;
+                let locationChanged = false;
+
+                while ((match = tagPattern.exec(text)) !== null) {
+                    const content = match[1].trim();
+
+                    const absTime = content.match(/^(\d+),\s*(\d+),\s*(\d+),\s*(\d{2}:\d{2})$/);
+                    if (absTime) {
+                        const day = parseInt(absTime[1]);
+                        const month = parseInt(absTime[2]);
+                        const year = parseInt(absTime[3]);
+                        const timeStr = absTime[4];
+                        d.day = day;
+                        d.month = (month > 0 && month <= 12) ? month : d.month;
+                        d.year = year;
+                        d.time = timeStr;
+                        timeChanged = true;
+                        continue;
+                    }
+
+                    const relTime = content.match(/^(Year|Month|Week|Day|Time):\s*([+-]?\d+(?::\d{2})?)$/i);
+                    if (relTime) {
+                        const key = relTime[1].toLowerCase();
+                        const valueStr = relTime[2];
+
+                        const parseHM = (t) => {
+                            const parts = (t || "00:00").split(":").map(Number);
+                            return { h: parts[0] || 0, m: parts[1] || 0 };
+                        };
+                        const setHM = (h, m) => {
+                            d.time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+                        };
+                        const applyVal = (cur, valStr) => {
+                            if (valStr.startsWith("+")) return cur + parseInt(valStr.substring(1));
+                            if (valStr.startsWith("-")) return cur - parseInt(valStr.substring(1));
+                            return parseInt(valStr);
+                        };
+
+                        if (key === "year") {
+                            d.year = applyVal(d.year || 1983, valueStr);
+                        } else if (key === "month") {
+                            const isRel = valueStr.startsWith("+") || valueStr.startsWith("-");
+                            if (isRel) {
+                                let m = (d.month || 1) + parseInt(valueStr);
+                                let y = d.year || 1983;
+                                while (m > 12) { m -= 12; y++; }
+                                while (m < 1) { m += 12; y--; }
+                                d.month = m;
+                                d.year = y;
+                            } else {
+                                let m = parseInt(valueStr);
+                                d.month = (m > 0 && m <= 12) ? m : (d.month || 1);
+                            }
+                        } else if (key === "week") {
+                            d.day = (d.day || 1) + (parseInt(valueStr) * 7);
+                        } else if (key === "day") {
+                            const isRel = valueStr.startsWith("+") || valueStr.startsWith("-");
+                            if (isRel) {
+                                d.day = (d.day || 1) + parseInt(valueStr);
+                            } else {
+                                d.day = parseInt(valueStr);
+                            }
+                        } else if (key === "time") {
+                            if (valueStr.includes(":")) {
+                                d.time = valueStr;
+                            } else {
+                                const mins = parseInt(valueStr);
+                                const cur = parseHM(d.time);
+                                let total = cur.h * 60 + cur.m + mins;
+                                while (total < 0) total += 24 * 60;
+                                total = total % (24 * 60);
+                                const nh = Math.floor(total / 60);
+                                const nm = total % 60;
+                                setHM(nh, nm);
                             }
                         }
-                    });
+
+                        let [hN, mN] = (d.time || "00:00").split(":").map(Number);
+                        while (mN >= 60) { mN -= 60; hN++; }
+                        while (mN < 0) { mN += 60; hN--; }
+                        while (hN >= 24) { hN -= 24; d.day = (d.day || 1) + 1; }
+                        while (hN < 0) { hN += 24; d.day = (d.day || 1) - 1; }
+                        d.time = `${String(hN).padStart(2, "0")}:${String(mN).padStart(2, "0")}`;
+
+                        while ((d.month || 1) > 12) { d.month -= 12; d.year = (d.year || 1983) + 1; }
+                        while ((d.month || 1) < 1) { d.month += 12; d.year = (d.year || 1983) - 1; }
+                        while ((d.day || 1) > 30) {
+                            d.day -= 30;
+                            d.month = (d.month || 1) + 1;
+                            if (d.month > 12) { d.month = 1; d.year = (d.year || 1983) + 1; }
+                        }
+                        while ((d.day || 1) < 1) {
+                            d.month = (d.month || 1) - 1;
+                            if (d.month < 1) { d.month = 12; d.year = (d.year || 1983) - 1; }
+                            d.day += 30;
+                        }
+
+                        timeChanged = true;
+                        continue;
+                    }
+
+                    if (content.includes(",")) {
+                        continue;
+                    }
+                    if (!content.includes(":")) {
+                        const num = parseInt(content);
+                        if (isNaN(num)) {
+                            updateLocation(content);
+                            locationChanged = true;
+                            continue;
+                        }
+                    }
                 }
 
-                // Remove all command blocks from the final display text
-                newText = newText.replace(cmdRegex, "").replace(/\s+/g, " ").trim();
-                return newText;
+                if (!timeChanged) {
+                    addMinutes(1);
+                } else {
+                    updateHeaderTime();
+                    saveActiveCharacter();
+                }
+
+                return text.replace(/\[\[.*?\]\]/g, "").replace(/\s+/g, " ").trim();
             }
 
             function handleCommand(key, val) {
