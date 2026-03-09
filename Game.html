@@ -836,6 +836,48 @@
                 }
             }
 
+            function rollbackToLastWorldState() {
+                if (!activeChar) return;
+                // Find last Narrator entry; fallback to any last entry
+                let entry = null;
+                for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    const e = chatHistory[i];
+                    if (typeof e !== "string" && e.sender === "Narrator") {
+                        entry = e;
+                        break;
+                    }
+                }
+                if (!entry) {
+                    for (let i = chatHistory.length - 1; i >= 0; i--) {
+                        const e = chatHistory[i];
+                        if (typeof e !== "string") {
+                            entry = e;
+                            break;
+                        }
+                    }
+                }
+                if (!entry) return;
+
+                if (!activeChar.startingDate) activeChar.startingDate = {};
+                const d = activeChar.startingDate;
+                if (entry.date) {
+                    const parts = entry.date.split(".");
+                    if (parts.length === 3) {
+                        d.day = parseInt(parts[0]) || d.day || 1;
+                        d.month = parseInt(parts[1]) || d.month || 1;
+                        d.year = parseInt(parts[2]) || d.year || 1983;
+                    }
+                }
+                if (entry.time) {
+                    d.time = entry.time;
+                }
+                updateHeaderTime();
+                if (entry.location) {
+                    updateLocation(entry.location);
+                }
+                saveActiveCharacter();
+            }
+
             function loadStoryLog() {
                 try {
                     const raw = Storage.get(LOG_KEY);
@@ -2053,6 +2095,8 @@ Example:
                     }
                 }
                 saveStoryLog();
+                // Roll back world state to last remaining entry
+                rollbackToLastWorldState();
                 isBusy = true;
                 setSendDisabled(true);
                 setStatus(false);
@@ -2173,6 +2217,8 @@ Example:
                 if (chatHistory.length > 0) {
                     chatHistory.pop();
                     saveStoryLog();
+                    // Roll back world state to last remaining entry after deletion
+                    rollbackToLastWorldState();
                     showToast("Message deleted.", "rgba(180, 60, 60, 0.85)");
                 }
             };
