@@ -414,27 +414,13 @@
                 <div class="settings-group">
                     <h3>KI-Verhalten</h3>
                     <div class="setting-item">
-                        <span class="setting-label">Kreativität</span>
+                        <span class="setting-label">Text Size</span>
                         <div class="setting-control">
-                            <input type="range" id="creativity" min="0" max="100" value="50">
-                            <span id="creativity-value">50</span>
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">Antwortgeschwindigkeit</span>
-                        <div class="setting-control">
-                            <select id="speed">
-                                <option value="fast">Schnell</option>
+                            <select id="text-size">
+                                <option value="short">Short</option>
                                 <option value="normal" selected>Normal</option>
-                                <option value="slow">Langsam</option>
+                                <option value="tall">Tall</option>
                             </select>
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">Temperatur</span>
-                        <div class="setting-control">
-                            <input type="range" id="temperature" min="0" max="100" value="70">
-                            <span id="temperature-value">70</span>
                         </div>
                     </div>
                     <div class="setting-item">
@@ -598,12 +584,8 @@
                 document.getElementById('theme').value = data.theme || 'light';
                 
                 // KI-Einstellungen
-                document.getElementById('creativity').value = data.creativity || 50;
-                document.getElementById('speed').value = data.speed || 'normal';
-                document.getElementById('temperature').value = data.temperature || 70;
+                document.getElementById('text-size').value = data.textSize || 'normal';
                 document.getElementById('ai-language').value = data.aiLanguage || 'en';
-                updateCreativityValue();
-                updateTemperatureValue();
                 
                 // Interface
                 document.getElementById('sound').checked = data.sound !== false;
@@ -661,9 +643,7 @@
                 theme: document.getElementById('theme').value,
                 
                 // KI-Einstellungen
-                creativity: document.getElementById('creativity').value,
-                speed: document.getElementById('speed').value,
-                temperature: document.getElementById('temperature').value,
+                textSize: document.getElementById('text-size').value,
                 aiLanguage: document.getElementById('ai-language').value,
                 
                 // Interface
@@ -760,9 +740,7 @@
                 backgroundUrl: document.getElementById('background-url').value,
                 language: document.getElementById('language').value,
                 theme: document.getElementById('theme').value,
-                creativity: document.getElementById('creativity').value,
-                speed: document.getElementById('speed').value,
-                temperature: document.getElementById('temperature').value,
+                textSize: document.getElementById('text-size').value,
                 aiLanguage: document.getElementById('ai-language').value,
                 sound: document.getElementById('sound').checked,
                 autosave: document.getElementById('autosave').checked,
@@ -783,9 +761,7 @@
                 currentSettings.backgroundUrl !== (savedSettings.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg') ||
                 currentSettings.language !== (savedSettings.language || 'de') ||
                 currentSettings.theme !== (savedSettings.theme || 'light') ||
-                currentSettings.creativity !== String(savedSettings.creativity || 50) ||
-                currentSettings.speed !== (savedSettings.speed || 'normal') ||
-                currentSettings.temperature !== String(savedSettings.temperature || 70) ||
+                currentSettings.textSize !== (savedSettings.textSize || 'normal') ||
                 currentSettings.aiLanguage !== (savedSettings.aiLanguage || 'en') ||
                 currentSettings.sound !== (savedSettings.sound !== false) ||
                 currentSettings.autosave !== (savedSettings.autosave !== false) ||
@@ -806,18 +782,6 @@
             setTimeout(() => {
                 window.location.href = url;
             }, 400);
-        }
-        
-        // Kreativitätswert aktualisieren
-        function updateCreativityValue() {
-            const value = document.getElementById('creativity').value;
-            document.getElementById('creativity-value').textContent = value;
-        }
-        
-        // Temperaturwert aktualisieren
-        function updateTemperatureValue() {
-            const value = document.getElementById('temperature').value;
-            document.getElementById('temperature-value').textContent = value;
         }
         
         // Cache leeren
@@ -870,8 +834,6 @@
         }
         
         // Event Listener
-        document.getElementById('creativity').addEventListener('input', updateCreativityValue);
-        document.getElementById('temperature').addEventListener('input', updateTemperatureValue);
         document.getElementById('background-url').addEventListener('input', () => applyBackground(false));
         
         // Einstellungen beim Laden laden
