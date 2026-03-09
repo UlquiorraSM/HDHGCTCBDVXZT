@@ -938,16 +938,35 @@
                 try {
                     const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
                     const size = (settings.textSize || "normal").toLowerCase();
-                    let limit = 1000;
-                    if (size === "short") limit = 500;
-                    else if (size === "tall") limit = 2000;
-                    if (!text || text.length <= limit) return text;
-                    const cutoff = limit;
-                    const substr = text.substring(0, cutoff);
-                    const lastPunct = Math.max(substr.lastIndexOf("."), substr.lastIndexOf("!"), substr.lastIndexOf("?"), substr.lastIndexOf("\n"));
-                    const lastSpace = substr.lastIndexOf(" ");
-                    const idx = lastPunct > 200 ? lastPunct : (lastSpace > 200 ? lastSpace : cutoff);
-                    return substr.substring(0, idx).trimEnd() + " …";
+                    let maxSentences = 0;
+                    let maxChars = 1000;
+                    if (size === "short") {
+                        maxSentences = 2;
+                        maxChars = 300;
+                    } else if (size === "tall") {
+                        maxSentences = 0;
+                        maxChars = 2400;
+                    } else {
+                        maxSentences = 6;
+                        maxChars = 1000;
+                    }
+                    if (!text) return text;
+                    let out = text.trim();
+                    if (maxSentences > 0) {
+                        const sentences = out.match(/[^.!?…]+[.!?…]+(?:\s+|$)|[^.!?…]+$/g) || [out];
+                        if (sentences.length > maxSentences) {
+                            out = sentences.slice(0, maxSentences).join(" ").trim();
+                        }
+                    }
+                    if (out.length > maxChars) {
+                        const cutoff = maxChars;
+                        const substr = out.substring(0, cutoff);
+                        const lastPunct = Math.max(substr.lastIndexOf("."), substr.lastIndexOf("!"), substr.lastIndexOf("?"), substr.lastIndexOf("…"), substr.lastIndexOf("\n"));
+                        const lastSpace = substr.lastIndexOf(" ");
+                        const idx = lastPunct > 120 ? lastPunct : (lastSpace > 120 ? lastSpace : cutoff);
+                        out = substr.substring(0, idx).trimEnd() + " …";
+                    }
+                    return out;
                 } catch {
                     return text;
                 }
@@ -1663,11 +1682,11 @@
                 const sizePref = (settings.textSize || "normal").toLowerCase();
                 let lengthInstruction = "";
                 if (sizePref === "short") {
-                    lengthInstruction = "KEEP YOUR RESPONSE VERY SHORT (max 1-2 sentences). Be extremely concise.";
+                    lengthInstruction = "KEEP YOUR RESPONSE VERY SHORT (max 1-2 sentences). Output AT MOST 2 sentences.";
                 } else if (sizePref === "tall") {
-                    lengthInstruction = "WRITE A LONG AND DETAILED RESPONSE. Be very descriptive and elaborate.";
+                    lengthInstruction = "WRITE A LONG AND DETAILED RESPONSE. Aim for 8-12 sentences, very descriptive.";
                 } else {
-                    lengthInstruction = "Write a response of normal length. Descriptive but balanced.";
+                    lengthInstruction = "Write a response of normal length. Aim for about 4-6 sentences, balanced detail.";
                 }
 
                 return `[SYSTEM INSTRUCTIONS]
