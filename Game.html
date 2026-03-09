@@ -1660,10 +1660,21 @@
                     "zh": "Chinese"
                 };
                 const aiLang = aiLangMap[settings.aiLanguage] || "English";
+                const sizePref = (settings.textSize || "normal").toLowerCase();
+                let lengthInstruction = "";
+                if (sizePref === "short") {
+                    lengthInstruction = "KEEP YOUR RESPONSE VERY SHORT (max 1-2 sentences). Be extremely concise.";
+                } else if (sizePref === "tall") {
+                    lengthInstruction = "WRITE A LONG AND DETAILED RESPONSE. Be very descriptive and elaborate.";
+                } else {
+                    lengthInstruction = "Write a response of normal length. Descriptive but balanced.";
+                }
 
                 return `[SYSTEM INSTRUCTIONS]
 You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
 
+ ${lengthInstruction}
+ 
 # CURRENT WORLD STATE
 - DATE: ${curDate}
 - TIME: ${curTime}
