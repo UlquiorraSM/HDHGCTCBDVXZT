@@ -2957,15 +2957,18 @@
            BACKGROUND
         ───────────────────────────────────────── */
             function loadBackground() {
+                // Immer globalen Hintergrund aus Settings verwenden
                 const raw = Storage.get("storyki_settings");
                 const url = raw
                     ? JSON.parse(raw).backgroundUrl ||
                       "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg"
                     : "https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg";
                 const el = document.getElementById("bg-layer");
-                el.style.backgroundImage = `url(${url})`;
-                el.style.backgroundSize = "cover";
-                el.style.backgroundPosition = "center";
+                if (el) {
+                    el.style.backgroundImage = `url("${url}")`;
+                    el.style.backgroundSize = "cover";
+                    el.style.backgroundPosition = "center";
+                }
             }
 
             /* ─────────────────────────────────────────
@@ -5201,6 +5204,93 @@
            NAVIGATION
         ───────────────────────────────────────── */
             function backToMenu() {
+                // Beim Zurückgehen speichern wir den Entwurf in der Welt
+                const worldId = Storage.get("storyki_selected_world_id");
+                const scenarios = JSON.parse(localStorage.getItem("storyki_scenarios") || "[]");
+                const cards = getCards();
+                if (worldId) {
+                    const idx = scenarios.findIndex(x => x.id === worldId);
+                    if (idx >= 0) {
+                        // Nur die Karten der Welt aktualisieren. Welt-Settings NICHT überschreiben.
+                        scenarios[idx].data.cards = cards;
+                        scenarios[idx].updatedAt = Date.now();
+                        
+                        // Auch alle zugehörigen Stories aktualisieren (nur Karten)
+                        scenarios.forEach(s => {
+                            if (s.worldId === worldId) {
+                                s.data.cards = cards;
+                                s.updatedAt = Date.now();
+                            }
+                        });
+                        
+                        localStorage.setItem("storyki_scenarios", JSON.stringify(scenarios));
+                    }
+                    
+                    // WICHTIG: Die world_id aus dem SessionStorage entfernen, 
+                    // damit index.html wieder den globalen Background lädt.
+                    Storage.remove("storyki_selected_world_id");
+                    
+                    document.body.style.opacity = "0";
+                    setTimeout(() => {
+                        window.location.href = "index.html";
+                    }, 400);
+                } else {
+                    openNewWorldDialog();
+                }
+            }
+            
+            // Dialog zum Speichern als neue Welt
+            function openNewWorldDialog() {
+                const overlay = document.getElementById("new-world-overlay");
+                const bgInput = document.getElementById("nw-bg");
+                const nameInput = document.getElementById("nw-name");
+                
+                // Optional: globalen Hintergrund als Vorschlag anzeigen
+                try {
+                    const raw = Storage.get("storyki_settings");
+                    const url = raw ? (JSON.parse(raw).backgroundUrl || "") : "";
+                    bgInput.value = url || "";
+                } catch { bgInput.value = ""; }
+                
+                nameInput.value = "";
+                overlay.style.display = "flex";
+            }
+            
+            function cancelNewWorldDialog() {
+                document.getElementById("new-world-overlay").style.display = "none";
+                // Ohne Speichern zurück zum Hauptmenü
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 400);
+            }
+            
+            function confirmSaveNewWorld() {
+                const name = document.getElementById("nw-name").value.trim();
+                const bg = document.getElementById("nw-bg").value.trim();
+                if (!name) { alert("Bitte einen Namen für die Welt eingeben."); return; }
+                
+                const cards = getCards();
+                const scenarios = JSON.parse(localStorage.getItem("storyki_scenarios") || "[]");
+                const id = generateId();
+                
+                const settings = {};
+                if (bg) settings.backgroundUrl = bg;
+                
+                scenarios.push({
+                    id,
+                    name,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    data: {
+                        cards,
+                        settings
+                    }
+                });
+                
+                localStorage.setItem("storyki_scenarios", JSON.stringify(scenarios));
+                document.getElementById("new-world-overlay").style.display = "none";
+                
                 document.body.style.opacity = "0";
                 setTimeout(() => {
                     window.location.href = "index.html";
@@ -5213,11 +5303,47 @@
             window.addEventListener("load", () => {
                 loadBackground();
                 setInterval(loadBackground, 2000);
+                
+                // Prüfen, ob eine Welt zur Bearbeitung geladen werden soll
+                const worldId = Storage.get("storyki_selected_world_id");
+                if (worldId) {
+                    // Die Daten wurden bereits von index.html in den SessionStorage geladen
+                    // Wir müssen nur die Liste rendern
+                    console.log("Editing world:", worldId);
+                } else {
+                    // Falls wir eine neue Welt erstellen, Session säubern (außer Settings)
+                    const settings = Storage.get("storyki_settings");
+                    Storage.clear();
+                    if (settings) Storage.set("storyki_settings", settings);
+                }
+                
                 renderList();
                 setTimeout(() => {
                     document.body.style.opacity = "1";
                 }, 100);
             });
         </script>
+        
+        <!-- Overlay: Neue Welt speichern -->
+        <div id="new-world-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000;">
+            <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:20px; padding:24px; width:100%; max-width:420px; display:flex; flex-direction:column; gap:16px;">
+                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Neue Welt speichern</div>
+                
+                <div>
+                    <div style="color:rgba(255,255,255,.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;">Name der Welt</div>
+                    <input id="nw-name" placeholder="Name eingeben..." style="width:100%; margin-top:6px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:10px 12px; color:#fff; outline:none;">
+                </div>
+                
+                <div>
+                    <div style="color:rgba(255,255,255,.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;">Background URL (optional)</div>
+                    <input id="nw-bg" placeholder="https://..." style="width:100%; margin-top:6px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:10px 12px; color:#fff; outline:none;">
+                </div>
+                
+                <div style="display:flex; gap:10px; margin-top:6px;">
+                    <button onclick="cancelNewWorldDialog()" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">Abbrechen</button>
+                    <button onclick="confirmSaveNewWorld()" style="flex:1; padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;">Speichern</button>
+                </div>
+            </div>
+        </div>
     </body>
 </html>

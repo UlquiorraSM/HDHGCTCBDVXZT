@@ -19,6 +19,7 @@
                 background-size: cover;
                 background-position: center;
                 background-attachment: fixed;
+                transition: background-image 0.5s ease-in-out;
             }
 
             body::before {
@@ -32,10 +33,201 @@
                 z-index: -1;
             }
 
-            .menu-container {
+            .menu-container, .stories-container {
                 text-align: center;
-                min-width: 300px;
+                width: 100%;
+                max-width: 1200px;
+                transition: opacity 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
+
+            .stories-container {
+                display: none;
+            }
+
+            /* Search Bar Styles */
+            .search-container {
+                width: 100%;
+                max-width: 400px;
+                margin-bottom: 20px;
+                position: relative;
+            }
+
+            .search-input {
+                width: 100%;
+                padding: 10px 15px;
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: rgba(0, 0, 0, 0.3);
+                color: #fff;
+                font-size: 14px;
+                outline: none;
+                transition: all 0.2s ease;
+                backdrop-filter: blur(5px);
+            }
+
+            .search-input:focus {
+                border-color: rgba(102, 126, 234, 0.6);
+                background: rgba(0, 0, 0, 0.5);
+                box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+            }
+
+            /* Horizontal Scroll Styles */
+            #scenarios-list {
+                display: flex;
+                gap: 20px;
+                padding: 20px;
+                overflow-x: auto;
+                width: 100%;
+                max-width: 100vw;
+                justify-content: center;
+                scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #scenarios-list:empty {
+                display: none;
+            }
+
+            /* Custom Scrollbar for horizontal list */
+            #scenarios-list::-webkit-scrollbar {
+                height: 6px;
+            }
+            #scenarios-list::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+            }
+            #scenarios-list::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 10px;
+            }
+            #scenarios-list::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+            .world-card {
+                flex: 0 0 240px; /* Slightly narrower */
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                padding: 16px;
+                background: rgba(10, 10, 15, 0.7);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 16px;
+                backdrop-filter: blur(12px);
+                transition: all 0.2s ease;
+                height: 180px; /* Fixed height for consistency */
+                box-sizing: border-box; /* Ensure padding doesn't add to width */
+            }
+            /* Story cards use a slightly smaller footprint */
+            .story-card {
+                flex: 0 0 200px;
+                padding: 14px;
+                height: 160px;
+            }
+
+            .world-card:hover {
+                 transform: translateY(-5px);
+                 border-color: rgba(255, 255, 255, 0.3);
+                 background: rgba(0, 0, 0, 0.65);
+             }
+
+             /* Config Panel Styles */
+             #world-conf-overlay {
+                 position: fixed;
+                 inset: 0;
+                 background: rgba(0, 0, 0, 0.85);
+                 display: none;
+                 align-items: center;
+                 justify-content: center;
+                 z-index: 2000;
+                 backdrop-filter: blur(10px);
+             }
+
+             .conf-panel {
+                 background: rgba(30, 30, 35, 0.95);
+                 border: 1px solid rgba(255, 255, 255, 0.15);
+                 border-radius: 20px;
+                 padding: 30px;
+                 width: 100%;
+                 max-width: 500px;
+                 display: flex;
+                 flex-direction: column;
+                 gap: 20px;
+                 box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+             }
+
+             .conf-panel h2 {
+                 color: #fff;
+                 margin: 0;
+                 font-size: 20px;
+                 text-align: center;
+             }
+
+             .conf-group {
+                 display: flex;
+                 flex-direction: column;
+                 gap: 8px;
+             }
+
+             .conf-label {
+                 color: rgba(255, 255, 255, 0.6);
+                 font-size: 12px;
+                 font-weight: 700;
+                 text-transform: uppercase;
+                 letter-spacing: 0.05em;
+             }
+
+             .conf-input {
+                 background: rgba(0, 0, 0, 0.3);
+                 border: 1px solid rgba(255, 255, 255, 0.15);
+                 border-radius: 10px;
+                 padding: 12px 15px;
+                 color: #fff;
+                 font-size: 14px;
+                 outline: none;
+                 transition: border-color 0.2s;
+             }
+
+             .conf-input:focus {
+                 border-color: rgba(102, 126, 234, 0.6);
+             }
+
+             .conf-actions {
+                 display: flex;
+                 gap: 12px;
+                 margin-top: 10px;
+             }
+
+             .conf-btn {
+                 flex: 1;
+                 padding: 12px;
+                 border-radius: 10px;
+                 border: none;
+                 font-weight: 700;
+                 cursor: pointer;
+                 transition: all 0.2s;
+             }
+
+             .conf-btn-save {
+                 background: #4a90e2;
+                 color: #fff;
+             }
+
+             .conf-btn-save:hover {
+                 background: #357abd;
+             }
+
+             .conf-btn-cancel {
+                 background: rgba(255, 255, 255, 0.1);
+                 color: #fff;
+             }
+
+             .conf-btn-cancel:hover {
+                 background: rgba(255, 255, 255, 0.2);
+             }
 
             h1 {
                 color: #fff;
@@ -47,7 +239,15 @@
             .menu-buttons {
                 display: flex;
                 flex-direction: column;
-                gap: 15px;
+                gap: 12px;
+                background: rgba(0, 0, 0, 0.4);
+                padding: 24px;
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                margin-top: 10px;
+                width: 100%;
+                max-width: 320px;
             }
 
             .menu-button {
@@ -74,17 +274,35 @@
         </style>
     </head>
     <body>
-        <div class="menu-container">
+        <div class="menu-container" id="main-menu">
             <h1>StoryKI</h1>
+            
+            <div id="scenarios-wrap" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                <div id="scenarios-title" style="color:#fff; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; opacity:.85;">
+                    Worlds
+                </div>
+
+                <!-- World Search Bar -->
+                <div class="search-container">
+                    <input 
+                        type="text" 
+                        id="world-search" 
+                        class="search-input" 
+                        placeholder="Searching for worlds..." 
+                        oninput="renderScenarios()"
+                    />
+                </div>
+
+                <div id="scenarios-list">
+                    <!-- Dynamically rendered -->
+                </div>
+                <div id="no-scenarios-hint" style="color:rgba(255,255,255,.8); text-align:center; margin: 20px 0; display:none;">
+                    No world found. Create a new one with "Create World".
+                </div>
+            </div>
             <div class="menu-buttons">
-                <button class="menu-button" onclick="continueGame()">
-                    Continue
-                </button>
-                <button class="menu-button" onclick="newStory()">
-                    New Story
-                </button>
                 <button class="menu-button" onclick="createStory()">
-                    Create
+                    Create World
                 </button>
                 <button class="menu-button" onclick="document.getElementById('file-input').click()">
                     Load (.json)
@@ -103,6 +321,83 @@
             </div>
         </div>
 
+        <div class="stories-container" id="stories-menu">
+            <h1 id="selected-world-title">Welt Name</h1>
+            <div id="stories-wrap" style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                <div id="stories-title" style="color:#fff; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; opacity:.85; text-align:center;">
+                    Your stories
+                </div>
+
+                <!-- Story Search Bar -->
+                <div class="search-container">
+                    <input 
+                        type="text" 
+                        id="story-search" 
+                        class="search-input" 
+                        placeholder="Search for stories..." 
+                        oninput="renderStories(Storage.get('storyki_selected_world_id'))"
+                    />
+                </div>
+
+                <div id="stories-list" style="display:flex; gap:20px; padding:20px; overflow-x:auto; width:100%; justify-content:center;">
+                    <!-- Dynamically rendered horizontal scroll -->
+                </div>
+                <div id="no-stories-hint" style="color:rgba(255,255,255,.8); text-align:center; margin-top:20px;">
+                    No stories found.
+                </div>
+            </div>
+            <div class="menu-buttons">
+                <button class="menu-button" onclick="startNewStory()" style="background: rgba(60, 180, 80, 0.7);">
+                    Start Story
+                </button>
+                <button class="menu-button" onclick="backToMainMenu()" style="background: rgba(120, 120, 120, 0.6);">
+                    Back
+                </button>
+            </div>
+        </div>
+        
+        <!-- Scenario Preview Overlay removed -->
+
+        <!-- World Configuration Panel -->
+        <div id="world-conf-overlay">
+            <div class="conf-panel">
+                <h2 id="conf-world-name-title">Configure world</h2>
+                
+                <div class="conf-group">
+                    <label class="conf-label">Name of the world</label>
+                    <input type="text" id="conf-world-name" class="conf-input" placeholder="Name eingeben...">
+                </div>
+
+                <div class="conf-group">
+                    <label class="conf-label">Background URL</label>
+                    <input type="text" id="conf-world-bg" class="conf-input" placeholder="https://...">
+                    <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">This image is used as the background in Game.html.</div>
+                </div>
+
+                <div class="conf-actions">
+                    <button class="conf-btn conf-btn-cancel" onclick="closeWorldConf()">Cancel</button>
+                    <button class="conf-btn conf-btn-save" onclick="saveWorldConf()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Story Configuration Panel -->
+        <div id="story-conf-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:2000; backdrop-filter:blur(10px);">
+            <div class="conf-panel">
+                <h2>Configure story</h2>
+                
+                <div class="conf-group">
+                    <label class="conf-label">Story title</label>
+                    <input type="text" id="conf-story-name" class="conf-input" placeholder="Story Name...">
+                </div>
+
+                <div class="conf-actions">
+                    <button class="conf-btn conf-btn-cancel" onclick="closeStoryConf()">Cancel</button>
+                    <button class="conf-btn conf-btn-save" onclick="saveStoryConf()">Save</button>
+                </div>
+            </div>
+        </div>
+
         <script>
             // Storage Helper (Non-persistent session storage)
             const Storage = {
@@ -111,38 +406,77 @@
                 remove: (key) => sessionStorage.removeItem(key),
                 clear: () => sessionStorage.clear()
             };
+            const SCENARIOS_KEY = "storyki_scenarios"; // localStorage
+            const SELECTED_SCENARIO_KEY = "storyki_selected_scenario";
+            const SELECTED_WORLD_ID_KEY = "storyki_selected_world_id"; // for session
+            const CURRENT_STORY_ID_KEY = "storyki_current_story_id"; // for session
+            let _selectedWorld = null;
 
             // Hintergrund aus Settings laden
+            function applyBg(url) {
+                if (!url) return;
+                
+                // Wir verzichten auf den String-Vergleich von currentBg vs newBg,
+                // da Browser URLs unterschiedlich formatieren (quotes, absolute paths etc.).
+                // Stattdessen setzen wir es einfach, loadBackground() wird nur 1x pro Sekunde gerufen.
+                
+                document.body.style.backgroundImage = `url("${url}")`;
+                document.body.style.backgroundSize = "cover";
+                document.body.style.backgroundPosition = "center";
+                document.body.style.backgroundAttachment = "fixed";
+            }
+
             function loadBackground() {
+                // Prüfen, ob wir in der Story-Auswahl einer Welt sind
+                const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
+                const storiesMenu = document.getElementById("stories-menu");
+                
+                // Wir prüfen nun über getComputedStyle, ob das Menü WIRKLICH sichtbar ist (nicht nur inline)
+                const isStoriesVisible = storiesMenu && window.getComputedStyle(storiesMenu).display === "flex";
+                
+                if (isStoriesVisible && worldId) {
+                    const scenarios = getScenarios();
+                    const world = scenarios.find(x => x.id === worldId);
+                    if (world && world.data?.settings?.backgroundUrl) {
+                        applyBg(world.data.settings.backgroundUrl);
+                        return;
+                    }
+                }
+
+                // Falls nicht in Stories oder kein Welt-Hintergrund:
+                // Globaler Background aus Settings
                 const settings = Storage.get("storyki_settings");
                 if (settings) {
-                    const data = JSON.parse(settings);
-                    const backgroundUrl = data.backgroundUrl;
-                    if (backgroundUrl) {
-                        document.body.style.backgroundImage = `url(${backgroundUrl})`;
-                        document.body.style.backgroundSize = "cover";
-                        document.body.style.backgroundPosition = "center";
-                        document.body.style.backgroundAttachment = "fixed";
-                    } else {
-                        // Default-Background verwenden
-                        document.body.style.backgroundImage =
-                            "url(https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg)";
-                        document.body.style.backgroundSize = "cover";
-                        document.body.style.backgroundPosition = "center";
-                        document.body.style.backgroundAttachment = "fixed";
-                    }
-                } else {
-                    // Default-Background verwenden, wenn keine Settings existieren
-                    document.body.style.backgroundImage =
-                        "url(https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg)";
-                    document.body.style.backgroundSize = "cover";
-                    document.body.style.backgroundPosition = "center";
-                    document.body.style.backgroundAttachment = "fixed";
+                    try {
+                        const data = JSON.parse(settings);
+                        if (data.backgroundUrl) {
+                            applyBg(data.backgroundUrl);
+                            return;
+                        }
+                    } catch(e) {}
                 }
+                
+                // Default-Fallback
+                applyBg("https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg");
             }
 
             // Hintergrund beim Laden anwenden
-            window.addEventListener("load", loadBackground);
+            window.addEventListener("load", () => {
+                const storiesMenu = document.getElementById("stories-menu");
+                const isStoriesVisible = storiesMenu && window.getComputedStyle(storiesMenu).display === "flex";
+                
+                if (!isStoriesVisible) {
+                    Storage.remove(SELECTED_WORLD_ID_KEY);
+                    // Falls wir zuvor für Game/CharacterCreate die Settings überschrieben haben,
+                    // stellen wir die globalen Settings wieder her.
+                    const backup = Storage.get("storyki_settings_backup");
+                    if (backup) {
+                        Storage.set("storyki_settings", backup);
+                        Storage.remove("storyki_settings_backup");
+                    }
+                }
+                loadBackground();
+            });
 
             // Auf Hintergrund-Änderungen von anderen Seiten reagieren
             window.addEventListener("backgroundChanged", function (event) {
@@ -156,43 +490,471 @@
             // Regelmäßig prüfen, ob sich der Hintergrund geändert hat
             setInterval(loadBackground, 1000);
 
-            function continueGame() {
-                const log = Storage.get("storyki_storylog");
-                const chars = Storage.get("storyki_characters");
+            // --- Scenarios (Welten & Stories) ---
+            function getScenarios() {
+                try { return JSON.parse(localStorage.getItem(SCENARIOS_KEY) || "[]"); } catch { return []; }
+            }
+            function setScenarios(list) {
+                localStorage.setItem(SCENARIOS_KEY, JSON.stringify(list));
+            }
+            
+            function renderScenarios() {
+                const listEl = document.getElementById("scenarios-list");
+                const hintEl = document.getElementById("no-scenarios-hint");
+                const searchInput = document.getElementById("world-search");
+                const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
                 
-                if (!log && (!chars || JSON.parse(chars).length === 0)) {
-                    alert("You currently have no story!");
+                listEl.innerHTML = "";
+                
+                // Welten filtern: Keine parent worldId UND Suchbegriff vorhanden
+                let scenarios = getScenarios().filter(s => !s.worldId);
+                
+                if (searchTerm) {
+                    scenarios = scenarios.filter(s => 
+                        (s.name || "").toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                if (!scenarios.length) {
+                    hintEl.style.display = "block";
+                    hintEl.textContent = searchTerm ? "Keine Welt mit diesem Namen gefunden." : "Keine Welt verfügbar. Erstelle eine neue mit „Create World“.";
                     return;
                 }
                 
-                console.log("Continue Game");
-                // Pass a flag to Game.html to skip welcome/narration
-                navigateWithTransition("Game.html?mode=continue");
-            }
-
-            function newStory() {
-                const log = Storage.get("storyki_storylog");
-                const chars = Storage.get("storyki_characters");
-                const hasExisting = log || (chars && JSON.parse(chars).length > 0);
-
-                if (hasExisting) {
-                    if (!confirm("Do you want to delete your existing story and start a new one?")) {
-                        return;
-                    }
-                    // Clear existing story data but keep settings and cards
-                    Storage.remove("storyki_storylog");
-                    Storage.remove("storyki_characters");
+                hintEl.style.display = "none";
+                
+                // Adjust justification based on content
+                // If more than 3 cards, use flex-start to allow scrolling from the left
+                // If few cards, use center
+                if (scenarios.length > 3) {
+                    listEl.style.justifyContent = "flex-start";
+                } else {
+                    listEl.style.justifyContent = "center";
                 }
 
-                console.log("New Story");
+                scenarios.forEach(s => {
+                    const card = document.createElement("div");
+                    card.className = "world-card";
+                    
+                    const header = document.createElement("div");
+                    header.style.cssText = "display:flex; flex-direction:column; gap:2px; margin-bottom: 5px;";
+                    
+                    const name = document.createElement("div");
+                    name.textContent = s.name || "Unnamed World";
+                    name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+                    header.appendChild(name);
+                    
+                    const actions = document.createElement("div");
+                    actions.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-top: auto;";
+                    
+                    const row1 = document.createElement("div");
+                    row1.style.cssText = "display:flex; gap:6px;";
+                    
+                    const selectBtn = document.createElement("button");
+                    selectBtn.textContent = "Select";
+                    selectBtn.className = "menu-button";
+                    selectBtn.style.cssText = "padding:8px 6px; font-size:12px; flex:1; min-width:0;";
+                    selectBtn.onclick = () => { openWorldStories(s.id); };
+
+                    const confBtn = document.createElement("button");
+                    confBtn.textContent = "Conf";
+                    confBtn.className = "menu-button";
+                    confBtn.style.cssText = "padding:8px 6px; font-size:12px; flex:1; min-width:0; background: rgba(100, 100, 100, 0.6);";
+                    confBtn.onclick = () => { openWorldConf(s.id); };
+                    
+                    row1.appendChild(selectBtn);
+                    row1.appendChild(confBtn);
+
+                    const row2 = document.createElement("div");
+                    row2.style.cssText = "display:flex; gap:6px;";
+
+                    const editBtn = document.createElement("button");
+                    editBtn.textContent = "Edit";
+                    editBtn.className = "menu-button";
+                    editBtn.style.cssText = "padding:8px 10px; font-size:12px; flex:1; min-width:0; background: rgba(74, 144, 226, 0.6);";
+                    editBtn.onclick = () => { editWorld(s.id); };
+
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.textContent = "🗑️";
+                    deleteBtn.className = "menu-button";
+                    deleteBtn.style.cssText = "padding:8px 10px; font-size:14px; width:44px; background: rgba(150,40,40,0.7);";
+                    deleteBtn.onclick = () => {
+                        if (!confirm("Welt wirklich löschen? Alle zugehörigen Stories gehen verloren!")) return;
+                        const items = getScenarios().filter(x => x.id !== s.id && x.worldId !== s.id);
+                        setScenarios(items);
+                        renderScenarios();
+                    };
+
+                    row2.appendChild(editBtn);
+                    row2.appendChild(deleteBtn);
+                    
+                    actions.appendChild(row1);
+                    actions.appendChild(row2);
+                    
+                    card.appendChild(header);
+                    card.appendChild(actions);
+                    listEl.appendChild(card);
+                });
+            }
+
+            function openWorldStories(worldId) {
+                const scenarios = getScenarios();
+                const world = scenarios.find(x => x.id === worldId);
+                if (!world) return;
+                
+                _selectedWorld = world;
+                Storage.set(SELECTED_WORLD_ID_KEY, worldId);
+                
+                // Clear story search input when opening a world
+                const storySearchInput = document.getElementById("story-search");
+                if (storySearchInput) storySearchInput.value = "";
+                
+                document.getElementById("main-menu").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("main-menu").style.display = "none";
+                    document.getElementById("stories-menu").style.display = "flex";
+                    document.getElementById("selected-world-title").textContent = world.name;
+                    // Zeige sofort den Welt-Hintergrund in der Story-Szene
+                    if (world.data?.settings?.backgroundUrl) {
+                        applyBg(world.data.settings.backgroundUrl);
+                    }
+                    renderStories(worldId);
+                    loadBackground(); // Sofort Hintergrund wechseln
+                    setTimeout(() => {
+                        document.getElementById("stories-menu").style.opacity = "1";
+                    }, 50);
+                }, 300);
+            }
+
+            function renderStories(worldId) {
+                const listEl = document.getElementById("stories-list");
+                const hintEl = document.getElementById("no-stories-hint");
+                const searchInput = document.getElementById("story-search");
+                const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
+                
+                listEl.innerHTML = "";
+                
+                let stories = getScenarios().filter(s => s.worldId === worldId);
+                
+                if (searchTerm) {
+                    stories = stories.filter(s => 
+                        (s.name || "").toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                if (!stories.length) {
+                    hintEl.style.display = "block";
+                    hintEl.textContent = searchTerm ? "No story found with this name." : "You have no stories in this world yet.";
+                    return;
+                }
+                hintEl.style.display = "none";
+                
+                // Adjust justification
+                if (stories.length > 3) {
+                    listEl.style.justifyContent = "flex-start";
+                } else {
+                    listEl.style.justifyContent = "center";
+                }
+
+                stories.forEach(s => {
+                    const card = document.createElement("div");
+                    card.className = "world-card story-card";
+                    
+                    const header = document.createElement("div");
+                    header.style.cssText = "display:flex; flex-direction:column; gap:2px; margin-bottom: 5px;";
+                    
+                    const name = document.createElement("div");
+                    name.textContent = s.name || "Unnamed Story";
+                    name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+                    header.appendChild(name);
+                    
+                    const meta = document.createElement("div");
+                    const charCount = s.data?.characters?.length || 0;
+                    meta.textContent = `${charCount} Charakter${charCount===1?'':'e'}`;
+                    meta.style.cssText = "color:rgba(255,255,255,.5); font-size: 10px;";
+                    header.appendChild(meta);
+                    
+                    const actions = document.createElement("div");
+                    actions.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-top: auto;";
+                    
+                    const playBtn = document.createElement("button");
+                    playBtn.textContent = "Continue";
+                    playBtn.className = "menu-button";
+                    playBtn.style.cssText = "padding:10px 12px; font-size:12px;";
+                    playBtn.onclick = () => { resumeStory(s); };
+                    
+                    const btnRow = document.createElement("div");
+                    btnRow.style.cssText = "display:flex; gap:6px;";
+
+                    const confBtn = document.createElement("button");
+                    confBtn.textContent = "⚙️";
+                    confBtn.className = "menu-button";
+                    confBtn.style.cssText = "padding:8px 10px; font-size:14px; flex:1; background: rgba(100, 100, 100, 0.6);";
+                    confBtn.title = "Rename story";
+                    confBtn.onclick = () => { openStoryConf(s.id); };
+
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.textContent = "🗑️";
+                    deleteBtn.className = "menu-button";
+                    deleteBtn.style.cssText = "padding:8px 10px; font-size:14px; width:44px; background: rgba(150,40,40,.7);";
+                    deleteBtn.title = "Delete";
+                    deleteBtn.onclick = () => {
+                        if (!confirm("Really delete the story?")) return;
+                        const items = getScenarios().filter(x => x.id !== s.id);
+                        setScenarios(items);
+                        renderStories(worldId);
+                    };
+                    
+                    btnRow.appendChild(confBtn);
+                    btnRow.appendChild(deleteBtn);
+
+                    actions.appendChild(playBtn);
+                    actions.appendChild(btnRow);
+                    
+                    card.appendChild(header);
+                    card.appendChild(actions);
+                    listEl.appendChild(card);
+                });
+            }
+
+            let _confStoryId = null;
+            function openStoryConf(storyId) {
+                const scenarios = getScenarios();
+                const story = scenarios.find(x => x.id === storyId);
+                if (!story) return;
+                
+                _confStoryId = storyId;
+                document.getElementById("conf-story-name").value = story.name || "";
+                document.getElementById("story-conf-overlay").style.display = "flex";
+            }
+
+            function closeStoryConf() {
+                _confStoryId = null;
+                document.getElementById("story-conf-overlay").style.display = "none";
+            }
+
+            function saveStoryConf() {
+                if (!_confStoryId) return;
+                
+                const newName = document.getElementById("conf-story-name").value.trim();
+                if (!newName) {
+                    alert("Bitte einen Namen eingeben.");
+                    return;
+                }
+                
+                const scenarios = getScenarios();
+                const idx = scenarios.findIndex(x => x.id === _confStoryId);
+                
+                if (idx >= 0) {
+                    scenarios[idx].name = newName;
+                    scenarios[idx].updatedAt = Date.now();
+                    setScenarios(scenarios);
+                    renderStories(Storage.get(SELECTED_WORLD_ID_KEY));
+                    closeStoryConf();
+                }
+            }
+
+            function backToMainMenu() {
+                _selectedWorld = null;
+                Storage.remove(SELECTED_WORLD_ID_KEY);
+                
+                document.getElementById("stories-menu").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("stories-menu").style.display = "none";
+                    document.getElementById("main-menu").style.display = "flex";
+                    renderScenarios();
+                    loadBackground(); // Sofort Hintergrund zurücksetzen
+                    setTimeout(() => {
+                        document.getElementById("main-menu").style.opacity = "1";
+                    }, 50);
+                }, 300);
+            }
+
+            function startNewStory() {
+                if (!_selectedWorld) return;
+                
+                // Welt-Daten in Session laden
+                Storage.set("storyki_storycards", JSON.stringify(_selectedWorld.data.cards || []));
+                Storage.set("storyki_storylog", JSON.stringify([]));
+                Storage.set("storyki_characters", JSON.stringify([]));
+                // Globale Settings sichern und für das Spiel welt-spezifische Settings setzen
+                const globalSettings = Storage.get("storyki_settings");
+                if (globalSettings) Storage.set("storyki_settings_backup", globalSettings);
+                Storage.set("storyki_settings", JSON.stringify(_selectedWorld.data.settings || {}));
+                
+                // worldId für spätere Speicherung merken
+                Storage.set(SELECTED_WORLD_ID_KEY, _selectedWorld.id);
+                Storage.remove(CURRENT_STORY_ID_KEY); // Neue Story, keine ID vorhanden
+                
                 navigateWithTransition("CharacterCreate.html");
             }
+
+            function resumeStory(story) {
+                // Story-Daten in Session laden
+                Storage.set("storyki_storycards", JSON.stringify(story.data.cards || []));
+                Storage.set("storyki_storylog", JSON.stringify(story.data.log || []));
+                Storage.set("storyki_characters", JSON.stringify(story.data.characters || []));
+                // Globale Settings sichern und für das Spiel passende Settings setzen
+                const globalSettings = Storage.get("storyki_settings");
+                if (globalSettings) Storage.set("storyki_settings_backup", globalSettings);
+                // Falls die Story keine eigenen Settings hat, auf Welt-Settings zurückfallen
+                let effectiveSettings = story.data?.settings || {};
+                if (!effectiveSettings.backgroundUrl) {
+                    const scenarios = getScenarios();
+                    const world = scenarios.find(x => x.id === story.worldId);
+                    if (world?.data?.settings) {
+                        effectiveSettings = { ...world.data.settings, ...effectiveSettings };
+                    }
+                }
+                Storage.set("storyki_settings", JSON.stringify(effectiveSettings));
+                
+                // worldId und storyId merken
+                Storage.set(SELECTED_WORLD_ID_KEY, story.worldId);
+                Storage.set(CURRENT_STORY_ID_KEY, story.id);
+                
+                // Direkt zum Spiel
+                navigateWithTransition("Game.html");
+            }
+
+            function captureDraftFromSessionIfAny() {
+                try {
+                    const cards = JSON.parse(Storage.get("storyki_storycards") || "[]");
+                    if (!cards || cards.length === 0) return;
+                    
+                    const chars = JSON.parse(Storage.get("storyki_characters") || "[]");
+                    const log = JSON.parse(Storage.get("storyki_storylog") || "[]");
+                    const settings = JSON.parse(Storage.get("storyki_settings") || "{}");
+                    const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
+                    const currentStoryId = Storage.get(CURRENT_STORY_ID_KEY);
+                    
+                    if (!worldId) return;
+
+                    // Signatur zur Vermeidung unnötiger Updates (wenn sich nichts geändert hat)
+                    const sig = JSON.stringify({ w: worldId, c: cards.length, ch: chars.length, l: log.length, s: Object.keys(settings || {}).length });
+                    const scenarios = getScenarios();
+                    
+                    const already = scenarios.some(x => x.signature === sig);
+                    if (already) return;
+                    
+                    let targetStory = null;
+                    if (currentStoryId) {
+                        targetStory = scenarios.find(x => x.id === currentStoryId);
+                    }
+                    
+                    if (targetStory) {
+                        // Vorhandene Story aktualisieren
+                        targetStory.updatedAt = Date.now();
+                        targetStory.signature = sig;
+                        targetStory.data = { cards, characters: chars, log, settings };
+                        
+                        // Wenn der Charakter-Name im Story-Titel sein soll:
+                        if (chars.length > 0 && targetStory.name.startsWith("Story ")) {
+                             const mainChar = chars[0];
+                             targetStory.name = `${mainChar.firstName} ${mainChar.lastName} - ${new Date().toLocaleDateString()}`;
+                        }
+                    } else {
+                        // Neue Story anlegen
+                        const id = Math.random().toString(36).slice(2, 10);
+                        let name = "Story " + new Date().toLocaleString();
+                        if (chars.length > 0) {
+                            const mainChar = chars[0];
+                            name = `${mainChar.firstName} ${mainChar.lastName} - ${new Date().toLocaleDateString()}`;
+                        }
+                        
+                        scenarios.push({
+                            id, 
+                            worldId,
+                            name, 
+                            createdAt: Date.now(), 
+                            updatedAt: Date.now(),
+                            signature: sig,
+                            data: { cards, characters: chars, log, settings }
+                        });
+                    }
+                    
+                    setScenarios(scenarios);
+                    renderScenarios();
+                } catch (e) {
+                    console.error("Capture draft failed", e);
+                }
+            }
+
+            // Removed old Continue / New Story flows
 
             function createStory() {
                 // Logik für das Erstellen einer Story Card
                 console.log("Create Story");
+                Storage.remove(SELECTED_WORLD_ID_KEY); // Sicherstellen, dass keine Welt-ID geladen wird (für neue Welt)
                 navigateWithTransition("Create.html");
             }
+
+            function editWorld(worldId) {
+                 const scenarios = getScenarios();
+                 const world = scenarios.find(x => x.id === worldId);
+                 if (!world) return;
+                 
+                 // Welt-Daten in Session laden für Create.html
+                 Storage.set("storyki_storycards", JSON.stringify(world.data.cards || []));
+                 
+                 // worldId merken, damit Create.html weiß, dass es eine Bearbeitung ist
+                 Storage.set(SELECTED_WORLD_ID_KEY, worldId);
+                 
+                 navigateWithTransition("Create.html");
+             }
+
+             let _confWorldId = null;
+             function openWorldConf(worldId) {
+                 const scenarios = getScenarios();
+                 const world = scenarios.find(x => x.id === worldId);
+                 if (!world) return;
+                 
+                 _confWorldId = worldId;
+                 document.getElementById("conf-world-name").value = world.name || "";
+                 document.getElementById("conf-world-bg").value = world.data?.settings?.backgroundUrl || "";
+                 document.getElementById("conf-world-name-title").textContent = `„${world.name}“ konfigurieren`;
+                 
+                 document.getElementById("world-conf-overlay").style.display = "flex";
+             }
+
+             function closeWorldConf() {
+                 _confWorldId = null;
+                 document.getElementById("world-conf-overlay").style.display = "none";
+             }
+
+             function saveWorldConf() {
+                 if (!_confWorldId) return;
+                 
+                 const newName = document.getElementById("conf-world-name").value.trim();
+                 const newBg = document.getElementById("conf-world-bg").value.trim();
+                 
+                 if (!newName) {
+                     alert("Bitte einen Namen eingeben.");
+                     return;
+                 }
+                 
+                 const scenarios = getScenarios();
+                 const idx = scenarios.findIndex(x => x.id === _confWorldId);
+                 
+                 if (idx >= 0) {
+                     scenarios[idx].name = newName;
+                     if (!scenarios[idx].data.settings) scenarios[idx].data.settings = {};
+                     scenarios[idx].data.settings.backgroundUrl = newBg;
+                     scenarios[idx].updatedAt = Date.now();
+                     
+                     // Auch alle Stories dieser Welt aktualisieren
+                     scenarios.forEach(s => {
+                         if (s.worldId === _confWorldId) {
+                             if (!s.data.settings) s.data.settings = {};
+                             s.data.settings.backgroundUrl = newBg;
+                             s.updatedAt = Date.now();
+                         }
+                     });
+                     
+                     setScenarios(scenarios);
+                     renderScenarios();
+                     closeWorldConf();
+                 }
+             }
 
             function loadGame(event) {
                 const file = event.target.files[0];
@@ -277,6 +1039,11 @@
 
             // Hintergrund beim Laden
             window.addEventListener("load", loadBackground);
+            // Render scenarios and capture drafts if returned from Create.html
+            window.addEventListener("load", () => {
+                captureDraftFromSessionIfAny();
+                renderScenarios();
+            });
         </script>
     </body>
 </html>
