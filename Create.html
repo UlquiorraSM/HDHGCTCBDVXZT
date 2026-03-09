@@ -2066,6 +2066,14 @@
                             </select>
                         </div>
                     </div>
+                    <div class="form-two-col">
+                        <div class="form-group">
+                            <label class="form-label">Race</label>
+                            <select class="form-select" id="f-char-race">
+                                <option value="">Select race...</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Birthdate</label>
                         <div class="form-two-col">
@@ -2091,6 +2099,20 @@
                                 <option value="11">November</option>
                                 <option value="12">December</option>
                             </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Playable</label>
+                        <div
+                            class="spawn-check-group"
+                            id="playable-check-group"
+                            onclick="togglePlayableCheck()"
+                        >
+                            <div class="spawn-checkbox">
+                                <span class="spawn-checkbox-tick">&#10003;</span>
+                            </div>
+                            <span class="spawn-check-label">Is playable</span>
+                            <span class="spawn-check-badge">PLAYER</span>
                         </div>
                     </div>
                     <div id="char-relation-group" style="margin-top: 14px;">
@@ -2977,6 +2999,21 @@
             function getCards() {
                 return JSON.parse(Storage.get(STORAGE_KEY) || "[]");
             }
+            function getRaceCards() {
+                return getCards().filter(c => c.genre === "race");
+            }
+            function populateRaceSelect() {
+                const sel = document.getElementById("f-char-race");
+                if (!sel) return;
+                const races = getRaceCards();
+                sel.innerHTML = `<option value="">Select race...</option>`;
+                races.forEach(r => {
+                    const opt = document.createElement("option");
+                    opt.value = r.id;
+                    opt.textContent = r.title || r.id;
+                    sel.appendChild(opt);
+                });
+            }
 
             function isSublocationOfAnything(cardId) {
                 if (!cardId) return false;
@@ -3324,6 +3361,14 @@
                             card.age || "";
                         document.getElementById("f-char-gender").value =
                             card.gender || "male";
+                        (function(){
+                            const grp = document.getElementById("playable-check-group");
+                            if (card.isPlayable) grp.classList.add("active");
+                            else grp.classList.remove("active");
+                        })();
+                        populateRaceSelect();
+                        const raceSel = document.getElementById("f-char-race");
+                        if (raceSel) raceSel.value = card.raceId || "";
                         if (card.birthdate) {
                             document.getElementById("f-char-birth-day").value =
                                 card.birthdate.day || "";
@@ -3473,8 +3518,15 @@
                 document.getElementById("f-char-personality").value = "";
                 document.getElementById("f-char-age").value = "";
                 document.getElementById("f-char-gender").value = "male";
+                populateRaceSelect();
+                const raceSel = document.getElementById("f-char-race");
+                if (raceSel) raceSel.value = "";
                 document.getElementById("f-char-birth-day").value = "";
                 document.getElementById("f-char-birth-month").value = "1";
+                (function(){
+                    const grp = document.getElementById("playable-check-group");
+                    if (grp) grp.classList.remove("active");
+                })();
                 relationSelections = [];
                 renderRelationTags();
             }
@@ -4825,6 +4877,17 @@
                     .classList.remove("active");
             }
 
+            /* ─── Is Playable (same visual style) ─── */
+            function togglePlayableCheck() {
+                document
+                    .getElementById("playable-check-group")
+                    .classList.toggle("active");
+            }
+            function resetPlayableCheck() {
+                const grp = document.getElementById("playable-check-group");
+                if (grp) grp.classList.remove("active");
+            }
+
             function resetSublocSelections() {
                 sublocSelections["village-city"] = [];
                 sublocSelections["country-kingdom"] = [];
@@ -4977,6 +5040,19 @@
                     type === "character"
                         ? document.getElementById("f-char-gender").value
                         : "";
+                const raceId =
+                    type === "character"
+                        ? (document.getElementById("f-char-race").value || "")
+                        : "";
+                const raceName =
+                    type === "character" && raceId
+                        ? ((getCards().find(c => c.id === raceId) || {}).title || "")
+                        : "";
+                const isPlayable =
+                    type === "character" &&
+                    document
+                        .getElementById("playable-check-group")
+                        .classList.contains("active");
                 const birthdate =
                     type === "character"
                         ? {
@@ -5021,6 +5097,9 @@
                             personality,
                             age,
                             gender,
+                            raceId,
+                            raceName,
+                            isPlayable,
                             birthdate,
                             tags,
                             description: desc,
@@ -5049,6 +5128,9 @@
                         personality,
                         age,
                         gender,
+                        raceId,
+                        raceName,
+                        isPlayable,
                         birthdate,
                         tags,
                         description: desc,

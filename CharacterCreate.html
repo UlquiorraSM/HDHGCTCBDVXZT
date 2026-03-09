@@ -798,6 +798,60 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Appearance -->
+                    <div class="form-group">
+                        <label class="form-label">Appearance</label>
+                        <textarea
+                            class="form-input"
+                            id="c-appearance"
+                            placeholder="Describe the character's appearance (hair, eyes, body, outfit, style)…"
+                            rows="3"
+                            style="resize: vertical; min-height: 72px;"
+                        ></textarea>
+                    </div>
+                    
+                    <!-- Age & Birthdate -->
+                    <div class="form-group">
+                        <label class="form-label">Age & Birthdate</label>
+                        <div class="two-col">
+                            <div>
+                                <input
+                                    type="number"
+                                    class="form-input"
+                                    id="c-age"
+                                    placeholder="Age"
+                                    min="0"
+                                    style="text-align:center;"
+                                />
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <input
+                                    type="number"
+                                    class="form-input"
+                                    id="c-birth-day"
+                                    placeholder="Day"
+                                    min="1"
+                                    max="31"
+                                    style="width:70px; text-align:center;"
+                                />
+                                <select class="form-input" id="c-birth-month" style="flex:1;">
+                                    <option value="1">Jan</option>
+                                    <option value="2">Feb</option>
+                                    <option value="3">Mar</option>
+                                    <option value="4">Apr</option>
+                                    <option value="5">May</option>
+                                    <option value="6">Jun</option>
+                                    <option value="7">Jul</option>
+                                    <option value="8">Aug</option>
+                                    <option value="9">Sep</option>
+                                    <option value="10">Oct</option>
+                                    <option value="11">Nov</option>
+                                    <option value="12">Dec</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Date & Time -->
                     <div class="form-group" style="margin-top: 24px;">
@@ -1157,6 +1211,14 @@
                INIT FORM
             ═══════════════════════════════════════ */
             function initForm() {
+                // Wenn es spielbare NPCs gibt, zuerst Auswahl anbieten
+                try {
+                    const playable = getCards().filter(c => c.genre === "character" && c.isPlayable);
+                    if (playable.length > 0) {
+                        openPlayableChoice(playable);
+                    }
+                } catch {}
+
                 // Populate race dropdown
                 const raceSelect = document.getElementById("c-race");
                 raceSelect.innerHTML = `<option value="">Select a race...</option>`;
@@ -1278,6 +1340,10 @@
                 const fn = document.getElementById("c-firstname").value.trim();
                 const ln = document.getElementById("c-lastname").value.trim();
                 const raceId = document.getElementById("c-race").value;
+                const appearance = document.getElementById("c-appearance").value.trim();
+                const age = parseInt(document.getElementById("c-age").value) || 0;
+                const birthDay = parseInt(document.getElementById("c-birth-day").value) || null;
+                const birthMonth = parseInt(document.getElementById("c-birth-month").value) || null;
 
                 const day = parseInt(document.getElementById("c-day").value) || 1;
                 const month = parseInt(document.getElementById("c-month").value) || 1;
@@ -1304,6 +1370,9 @@
                     raceName: raceCard ? raceCard.title : "",
                     gender: selectedGender,
                     spawnId: selectedSpawnId || null,
+                    appearance,
+                    age,
+                    birthdate: (birthDay && birthMonth) ? { day: birthDay, month: birthMonth } : null,
                     relations: [...relationSelections],
                     startingDate: { day, month, year, time },
                     introduction: introduction,
@@ -1352,6 +1421,76 @@
                     document.body.style.opacity = "1";
                 }, 100);
             });
+        </script>
+        
+        <!-- Overlay: Choose Playable NPC or New Character -->
+        <div id="playable-choice-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:4000;">
+            <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:20px; padding:24px; width:100%; max-width:520px; display:flex; flex-direction:column; gap:16px;">
+                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Choose Your Protagonist</div>
+                
+                <div id="playable-list" style="display:flex; flex-direction:column; gap:8px; max-height:40vh; overflow:auto;"></div>
+                
+                <div style="display:flex; gap:10px; margin-top:6px;">
+                    <button onclick="closePlayableChoice()" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">New Character</button>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            function openPlayableChoice(playable) {
+                const list = document.getElementById("playable-list");
+                list.innerHTML = "";
+                playable.forEach(npc => {
+                    const btn = document.createElement("button");
+                    btn.textContent = `Play as ${npc.title}`;
+                    btn.style.cssText = "padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;";
+                    btn.onclick = () => playAsNPC(npc.id);
+                    list.appendChild(btn);
+                });
+                document.getElementById("playable-choice-overlay").style.display = "flex";
+            }
+            function closePlayableChoice() {
+                document.getElementById("playable-choice-overlay").style.display = "none";
+            }
+            function playAsNPC(npcId) {
+                const cards = getCards();
+                const npc = cards.find(c => c.id === npcId);
+                if (!npc) return;
+                
+                const chars = getCharacters();
+                const nameParts = (npc.title || "").split(" ");
+                const firstName = nameParts.shift() || "Player";
+                const lastName = nameParts.join(" ");
+                const day = (npc.birthdate && npc.birthdate.day) || 1;
+                const month = (npc.birthdate && npc.birthdate.month) || 1;
+                const year = 1983;
+                const time = "00:00";
+                
+                const newChar = {
+                    id: generateId(),
+                    firstName,
+                    lastName,
+                    raceId: null,
+                    raceName: "",
+                    gender: npc.gender || "male",
+                    spawnId: null,
+                    relations: [...(npc.relations || [])],
+                    startingDate: { day, month, year, time },
+                    introduction: "",
+                    createdAt: new Date().toISOString(),
+                };
+                chars.push(newChar);
+                saveCharacters(chars);
+                
+                // Entferne den NPC aus den Weltkarten, da der Spieler ihn übernimmt
+                const filtered = cards.filter(c => c.id !== npcId);
+                Storage.set(CARDS_KEY, JSON.stringify(filtered));
+                
+                // Direkt zum Loading (führt in Game)
+                document.getElementById("playable-choice-overlay").style.display = "none";
+                document.body.style.opacity = "0";
+                setTimeout(() => { window.location.href = "Loading.html"; }, 400);
+            }
         </script>
     </body>
 </html>
