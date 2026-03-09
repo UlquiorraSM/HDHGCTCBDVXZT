@@ -778,9 +778,17 @@
                 Storage.set("storyki_storylog", JSON.stringify([]));
                 Storage.set("storyki_characters", JSON.stringify([]));
                 // Globale Settings sichern und für das Spiel welt-spezifische Settings setzen
-                const globalSettings = Storage.get("storyki_settings");
-                if (globalSettings) Storage.set("storyki_settings_backup", globalSettings);
-                Storage.set("storyki_settings", JSON.stringify(_selectedWorld.data.settings || {}));
+                const globalSettingsRaw = Storage.get("storyki_settings");
+                if (globalSettingsRaw) Storage.set("storyki_settings_backup", globalSettingsRaw);
+                let mergedSettings = {};
+                try {
+                    const globalSettings = globalSettingsRaw ? JSON.parse(globalSettingsRaw) : {};
+                    const worldSettings = _selectedWorld?.data?.settings || {};
+                    mergedSettings = { ...globalSettings, ...worldSettings };
+                } catch {
+                    mergedSettings = _selectedWorld?.data?.settings || {};
+                }
+                Storage.set("storyki_settings", JSON.stringify(mergedSettings));
                 
                 // worldId für spätere Speicherung merken
                 Storage.set(SELECTED_WORLD_ID_KEY, _selectedWorld.id);
@@ -795,8 +803,8 @@
                 Storage.set("storyki_storylog", JSON.stringify(story.data.log || []));
                 Storage.set("storyki_characters", JSON.stringify(story.data.characters || []));
                 // Globale Settings sichern und für das Spiel passende Settings setzen
-                const globalSettings = Storage.get("storyki_settings");
-                if (globalSettings) Storage.set("storyki_settings_backup", globalSettings);
+                const globalSettingsRaw = Storage.get("storyki_settings");
+                if (globalSettingsRaw) Storage.set("storyki_settings_backup", globalSettingsRaw);
                 // Falls die Story keine eigenen Settings hat, auf Welt-Settings zurückfallen
                 let effectiveSettings = story.data?.settings || {};
                 if (!effectiveSettings.backgroundUrl) {
@@ -806,7 +814,14 @@
                         effectiveSettings = { ...world.data.settings, ...effectiveSettings };
                     }
                 }
-                Storage.set("storyki_settings", JSON.stringify(effectiveSettings));
+                // Mit globalen Einstellungen mergen, damit Benutzerpräferenzen (z. B. KI-Sprache/Textgröße) erhalten bleiben
+                try {
+                    const globalSettings = globalSettingsRaw ? JSON.parse(globalSettingsRaw) : {};
+                    const mergedSettings = { ...globalSettings, ...effectiveSettings };
+                    Storage.set("storyki_settings", JSON.stringify(mergedSettings));
+                } catch {
+                    Storage.set("storyki_settings", JSON.stringify(effectiveSettings));
+                }
                 
                 // worldId und storyId merken
                 Storage.set(SELECTED_WORLD_ID_KEY, story.worldId);
