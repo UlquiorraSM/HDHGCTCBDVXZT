@@ -622,6 +622,9 @@
             #skills-view .page-scroll {
                 flex: 1;
                 overflow-y: auto;
+                max-width: 1000px;
+                margin: 0 auto;
+                padding: 0 24px 40px 24px;
             }
             #skills-view .nav-title {
                 flex: 1;
@@ -777,6 +780,7 @@
 
                 <div class="section">
                     <div class="section-title">Available Skills</div>
+                    <input type="text" class="form-input" id="skills-search" placeholder="Search skills..." style="margin-bottom:10px;">
                     <div id="skills-list" class="relation-rows"></div>
                 </div>
 
@@ -1295,20 +1299,10 @@
                 const skills = getCards().filter(c => c.genre === "skill");
                 document.getElementById("skills-count").textContent = skills.length;
                 skillPickerTemp = [...skillSelections];
-                const list = document.getElementById("skills-list");
-                list.innerHTML = "";
-                skills.forEach((sk, idx) => {
-                    const row = document.createElement("div");
-                    row.className = "relation-row";
-                    row.innerHTML = `
-                        <div class="relation-row-header">
-                            <span class="relation-target-name">${escHtml(sk.title)}</span>
-                            <input type="checkbox" ${skillPickerTemp.includes(sk.id) ? "checked" : ""} onchange="toggleSkill('${sk.id}', this.checked)" />
-                        </div>
-                        ${sk.description ? `<div style="opacity:.8; font-size:13px;">${escHtml(sk.description)}</div>` : ""}
-                    `;
-                    list.appendChild(row);
-                });
+                const input = document.getElementById("skills-search");
+                if (input) input.value = "";
+                renderSkillsList("");
+                if (input) input.oninput = () => renderSkillsList(input.value.trim().toLowerCase());
                 document.getElementById("main-view").style.display = "none";
                 document.getElementById("skills-view").style.display = "flex";
             }
@@ -1328,6 +1322,32 @@
                 skillSelections = [...skillPickerTemp];
                 renderSkillTags();
                 hideSkillsScene();
+            }
+
+            function renderSkillsList(filter) {
+                const list = document.getElementById("skills-list");
+                if (!list) return;
+                const skills = getCards().filter(c => c.genre === "skill");
+                list.innerHTML = "";
+                skills
+                    .filter(sk => {
+                        if (!filter) return true;
+                        const t = (sk.title || "").toLowerCase();
+                        const d = (sk.description || "").toLowerCase();
+                        return t.includes(filter) || d.includes(filter);
+                    })
+                    .forEach((sk) => {
+                        const row = document.createElement("div");
+                        row.className = "relation-row";
+                        row.innerHTML = `
+                            <div class="relation-row-header">
+                                <span class="relation-target-name">${escHtml(sk.title)}</span>
+                                <input type="checkbox" ${skillPickerTemp.includes(sk.id) ? "checked" : ""} onchange="toggleSkill('${sk.id}', this.checked)" />
+                            </div>
+                            ${sk.description ? `<div style="opacity:.8; font-size:13px;">${escHtml(sk.description)}</div>` : ""}
+                        `;
+                        list.appendChild(row);
+                    });
             }
 
             /* Spawn buildings = location cards with canBeSpawn = true */
