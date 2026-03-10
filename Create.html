@@ -778,6 +778,31 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            /* ─── Events Scene (same layout) ─── */
+            #events-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #events-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #events-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
             #work-view {
                 position: fixed;
                 inset: 0;
@@ -2147,6 +2172,65 @@
             </div>
         </div>
 
+        <!-- ══════════════════════════════
+             EVENTS SCENE (Zivil)
+        ══════════════════════════════ -->
+        <div id="events-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">LOCATION EVENTS</span>
+                <div class="nav-count" id="events-count">0</div>
+            </nav>
+
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Manage Events</h2>
+                    <span class="entry-badge badge-locations">ZIVIL</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">New Event</label>
+                    <div class="form-two-col">
+                        <div>
+                            <label class="form-label">Type</label>
+                            <select class="form-select" id="ev-type">
+                                <option value="public">Public Event</option>
+                                <option value="secret">Secret Event</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Time</label>
+                            <input type="time" class="form-input" id="ev-time" value="12:00" />
+                        </div>
+                    </div>
+                    <div class="form-two-col" style="margin-top: 8px;">
+                        <input type="number" class="form-input" id="ev-day" placeholder="Day" min="1" max="31" />
+                        <input type="number" class="form-input" id="ev-month" placeholder="Month" min="1" max="12" />
+                        <input type="number" class="form-input" id="ev-year" placeholder="Year" />
+                    </div>
+                    <div class="form-group" style="margin-top: 8px;">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-textarea" id="ev-desc" placeholder="Describe what happens..."></textarea>
+                    </div>
+                    <div class="form-actions" style="margin-top: 8px;">
+                        <button class="btn-save" onclick="eventsAdd()">+ Add Event</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Current Events</label>
+                    <div id="event-rows"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-save" onclick="confirmEvents()">Done</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ════════════════════════════════════
              FORM VIEW (free scene, not a modal)
         ════════════════════════════════════ -->
@@ -2391,6 +2475,14 @@
                                 <button
                                     type="button"
                                     class="subloc-btn"
+                                    onclick="openEventsScene('village-city')"
+                                >
+                                    <span class="subloc-icon">🎉</span>
+                                    Events
+                                </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
                                     id="tools-resident-vc"
                                     onclick="openSublocPicker('village-city-resident')"
                                     style="display:none"
@@ -2521,6 +2613,14 @@
                                 >
                                     <span class="subloc-icon">&#43;</span>
                                     Sublocations
+                                </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="openEventsScene('country-kingdom')"
+                                >
+                                    <span class="subloc-icon">🎉</span>
+                                    Events
                                 </button>
                                 <button
                                     type="button"
@@ -3647,37 +3747,42 @@
             let relationSelections = [];
             let relationPickerTemp = [];
 
-            function showRelationsScene() {
-                // deep-copy current selection into temp
-                relationPickerTemp = relationSelections.map((r) => ({ ...r }));
-
-                // Populate NPC select (exclude self)
-                const npcCards = getCards().filter(
+            function relationRebuildSelect(filterText = "") {
+                const sel = document.getElementById("relation-add-select");
+                if (!sel) return;
+                const allChars = getCards().filter(
                     (c) => c.genre === "character" && c.id !== editingId,
                 );
-                const sel = document.getElementById("relation-add-select");
-                sel.innerHTML = `<option value="">Select NPC to add relation...</option>`;
-                npcCards.forEach((c) => {
+                const excludeIds = new Set(
+                    [...relationSelections, ...relationPickerTemp]
+                        .map((r) => r.targetId)
+                        .filter(Boolean),
+                );
+                const q = (filterText || "").toLowerCase().trim();
+                sel.innerHTML =
+                    `<option value="">Select NPC to add relation...</option>`;
+                allChars.forEach((c) => {
+                    if (excludeIds.has(c.id)) return;
+                    if (q && !((c.title || "").toLowerCase().includes(q)))
+                        return;
                     const opt = document.createElement("option");
                     opt.value = c.id;
                     opt.textContent = c.title;
                     sel.appendChild(opt);
                 });
+            }
+
+            function showRelationsScene() {
+                // deep-copy current selection into temp
+                relationPickerTemp = relationSelections.map((r) => ({ ...r }));
+
+                // Populate NPC select (exclude self and already selected)
+                relationRebuildSelect("");
                 const search = document.getElementById("relation-add-search");
                 if (search) {
                     search.value = "";
                     search.oninput = () => {
-                        const q = search.value.toLowerCase().trim();
-                        const cards = getCards().filter((c) => c.genre === "character" && c.id !== editingId);
-                        sel.innerHTML = `<option value="">Select NPC to add relation...</option>`;
-                        cards.forEach((c) => {
-                            if (!q || (c.title || "").toLowerCase().includes(q)) {
-                                const opt = document.createElement("option");
-                                opt.value = c.id;
-                                opt.textContent = c.title;
-                                sel.appendChild(opt);
-                            }
-                        });
+                        relationRebuildSelect(search.value);
                     };
                 }
 
@@ -3697,11 +3802,13 @@
                 const sec = document.getElementById("secrets-view");
                 const cls = document.getElementById("classes-view");
                 const skl = document.getElementById("skills-view");
+                const ev = document.getElementById("events-view");
                 const wrk = document.getElementById("work-view");
                 if (rel) rel.style.display = "none";
                 if (sec) sec.style.display = "none";
                 if (cls) cls.style.display = "none";
                 if (skl) skl.style.display = "none";
+                if (ev) ev.style.display = "none";
                 if (wrk) wrk.style.display = "none";
                 document.getElementById("form-view").style.display = "flex";
                 relationPickerTemp = [];
@@ -3734,6 +3841,8 @@
                 sel.value = "";
                 document.getElementById("relations-count").textContent = relationPickerTemp.length;
                 renderRelationPickerRows();
+                const search = document.getElementById("relation-add-search");
+                relationRebuildSelect(search ? search.value : "");
             }
 
             function renderRelationPickerRows() {
@@ -3792,6 +3901,8 @@
                 relationPickerTemp.splice(idx, 1);
                 document.getElementById("relations-count").textContent = relationPickerTemp.length;
                 renderRelationPickerRows();
+                const search = document.getElementById("relation-add-search");
+                relationRebuildSelect(search ? search.value : "");
             }
 
             function renderRelationTags() {
@@ -3887,6 +3998,69 @@
             /* ─────────────────────────────────────────
                SCHOOL SCHEDULE (Building -> School)
             ───────────────────────────────────────── */
+            // ZIVIL EVENTS (Village/City/Country/Kingdom)
+            const eventsSelections = {
+                "village-city": [],
+                "country-kingdom": [],
+            };
+            let eventsTemp = [];
+            let eventsCtx = null; // 'village-city' | 'country-kingdom'
+
+            function openEventsScene(ctx) {
+                eventsCtx = ctx;
+                eventsTemp = (eventsSelections[ctx] || []).map(e => ({ ...e }));
+                document.getElementById("events-count").textContent = eventsTemp.length;
+                document.getElementById("form-view").style.display = "none";
+                document.getElementById("events-view").style.display = "flex";
+                renderEventRows();
+            }
+            function eventsAdd() {
+                const type = (document.getElementById("ev-type").value || "public").toLowerCase();
+                const day = parseInt(document.getElementById("ev-day").value) || 0;
+                const month = parseInt(document.getElementById("ev-month").value) || 0;
+                const year = parseInt(document.getElementById("ev-year").value) || 0;
+                const time = document.getElementById("ev-time").value || "12:00";
+                const desc = (document.getElementById("ev-desc").value || "").trim();
+                eventsTemp.push({ type, day, month, year, time, description: desc });
+                document.getElementById("events-count").textContent = eventsTemp.length;
+                document.getElementById("ev-desc").value = "";
+                renderEventRows();
+            }
+            function renderEventRows() {
+                const wrap = document.getElementById("event-rows");
+                if (!wrap) return;
+                wrap.innerHTML = "";
+                eventsTemp.forEach((e, idx) => {
+                    const row = document.createElement("div");
+                    row.className = "relation-row";
+                    const dateStr = `${String(e.day||0).toString().padStart(2,"0")}.${String(e.month||0).toString().padStart(2,"0")}.${e.year||0} ${e.time || ""}`;
+                    const typeLabel = (e.type === "secret") ? "Secret Event" : "Public Event";
+                    row.innerHTML = `
+                        <div class="relation-row-header">
+                            <span class="relation-target-name">[${typeLabel}] ${dateStr}</span>
+                            <button class="relation-row-remove" onclick="eventRemove(${idx})">Remove</button>
+                        </div>
+                        <div class="relation-controls">
+                            <textarea class="form-textarea" onchange="eventUpdateDesc(${idx}, this.value)">${e.description || ""}</textarea>
+                        </div>
+                    `;
+                    wrap.appendChild(row);
+                });
+            }
+            function eventUpdateDesc(idx, val) {
+                eventsTemp[idx].description = val;
+            }
+            function eventRemove(idx) {
+                eventsTemp.splice(idx, 1);
+                document.getElementById("events-count").textContent = eventsTemp.length;
+                renderEventRows();
+            }
+            function confirmEvents() {
+                if (!eventsCtx) return showFormView();
+                eventsSelections[eventsCtx] = eventsTemp.map(e => ({ ...e }));
+                showFormView();
+            }
+
             let schoolSchedule = {
                 days: [true, true, true, true, true, false, false], // Mon-Fri on
                 start: "08:00",
@@ -4583,6 +4757,14 @@
                             card.sublocations["country-kingdom"] || [];
                         renderSublocTags("village-city");
                         renderSublocTags("country-kingdom");
+                    }
+                    // restore zivil events
+                    if (card.events) {
+                        eventsSelections["village-city"] = card.events["village-city"] || [];
+                        eventsSelections["country-kingdom"] = card.events["country-kingdom"] || [];
+                    } else {
+                        eventsSelections["village-city"] = [];
+                        eventsSelections["country-kingdom"] = [];
                     }
                     // restore racial selections
                     if (card.racialCivilization) {
@@ -5963,6 +6145,13 @@
                     locationDetail === "school"
                         ? classesSelections.map(c => ({ name: c.name, teacherId: c.teacherId || "", studentIds: [...(c.studentIds || [])] }))
                         : null;
+                const zivilEventsData =
+                    type === "location"
+                        ? {
+                              "village-city": (eventsSelections["village-city"] || []).map(e => ({ ...e })),
+                              "country-kingdom": (eventsSelections["country-kingdom"] || []).map(e => ({ ...e })),
+                          }
+                        : null;
                 const shopScheduleData =
                     type === "location" &&
                     locationSub === "building" &&
@@ -6082,6 +6271,7 @@
                             sublocations,
                             racialCivilization,
                             population,
+                            events: zivilEventsData,
                             residents,
                             relations: type === "character" ? [...relationSelections] : [],
                             secrets: type === "character" ? [...secretSelections] : [],
@@ -6120,6 +6310,7 @@
                         sublocations,
                         racialCivilization,
                         population,
+                        events: zivilEventsData,
                         residents,
                         relations: type === "character" ? [...relationSelections] : [],
                         secrets: type === "character" ? [...secretSelections] : [],

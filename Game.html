@@ -1805,6 +1805,53 @@
                 }
             }
 
+            function buildEventsContext() {
+                try {
+                    const cards = getCards();
+                    if (!currentLocationId) return "";
+                    const d = activeChar?.startingDate || {};
+                    const curDate = `${String(d.day || 1).padStart(2,"0")}.${String(d.month || 1).padStart(2,"0")}.${d.year || 1983}`;
+                    const curTime = d.time || "00:00";
+                    // Find ancestors of current location
+                    const ancestors = [];
+                    let current = cards.find(c => c.id === currentLocationId);
+                    if (!current) return "";
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const contextLines = [];
+                    contextLines.push("\nZIVIL EVENTS (Current area and parent regions):");
+                    ancestors.forEach(loc => {
+                        if (loc.genre !== "location" || loc.locationSub !== "zivil") return;
+                        const ev = loc.events || null;
+                        if (!ev) return;
+                        const lists = [];
+                        if (Array.isArray(ev["village-city"])) lists.push(...ev["village-city"].map(e => ({...e, _loc: loc.title})));
+                        if (Array.isArray(ev["country-kingdom"])) lists.push(...ev["country-kingdom"].map(e => ({...e, _loc: loc.title})));
+                        if (lists.length === 0) return;
+                        contextLines.push(`- ${loc.title}:`);
+                        lists.forEach(e => {
+                            const type = (e.type === "secret") ? "SECRET EVENT" : "PUBLIC EVENT";
+                            const dateStr = `${String(e.day||0).toString().padStart(2,"0")}.${String(e.month||0).toString().padStart(2,"0")}.${e.year||0} ${e.time || ""}`;
+                            const desc = e.description || "";
+                            contextLines.push(`  * [${type}] ${dateStr} — ${desc}`);
+                        });
+                    });
+                    if (contextLines.length <= 1) return "";
+                    contextLines.push(`Current time reference: ${curDate} ${curTime}`);
+                    contextLines.push("Secret events are unknown to NPCs; use them only as hidden world triggers.");
+                    return contextLines.join("\n") + "\n";
+                } catch (e) {
+                    console.error("Events context error", e);
+                    return "";
+                }
+            }
+
             // Helpers for school schedules
             function _timeToMinutes(t) {
                 if (!t || typeof t !== "string") return 0;
@@ -1914,6 +1961,7 @@
                 const raceContext = buildRaceContext();
                 const itemContext = buildItemContext();
                 const playerContext = buildPlayerContext();
+                const eventsContext = buildEventsContext();
                 const relationshipSummary = buildRelationshipSummary();
                 const scheduleInfo = computeSchoolPresenceNow();
                 const scheduleContext = scheduleInfo.context || "";
@@ -1969,6 +2017,7 @@ ${worldHierarchy}
 ${charContext}
 ${raceContext}
 ${itemContext}
+${eventsContext}
 ${relationshipSummary}
 ${scheduleContext}
 
@@ -1978,6 +2027,7 @@ ${scheduleContext}
 3. Follow the 'IMPORTANT RELATIONSHIP RULES' strictly.
 4. Strangers (Unknown) have NO shared past. Do NOT invent friendship or shared memories for them.
 5. During SCHOOL OPEN HOURS, any NPC assigned to a School class is ONLY present at that School. Do NOT involve them elsewhere unless the player moves there or the time is outside school hours.
+6. Secret Events are UNKNOWN to NPCs. Do NOT reveal them in dialogue; use them only to drive hidden world changes or narrative tension.
 
 # TIME & LOCATION MANAGEMENT (CRITICAL)
 1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
