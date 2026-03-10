@@ -108,24 +108,26 @@
             }
 
             .world-card {
-                flex: 0 0 240px; /* Slightly narrower */
+                flex: 0 0 200px;
+                width: 200px;
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
-                padding: 16px;
+                padding: 12px;
                 background: rgba(10, 10, 15, 0.7);
                 border: 1px solid rgba(255, 255, 255, 0.12);
                 border-radius: 16px;
                 backdrop-filter: blur(12px);
                 transition: all 0.2s ease;
-                height: 180px; /* Fixed height for consistency */
+                height: 150px;
                 box-sizing: border-box; /* Ensure padding doesn't add to width */
             }
             /* Story cards use a slightly smaller footprint */
             .story-card {
-                flex: 0 0 200px;
-                padding: 14px;
-                height: 160px;
+                flex: 0 0 160px;
+                width: 160px;
+                padding: 10px;
+                height: 140px;
             }
 
             .world-card:hover {
@@ -693,6 +695,13 @@
                     confBtn.title = "Rename story";
                     confBtn.onclick = () => { openStoryConf(s.id); };
 
+                    const copyBtn = document.createElement("button");
+                    copyBtn.textContent = "📋";
+                    copyBtn.className = "menu-button";
+                    copyBtn.style.cssText = "padding:8px 10px; font-size:14px; flex:1; background: rgba(90, 160, 90, 0.6);";
+                    copyBtn.title = "Copy";
+                    copyBtn.onclick = () => { copyStory(s.id); };
+
                     const deleteBtn = document.createElement("button");
                     deleteBtn.textContent = "🗑️";
                     deleteBtn.className = "menu-button";
@@ -706,6 +715,7 @@
                     };
                     
                     btnRow.appendChild(confBtn);
+                    btnRow.appendChild(copyBtn);
                     btnRow.appendChild(deleteBtn);
 
                     actions.appendChild(playBtn);
@@ -752,6 +762,34 @@
                     renderStories(Storage.get(SELECTED_WORLD_ID_KEY));
                     closeStoryConf();
                 }
+            }
+
+            function copyStory(storyId) {
+                const scenarios = getScenarios();
+                const orig = scenarios.find(x => x.id === storyId);
+                if (!orig) return;
+                const now = Date.now();
+                const id = Math.random().toString(36).slice(2, 10);
+                const dataCopy = JSON.parse(JSON.stringify(orig.data || {}));
+                const cards = dataCopy.cards || [];
+                const chars = dataCopy.characters || [];
+                const log = dataCopy.log || [];
+                const settings = dataCopy.settings || {};
+                const sig = JSON.stringify({ w: orig.worldId, c: cards.length, ch: chars.length, l: log.length, s: Object.keys(settings).length });
+                const name = (orig.name || "Story") + " (Copy)";
+                const copy = {
+                    id,
+                    worldId: orig.worldId,
+                    name,
+                    createdAt: now,
+                    updatedAt: now,
+                    signature: sig,
+                    official: orig.official === true,
+                    data: dataCopy
+                };
+                scenarios.push(copy);
+                setScenarios(scenarios);
+                renderStories(Storage.get(SELECTED_WORLD_ID_KEY));
             }
 
             function backToMainMenu() {
