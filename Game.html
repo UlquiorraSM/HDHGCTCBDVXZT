@@ -2310,6 +2310,40 @@ Example:
                 const text = inputEl.value.trim();
                 if (!text || isBusy) return;
 
+                // Time set command: standalone HH:MM without quotes triggers time change
+                const timeCmd = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(text);
+                if (timeCmd && !text.includes('"') && !text.includes("'")) {
+                    try {
+                        const hh = parseInt(timeCmd[1], 10);
+                        const mm = parseInt(timeCmd[2], 10);
+                        if (!activeChar) {
+                            showToast("Kein aktiver Charakter zum Zeitstellen.", "rgba(180,60,60,0.85)");
+                            return;
+                        }
+                        const sd = activeChar.startingDate || {};
+                        const curParts = (sd.time || "00:00").split(":");
+                        const curMin = (parseInt(curParts[0] || "0", 10) * 60) + (parseInt(curParts[1] || "0", 10));
+                        const newMin = hh * 60 + mm;
+                        const dt = new Date((sd.year || 1983), (sd.month || 1) - 1, (sd.day || 1));
+                        if (newMin < curMin) dt.setDate(dt.getDate() + 1); // don't go backwards; jump to next day
+                        activeChar.startingDate = {
+                            day: dt.getDate(),
+                            month: dt.getMonth() + 1,
+                            year: dt.getFullYear(),
+                            time: `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`
+                        };
+                        saveActiveCharacter();
+                        addSystemDivider(`TIME SET: ${activeChar.startingDate.time} (${activeChar.startingDate.day}.${String(activeChar.startingDate.month).padStart(2,"0")}.${activeChar.startingDate.year})`);
+                        inputEl.value = "";
+                        inputEl.style.height = "auto";
+                        return;
+                    } catch (e) {
+                        console.error("Zeitstellen fehlgeschlagen", e);
+                        showToast("Zeit konnte nicht gesetzt werden.", "rgba(180,60,60,0.85)");
+                        return;
+                    }
+                }
+
                 appendBubble("user", text);
                 const senderName = activeChar
                     ? [activeChar.firstName, activeChar.lastName]
