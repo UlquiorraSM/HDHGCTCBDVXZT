@@ -108,26 +108,31 @@
             }
 
             .world-card {
-                flex: 0 0 200px;
-                width: 200px;
+                flex: 0 0 180px; /* narrower cards */
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
-                padding: 12px;
+                padding: 16px;
                 background: rgba(10, 10, 15, 0.7);
                 border: 1px solid rgba(255, 255, 255, 0.12);
                 border-radius: 16px;
                 backdrop-filter: blur(12px);
                 transition: all 0.2s ease;
-                height: 150px;
+                height: 160px; /* reduce height a bit */
                 box-sizing: border-box; /* Ensure padding doesn't add to width */
             }
             /* Story cards use a slightly smaller footprint */
             .story-card {
                 flex: 0 0 160px;
-                width: 160px;
-                padding: 10px;
+                padding: 12px;
                 height: 140px;
+            }
+
+            /* Make buttons inside story cards compact */
+            .story-card .menu-button {
+                min-width: 0;
+                padding: 8px 10px;
+                font-size: 12px;
             }
 
             .world-card:hover {
@@ -682,30 +687,32 @@
                     const playBtn = document.createElement("button");
                     playBtn.textContent = "Continue";
                     playBtn.className = "menu-button";
-                    playBtn.style.cssText = "padding:10px 12px; font-size:12px;";
+                    playBtn.style.cssText = "padding:8px 10px; font-size:12px; align-self:stretch;";
                     playBtn.onclick = () => { resumeStory(s); };
                     
                     const btnRow = document.createElement("div");
-                    btnRow.style.cssText = "display:flex; gap:6px;";
+                    btnRow.style.cssText = "display:flex; gap:0; border-radius:8px; overflow:hidden;";
 
                     const confBtn = document.createElement("button");
                     confBtn.textContent = "⚙️";
                     confBtn.className = "menu-button";
-                    confBtn.style.cssText = "padding:8px 10px; font-size:14px; flex:1; background: rgba(100, 100, 100, 0.6);";
+                    confBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(100, 100, 100, 0.6); border-radius:0;";
                     confBtn.title = "Rename story";
                     confBtn.onclick = () => { openStoryConf(s.id); };
+                    confBtn.style.borderTopLeftRadius = "8px";
+                    confBtn.style.borderBottomLeftRadius = "8px";
 
                     const copyBtn = document.createElement("button");
                     copyBtn.textContent = "📋";
                     copyBtn.className = "menu-button";
-                    copyBtn.style.cssText = "padding:8px 10px; font-size:14px; flex:1; background: rgba(90, 160, 90, 0.6);";
+                    copyBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90, 160, 90, 0.6); border-radius:0;";
                     copyBtn.title = "Copy";
                     copyBtn.onclick = () => { copyStory(s.id); };
 
                     const deleteBtn = document.createElement("button");
                     deleteBtn.textContent = "🗑️";
                     deleteBtn.className = "menu-button";
-                    deleteBtn.style.cssText = "padding:8px 10px; font-size:14px; width:44px; background: rgba(150,40,40,.7);";
+                    deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,.7); border-radius:0;";
                     deleteBtn.title = "Delete";
                     deleteBtn.onclick = () => {
                         if (!confirm("Really delete the story?")) return;
@@ -713,6 +720,8 @@
                         setScenarios(items);
                         renderStories(worldId);
                     };
+                    deleteBtn.style.borderTopRightRadius = "8px";
+                    deleteBtn.style.borderBottomRightRadius = "8px";
                     
                     btnRow.appendChild(confBtn);
                     btnRow.appendChild(copyBtn);
