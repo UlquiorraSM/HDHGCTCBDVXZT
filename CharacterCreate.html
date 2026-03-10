@@ -611,6 +611,27 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            /* ─── Skills Scene (same layout) ─── */
+            #skills-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #skills-view .page-scroll {
+                flex: 1;
+                overflow-y: auto;
+            }
+            #skills-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
             .relation-rows {
                 display: flex;
                 flex-direction: column;
@@ -731,6 +752,38 @@
                     <div class="form-actions">
                         <button class="btn-cancel" onclick="showCharacterCreateScene()">← Back</button>
                         <button class="btn-create" onclick="confirmRelations()">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             SKILLS SCENE
+        ══════════════════════════════ -->
+        <div id="skills-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="hideSkillsScene()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">CHARACTER SKILLS</span>
+                <div class="nav-count" id="skills-count">0</div>
+            </nav>
+
+            <div class="page-scroll">
+                <div class="page-title-row">
+                    <h1>Choose Skills</h1>
+                    <span class="page-title-badge">SKILLS</span>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Available Skills</div>
+                    <div id="skills-list" class="relation-rows"></div>
+                </div>
+
+                <div class="section">
+                    <div class="form-actions">
+                        <button class="btn-cancel" onclick="hideSkillsScene()">← Back</button>
+                        <button class="btn-create" onclick="confirmSkills()">Done</button>
                     </div>
                 </div>
             </div>
@@ -927,6 +980,14 @@
                             <span class="subloc-icon">&#128101;</span> Relations
                         </button>
                     </div>
+                    <!-- Skills (visible only if at least one Skill exists) -->
+                    <div class="form-group" id="skills-block" style="margin-top: 14px; display: none;">
+                        <label class="form-label">Skills</label>
+                        <div class="relation-tags" id="char-skill-tags"></div>
+                        <button type="button" class="subloc-btn relation-btn" onclick="showSkillsScene()">
+                            <span class="subloc-icon">🛠️</span> Skills
+                        </button>
+                    </div>
                 </div>
 
                 <!-- ── SPAWN LOCATION ── -->
@@ -1079,6 +1140,10 @@
             let relationSelections = [];
             let relationPickerTemp = [];
 
+            // Skills
+            let skillSelections = []; // array of skill IDs
+            let skillPickerTemp = [];
+
             function showRelationsScene() {
                 relationPickerTemp = relationSelections.map((r) => ({ ...r }));
                 
@@ -1210,6 +1275,61 @@
                 });
             }
 
+            function renderSkillTags() {
+                const wrap = document.getElementById("char-skill-tags");
+                if (!wrap) return;
+                wrap.innerHTML = "";
+                if (!skillSelections.length) return;
+                const all = getCards();
+                skillSelections.forEach(id => {
+                    const sk = all.find(c => c.id === id);
+                    if (!sk) return;
+                    const tag = document.createElement("div");
+                    tag.className = "relation-tag";
+                    tag.innerHTML = `<span>${escHtml(sk.title)}</span>`;
+                    wrap.appendChild(tag);
+                });
+            }
+
+            function showSkillsScene() {
+                const skills = getCards().filter(c => c.genre === "skill");
+                document.getElementById("skills-count").textContent = skills.length;
+                skillPickerTemp = [...skillSelections];
+                const list = document.getElementById("skills-list");
+                list.innerHTML = "";
+                skills.forEach((sk, idx) => {
+                    const row = document.createElement("div");
+                    row.className = "relation-row";
+                    row.innerHTML = `
+                        <div class="relation-row-header">
+                            <span class="relation-target-name">${escHtml(sk.title)}</span>
+                            <input type="checkbox" ${skillPickerTemp.includes(sk.id) ? "checked" : ""} onchange="toggleSkill('${sk.id}', this.checked)" />
+                        </div>
+                        ${sk.description ? `<div style="opacity:.8; font-size:13px;">${escHtml(sk.description)}</div>` : ""}
+                    `;
+                    list.appendChild(row);
+                });
+                document.getElementById("main-view").style.display = "none";
+                document.getElementById("skills-view").style.display = "flex";
+            }
+            function hideSkillsScene() {
+                document.getElementById("skills-view").style.display = "none";
+                document.getElementById("relations-view").style.display = "none";
+                document.getElementById("main-view").style.display = "flex";
+            }
+            function toggleSkill(id, checked) {
+                if (checked) {
+                    if (!skillPickerTemp.includes(id)) skillPickerTemp.push(id);
+                } else {
+                    skillPickerTemp = skillPickerTemp.filter(x => x !== id);
+                }
+            }
+            function confirmSkills() {
+                skillSelections = [...skillPickerTemp];
+                renderSkillTags();
+                hideSkillsScene();
+            }
+
             /* Spawn buildings = location cards with canBeSpawn = true */
             function getSpawnBuildings() {
                 return getCards().filter(
@@ -1256,6 +1376,11 @@
 
                 document.getElementById("create-count").textContent =
                     getCharacters().length;
+
+                // Show Skills button only if at least one Skill exists
+                const skills = getCards().filter(c => c.genre === "skill");
+                const skillBlock = document.getElementById("skills-block");
+                if (skillBlock) skillBlock.style.display = skills.length > 0 ? "block" : "none";
             }
 
             /* ─── Race Change ─── */
@@ -1403,6 +1528,7 @@
                     age,
                     birthdate: (birthDay && birthMonth) ? { day: birthDay, month: birthMonth } : null,
                     relations: [...relationSelections],
+                    skills: [...skillSelections],
                     startingDate: { day, month, year, time },
                     introduction: introduction,
                     createdAt: new Date().toISOString(),
