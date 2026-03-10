@@ -135,6 +135,13 @@
                 font-size: 12px;
             }
 
+            /* Make buttons inside world cards compact, like stories */
+            .world-card .menu-button {
+                min-width: 0;
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
             .world-card:hover {
                  transform: translateY(-5px);
                  border-color: rgba(255, 255, 255, 0.3);
@@ -372,7 +379,7 @@
                 
                 <div class="conf-group">
                     <label class="conf-label">Name of the world</label>
-                    <input type="text" id="conf-world-name" class="conf-input" placeholder="Name eingeben...">
+                    <input type="text" id="conf-world-name" class="conf-input" placeholder="Enter name...">
                 </div>
 
                 <div class="conf-group">
@@ -555,44 +562,56 @@
                     actions.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-top: auto;";
                     
                     const row1 = document.createElement("div");
-                    row1.style.cssText = "display:flex; gap:6px;";
+                    row1.style.cssText = "display:flex; gap:6px; justify-content:center;";
                     
                     const selectBtn = document.createElement("button");
                     selectBtn.textContent = "Select";
                     selectBtn.className = "menu-button";
-                    selectBtn.style.cssText = "padding:8px 6px; font-size:12px; flex:1; min-width:0;";
+                    selectBtn.style.cssText = "padding:8px 6px; font-size:12px; width:72px; min-width:0; flex:none;";
                     selectBtn.onclick = () => { openWorldStories(s.id); };
 
                     const confBtn = document.createElement("button");
                     confBtn.textContent = "Conf";
                     confBtn.className = "menu-button";
-                    confBtn.style.cssText = "padding:8px 6px; font-size:12px; flex:1; min-width:0; background: rgba(100, 100, 100, 0.6);";
+                    confBtn.style.cssText = "padding:8px 6px; font-size:12px; width:72px; min-width:0; flex:none; background: rgba(100, 100, 100, 0.6);";
                     confBtn.onclick = () => { openWorldConf(s.id); };
                     
                     row1.appendChild(selectBtn);
                     row1.appendChild(confBtn);
 
                     const row2 = document.createElement("div");
-                    row2.style.cssText = "display:flex; gap:6px;";
+                    row2.style.cssText = "display:flex; gap:0; border-radius:8px; overflow:hidden;";
 
                     const editBtn = document.createElement("button");
                     editBtn.textContent = "Edit";
                     editBtn.className = "menu-button";
-                    editBtn.style.cssText = "padding:8px 10px; font-size:12px; flex:1; min-width:0; background: rgba(74, 144, 226, 0.6);";
+                    editBtn.style.cssText = "padding:8px 0; font-size:12px; flex:1; background: rgba(74, 144, 226, 0.6); border-radius:0;";
                     editBtn.onclick = () => { editWorld(s.id); };
+                    editBtn.style.borderTopLeftRadius = "8px";
+                    editBtn.style.borderBottomLeftRadius = "8px";
+
+                    const downloadBtn = document.createElement("button");
+                    downloadBtn.textContent = "📥";
+                    downloadBtn.className = "menu-button";
+                    downloadBtn.title = "Download world (.json)";
+                    downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
+                    downloadBtn.onclick = () => { exportWorld(s.id); };
 
                     const deleteBtn = document.createElement("button");
                     deleteBtn.textContent = "🗑️";
                     deleteBtn.className = "menu-button";
-                    deleteBtn.style.cssText = "padding:8px 10px; font-size:14px; width:44px; background: rgba(150,40,40,0.7);";
+                    deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,0.7); border-radius:0;";
                     deleteBtn.onclick = () => {
                         if (!confirm("Welt wirklich löschen? Alle zugehörigen Stories gehen verloren!")) return;
                         const items = getScenarios().filter(x => x.id !== s.id && x.worldId !== s.id);
                         setScenarios(items);
                         renderScenarios();
                     };
+                    deleteBtn.style.borderTopRightRadius = "8px";
+                    deleteBtn.style.borderBottomRightRadius = "8px";
 
                     row2.appendChild(editBtn);
+                    row2.appendChild(downloadBtn);
                     row2.appendChild(deleteBtn);
                     
                     actions.appendChild(row1);
@@ -1026,6 +1045,48 @@
                 reader.onload = function(e) {
                     try {
                         const data = JSON.parse(e.target.result);
+                        // World export import
+                        if (data && (data.type === "world_export" || data.world)) {
+                            let scenarios = getScenarios();
+                            const world = data.world;
+                            if (!world || !world.data) throw new Error("Ungültige Welt-Datei.");
+                            let newWorldId = world.id || Math.random().toString(36).slice(2, 10);
+                            if (scenarios.some(x => x.id === newWorldId)) newWorldId = Math.random().toString(36).slice(2, 10);
+                            scenarios.push({
+                                id: newWorldId,
+                                name: world.name || "Imported World",
+                                createdAt: Date.now(),
+                                updatedAt: Date.now(),
+                                data: {
+                                    cards: world.data.cards || [],
+                                    settings: world.data.settings || {}
+                                }
+                            });
+                            const stories = Array.isArray(data.stories) ? data.stories : [];
+                            stories.forEach(st => {
+                                let sid = st.id || Math.random().toString(36).slice(2, 10);
+                                if (scenarios.some(x => x.id === sid)) sid = Math.random().toString(36).slice(2, 10);
+                                scenarios.push({
+                                    id: sid,
+                                    worldId: newWorldId,
+                                    name: st.name || "Imported Story",
+                                    createdAt: Date.now(),
+                                    updatedAt: Date.now(),
+                                    signature: st.signature || "",
+                                    data: {
+                                        cards: st.data?.cards || [],
+                                        characters: st.data?.characters || [],
+                                        log: st.data?.log || [],
+                                        settings: st.data?.settings || {}
+                                    }
+                                });
+                            });
+                            setScenarios(scenarios);
+                            renderScenarios();
+                            loadBackground();
+                            alert("Welt und Stories importiert.");
+                            return;
+                        }
                         
                         // Import state into sessionStorage
                         if (data.create) {
@@ -1106,6 +1167,48 @@
                 captureDraftFromSessionIfAny();
                 renderScenarios();
             });
+
+            function exportWorld(worldId) {
+                const scenarios = getScenarios();
+                const world = scenarios.find(x => x.id === worldId && !x.worldId);
+                if (!world) { alert("Welt nicht gefunden."); return; }
+                const stories = scenarios.filter(x => x.worldId === worldId);
+                const payload = {
+                    version: 1,
+                    type: "world_export",
+                    exportedAt: new Date().toISOString(),
+                    world: {
+                        id: world.id,
+                        name: world.name,
+                        data: {
+                            cards: world.data?.cards || [],
+                            settings: world.data?.settings || {}
+                        }
+                    },
+                    stories: stories.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        signature: s.signature || "",
+                        data: {
+                            cards: s.data?.cards || [],
+                            characters: s.data?.characters || [],
+                            log: s.data?.log || [],
+                            settings: s.data?.settings || {}
+                        }
+                    }))
+                };
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                const safeName = (world.name || "World").replace(/[^a-z0-9_\- ]/gi, "_");
+                const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+                a.href = url;
+                a.download = `${safeName}_export_${timestamp}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
         </script>
     </body>
 </html>

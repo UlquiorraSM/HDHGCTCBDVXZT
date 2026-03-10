@@ -736,14 +736,14 @@
                     </div>
                 </div>
 
-                <div id="status-dot-wrap">
+                <div id="status-dot-wrap" style="display:none;">
                     <div class="status-dot" id="status-dot"></div>
                     <span class="status-label" id="status-label">Online</span>
                 </div>
             </div>
 
             <!-- Present NPCs -->
-            <div id="present-npcs-bar"></div>
+            <div id="present-npcs-bar" style="display:none;"></div>
 
             <!-- Messages -->
             <div id="messages">
@@ -1575,13 +1575,10 @@
             function setStatus(online) {
                 const dot = document.getElementById("status-dot");
                 const lbl = document.getElementById("status-label");
-                dot.style.background = online
-                    ? "rgba(80,200,100,0.9)"
-                    : "rgba(200,80,80,0.9)";
+                if (!dot || !lbl) return;
+                dot.style.background = online ? "rgba(80,200,100,0.9)" : "rgba(200,80,80,0.9)";
                 lbl.textContent = online ? "Online" : "Offline";
-                lbl.style.color = online
-                    ? "rgba(80,200,100,0.85)"
-                    : "rgba(200,80,80,0.85)";
+                lbl.style.color = online ? "rgba(80,200,100,0.85)" : "rgba(200,80,80,0.85)";
             }
 
             /* ═══════════════════════════════════════
@@ -2029,6 +2026,7 @@ Example:
 
             function updatePresentNPCs() {
                 const bar = document.getElementById("present-npcs-bar");
+                if (!bar) return;
                 if (!currentLocationId) {
                     bar.classList.remove("visible");
                     bar.innerHTML = "";

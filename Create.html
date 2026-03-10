@@ -5409,11 +5409,11 @@
         <!-- Overlay: Neue Welt speichern -->
         <div id="new-world-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000;">
             <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:20px; padding:24px; width:100%; max-width:420px; display:flex; flex-direction:column; gap:16px;">
-                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Neue Welt speichern</div>
+                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Save new world</div>
                 
                 <div>
-                    <div style="color:rgba(255,255,255,.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;">Name der Welt</div>
-                    <input id="nw-name" placeholder="Name eingeben..." style="width:100%; margin-top:6px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:10px 12px; color:#fff; outline:none;">
+                    <div style="color:rgba(255,255,255,.6); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;">World name</div>
+                    <input id="nw-name" placeholder="Enter name..." style="width:100%; margin-top:6px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:10px 12px; color:#fff; outline:none;">
                 </div>
                 
                 <div>
@@ -5422,8 +5422,8 @@
                 </div>
                 
                 <div style="display:flex; gap:10px; margin-top:6px;">
-                    <button onclick="cancelNewWorldDialog()" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">Abbrechen</button>
-                    <button onclick="confirmSaveNewWorld()" style="flex:1; padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;">Speichern</button>
+                    <button onclick="cancelNewWorldDialog()" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">Cancel</button>
+                    <button onclick="confirmSaveNewWorld()" style="flex:1; padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;">Save</button>
                 </div>
             </div>
         </div>
