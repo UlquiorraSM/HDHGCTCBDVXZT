@@ -670,6 +670,39 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            .relation-add-search {
+                width: 100%;
+                margin-bottom: 8px;
+                padding: 10px 12px;
+                background: rgba(18,18,22,0.9);
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 9px;
+                color: #fff;
+                outline: none;
+                font-size: 14px;
+            }
+            .relation-pills {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            .relation-pill {
+                padding: 7px 10px;
+                border-radius: 8px;
+                border: 1px solid rgba(255,255,255,0.12);
+                background: rgba(22,22,28,0.7);
+                color: rgba(255,255,255,0.85);
+                font-size: 12px;
+                font-weight: 700;
+                cursor: pointer;
+                user-select: none;
+                transition: background .2s, border-color .2s, color .2s;
+            }
+            .relation-pill.active {
+                background: rgba(80,140,220,0.85);
+                border-color: rgba(120,180,255,0.6);
+                color: #fff;
+            }
             /* ─── Secrets Scene (same layout as Relations) ─── */
             #secrets-view {
                 position: fixed;
@@ -2686,7 +2719,7 @@
                     </button>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="description-group">
                     <label class="form-label">Description</label>
                     <textarea
                         class="form-textarea"
@@ -3054,6 +3087,7 @@
                 <!-- Add Relations Section -->
                 <div class="form-group">
                     <label class="form-label">Select NPC</label>
+                    <input type="text" class="relation-add-search" id="relation-add-search" placeholder="Search NPC..." />
                     <select class="form-select" id="relation-add-select">
                         <option value="">Select NPC to add relation...</option>
                     </select>
@@ -3629,6 +3663,23 @@
                     opt.textContent = c.title;
                     sel.appendChild(opt);
                 });
+                const search = document.getElementById("relation-add-search");
+                if (search) {
+                    search.value = "";
+                    search.oninput = () => {
+                        const q = search.value.toLowerCase().trim();
+                        const cards = getCards().filter((c) => c.genre === "character" && c.id !== editingId);
+                        sel.innerHTML = `<option value="">Select NPC to add relation...</option>`;
+                        cards.forEach((c) => {
+                            if (!q || (c.title || "").toLowerCase().includes(q)) {
+                                const opt = document.createElement("option");
+                                opt.value = c.id;
+                                opt.textContent = c.title;
+                                sel.appendChild(opt);
+                            }
+                        });
+                    };
+                }
 
                 // Update count
                 document.getElementById("relations-count").textContent = relationPickerTemp.length;
@@ -3701,13 +3752,13 @@
                             <button class="relation-row-remove" onclick="relationRemoveRow(${idx})">Remove</button>
                         </div>
                         <div class="relation-controls">
-                            <select class="relation-select" onchange="relationUpdateType(${idx}, this.value)">
-                                <option value="Unknown" ${row.relation === "Unknown" ? "selected" : ""}>Unknown</option>
-                                <option value="Friends" ${row.relation === "Friends" ? "selected" : ""}>Friends</option>
-                                <option value="Lover" ${row.relation === "Lover" ? "selected" : ""}>Lover</option>
-                                <option value="Husband" ${row.relation === "Husband" ? "selected" : ""}>Husband</option>
-                                <option value="Family" ${row.relation === "Family" ? "selected" : ""}>Family</option>
-                            </select>
+                            <div class="relation-pills">
+                                <button type="button" class="relation-pill ${row.relation === "Unknown" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Unknown')">Unknown</button>
+                                <button type="button" class="relation-pill ${row.relation === "Friends" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Friends')">Friends</button>
+                                <button type="button" class="relation-pill ${row.relation === "Lover" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Lover')">Lover</button>
+                                <button type="button" class="relation-pill ${row.relation === "Husband" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Husband')">Husband</button>
+                                <button type="button" class="relation-pill ${row.relation === "Family" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Family')">Family</button>
+                            </div>
                             <select class="relation-select family-sub-select" 
                                 style="display: ${isFamily ? "block" : "none"}"
                                 onchange="relationUpdateFamilySub(${idx}, this.value)">
@@ -4391,6 +4442,10 @@
                 document.getElementById("character-block").style.display =
                     type === "character" ? "block" : "none";
                 if (type === "character") updateSkillGroupVisibility();
+
+                // Show / hide Description at bottom for Character
+                const descGrp = document.getElementById("description-group");
+                if (descGrp) descGrp.style.display = type === "character" ? "none" : "block";
 
                 // Show / hide Item block
                 document.getElementById("item-block").style.display =

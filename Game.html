@@ -23,6 +23,8 @@
                 border-radius: 2px;
             }
 
+            
+
             html,
             body {
                 width: 100%;
@@ -1911,6 +1913,7 @@
                 const charContext = buildCharacterContext();
                 const raceContext = buildRaceContext();
                 const itemContext = buildItemContext();
+                const playerContext = buildPlayerContext();
                 const relationshipSummary = buildRelationshipSummary();
                 const scheduleInfo = computeSchoolPresenceNow();
                 const scheduleContext = scheduleInfo.context || "";
@@ -1958,6 +1961,9 @@ You are the Narrator of an immersive, interactive story. Your goal is to describ
 - LOCATION PATH: ${curLocPath}
 - PRESENT NPCs: ${presentNPCs || "None"}
 
+# PLAYER CHARACTER
+${playerContext}
+
 # WORLD KNOWLEDGE
 ${worldHierarchy}
 ${charContext}
@@ -1992,6 +1998,33 @@ Example:
 [[TIME: 14:15, LOCATION: "Forest"]]
 
 [STRICT REQUIREMENT]: You MUST include this block in EVERY response. If you fail to include it, the world state will break. Use the CURRENT time and location if nothing changed.`;
+            }
+
+            function buildPlayerContext() {
+                if (!activeChar) return "";
+                const name = [activeChar.firstName, activeChar.lastName].filter(Boolean).join(" ") || "Unknown";
+                const race = activeChar.raceName || "Unknown Race";
+                const gender = activeChar.gender || "";
+                const age = activeChar.age ? `${activeChar.age}` : "";
+                const bd = activeChar.birthdate ? `${String(activeChar.birthdate.day || 1).padStart(2,"0")}.${String(activeChar.birthdate.month || 1).padStart(2,"0")}` : "";
+                const app = activeChar.appearance || "";
+                let lines = [];
+                lines.push(`- NAME: ${name}`);
+                if (race) lines.push(`- RACE: ${race}`);
+                if (gender) lines.push(`- GENDER: ${gender}`);
+                if (age) lines.push(`- AGE: ${age}`);
+                if (bd) lines.push(`- BIRTHDATE: ${bd}`);
+                if (app) lines.push(`- APPEARANCE: ${app}`);
+                const rels = Array.isArray(activeChar.relations) ? activeChar.relations : [];
+                if (rels.length > 0) {
+                    lines.push("- RELATIONS:");
+                    rels.forEach(r => {
+                        const n = r.targetName || r.targetId || "(Unknown)";
+                        const rel = r.relation === "Family" ? (r.familySub || "Family") : (r.relation || "Unknown");
+                        lines.push(`  * ${n}: ${rel}`);
+                    });
+                }
+                return lines.join("\n");
             }
 
             function buildRelationshipSummary() {
@@ -2280,12 +2313,12 @@ Example:
                 const systemInst = buildSystemPrompt();
 
                 try {
-                    const recentHistory = chatHistory.slice(-10);
+                    const recentHistory = chatHistory;
                     const historyLines = recentHistory.map(e => {
                         if (typeof e === 'string') return `--- ${e} ---`;
                         return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
                     }).join("\n");
-                    const finalPrompt = systemInst + "\n\n### RECENT STORY HISTORY ###\n" + (chatHistory.length > 10 ? "...(older history omitted)...\n" : "") + historyLines + "\n\nNarrator:";
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
@@ -2363,12 +2396,12 @@ Example:
                 const systemInst = buildSystemPrompt();
 
                 try {
-                    const recentHistory = chatHistory.slice(-10); // Limit history to last 10 entries for focus
+                    const recentHistory = chatHistory;
                     const historyLines = recentHistory.map(e => {
                         if (typeof e === 'string') return `--- ${e} ---`;
                         return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
                     }).join("\n");
-                    const finalPrompt = systemInst + "\n\n### RECENT STORY HISTORY ###\n" + (chatHistory.length > 10 ? "...(older history omitted)...\n" : "") + historyLines + "\n\nNarrator:";
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
@@ -2451,12 +2484,12 @@ Example:
                 const systemInst = buildSystemPrompt();
 
                 try {
-                    const recentHistory = chatHistory.slice(-10);
+                    const recentHistory = chatHistory;
                     const historyLines = recentHistory.map(e => {
                         if (typeof e === 'string') return `--- ${e} ---`;
                         return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
                     }).join("\n");
-                    const finalPrompt = systemInst + "\n\n### RECENT STORY HISTORY ###\n" + (chatHistory.length > 10 ? "...(older history omitted)...\n" : "") + historyLines + "\n\nNarrator:";
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
