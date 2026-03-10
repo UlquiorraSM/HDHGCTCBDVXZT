@@ -783,6 +783,21 @@
         <!-- Toast -->
         <div id="toast"></div>
 
+        <div id="back-popup-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000; backdrop-filter:blur(10px);">
+            <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:20px; width:100%; max-width:480px; display:flex; flex-direction:column; gap:14px;">
+                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Story verwalten</div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <label for="back-story-input" style="color:rgba(255,255,255,.75); font-size:13px;">Story-Name</label>
+                    <input id="back-story-input" type="text" style="padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,.15); background:rgba(20,20,25,.9); color:#fff; outline:none;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button id="back-popup-cancel" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">Back</button>
+                    <button id="back-popup-save" style="flex:1; padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;">Save</button>
+                    <button id="back-popup-delete" style="flex:1; padding:10px; border-radius:10px; background:#b04040; color:#fff; border:none; font-weight:700; cursor:pointer;">Delete</button>
+                </div>
+            </div>
+        </div>
+
         <script>
             /* ═══════════════════════════════════════
                CONSTANTS
@@ -791,6 +806,9 @@
             const CHARS_KEY = "storyki_characters";
             const CARDS_KEY = "storyki_storycards";
             const LOG_KEY = "storyki_storylog";
+            const SCENARIOS_KEY = "storyki_scenarios";
+            const SELECTED_WORLD_ID_KEY = "storyki_selected_world_id";
+            const CURRENT_STORY_ID_KEY = "storyki_current_story_id";
 
             // Storage Helper (Non-persistent session storage)
             const Storage = {
@@ -823,6 +841,7 @@
                         chars[idx] = activeChar;
                         Storage.set(CHARS_KEY, JSON.stringify(chars));
                     }
+                    autoSaveStory();
                 } catch (e) {
                     console.error("Failed to save character", e);
                 }
@@ -831,6 +850,7 @@
             function saveStoryLog() {
                 try {
                     Storage.set(LOG_KEY, JSON.stringify(chatHistory));
+                    autoSaveStory();
                 } catch (e) {
                     console.error("Failed to save story log", e);
                 }
@@ -1210,6 +1230,133 @@
                     el.style.backgroundImage = `url(${url})`;
                 }
             }
+            function getScenariosLocal() {
+                try { return JSON.parse(localStorage.getItem(SCENARIOS_KEY) || "[]"); } catch { return []; }
+            }
+            function setScenariosLocal(list) {
+                localStorage.setItem(SCENARIOS_KEY, JSON.stringify(list));
+            }
+            function getCurrentStoryId() {
+                return Storage.get(CURRENT_STORY_ID_KEY);
+            }
+            function setCurrentStoryId(id) {
+                Storage.set(CURRENT_STORY_ID_KEY, id);
+            }
+            function computeSig(cards, chars, log, settings, worldId) {
+                return JSON.stringify({ w: worldId, c: cards.length, ch: chars.length, l: log.length, s: Object.keys(settings || {}).length });
+            }
+            function ensureStoryRecord() {
+                const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
+                if (!worldId) return null;
+                const cards = JSON.parse(Storage.get(CARDS_KEY) || "[]");
+                const chars = JSON.parse(Storage.get(CHARS_KEY) || "[]");
+                const log = JSON.parse(Storage.get(LOG_KEY) || "[]");
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                let scenarios = getScenariosLocal();
+                let storyId = getCurrentStoryId();
+                let story = storyId ? scenarios.find(x => x.id === storyId) : null;
+                if (!story) {
+                    const id = Math.random().toString(36).slice(2, 10);
+                    let name = "Story " + new Date().toLocaleString();
+                    if (chars.length > 0) {
+                        const mainChar = chars[0];
+                        const fullName = [mainChar.firstName, mainChar.lastName].filter(Boolean).join(" ").trim() || "Story";
+                        name = `${fullName} - ${new Date().toLocaleDateString()}`;
+                    }
+                    story = {
+                        id,
+                        worldId,
+                        name,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                        signature: computeSig(cards, chars, log, settings, worldId),
+                        official: false,
+                        data: { cards, characters: chars, log, settings }
+                    };
+                    scenarios.push(story);
+                    setScenariosLocal(scenarios);
+                    setCurrentStoryId(id);
+                }
+                return story;
+            }
+            function autoSaveStory() {
+                const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
+                if (!worldId) return;
+                const cards = JSON.parse(Storage.get(CARDS_KEY) || "[]");
+                const chars = JSON.parse(Storage.get(CHARS_KEY) || "[]");
+                const log = JSON.parse(Storage.get(LOG_KEY) || "[]");
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                let scenarios = getScenariosLocal();
+                let storyId = getCurrentStoryId();
+                let story = storyId ? scenarios.find(x => x.id === storyId) : null;
+                if (!story) {
+                    story = ensureStoryRecord();
+                    scenarios = getScenariosLocal();
+                }
+                if (!story) return;
+                const idx = scenarios.findIndex(x => x.id === story.id);
+                if (idx === -1) return;
+                scenarios[idx].updatedAt = Date.now();
+                scenarios[idx].data = { cards, characters: chars, log, settings };
+                scenarios[idx].signature = computeSig(cards, chars, log, settings, worldId);
+                if (!scenarios[idx].official) {
+                    if (chars.length > 0) {
+                        const mainChar = chars[0];
+                        const fullName = [mainChar.firstName, mainChar.lastName].filter(Boolean).join(" ").trim();
+                        if (fullName) {
+                            scenarios[idx].name = `${fullName} - ${new Date().toLocaleDateString()}`;
+                        }
+                    }
+                }
+                setScenariosLocal(scenarios);
+            }
+            function showBackPopup() {
+                const overlay = document.getElementById("back-popup-overlay");
+                const input = document.getElementById("back-story-input");
+                const storyId = getCurrentStoryId();
+                const scenarios = getScenariosLocal();
+                const story = scenarios.find(x => x.id === storyId);
+                input.value = story?.name || "";
+                overlay.style.display = "flex";
+            }
+            function hideBackPopup() {
+                const overlay = document.getElementById("back-popup-overlay");
+                overlay.style.display = "none";
+            }
+            function handleBackSave() {
+                const input = document.getElementById("back-story-input");
+                const name = input.value.trim();
+                const storyId = getCurrentStoryId();
+                if (!storyId) { hideBackPopup(); return; }
+                const scenarios = getScenariosLocal();
+                const idx = scenarios.findIndex(x => x.id === storyId);
+                if (idx >= 0) {
+                    if (name) scenarios[idx].name = name;
+                    scenarios[idx].official = true;
+                    scenarios[idx].updatedAt = Date.now();
+                    setScenariosLocal(scenarios);
+                }
+                hideBackPopup();
+            }
+            function handleBackDelete() {
+                const storyId = getCurrentStoryId();
+                let scenarios = getScenariosLocal();
+                if (storyId) {
+                    scenarios = scenarios.filter(x => x.id !== storyId);
+                    setScenariosLocal(scenarios);
+                }
+                Storage.remove(CURRENT_STORY_ID_KEY);
+                Storage.remove(SELECTED_WORLD_ID_KEY);
+                Storage.remove(CARDS_KEY);
+                Storage.remove(CHARS_KEY);
+                Storage.remove(LOG_KEY);
+                hideBackPopup();
+                document.body.style.opacity = "0";
+                setTimeout(() => { window.location.href = "index.html"; }, 300);
+            }
+            document.getElementById("back-popup-cancel").onclick = hideBackPopup;
+            document.getElementById("back-popup-save").onclick = handleBackSave;
+            document.getElementById("back-popup-delete").onclick = handleBackDelete;
 
             /* ═══════════════════════════════════════
                CHARACTER LOAD
@@ -2325,10 +2472,19 @@ Example:
                NAVIGATION
             ═══════════════════════════════════════ */
             function goBack() {
-                document.body.style.opacity = "0";
-                setTimeout(() => {
-                    window.location.href = "index.html";
-                }, 400);
+                const storyId = Storage.get(CURRENT_STORY_ID_KEY);
+                if (storyId) {
+                    const scenarios = getScenariosLocal();
+                    const story = scenarios.find(x => x.id === storyId);
+                    if (story && story.official === true) {
+                        document.body.style.opacity = "0";
+                        setTimeout(() => { window.location.href = "index.html"; }, 400);
+                        return;
+                    }
+                }
+                ensureStoryRecord();
+                autoSaveStory();
+                showBackPopup();
             }
 
             /* ═══════════════════════════════════════
@@ -2347,15 +2503,19 @@ Example:
                     loadStoryLog();
                     
                     if (isContinue) {
-                        // Directly show the game, no welcome
                         const ov = document.getElementById("welcome-overlay");
                         ov.style.display = "none";
                     }
                 }
 
+                ensureStoryRecord();
+                autoSaveStory();
                 setTimeout(() => {
                     document.body.style.opacity = "1";
                 }, 100);
+            });
+            window.addEventListener("beforeunload", () => {
+                autoSaveStory();
             });
         </script>
     </body>
