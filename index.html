@@ -82,9 +82,12 @@
                 overflow-x: auto;
                 width: 100%;
                 max-width: 100vw;
-                justify-content: center;
+                justify-content: flex-start;
                 scroll-behavior: smooth;
                 -webkit-overflow-scrolling: touch;
+                scroll-snap-type: x mandatory;
+                scroll-padding-left: 16px;
+                scroll-padding-right: 16px;
             }
 
             #scenarios-list:empty {
@@ -120,6 +123,7 @@
                 transition: all 0.2s ease;
                 height: 160px; /* reduce height a bit */
                 box-sizing: border-box; /* Ensure padding doesn't add to width */
+                scroll-snap-align: start;
             }
             /* Story cards use a slightly smaller footprint */
             .story-card {
@@ -597,14 +601,8 @@
                 
                 hintEl.style.display = "none";
                 
-                // Adjust justification based on content
-                // If more than 3 cards, use flex-start to allow scrolling from the left
-                // If few cards, use center
-                if (scenarios.length > 3) {
-                    listEl.style.justifyContent = "flex-start";
-                } else {
-                    listEl.style.justifyContent = "center";
-                }
+                // Always align to start to ensure full scroll range
+                listEl.style.justifyContent = "flex-start";
 
                 scenarios.forEach(s => {
                     const card = document.createElement("div");
@@ -681,6 +679,9 @@
                     card.appendChild(actions);
                     listEl.appendChild(card);
                 });
+                
+                // Ensure scroll starts at the beginning
+                listEl.scrollLeft = 0;
             }
 
             function openWorldStories(worldId) {
