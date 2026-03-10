@@ -670,10 +670,104 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            /* ─── Secrets Scene (same layout as Relations) ─── */
+            #secrets-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #secrets-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #secrets-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
+            /* ─── Classes Scene (same layout) ─── */
+            #classes-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #classes-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #classes-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
             .relation-rows {
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
+            }
+            .day-toggle {
+                padding: 7px 10px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255,255,255,0.15);
+                background: rgba(28,28,28,0.85);
+                color: rgba(255,255,255,0.8);
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s, border-color 0.2s;
+            }
+            .day-toggle.active {
+                background: rgba(60, 140, 80, 0.8);
+                border-color: rgba(120, 220, 160, 0.4);
+                color: #fff;
+            }
+            .student-list {
+                max-height: 240px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                background: rgba(20,20,24,0.6);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 10px;
+                padding: 8px;
+            }
+            .student-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 10px;
+                border-radius: 8px;
+                background: rgba(28,28,32,0.7);
+                border: 1px solid rgba(255,255,255,0.08);
+                color: rgba(255,255,255,0.85);
+                cursor: pointer;
+                user-select: none;
+            }
+            .student-item input[type="checkbox"] {
+                width: 16px;
+                height: 16px;
+                accent-color: #a88b32;
             }
             .relation-row {
                 background: rgba(35, 35, 45, 0.6);
@@ -2122,6 +2216,13 @@
                             <span class="subloc-icon">&#128101;</span> Relations
                         </button>
                     </div>
+                    <div id="char-secrets-group" style="margin-top: 14px;">
+                        <label class="form-label">Secrets</label>
+                        <div class="relation-tags" id="char-secret-tags"></div>
+                        <button type="button" class="subloc-btn relation-btn" onclick="showSecretsScene()">
+                            <span class="subloc-icon">🕵️</span> Secrets
+                        </button>
+                    </div>
                 </div>
 
                 <!-- ── Location sub-dropdowns ── -->
@@ -2403,6 +2504,27 @@
                         </div>
                         <span class="spawn-check-label">Can be Spawn</span>
                         <span class="spawn-check-badge">SPAWN</span>
+                    </div>
+
+                    <!-- School schedule (for Building -> School) -->
+                    <div id="school-schedule-group" style="display:none; margin-top:14px;">
+                        <label class="form-label">School Schedule</label>
+                        <div id="school-days" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
+                        <div class="form-two-col">
+                            <div>
+                                <label class="form-label">Start</label>
+                                <input type="time" class="form-input" id="school-start" value="08:00" />
+                            </div>
+                            <div>
+                                <label class="form-label">Ende</label>
+                                <input type="time" class="form-input" id="school-end" value="16:00" />
+                            </div>
+                        </div>
+                        <div class="form-actions" style="margin-top: 12px;">
+                            <button type="button" class="subloc-btn" onclick="showClassesScene()" style="margin-top:0;">
+                                <span class="subloc-icon">🏫</span> Classes
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -2815,6 +2937,96 @@
             </div>
         </div>
 
+        <!-- ══════════════════════════════
+             SECRETS SCENE
+        ══════════════════════════════ -->
+        <div id="secrets-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">CHARACTER SECRETS</span>
+                <div class="nav-count" id="secrets-count">0</div>
+            </nav>
+
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Manage Secrets</h2>
+                    <span class="entry-badge badge-character">SECRETS</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">New Secret</label>
+                    <textarea class="form-textarea" id="secret-input" placeholder="Enter a secret only this NPC knows..."></textarea>
+                    <div class="form-actions" style="margin-top: 12px;">
+                        <button class="btn-save" onclick="secretAdd()">+ Add Secret</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Current Secrets</label>
+                    <div id="secret-rows"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-save" onclick="confirmSecrets()">Done</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             CLASSES SCENE (School)
+        ══════════════════════════════ -->
+        <div id="classes-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">SCHOOL CLASSES</span>
+                <div class="nav-count" id="classes-count">0</div>
+            </nav>
+
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Manage Classes</h2>
+                    <span class="entry-badge badge-buildings">SCHOOL</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Class Name</label>
+                    <input type="text" class="form-input" id="class-name" placeholder="e.g. Class 1A">
+                </div>
+
+                <div class="form-two-col">
+                    <div class="form-group">
+                        <label class="form-label">Teacher</label>
+                        <select class="form-select" id="class-teacher-select">
+                            <option value="">Select teacher...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Students</label>
+                        <input type="text" class="form-input" id="class-students-search" placeholder="Search students..." style="margin-bottom:8px;">
+                        <div id="class-students-list" class="student-list"></div>
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top: 12px;">
+                    <button class="btn-save" onclick="classAdd()">+ Add Class</button>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Classes</label>
+                    <div id="class-rows"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-save" onclick="confirmClasses()">Done</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ── SUBLOCATION PICKER ── -->
         <div id="subloc-picker">
             <div class="subloc-picker-panel">
@@ -3217,10 +3429,16 @@
             }
 
             function showFormView() {
-                // Show form view, hide relations scene
-                document.getElementById("relations-view").style.display = "none";
+                // Show form view, hide auxiliary scenes
+                const rel = document.getElementById("relations-view");
+                const sec = document.getElementById("secrets-view");
+                const cls = document.getElementById("classes-view");
+                if (rel) rel.style.display = "none";
+                if (sec) sec.style.display = "none";
+                if (cls) cls.style.display = "none";
                 document.getElementById("form-view").style.display = "flex";
                 relationPickerTemp = [];
+                secretTemp = [];
             }
 
             function confirmRelations() {
@@ -3327,6 +3545,260 @@
                 });
             }
 
+            /* ─────────────────────────────────────────
+               SECRETS STATE & SCENE MANAGEMENT
+            ───────────────────────────────────────── */
+            // Array of { text }
+            let secretSelections = [];
+            let secretTemp = [];
+
+            function showSecretsScene() {
+                secretTemp = secretSelections.map(s => ({ ...s }));
+                document.getElementById("secrets-count").textContent = secretTemp.length;
+                document.getElementById("form-view").style.display = "none";
+                document.getElementById("secrets-view").style.display = "flex";
+                renderSecretRows();
+            }
+
+            function confirmSecrets() {
+                secretSelections = secretTemp.map(s => ({ ...s }));
+                renderSecretTags();
+                showFormView();
+            }
+
+            function secretAdd() {
+                const ta = document.getElementById("secret-input");
+                const txt = (ta.value || "").trim();
+                if (!txt) return;
+                secretTemp.push({ text: txt });
+                ta.value = "";
+                document.getElementById("secrets-count").textContent = secretTemp.length;
+                renderSecretRows();
+            }
+
+            function secretRemove(idx) {
+                secretTemp.splice(idx, 1);
+                document.getElementById("secrets-count").textContent = secretTemp.length;
+                renderSecretRows();
+            }
+
+            function renderSecretRows() {
+                const container = document.getElementById("secret-rows");
+                container.innerHTML = "";
+                secretTemp.forEach((s, idx) => {
+                    const row = document.createElement("div");
+                    row.className = "relation-row";
+                    row.innerHTML = `
+                        <div class="relation-row-header">
+                            <span class="relation-target-name">Secret ${idx + 1}</span>
+                            <button class="relation-row-remove" onclick="secretRemove(${idx})">Remove</button>
+                        </div>
+                        <div class="relation-controls">
+                            <textarea class="form-textarea" onchange="secretUpdate(${idx}, this.value)">${escHtml(s.text)}</textarea>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            function secretUpdate(idx, val) {
+                secretTemp[idx].text = val;
+            }
+
+            function renderSecretTags() {
+                const container = document.getElementById("char-secret-tags");
+                if (!container) return;
+                container.innerHTML = "";
+                secretSelections.forEach((s, i) => {
+                    const tag = document.createElement("div");
+                    tag.className = "relation-tag";
+                    tag.innerHTML = `<span>Secret ${i + 1}</span>`;
+                    container.appendChild(tag);
+                });
+            }
+
+            /* ─────────────────────────────────────────
+               SCHOOL SCHEDULE (Building -> School)
+            ───────────────────────────────────────── */
+            let schoolSchedule = {
+                days: [true, true, true, true, true, false, false], // Mon-Fri on
+                start: "08:00",
+                end: "16:00"
+            };
+            function renderSchoolDays() {
+                const wrap = document.getElementById("school-days");
+                if (!wrap) return;
+                const labels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+                wrap.innerHTML = "";
+                labels.forEach((lbl, idx) => {
+                    const b = document.createElement("button");
+                    b.type = "button";
+                    b.className = "day-toggle" + (schoolSchedule.days[idx] ? " active" : "");
+                    b.textContent = lbl;
+                    b.onclick = () => {
+                        schoolSchedule.days[idx] = !schoolSchedule.days[idx];
+                        renderSchoolDays();
+                    };
+                    wrap.appendChild(b);
+                });
+                const s = document.getElementById("school-start");
+                const e = document.getElementById("school-end");
+                if (s && e) {
+                    if (!s.value) s.value = schoolSchedule.start;
+                    if (!e.value) e.value = schoolSchedule.end;
+                    s.onchange = () => (schoolSchedule.start = s.value || "08:00");
+                    e.onchange = () => (schoolSchedule.end = e.value || "16:00");
+                }
+            }
+            function getSchoolSchedule() {
+                const s = document.getElementById("school-start");
+                const e = document.getElementById("school-end");
+                return {
+                    days: [...schoolSchedule.days],
+                    start: (s && s.value) ? s.value : schoolSchedule.start,
+                    end: (e && e.value) ? e.value : schoolSchedule.end
+                };
+            }
+
+            /* ─────────────────────────────────────────
+               SCHOOL CLASSES (Building -> School)
+            ───────────────────────────────────────── */
+            // classesSelections: [{ name, teacherId, studentIds[] }]
+            let classesSelections = [];
+            let classesTemp = [];
+            let currentStudentSelection = new Set();
+            function getAvailableNPCsForSchool() {
+                // All characters that are residents in any zivil location (village/city/kingdom)
+                const cards = getCards();
+                const residentIds = new Set();
+                cards.forEach(c => {
+                    if (c.genre === "location" && c.locationSub === "zivil") {
+                        (c.residents || []).forEach(id => residentIds.add(id));
+                    }
+                });
+                return cards.filter(c => c.genre === "character" && residentIds.has(c.id));
+            }
+            function populateClassSelectors() {
+                const npcs = getAvailableNPCsForSchool();
+                const teacherSel = document.getElementById("class-teacher-select");
+                const studentsList = document.getElementById("class-students-list");
+                const searchEl = document.getElementById("class-students-search");
+                if (!teacherSel || !studentsList) return;
+                const currentTeacher = teacherSel.value || "";
+                // Current chosen students
+                const selectedStudents = currentStudentSelection;
+                // Build exclusion sets from already created temp classes
+                const usedAsTeacher = new Set(classesTemp.map(c => c.teacherId).filter(Boolean));
+                const usedAsStudent = new Set();
+                classesTemp.forEach(c => (c.studentIds || []).forEach(id => usedAsStudent.add(id)));
+                const usedAny = new Set([...usedAsTeacher, ...usedAsStudent]);
+
+                // Teacher list: all NPCs not used in any class AND not currently picked as student in this class
+                teacherSel.innerHTML = `<option value="">Select teacher...</option>`;
+                npcs.forEach(n => {
+                    if (usedAny.has(n.id) && n.id !== currentTeacher) return;
+                    if (selectedStudents.has(n.id)) return; // cannot be both in same class
+                    const optT = document.createElement("option");
+                    optT.value = n.id;
+                    optT.textContent = n.title;
+                    teacherSel.appendChild(optT);
+                });
+                // Restore selection if still present
+                if (currentTeacher) teacherSel.value = currentTeacher;
+
+                // Students list: NPCs not used in any class AND not current teacher
+                const filter = (searchEl?.value || "").toLowerCase().trim();
+                studentsList.innerHTML = "";
+                npcs.forEach(n => {
+                    if (usedAny.has(n.id)) return;
+                    if (teacherSel.value && n.id === teacherSel.value) return;
+                    if (filter && !n.title.toLowerCase().includes(filter)) return;
+                    const row = document.createElement("div");
+                    row.className = "student-item";
+                    row.onclick = (e) => {
+                        // avoid toggling twice when clicking checkbox directly
+                        if (e.target && e.target.tagName === "INPUT") return;
+                        const cb = row.querySelector("input[type='checkbox']");
+                        cb.checked = !cb.checked;
+                        if (cb.checked) currentStudentSelection.add(n.id);
+                        else currentStudentSelection.delete(n.id);
+                        // Exclude newly selected students from teacher dropdown
+                        populateClassSelectors();
+                    };
+                    const cb = document.createElement("input");
+                    cb.type = "checkbox";
+                    cb.checked = selectedStudents.has(n.id);
+                    cb.onchange = () => {
+                        if (cb.checked) currentStudentSelection.add(n.id);
+                        else currentStudentSelection.delete(n.id);
+                        populateClassSelectors();
+                    };
+                    const label = document.createElement("span");
+                    label.textContent = n.title;
+                    row.appendChild(cb);
+                    row.appendChild(label);
+                    studentsList.appendChild(row);
+                });
+            }
+            function showClassesScene() {
+                classesTemp = classesSelections.map(cls => ({ name: cls.name, teacherId: cls.teacherId || "", studentIds: [...(cls.studentIds || [])] }));
+                document.getElementById("classes-count").textContent = classesTemp.length;
+                document.getElementById("form-view").style.display = "none";
+                document.getElementById("classes-view").style.display = "flex";
+                currentStudentSelection = new Set();
+                populateClassSelectors();
+                const teacherSel = document.getElementById("class-teacher-select");
+                const searchEl = document.getElementById("class-students-search");
+                if (teacherSel) teacherSel.onchange = () => populateClassSelectors();
+                if (searchEl) searchEl.oninput = () => populateClassSelectors();
+                renderClassRows();
+            }
+            function classAdd() {
+                const name = (document.getElementById("class-name").value || "").trim();
+                const teacherId = document.getElementById("class-teacher-select").value || "";
+                const studentIds = Array.from(currentStudentSelection);
+                if (!name) { showToast("Please enter class name.", "#c04040"); return; }
+                classesTemp.push({ name, teacherId, studentIds });
+                document.getElementById("class-name").value = "";
+                currentStudentSelection = new Set();
+                document.getElementById("classes-count").textContent = classesTemp.length;
+                renderClassRows();
+                // Refresh selectors to enforce availability rules for next classes
+                document.getElementById("class-teacher-select").value = "";
+                populateClassSelectors();
+            }
+            function classRemove(idx) {
+                classesTemp.splice(idx, 1);
+                document.getElementById("classes-count").textContent = classesTemp.length;
+                renderClassRows();
+            }
+            function renderClassRows() {
+                const rows = document.getElementById("class-rows");
+                rows.innerHTML = "";
+                const cards = getCards();
+                classesTemp.forEach((cls, idx) => {
+                    const teacherName = (cards.find(c => c.id === cls.teacherId) || {}).title || "—";
+                    const count = cls.studentIds ? cls.studentIds.length : 0;
+                    const div = document.createElement("div");
+                    div.className = "relation-row";
+                    div.innerHTML = `
+                        <div class="relation-row-header">
+                            <span class="relation-target-name">${escHtml(cls.name)}</span>
+                            <button class="relation-row-remove" onclick="classRemove(${idx})">Remove</button>
+                        </div>
+                        <div class="relation-controls" style="flex-direction:column; gap:6px;">
+                            <div><strong>Teacher:</strong> ${escHtml(teacherName)}</div>
+                            <div><strong>Students:</strong> ${count}</div>
+                        </div>
+                    `;
+                    rows.appendChild(div);
+                });
+            }
+            function confirmClasses() {
+                classesSelections = classesTemp.map(c => ({ name: c.name, teacherId: c.teacherId, studentIds: [...(c.studentIds || [])] }));
+                showFormView();
+            }
+
             function escHtml(str) {
                 return (str || "")
                     .replace(/&/g, "&amp;")
@@ -3380,6 +3852,8 @@
                             ? [...card.relations]
                             : [];
                         renderRelationTags();
+                        secretSelections = card.secrets ? [...card.secrets] : [];
+                        renderSecretTags();
                     } else {
                         resetCharacterFields();
                     }
@@ -3611,6 +4085,15 @@
                     const isSub = isSublocationOfAnything(editingId);
                     resGroup.style.display = (isHouse && isSub) ? "block" : "none";
                 }
+                // Show school schedule only for School
+                const sched = document.getElementById("school-schedule-group");
+                if (sched) {
+                    const isSchool = sub === "school";
+                    sched.style.display = isSchool ? "block" : "none";
+                    if (isSchool) {
+                        renderSchoolDays();
+                    }
+                }
                 if (sub !== "house") {
                     // Only clear if not a zivil type that has residents
                     const locSub =
@@ -3697,6 +4180,25 @@
                     document.getElementById("f-building-sub").value =
                         card.locationDetail || "";
                     onBuildingSubChange();
+                    // Restore school schedule
+                    if (card.locationDetail === "school" && card.schoolSchedule) {
+                        schoolSchedule = {
+                            days: Array.isArray(card.schoolSchedule.days) ? [...card.schoolSchedule.days] : [true,true,true,true,true,false,false],
+                            start: card.schoolSchedule.start || "08:00",
+                            end: card.schoolSchedule.end || "16:00",
+                        };
+                        renderSchoolDays();
+                        const s = document.getElementById("school-start");
+                        const e = document.getElementById("school-end");
+                        if (s) s.value = schoolSchedule.start;
+                        if (e) e.value = schoolSchedule.end;
+                    }
+                    // Restore school classes
+                    if (card.locationDetail === "school" && Array.isArray(card.schoolClasses)) {
+                        classesSelections = card.schoolClasses.map(c => ({ name: c.name, teacherId: c.teacherId || "", studentIds: [...(c.studentIds || [])] }));
+                    } else {
+                        classesSelections = [];
+                    }
                     if (card.sublocations) {
                         sublocSelections["building"] =
                             card.sublocations["building"] || [];
@@ -4986,6 +5488,19 @@
                           }
                         : {};
 
+                const schoolScheduleData =
+                    type === "location" &&
+                    locationSub === "building" &&
+                    locationDetail === "school"
+                        ? getSchoolSchedule()
+                        : null;
+                const schoolClassesData =
+                    type === "location" &&
+                    locationSub === "building" &&
+                    locationDetail === "school"
+                        ? classesSelections.map(c => ({ name: c.name, teacherId: c.teacherId || "", studentIds: [...(c.studentIds || [])] }))
+                        : null;
+
                 const residents =
                     type === "location" &&
                     ((locationSub === "building" && locationDetail === "house") ||
@@ -5084,12 +5599,15 @@
                             genre: type,
                             locationSub,
                             locationDetail,
+                            schoolSchedule: schoolScheduleData,
+                            schoolClasses: schoolClassesData,
                             canBeSpawn,
                             sublocations,
                             racialCivilization,
                             population,
                             residents,
                             relations: type === "character" ? [...relationSelections] : [],
+                            secrets: type === "character" ? [...secretSelections] : [],
                             nameGenerator,
                             lore,
                             skincolorAllowed,
@@ -5115,12 +5633,15 @@
                         genre: type,
                         locationSub,
                         locationDetail,
+                        schoolSchedule: schoolScheduleData,
+                        schoolClasses: schoolClassesData,
                         canBeSpawn,
                         sublocations,
                         racialCivilization,
                         population,
                         residents,
                         relations: type === "character" ? [...relationSelections] : [],
+                        secrets: type === "character" ? [...secretSelections] : [],
                         nameGenerator,
                         lore,
                         skincolorAllowed,

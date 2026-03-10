@@ -1640,6 +1640,40 @@
                                 }
                             });
                         }
+                        
+                        // School-specific data
+                        if (
+                            (loc.locationSub === "building" ||
+                                loc.locationSub === "BUILDING") &&
+                            (loc.locationDetail === "school" ||
+                                loc.locationDetail === "SCHOOL")
+                        ) {
+                            if (loc.schoolSchedule) {
+                                const d = loc.schoolSchedule.days || [];
+                                const labels = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+                                const openDays = labels
+                                    .map((lbl, i) => (d[i] ? lbl : null))
+                                    .filter(Boolean)
+                                    .join(", ");
+                                const start = loc.schoolSchedule.start || "08:00";
+                                const end = loc.schoolSchedule.end || "16:00";
+                                str += `${indent}  School Schedule: ${openDays || "—"} | ${start} - ${end}\n`;
+                            }
+                            if (Array.isArray(loc.schoolClasses) && loc.schoolClasses.length > 0) {
+                                str += `${indent}  Classes:\n`;
+                                loc.schoolClasses.forEach((cls, idx) => {
+                                    const t = characters.find(c => c.id === cls.teacherId);
+                                    const tName = t ? t.title : (cls.teacherId ? "(Unknown)" : "—");
+                                    const studs = (cls.studentIds || [])
+                                        .map(id => {
+                                            const ch = characters.find(c => c.id === id);
+                                            return ch ? ch.title : "(Unknown)";
+                                        })
+                                        .join(", ");
+                                    str += `${indent}    - ${cls.name || "Class "+(idx+1)} | Teacher: ${tName} | Students: ${studs || "—"}\n`;
+                                });
+                            }
+                        }
 
                         const children = childrenMap.get(id) || [];
                         children.forEach((childId) => {
@@ -1687,6 +1721,11 @@
                         current = parent;
                     }
 
+                    const ancestorIds = new Set(ancestors.map(a => a.id));
+
+                    const scheduleNow = computeSchoolPresenceNow();
+                    const scheduledByNpc = scheduleNow.byNpc || new Map();
+
                     // Collect all resident IDs from this location and its ancestors
                     const residentIds = new Set();
                     ancestors.forEach((loc) => {
@@ -1703,6 +1742,11 @@
                     let context = "\nPRESENT CHARACTERS (Residents of this location and its parent regions):\n";
                     context += "NOTE: Presence does NOT mean friendship. Check 'Character Relationships' for status.\n";
                     characters.forEach((c) => {
+                        // If NPC is scheduled in school now, show only when current location includes that school
+                        const sched = scheduledByNpc.get(c.id);
+                        if (sched && !ancestorIds.has(sched.schoolId)) {
+                            return; // not present here now
+                        }
                         context += `- ${c.title} (${c.raceName || "Unknown Race"})\n`;
                         if (c.description) context += `  Description: ${c.description}\n`;
                         if (c.personality) context += `  Personality: ${c.personality}\n`;
@@ -1759,6 +1803,72 @@
                 }
             }
 
+            // Helpers for school schedules
+            function _timeToMinutes(t) {
+                if (!t || typeof t !== "string") return 0;
+                const parts = t.split(":").map((x) => parseInt(x, 10));
+                return (parts[0] || 0) * 60 + (parts[1] || 0);
+            }
+            function _weekdayMon0(day, month, year) {
+                // JS: 0=Sun..6=Sat -> convert to Mon=0..Sun=6
+                const js = new Date((year || 1983), (month || 1) - 1, (day || 1));
+                const dow = js.getDay(); // 0..6
+                return (dow + 6) % 7;
+            }
+            function computeSchoolPresenceNow() {
+                try {
+                    const cards = getCards();
+                    const d = activeChar?.startingDate || {};
+                    const wday = _weekdayMon0(d.day, d.month, d.year);
+                    const nowMin = _timeToMinutes(d.time || "00:00");
+                    const schools = cards.filter(
+                        (c) =>
+                            c.genre === "location" &&
+                            c.locationSub === "building" &&
+                            (c.locationDetail || "").toLowerCase() === "school",
+                    );
+                    const characters = cards.filter((c) => c.genre === "character");
+                    const byNpc = new Map(); // npcId -> { schoolId, schoolTitle, className }
+                    let context = "\nSCHEDULED NPC PRESENCE (Current time):\n";
+                    schools.forEach((school) => {
+                        const sched = school.schoolSchedule || null;
+                        let isOpen = false;
+                        if (sched && Array.isArray(sched.days)) {
+                            const startMin = _timeToMinutes(sched.start || "08:00");
+                            const endMin = _timeToMinutes(sched.end || "16:00");
+                            isOpen = !!sched.days[wday] && nowMin >= startMin && nowMin < endMin;
+                        }
+                        if (!isOpen) return;
+                        const classes = Array.isArray(school.schoolClasses)
+                            ? school.schoolClasses
+                            : [];
+                        if (classes.length === 0) return;
+                        context += `- ${school.title}: OPEN. Classes running now.\n`;
+                        classes.forEach((cls, idx) => {
+                            const t = characters.find((c) => c.id === cls.teacherId);
+                            const tName = t ? t.title : (cls.teacherId ? "(Unknown)" : "—");
+                            const studs = (cls.studentIds || [])
+                                .map((id) => {
+                                    const ch = characters.find((c) => c.id === id);
+                                    return ch ? ch.title : "(Unknown)";
+                                })
+                                .join(", ");
+                            context += `  * ${cls.name || "Class " + (idx + 1)} | Teacher: ${tName} | Students: ${studs || "—"}\n`;
+                            // Fill lookup to constrain presence
+                            if (cls.teacherId) byNpc.set(cls.teacherId, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" });
+                            (cls.studentIds || []).forEach((sid) =>
+                                byNpc.set(sid, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" }),
+                            );
+                        });
+                    });
+                    if (byNpc.size === 0) context += "  (No classes in session)\n";
+                    return { byNpc, context };
+                } catch (e) {
+                    console.error("schedule compute error", e);
+                    return { byNpc: new Map(), context: "" };
+                }
+            }
+
             function getCurrentLocationPath() {
                 if (!currentLocationId) return "Unknown Location";
                 try {
@@ -1802,11 +1912,14 @@
                 const raceContext = buildRaceContext();
                 const itemContext = buildItemContext();
                 const relationshipSummary = buildRelationshipSummary();
+                const scheduleInfo = computeSchoolPresenceNow();
+                const scheduleContext = scheduleInfo.context || "";
                 const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
                 
                 const cards = getCards();
                 const allLocNames = cards
                     .filter(c => c.genre === "location")
+                    .map(c => c.title)
                     .map(c => c.title)
                     .join(", ");
 
@@ -1851,12 +1964,14 @@ ${charContext}
 ${raceContext}
 ${itemContext}
 ${relationshipSummary}
+${scheduleContext}
 
 # ROLEPLAY RULES
 1. Write EXCLUSIVELY in ${aiLang}.
 2. Be descriptive, vivid, and maintain a consistent tone.
 3. Follow the 'IMPORTANT RELATIONSHIP RULES' strictly.
 4. Strangers (Unknown) have NO shared past. Do NOT invent friendship or shared memories for them.
+5. During SCHOOL OPEN HOURS, any NPC assigned to a School class is ONLY present at that School. Do NOT involve them elsewhere unless the player moves there or the time is outside school hours.
 
 # TIME & LOCATION MANAGEMENT (CRITICAL)
 1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
