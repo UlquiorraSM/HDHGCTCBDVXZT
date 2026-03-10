@@ -2310,8 +2310,8 @@ Example:
                 const text = inputEl.value.trim();
                 if (!text || isBusy) return;
 
-                // Time set command: standalone HH:MM without quotes triggers time change
-                const timeCmd = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(text);
+                // Time set command: standalone H:MM or HH:MM without quotes triggers time change
+                const timeCmd = /^([01]?\d|2[0-3]):([0-5]?\d)$/.exec(text);
                 if (timeCmd && !text.includes('"') && !text.includes("'")) {
                     try {
                         const hh = parseInt(timeCmd[1], 10);
