@@ -720,6 +720,31 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            /* ─── Skills Scene (same layout) ─── */
+            #skills-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #skills-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #skills-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
             .relation-rows {
                 display: flex;
                 flex-direction: column;
@@ -2099,6 +2124,7 @@
                             <option value="race">Race</option>
                             <option value="character">Character</option>
                             <option value="item">Item</option>
+                            <option value="skill">Skill</option>
                         </select>
                     </div>
                 </div>
@@ -2221,6 +2247,13 @@
                         <div class="relation-tags" id="char-secret-tags"></div>
                         <button type="button" class="subloc-btn relation-btn" onclick="showSecretsScene()">
                             <span class="subloc-icon">🕵️</span> Secrets
+                        </button>
+                    </div>
+                    <div id="char-skill-group" style="margin-top: 14px; display:none;">
+                        <label class="form-label">Skills</label>
+                        <div class="relation-tags" id="char-skill-tag"></div>
+                        <button type="button" class="subloc-btn relation-btn" onclick="showSkillsScene()">
+                            <span class="subloc-icon">🛠️</span> Skills
                         </button>
                     </div>
                 </div>
@@ -3027,6 +3060,34 @@
             </div>
         </div>
 
+        <!-- ══════════════════════════════
+             SKILLS SCENE (Character)
+        ══════════════════════════════ -->
+        <div id="skills-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">CHARACTER SKILLS</span>
+                <div class="nav-count" id="skills-count">0</div>
+            </nav>
+
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Assign Skill</h2>
+                    <span class="entry-badge badge-character">SKILL</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Available Skills</label>
+                    <div id="skills-list" class="student-list"></div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-save" onclick="confirmSkills()">Done</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ── SUBLOCATION PICKER ── -->
         <div id="subloc-picker">
             <div class="subloc-picker-panel">
@@ -3433,9 +3494,11 @@
                 const rel = document.getElementById("relations-view");
                 const sec = document.getElementById("secrets-view");
                 const cls = document.getElementById("classes-view");
+                const skl = document.getElementById("skills-view");
                 if (rel) rel.style.display = "none";
                 if (sec) sec.style.display = "none";
                 if (cls) cls.style.display = "none";
+                if (skl) skl.style.display = "none";
                 document.getElementById("form-view").style.display = "flex";
                 relationPickerTemp = [];
                 secretTemp = [];
@@ -3667,6 +3730,65 @@
             let classesSelections = [];
             let classesTemp = [];
             let currentStudentSelection = new Set();
+
+            /* ─────────────────────────────────────────
+               SKILLS (Character)
+            ───────────────────────────────────────── */
+            let selectedSkillId = "";
+            let skillTempId = "";
+
+            function getSkills() {
+                return getCards().filter(c => c.genre === "skill");
+            }
+            function updateSkillGroupVisibility() {
+                const grp = document.getElementById("char-skill-group");
+                if (!grp) return;
+                grp.style.display = getSkills().length > 0 ? "block" : "none";
+                renderSkillTag();
+            }
+            function showSkillsScene() {
+                const list = document.getElementById("skills-list");
+                const skills = getSkills();
+                document.getElementById("skills-count").textContent = skills.length;
+                list.innerHTML = "";
+                skills.forEach(sk => {
+                    const row = document.createElement("div");
+                    row.className = "student-item";
+                    row.style.gap = "8px";
+                    const rb = document.createElement("input");
+                    rb.type = "radio";
+                    rb.name = "skill-radio";
+                    rb.value = sk.id;
+                    rb.checked = (sk.id === selectedSkillId);
+                    rb.onchange = () => { skillTempId = rb.value; };
+                    const label = document.createElement("div");
+                    label.innerHTML = `<div style="font-weight:700;">${escHtml(sk.title)}</div>${sk.description ? `<div style="opacity:.8; font-size:12px;">${escHtml(sk.description)}</div>` : ""}`;
+                    row.appendChild(rb);
+                    row.appendChild(label);
+                    row.onclick = (e)=>{ if(e.target!==rb){ rb.checked = true; skillTempId = rb.value; } };
+                    list.appendChild(row);
+                });
+                document.getElementById("form-view").style.display = "none";
+                document.getElementById("skills-view").style.display = "flex";
+            }
+            function confirmSkills() {
+                if (skillTempId) selectedSkillId = skillTempId;
+                renderSkillTag();
+                showFormView();
+            }
+            function renderSkillTag() {
+                const wrap = document.getElementById("char-skill-tag");
+                if (!wrap) return;
+                wrap.innerHTML = "";
+                if (!selectedSkillId) return;
+                const all = getCards();
+                const sk = all.find(c => c.id === selectedSkillId);
+                if (!sk) return;
+                const tag = document.createElement("div");
+                tag.className = "relation-tag";
+                tag.innerHTML = `<span>${escHtml(sk.title)}</span>`;
+                wrap.appendChild(tag);
+            }
             function getAvailableNPCsForSchool() {
                 // All characters that are residents in any zivil location (village/city/kingdom)
                 const cards = getCards();
@@ -3854,6 +3976,9 @@
                         renderRelationTags();
                         secretSelections = card.secrets ? [...card.secrets] : [];
                         renderSecretTags();
+                        selectedSkillId = card.skillId || "";
+                        renderSkillTag();
+                        updateSkillGroupVisibility();
                     } else {
                         resetCharacterFields();
                     }
@@ -4018,6 +4143,7 @@
                 // Show / hide Character block
                 document.getElementById("character-block").style.display =
                     type === "character" ? "block" : "none";
+                if (type === "character") updateSkillGroupVisibility();
 
                 // Show / hide Item block
                 document.getElementById("item-block").style.display =
@@ -5608,6 +5734,8 @@
                             residents,
                             relations: type === "character" ? [...relationSelections] : [],
                             secrets: type === "character" ? [...secretSelections] : [],
+                            skillId: type === "character" ? (selectedSkillId || "") : (cards[idx].skillId || ""),
+                            skillName: type === "character" ? ((getCards().find(c => c.id === selectedSkillId) || {}).title || "") : (cards[idx].skillName || ""),
                             nameGenerator,
                             lore,
                             skincolorAllowed,
@@ -5642,6 +5770,8 @@
                         residents,
                         relations: type === "character" ? [...relationSelections] : [],
                         secrets: type === "character" ? [...secretSelections] : [],
+                        skillId: type === "character" ? (selectedSkillId || "") : "",
+                        skillName: type === "character" ? ((getCards().find(c => c.id === selectedSkillId) || {}).title || "") : "",
                         nameGenerator,
                         lore,
                         skincolorAllowed,
