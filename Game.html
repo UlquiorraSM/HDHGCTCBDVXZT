@@ -2501,7 +2501,11 @@ Example:
                 if (char) {
                     applyCharacter(char);
                     loadStoryLog();
-                    
+                    // Overlay ausblenden, wenn bereits Nachrichten existieren
+                    if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+                        const ov = document.getElementById("welcome-overlay");
+                        if (ov) ov.style.display = "none";
+                    }
                     if (isContinue) {
                         const ov = document.getElementById("welcome-overlay");
                         ov.style.display = "none";
