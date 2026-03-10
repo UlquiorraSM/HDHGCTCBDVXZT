@@ -745,6 +745,30 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            #work-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #work-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #work-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
             .relation-rows {
                 display: flex;
                 flex-direction: column;
@@ -1922,6 +1946,15 @@
                 }
             }
 
+            /* Tools row (Location actions) */
+            .tools-row {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                margin: 6px 0 12px 0;
+                flex-wrap: wrap;
+            }
+
             /* RacialCiv tags (shown in form) */
             .racial-tags {
                 display: flex;
@@ -2304,6 +2337,35 @@
                     <div class="zivil-side-layout">
                         <!-- LEFT: RacialCiv + Sublocations -->
                         <div class="zivil-main-col">
+                            <label class="form-label">Tools</label>
+                            <div class="tools-row" id="tools-section-vc" style="display:none">
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="openRacialPicker('village-city')"
+                                >
+                                    <span class="subloc-icon">&#9670;</span>
+                                    RacialCivilization
+                                </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="openSublocPicker('village-city')"
+                                >
+                                    <span class="subloc-icon">&#43;</span>
+                                    Sublocations
+                                </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    id="tools-resident-vc"
+                                    onclick="openSublocPicker('village-city-resident')"
+                                    style="display:none"
+                                >
+                                    <span class="subloc-icon">&#128100;</span>
+                                    Resident
+                                </button>
+                            </div>
                             <!-- RacialCivilization for Village / City -->
                             <div
                                 class="form-group"
@@ -2320,7 +2382,7 @@
                                     type="button"
                                     class="subloc-btn"
                                     onclick="openRacialPicker('village-city')"
-                                    style="margin-top: 8px"
+                                    style="margin-top: 8px; display:none"
                                 >
                                     <span class="subloc-icon">&#9670;</span>
                                     RacialCivilization
@@ -2341,6 +2403,7 @@
                                     type="button"
                                     class="subloc-btn"
                                     onclick="openSublocPicker('village-city')"
+                                    style="display:none"
                                 >
                                     <span class="subloc-icon">&#43;</span>
                                     Sublocations
@@ -2364,6 +2427,7 @@
                                     type="button"
                                     class="subloc-btn"
                                     onclick="openSublocPicker('village-city-resident')"
+                                    style="display:none"
                                 >
                                     <span class="subloc-icon">&#128100;</span>
                                     Resident
@@ -2403,6 +2467,39 @@
                     <div class="zivil-side-layout">
                         <!-- LEFT: RacialCiv + Sublocations -->
                         <div class="zivil-main-col">
+                            <label class="form-label">Tools</label>
+                            <div class="tools-row" id="tools-section-ck" style="display:none">
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="
+                                        openRacialPicker('country-kingdom')
+                                    "
+                                >
+                                    <span class="subloc-icon">&#9670;</span>
+                                    RacialCivilization
+                                </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="
+                                        openSublocPicker('country-kingdom')
+                                    "
+                                >
+                                    <span class="subloc-icon">&#43;</span>
+                                    Sublocations
+                                </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    id="tools-resident-ck"
+                                    onclick="openSublocPicker('country-kingdom-resident')"
+                                    style="display:none"
+                                >
+                                    <span class="subloc-icon">&#128100;</span>
+                                    Resident
+                                </button>
+                            </div>
                             <!-- RacialCivilization for Country / Kingdom -->
                             <div
                                 class="form-group"
@@ -2421,7 +2518,7 @@
                                     onclick="
                                         openRacialPicker('country-kingdom')
                                     "
-                                    style="margin-top: 8px"
+                                    style="margin-top: 8px; display:none"
                                 >
                                     <span class="subloc-icon">&#9670;</span>
                                     RacialCivilization
@@ -2444,6 +2541,7 @@
                                     onclick="
                                         openSublocPicker('country-kingdom')
                                     "
+                                    style="display:none"
                                 >
                                     <span class="subloc-icon">&#43;</span>
                                     Sublocations
@@ -2467,6 +2565,7 @@
                                     type="button"
                                     class="subloc-btn"
                                     onclick="openSublocPicker('country-kingdom-resident')"
+                                    style="display:none"
                                 >
                                     <span class="subloc-icon">&#128100;</span>
                                     Resident
@@ -2537,6 +2636,15 @@
                         </div>
                         <span class="spawn-check-label">Can be Spawn</span>
                         <span class="spawn-check-badge">SPAWN</span>
+                    </div>
+
+                    <div id="shop-work-group" style="display:none; margin-top:14px;">
+                        <label class="form-label">Work</label>
+                        <div class="form-actions" style="margin-top: 8px;">
+                            <button type="button" class="subloc-btn" onclick="showWorkScene()" style="margin-top:0;">
+                                <span class="subloc-icon">🛠</span> Work
+                            </button>
+                        </div>
                     </div>
 
                     <!-- School schedule (for Building -> School) -->
@@ -3061,6 +3169,49 @@
         </div>
 
         <!-- ══════════════════════════════
+             WORKERS SCENE (Shop)
+        ══════════════════════════════ -->
+        <div id="work-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">SHOP WORKERS</span>
+                <div class="nav-count" id="work-count">0</div>
+            </nav>
+
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Manage Workers</h2>
+                    <span class="entry-badge badge-buildings">SHOP</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Days</label>
+                    <div id="shop-days" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
+                    <div class="form-two-col">
+                        <div>
+                            <label class="form-label">Start</label>
+                            <input type="time" class="form-input" id="shop-start" value="09:00" />
+                        </div>
+                        <div>
+                            <label class="form-label">Ende</label>
+                            <input type="time" class="form-input" id="shop-end" value="17:00" />
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Available NPCs</label>
+                    <input type="text" class="form-input" placeholder="Search NPC..." id="shop-search" />
+                    <div class="student-list" id="shop-npc-list"></div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-save" onclick="confirmWork()">Done</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
              SKILLS SCENE (Character)
         ══════════════════════════════ -->
         <div id="skills-view" style="display: none;">
@@ -3495,10 +3646,12 @@
                 const sec = document.getElementById("secrets-view");
                 const cls = document.getElementById("classes-view");
                 const skl = document.getElementById("skills-view");
+                const wrk = document.getElementById("work-view");
                 if (rel) rel.style.display = "none";
                 if (sec) sec.style.display = "none";
                 if (cls) cls.style.display = "none";
                 if (skl) skl.style.display = "none";
+                if (wrk) wrk.style.display = "none";
                 document.getElementById("form-view").style.display = "flex";
                 relationPickerTemp = [];
                 secretTemp = [];
@@ -3721,6 +3874,100 @@
                     start: (s && s.value) ? s.value : schoolSchedule.start,
                     end: (e && e.value) ? e.value : schoolSchedule.end
                 };
+            }
+
+            let shopSchedule = {
+                days: [true, true, true, true, true, false, false],
+                start: "09:00",
+                end: "17:00"
+            };
+            let shopWorkers = [];
+            let shopWorkersTemp = new Set();
+            function renderShopDays() {
+                const wrap = document.getElementById("shop-days");
+                if (!wrap) return;
+                const labels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+                wrap.innerHTML = "";
+                labels.forEach((lbl, idx) => {
+                    const b = document.createElement("button");
+                    b.type = "button";
+                    b.className = "day-toggle" + (shopSchedule.days[idx] ? " active" : "");
+                    b.textContent = lbl;
+                    b.onclick = () => {
+                        shopSchedule.days[idx] = !shopSchedule.days[idx];
+                        renderShopDays();
+                    };
+                    wrap.appendChild(b);
+                });
+                const s = document.getElementById("shop-start");
+                const e = document.getElementById("shop-end");
+                if (s && e) {
+                    if (!s.value) s.value = shopSchedule.start;
+                    if (!e.value) e.value = shopSchedule.end;
+                    s.onchange = () => (shopSchedule.start = s.value || "09:00");
+                    e.onchange = () => (shopSchedule.end = e.value || "17:00");
+                }
+            }
+            function getShopSchedule() {
+                const s = document.getElementById("shop-start");
+                const e = document.getElementById("shop-end");
+                return {
+                    days: [...shopSchedule.days],
+                    start: (s && s.value) ? s.value : shopSchedule.start,
+                    end: (e && e.value) ? e.value : shopSchedule.end
+                };
+            }
+            function getAvailableNPCsForShop() {
+                return getAvailableNPCsForSchool();
+            }
+            function populateShopNPCList() {
+                const list = document.getElementById("shop-npc-list");
+                const searchEl = document.getElementById("shop-search");
+                if (!list) return;
+                const all = getAvailableNPCsForShop();
+                const filter = (searchEl?.value || "").toLowerCase().trim();
+                const items = all.filter(n =>
+                    !filter ||
+                    (n.title || "").toLowerCase().includes(filter) ||
+                    (n.description || "").toLowerCase().includes(filter)
+                );
+                list.innerHTML = "";
+                items.forEach(n => {
+                    const row = document.createElement("div");
+                    row.className = "student-item";
+                    row.style.gap = "8px";
+                    const cb = document.createElement("input");
+                    cb.type = "checkbox";
+                    cb.checked = shopWorkersTemp.has(n.id);
+                    cb.onchange = () => {
+                        if (cb.checked) shopWorkersTemp.add(n.id);
+                        else shopWorkersTemp.delete(n.id);
+                        document.getElementById("work-count").textContent = shopWorkersTemp.size;
+                    };
+                    const label = document.createElement("div");
+                    label.innerHTML = `<div style="font-weight:700;">${escHtml(n.title)}</div>${n.description ? `<div style="opacity:.8; font-size:12px;">${escHtml(n.description)}</div>` : ""}`;
+                    row.appendChild(cb);
+                    row.appendChild(label);
+                    row.onclick = (e)=>{ if(e.target!==cb){ cb.checked = !cb.checked; cb.onchange(); } };
+                    list.appendChild(row);
+                });
+                document.getElementById("work-count").textContent = shopWorkersTemp.size;
+            }
+            function showWorkScene() {
+                shopWorkersTemp = new Set(shopWorkers);
+                renderShopDays();
+                const searchEl = document.getElementById("shop-search");
+                if (searchEl) {
+                    searchEl.value = "";
+                    searchEl.oninput = populateShopNPCList;
+                }
+                populateShopNPCList();
+                document.getElementById("form-view").style.display = "none";
+                document.getElementById("work-view").style.display = "flex";
+            }
+            function confirmWork() {
+                shopWorkers = Array.from(shopWorkersTemp);
+                showFormView();
             }
 
             /* ─────────────────────────────────────────
@@ -4211,13 +4458,20 @@
                     const isSub = isSublocationOfAnything(editingId);
                     resGroup.style.display = (isHouse && isSub) ? "block" : "none";
                 }
-                // Show school schedule only for School
                 const sched = document.getElementById("school-schedule-group");
                 if (sched) {
                     const isSchool = sub === "school";
                     sched.style.display = isSchool ? "block" : "none";
                     if (isSchool) {
                         renderSchoolDays();
+                    }
+                }
+                const shopGrp = document.getElementById("shop-work-group");
+                if (shopGrp) {
+                    const isShop = sub === "shop";
+                    shopGrp.style.display = isShop ? "block" : "none";
+                    if (isShop) {
+                        renderShopDays();
                     }
                 }
                 if (sub !== "house") {
@@ -4306,7 +4560,6 @@
                     document.getElementById("f-building-sub").value =
                         card.locationDetail || "";
                     onBuildingSubChange();
-                    // Restore school schedule
                     if (card.locationDetail === "school" && card.schoolSchedule) {
                         schoolSchedule = {
                             days: Array.isArray(card.schoolSchedule.days) ? [...card.schoolSchedule.days] : [true,true,true,true,true,false,false],
@@ -4319,11 +4572,22 @@
                         if (s) s.value = schoolSchedule.start;
                         if (e) e.value = schoolSchedule.end;
                     }
-                    // Restore school classes
                     if (card.locationDetail === "school" && Array.isArray(card.schoolClasses)) {
                         classesSelections = card.schoolClasses.map(c => ({ name: c.name, teacherId: c.teacherId || "", studentIds: [...(c.studentIds || [])] }));
                     } else {
                         classesSelections = [];
+                    }
+                    if (card.locationDetail === "shop" && card.shopSchedule) {
+                        shopSchedule = {
+                            days: Array.isArray(card.shopSchedule.days) ? [...card.shopSchedule.days] : [true,true,true,true,true,false,false],
+                            start: card.shopSchedule.start || "09:00",
+                            end: card.shopSchedule.end || "17:00",
+                        };
+                    }
+                    if (card.locationDetail === "shop" && Array.isArray(card.shopWorkers)) {
+                        shopWorkers = [...card.shopWorkers];
+                    } else if (card.locationDetail === "shop") {
+                        shopWorkers = [];
                     }
                     if (card.sublocations) {
                         sublocSelections["building"] =
@@ -4968,6 +5232,24 @@
                         val === "village" || val === "city" ? "block" : "none";
                 if (resCkGroup)
                     resCkGroup.style.display = val === "kingdom" ? "block" : "none";
+
+                // Tools sections and Resident tool buttons
+                const toolsVc = document.getElementById("tools-section-vc");
+                const toolsCk = document.getElementById("tools-section-ck");
+                if (toolsVc)
+                    toolsVc.style.display =
+                        val === "village" || val === "city" ? "flex" : "none";
+                if (toolsCk)
+                    toolsCk.style.display =
+                        val === "country" || val === "kingdom" ? "flex" : "none";
+                const toolsResVc = document.getElementById("tools-resident-vc");
+                const toolsResCk = document.getElementById("tools-resident-ck");
+                if (toolsResVc)
+                    toolsResVc.style.display =
+                        val === "village" || val === "city" ? "inline-flex" : "none";
+                if (toolsResCk)
+                    toolsResCk.style.display =
+                        val === "kingdom" ? "inline-flex" : "none";
 
                 // clear tags & population when hidden
                 if (val !== "village" && val !== "city") {
@@ -5626,6 +5908,18 @@
                     locationDetail === "school"
                         ? classesSelections.map(c => ({ name: c.name, teacherId: c.teacherId || "", studentIds: [...(c.studentIds || [])] }))
                         : null;
+                const shopScheduleData =
+                    type === "location" &&
+                    locationSub === "building" &&
+                    locationDetail === "shop"
+                        ? getShopSchedule()
+                        : null;
+                const shopWorkersData =
+                    type === "location" &&
+                    locationSub === "building" &&
+                    locationDetail === "shop"
+                        ? [...shopWorkers]
+                        : null;
 
                 const residents =
                     type === "location" &&
@@ -5727,6 +6021,8 @@
                             locationDetail,
                             schoolSchedule: schoolScheduleData,
                             schoolClasses: schoolClassesData,
+                            shopSchedule: shopScheduleData,
+                            shopWorkers: shopWorkersData,
                             canBeSpawn,
                             sublocations,
                             racialCivilization,
@@ -5763,6 +6059,8 @@
                         locationDetail,
                         schoolSchedule: schoolScheduleData,
                         schoolClasses: schoolClassesData,
+                        shopSchedule: shopScheduleData,
+                        shopWorkers: shopWorkersData,
                         canBeSpawn,
                         sublocations,
                         racialCivilization,
