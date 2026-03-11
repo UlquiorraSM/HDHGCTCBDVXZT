@@ -970,7 +970,8 @@
                 const yr = d.year || 1983;
                 const tm = d.time || "00:00";
                 const el = document.getElementById("header-time");
-                if (el) el.textContent = `${day}.${mon}.${yr} — ${tm}`;
+                const wdn = _weekdayNameEn(d.day || 1, d.month || 1, d.year || 1983);
+                if (el) el.textContent = `${wdn}, ${day}.${mon}.${yr} — ${tm}`;
             }
 
             function applyTextSizeLimit(text) {
@@ -1881,6 +1882,11 @@
                 const dow = js.getDay(); // 0..6
                 return (dow + 6) % 7;
             }
+            function _weekdayNameEn(day, month, year) {
+                const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+                const idx = _weekdayMon0(day, month, year);
+                return names[idx] || "Monday";
+            }
             function computeSchoolPresenceNow() {
                 try {
                     const cards = getCards();
@@ -1969,6 +1975,7 @@
                 const d = activeChar?.startingDate || {};
                 const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
                 const curTime = d.time || "00:00";
+                const curWeekday = _weekdayNameEn(d.day || 1, d.month || 1, d.year || 1983);
                 
                 const curLocPath = getCurrentLocationPath();
                 const curLocName = document.getElementById("header-location")?.textContent || "Unknown Location";
@@ -2022,6 +2029,7 @@ You are the Narrator of an immersive, interactive story. Your goal is to describ
 # CURRENT WORLD STATE
 - DATE: ${curDate}
 - TIME: ${curTime}
+- WEEKDAY: ${curWeekday}
 - CURRENT LOCATION: ${curLocName}
 - LOCATION PATH: ${curLocPath}
 - PRESENT NPCs: ${presentNPCs || "None"}
