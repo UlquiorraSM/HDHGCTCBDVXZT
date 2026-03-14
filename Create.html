@@ -2446,6 +2446,38 @@
                             placeholder="Describe typical personality traits..."
                         ></textarea>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Lore</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-species-lore"
+                            placeholder="Write background lore for this species..."
+                        ></textarea>
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label class="form-label" style="font-size: 12px; color: rgba(255,255,255,0.4);">Tags (Bullet points for AI, max 10)</label>
+                        <div class="item-tag-container" id="species-tags-container"></div>
+                        <div class="item-tag-input-wrapper">
+                            <input
+                                type="text"
+                                class="form-input"
+                                id="f-species-tag-input"
+                                placeholder="Add a tag and press Enter..."
+                                onkeydown="if(event.key === 'Enter') addGenericTag('species')"
+                            />
+                            <button type="button" class="subloc-btn" onclick="addGenericTag('species')" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
+                        </div>
+                        <div class="item-tag-count" id="species-tag-count">0 / 10 tags</div>
+                    </div>
+                    <div class="form-two-col" style="margin-top: 8px;">
+                        <div class="form-group">
+                            <label class="form-label">Lore Mode</label>
+                            <select class="form-select" id="f-species-lore-mode">
+                                <option value="always">Always</option>
+                                <option value="tags">Tags</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ── Location sub-dropdowns ── -->
@@ -3603,6 +3635,7 @@
             let ctxTargetId = null; // for context-menu
             let itemTags = []; // for item tags
             let raceTags = []; // for race tags
+            let speciesTags = []; // for species tags
 
             /* ─────────────────────────────────────────
            BACKGROUND
@@ -4534,8 +4567,16 @@
                             card.appearance || "";
                         document.getElementById("f-species-personality").value =
                             card.personality || "";
+                        const l = document.getElementById("f-species-lore");
+                        const lm = document.getElementById("f-species-lore-mode");
+                        if (l) l.value = card.speciesLore || "";
+                        if (lm) lm.value = card.speciesLoreMode || "always";
+                        speciesTags = Array.isArray(card.speciesTags) ? [...card.speciesTags] : [];
+                        renderGenericTags("species");
                     } else {
                         resetSpeciesFields();
+                        speciesTags = [];
+                        renderGenericTags("species");
                     }
 
                     // restore item data
@@ -4706,9 +4747,13 @@
                 const g = document.getElementById("f-species-generally");
                 const a = document.getElementById("f-species-appearance");
                 const p = document.getElementById("f-species-personality");
+                const l = document.getElementById("f-species-lore");
+                const lm = document.getElementById("f-species-lore-mode");
                 if (g) g.value = "";
                 if (a) a.value = "";
                 if (p) p.value = "";
+                if (l) l.value = "";
+                if (lm) lm.value = "always";
             }
 
             /* ─────────────────────────────────────────
@@ -4731,7 +4776,7 @@
 
                 // Show / hide Description at bottom for Character
                 const descGrp = document.getElementById("description-group");
-                if (descGrp) descGrp.style.display = type === "character" ? "none" : "block";
+                if (descGrp) descGrp.style.display = (type === "character" || type === "species") ? "none" : "block";
 
                 // Show / hide Item block
                 document.getElementById("item-block").style.display =
@@ -5469,12 +5514,18 @@
                GENERIC TAGS (Items, Races)
             ───────────────────────────────────────── */
             function addGenericTag(type) {
-                const inputId = type === "item" ? "f-item-tag-input" : "f-race-tag-input";
+                const inputId =
+                    type === "item"
+                        ? "f-item-tag-input"
+                        : (type === "race" ? "f-race-tag-input" : "f-species-tag-input");
                 const input = document.getElementById(inputId);
                 const tag = input.value.trim();
                 if (!tag) return;
 
-                let tagArray = type === "item" ? itemTags : raceTags;
+                let tagArray =
+                    type === "item"
+                        ? itemTags
+                        : (type === "race" ? raceTags : speciesTags);
                 if (tagArray.length >= 10) {
                     showToast("Maximum 10 tags allowed.", "rgba(180, 60, 60, 0.9)");
                     return;
@@ -5489,19 +5540,26 @@
             }
 
             function removeGenericTag(type, tag) {
-                if (type === "item") {
-                    itemTags = itemTags.filter((t) => t !== tag);
-                } else {
-                    raceTags = raceTags.filter((t) => t !== tag);
-                }
+                if (type === "item") itemTags = itemTags.filter((t) => t !== tag);
+                else if (type === "race") raceTags = raceTags.filter((t) => t !== tag);
+                else speciesTags = speciesTags.filter((t) => t !== tag);
                 renderGenericTags(type);
             }
 
             function renderGenericTags(type) {
-                const containerId = type === "item" ? "item-tags-container" : "race-tags-container";
-                const countId = type === "item" ? "item-tag-count" : "race-tag-count";
+                const containerId =
+                    type === "item"
+                        ? "item-tags-container"
+                        : (type === "race" ? "race-tags-container" : "species-tags-container");
+                const countId =
+                    type === "item"
+                        ? "item-tag-count"
+                        : (type === "race" ? "race-tag-count" : "species-tag-count");
                 const container = document.getElementById(containerId);
-                const tagArray = type === "item" ? itemTags : raceTags;
+                const tagArray =
+                    type === "item"
+                        ? itemTags
+                        : (type === "race" ? raceTags : speciesTags);
 
                 if (!container) return;
                 container.innerHTML = "";
@@ -6402,6 +6460,14 @@
                     type === "species"
                         ? (document.getElementById("f-species-generally").value.trim())
                         : "";
+                const speciesLore =
+                    type === "species"
+                        ? (document.getElementById("f-species-lore").value.trim())
+                        : "";
+                const speciesLoreMode =
+                    type === "species"
+                        ? (document.getElementById("f-species-lore-mode").value || "always")
+                        : "";
                 const age =
                     type === "character"
                         ? parseInt(document.getElementById("f-char-age").value) || 0
@@ -6441,7 +6507,10 @@
                         : null;
 
                 const tags =
-                    type === "item" ? [...itemTags] : (type === "race" ? [...raceTags] : []);
+                    type === "item"
+                        ? [...itemTags]
+                        : (type === "race" ? [...raceTags] : []);
+                const speciesTagsOut = type === "species" ? [...speciesTags] : [];
 
                 let cards = getCards();
 
@@ -6475,6 +6544,9 @@
                             appearance,
                             personality,
                             generally,
+                            speciesTags: speciesTagsOut.length ? speciesTagsOut : (cards[idx].speciesTags || []),
+                            speciesLore: type === "species" ? speciesLore : (cards[idx].speciesLore || ""),
+                            speciesLoreMode: type === "species" ? speciesLoreMode : (cards[idx].speciesLoreMode || ""),
                             age,
                             gender,
                             raceId,
@@ -6516,6 +6588,9 @@
                         appearance,
                         personality,
                         generally,
+                        speciesTags: speciesTagsOut,
+                        speciesLore,
+                        speciesLoreMode,
                         age,
                         gender,
                         raceId,

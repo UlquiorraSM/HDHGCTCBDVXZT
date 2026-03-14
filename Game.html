@@ -1871,16 +1871,134 @@
                 try {
                     const species = getPresentSpeciesCards();
                     if (species.length === 0) return "";
+                    const worldTags = computeWorldTags();
                     let context = "\nPRESENT SPECIES (Allowed to appear here):\n";
                     species.forEach((s) => {
                         context += `- ${s.title}\n`;
                         if (s.generally) context += `  Generally: ${s.generally}\n`;
                         if (s.appearance) context += `  Appearance: ${s.appearance}\n`;
                         if (s.personality) context += `  Personality: ${s.personality}\n`;
+                        const mode = (s.speciesLoreMode || "always");
+                        if (mode === "always" && s.speciesLore) {
+                            context += `  Lore: ${s.speciesLore}\n`;
+                        } else if (mode === "tags" && s.speciesLore && Array.isArray(s.speciesTags)) {
+                            const hasMatch = s.speciesTags.some(t => worldTags.has((t || "").toLowerCase()));
+                            if (hasMatch) context += `  Lore: ${s.speciesLore}\n`;
+                        }
                     });
                     return context;
                 } catch (e) {
                     console.error("Species context error", e);
+                    return "";
+                }
+            }
+
+            function computeWorldTags() {
+                const tags = new Set();
+                try {
+                    const cards = getCards();
+                    if (!currentLocationId) return tags;
+                    const cur = cards.find(c => c.id === currentLocationId);
+                    if (!cur) return tags;
+                    const sub = (cur.locationSub || "").toLowerCase();
+                    const det = (cur.locationDetail || "").toLowerCase();
+                    if (sub) tags.add(sub);
+                    if (det) tags.add(det);
+                    // Include ancestor detail/sub as tags (region context)
+                    let p = cur;
+                    while (p) {
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(p.id));
+                        });
+                        p = parent;
+                        if (p) {
+                            const s = (p.locationSub || "").toLowerCase();
+                            const d = (p.locationDetail || "").toLowerCase();
+                            if (s) tags.add(s);
+                            if (d) tags.add(d);
+                        }
+                    }
+                } catch {}
+                return tags;
+            }
+
+            function getAncestorLocations() {
+                const cards = getCards();
+                if (!currentLocationId) return [];
+                const currentLoc = cards.find((c) => c.id === currentLocationId);
+                if (!currentLoc) return [];
+                const ancestors = [];
+                let current = currentLoc;
+                while (current) {
+                    ancestors.push(current);
+                    const parent = cards.find((c) => {
+                        if (c.genre !== "location" || !c.sublocations) return false;
+                        return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                    });
+                    current = parent;
+                }
+                return ancestors;
+            }
+
+            function getPresentNPCIds() {
+                const cards = getCards();
+                const ancestors = getAncestorLocations();
+                const ids = new Set();
+                ancestors.forEach((loc) => {
+                    (loc.residents || []).forEach((id) => ids.add(id));
+                });
+                // School schedule constraint: only show NPCs present at current school when active
+                const scheduleNow = computeSchoolPresenceNow();
+                const scheduledByNpc = scheduleNow.byNpc || new Map();
+                const ancestorIds = new Set(ancestors.map(a => a.id));
+                [...ids].forEach((id) => {
+                    const sched = scheduledByNpc.get(id);
+                    if (sched && !ancestorIds.has(sched.schoolId)) {
+                        ids.delete(id);
+                    }
+                });
+                return ids;
+            }
+
+            function buildRelevantKnowledge() {
+                try {
+                    const cards = getCards();
+                    const ancestors = getAncestorLocations();
+                    const worldTags = computeWorldTags();
+                    const npcIds = getPresentNPCIds();
+                    const npcCards = cards.filter(c => c.genre === "character" && npcIds.has(c.id));
+                    const npcRaceNames = new Set(npcCards.map(c => (c.raceName || "").toLowerCase()).filter(Boolean));
+                    if (activeChar && activeChar.raceName) npcRaceNames.add((activeChar.raceName || "").toLowerCase());
+
+                    const relevantRaces = cards.filter(c => c.genre === "race" && npcRaceNames.has((c.title || "").toLowerCase()));
+
+                    const racialNames = new Set();
+                    ancestors.forEach(loc => {
+                        const rc = loc.racialCivilization || {};
+                        (rc["village-city"] || []).forEach(r => racialNames.add((r.name || "").toLowerCase()));
+                        (rc["country-kingdom"] || []).forEach(r => racialNames.add((r.name || "").toLowerCase()));
+                    });
+                    const relevantRacialCivRaces = cards.filter(c => c.genre === "race" && racialNames.has((c.title || "").toLowerCase()));
+
+                    const species = getPresentSpeciesCards();
+
+                    const locLabels = ancestors.map(a => (a.title || a.id || "Unknown")).reverse();
+
+                    let lines = [];
+                    lines.push("\nRELEVANT KNOWLEDGE (auto-selected to save tokens):");
+                    if (locLabels.length) lines.push("- LOCATIONS IN CONTEXT: " + locLabels.join(" > "));
+                    if (npcCards.length) {
+                        const list = npcCards.map(c => c.title).join(", ");
+                        lines.push("- PRESENT NPCs: " + list);
+                    }
+                    const raceSet = new Set([...relevantRaces, ...relevantRacialCivRaces].map(r => r.title));
+                    if (raceSet.size) lines.push("- RELEVANT RACES: " + [...raceSet].join(", "));
+                    if (species.length) lines.push("- RELEVANT SPECIES: " + species.map(s => s.title).join(", "));
+                    if (worldTags.size) lines.push("- WORLD TAGS: " + [...worldTags].join(", "));
+                    return lines.join("\n");
+                } catch (e) {
+                    console.error("Relevant knowledge build error", e);
                     return "";
                 }
             }
@@ -2044,8 +2162,7 @@
                 
                 const worldHierarchy = buildLocationHierarchy();
                 const charContext = buildCharacterContext();
-                const raceContext = buildRaceContext();
-                const itemContext = buildItemContext();
+                const relevantKnowledge = buildRelevantKnowledge();
                 const speciesContext = buildSpeciesPresenceContext();
                 const playerContext = buildPlayerContext();
                 const eventsContext = buildEventsContext();
@@ -2105,8 +2222,7 @@ ${playerContext}
 # WORLD KNOWLEDGE
 ${worldHierarchy}
 ${charContext}
-${raceContext}
-${itemContext}
+${relevantKnowledge}
 ${speciesContext}
 ${eventsContext}
 ${relationshipSummary}
