@@ -1004,8 +1004,16 @@
                         const lastPunct = Math.max(substr.lastIndexOf("."), substr.lastIndexOf("!"), substr.lastIndexOf("?"), substr.lastIndexOf("…"), substr.lastIndexOf("\n"));
                         const lastSpace = substr.lastIndexOf(" ");
                         const idx = lastPunct > 120 ? lastPunct : (lastSpace > 120 ? lastSpace : cutoff);
-                        out = substr.substring(0, idx).trimEnd() + " …";
+                        out = substr.substring(0, idx).trimEnd();
+                        // avoid artificial ellipsis; ensure sentence closure
+                        if (!/[.!?…]"?$/.test(out)) out += ".";
                     }
+                    // Balance quotes (ASCII and curly)
+                    const asciiQuotes = (out.match(/"/g) || []).length;
+                    if (asciiQuotes % 2 === 1) out += '"';
+                    const leftCurly = (out.match(/“|„/g) || []).length;
+                    const rightCurly = (out.match(/”/g) || []).length;
+                    if (leftCurly > rightCurly) out += "”";
                     return out;
                 } catch {
                     return text;
@@ -2078,7 +2086,7 @@
                 const sizePref = (settings.textSize || "normal").toLowerCase();
                 let lengthInstruction = "";
                 if (sizePref === "short") {
-                    lengthInstruction = "KEEP YOUR RESPONSE VERY SHORT (max 1-2 sentences). Output AT MOST 2 sentences.";
+                    lengthInstruction = "WRITE 1–2 COMPLETE SENTENCES. Do NOT end with '...'. Close all quotes.";
                 } else if (sizePref === "tall") {
                     lengthInstruction = "WRITE A LONG AND DETAILED RESPONSE. Aim for 8-12 sentences, very descriptive.";
                 } else {
@@ -2119,6 +2127,8 @@ ${scheduleContext}
 4. Strangers (Unknown) have NO shared past. Do NOT invent friendship or shared memories for them.
 5. During SCHOOL OPEN HOURS, any NPC assigned to a School class is ONLY present at that School. Do NOT involve them elsewhere unless the player moves there or the time is outside school hours.
 6. Secret Events are UNKNOWN to NPCs. Do NOT reveal them in dialogue; use them only to drive hidden world changes or narrative tension.
+7. ALWAYS close quotation marks. If a character speaks, end the spoken line with a closing quote.
+8. Do NOT end your narration with "..." unless it's intentional and the sentence is complete; prefer complete sentences.
 
 # TIME & LOCATION MANAGEMENT (CRITICAL)
 1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
