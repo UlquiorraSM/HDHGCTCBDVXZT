@@ -2284,6 +2284,7 @@
                             <option value="">Select a type...</option>
                             <option value="location">Location</option>
                             <option value="race">Race</option>
+                            <option value="species">Species</option>
                             <option value="character">Character</option>
                             <option value="item">Item</option>
                             <option value="skill">Skill</option>
@@ -2420,6 +2421,33 @@
                     </div>
                 </div>
 
+                <div id="species-block" style="display: none">
+                    <div class="form-group">
+                        <label class="form-label">Generally</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-species-generally"
+                            placeholder="Describe general traits of the species..."
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Appearance</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-species-appearance"
+                            placeholder="Describe how the species looks..."
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Personality</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-species-personality"
+                            placeholder="Describe typical personality traits..."
+                        ></textarea>
+                    </div>
+                </div>
+
                 <!-- ── Location sub-dropdowns ── -->
                 <div
                     class="form-group"
@@ -2459,6 +2487,21 @@
                         <option value="country">Country</option>
                         <option value="kingdom">Kingdom</option>
                     </select>
+                </div>
+
+                <div class="form-group" id="other-tools-group" style="display:none">
+                    <label class="form-label">Tools</label>
+                    <div class="tools-row" id="tools-section-other" style="display:none">
+                        <button
+                            type="button"
+                            class="subloc-btn"
+                            id="species-tool-btn"
+                            onclick="openSublocPicker('species-forest')"
+                        >
+                            <span class="subloc-icon">🐾</span>
+                            Species
+                        </button>
+                    </div>
                 </div>
 
                 <!-- ══ Village / City block ══ -->
@@ -2501,6 +2544,14 @@
                                 >
                                     <span class="subloc-icon">&#128100;</span>
                                     Resident
+                                </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="openSublocPicker('species-village-city')"
+                                >
+                                    <span class="subloc-icon">🐾</span>
+                                    Species
                                 </button>
                             </div>
                             <!-- RacialCivilization for Village / City -->
@@ -2643,6 +2694,14 @@
                                 >
                                     <span class="subloc-icon">&#128100;</span>
                                     Resident
+                                </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="openSublocPicker('species-country-kingdom')"
+                                >
+                                    <span class="subloc-icon">🐾</span>
+                                    Species
                                 </button>
                             </div>
                             <!-- RacialCivilization for Country / Kingdom -->
@@ -4467,6 +4526,18 @@
                         resetCharacterFields();
                     }
 
+                    // restore species data
+                    if (card.genre === "species") {
+                        document.getElementById("f-species-generally").value =
+                            card.generally || "";
+                        document.getElementById("f-species-appearance").value =
+                            card.appearance || "";
+                        document.getElementById("f-species-personality").value =
+                            card.personality || "";
+                    } else {
+                        resetSpeciesFields();
+                    }
+
                     // restore item data
                     if (card.genre === "item") {
                         itemTags = card.tags ? [...card.tags] : [];
@@ -4526,6 +4597,21 @@
                     resetLocationSubtype();
                     onTypeChange();
                     if (card.genre === "location") applyLocationSubtype(card);
+                    // restore species selections for location
+                    if (card.genre === "location") {
+                        const sp = card.species || {};
+                        speciesSelections["village-city"] = [...(sp["village-city"] || [])];
+                        speciesSelections["country-kingdom"] = [...(sp["country-kingdom"] || [])];
+                        speciesSelections["forest"] = [...(sp["forest"] || [])];
+                        speciesSelections["landmark"] = [...(sp["landmark"] || [])];
+                        speciesSelections["ocean"] = [...(sp["ocean"] || [])];
+                    } else {
+                        speciesSelections["village-city"] = [];
+                        speciesSelections["country-kingdom"] = [];
+                        speciesSelections["forest"] = [];
+                        speciesSelections["landmark"] = [];
+                        speciesSelections["ocean"] = [];
+                    }
                 } else {
                     document.getElementById("form-title").textContent =
                         "Add Entry";
@@ -4542,6 +4628,7 @@
                     document.getElementById("btn-save").textContent = "Create";
                     resetLocationSubtype();
                     resetCharacterFields();
+                    resetSpeciesFields();
                 }
 
                 // Update the small badge pill in form nav
@@ -4615,6 +4702,14 @@
                 secretSelections = [];
                 renderSecretTags();
             }
+            function resetSpeciesFields() {
+                const g = document.getElementById("f-species-generally");
+                const a = document.getElementById("f-species-appearance");
+                const p = document.getElementById("f-species-personality");
+                if (g) g.value = "";
+                if (a) a.value = "";
+                if (p) p.value = "";
+            }
 
             /* ─────────────────────────────────────────
                LOCATION SUB-DROPDOWNS
@@ -4630,6 +4725,9 @@
                 document.getElementById("character-block").style.display =
                     type === "character" ? "block" : "none";
                 if (type === "character") updateSkillGroupVisibility();
+                // Show / hide Species block
+                document.getElementById("species-block").style.display =
+                    type === "species" ? "block" : "none";
 
                 // Show / hide Description at bottom for Character
                 const descGrp = document.getElementById("description-group");
@@ -4670,6 +4768,17 @@
                     sub === "building" ? "block" : "none";
                 sublocBuildingGroup.style.display =
                     sub === "building" ? "block" : "none";
+
+                const otherTools = document.getElementById("other-tools-group");
+                const otherToolsRow = document.getElementById("tools-section-other");
+                const speciesBtn = document.getElementById("species-tool-btn");
+                if (otherTools && otherToolsRow && speciesBtn) {
+                    const showOther =
+                        sub === "forest" || sub === "landmark" || sub === "ocean";
+                    otherTools.style.display = showOther ? "block" : "none";
+                    otherToolsRow.style.display = showOther ? "flex" : "none";
+                    speciesBtn.onclick = () => openSublocPicker("species-" + sub);
+                }
 
                 if (sub !== "zivil") {
                     document.getElementById("f-zivil-sub").value = "";
@@ -5731,6 +5840,13 @@
             let residentSelections = []; // array of card IDs for characters
             let sublocPickerContext = null; // which key is open or "resident"
             let sublocPickerTemp = []; // temp selection while picker is open
+            const speciesSelections = {
+                "village-city": [],
+                "country-kingdom": [],
+                forest: [],
+                landmark: [],
+                ocean: [],
+            };
 
             /* ─────────────────────────────────────────
                RENDER TAGS
@@ -5798,10 +5914,15 @@
 
             function openSublocPicker(ctx) {
                 sublocPickerContext = ctx;
-                sublocPickerTemp =
-                    ctx === "resident" || ctx.endsWith("-resident")
-                        ? [...residentSelections]
-                        : [...(sublocSelections[ctx] || [])];
+                if (ctx.startsWith("species-")) {
+                    const key = ctx.replace("species-", "");
+                    sublocPickerTemp = [...(speciesSelections[key] || [])];
+                } else {
+                    sublocPickerTemp =
+                        ctx === "resident" || ctx.endsWith("-resident")
+                            ? [...residentSelections]
+                            : [...(sublocSelections[ctx] || [])];
+                }
 
                 const titles = {
                     "village-city": "Select Buildings",
@@ -5810,6 +5931,11 @@
                     resident: "Select Residents (NPCs)",
                     "village-city-resident": "Select Residents (NPCs)",
                     "country-kingdom-resident": "Select Residents (NPCs)",
+                    "species-village-city": "Select Species",
+                    "species-country-kingdom": "Select Species",
+                    "species-forest": "Select Species",
+                    "species-landmark": "Select Species",
+                    "species-ocean": "Select Species",
                 };
                 document.getElementById("subloc-picker-title").textContent =
                     titles[ctx] || "Select Sublocations";
@@ -5834,17 +5960,22 @@
 
             function confirmSublocPicker() {
                 if (!sublocPickerContext) return;
-                if (
-                    sublocPickerContext === "resident" ||
-                    sublocPickerContext.endsWith("-resident")
-                ) {
-                    residentSelections = [...sublocPickerTemp];
+                if (sublocPickerContext.startsWith("species-")) {
+                    const key = sublocPickerContext.replace("species-", "");
+                    speciesSelections[key] = [...sublocPickerTemp];
                 } else {
-                    sublocSelections[sublocPickerContext] = [
-                        ...sublocPickerTemp,
-                    ];
+                    if (
+                        sublocPickerContext === "resident" ||
+                        sublocPickerContext.endsWith("-resident")
+                    ) {
+                        residentSelections = [...sublocPickerTemp];
+                    } else {
+                        sublocSelections[sublocPickerContext] = [
+                            ...sublocPickerTemp,
+                        ];
+                    }
+                    renderSublocTags(sublocPickerContext);
                 }
-                renderSublocTags(sublocPickerContext);
                 closeSublocPicker();
             }
 
@@ -5857,6 +5988,9 @@
                     .getElementById("subloc-picker-search")
                     .value.toLowerCase()
                     .trim();
+                const speciesMode =
+                    sublocPickerContext &&
+                    sublocPickerContext.startsWith("species-");
                 const allowed = sublocAllowedTypes(sublocPickerContext);
                 const allowedDetails =
                     sublocAllowedDetails(sublocPickerContext);
@@ -5926,6 +6060,13 @@
                 const candidates = all.filter((c) => {
                     if (c.id === editingId) return false;
 
+                    if (speciesMode) {
+                        if (c.genre !== "species") return false;
+                        if (term && !(c.title || "").toLowerCase().includes(term))
+                            return false;
+                        return true;
+                    }
+
                     if (
                         sublocPickerContext === "resident" ||
                         sublocPickerContext.endsWith("-resident")
@@ -5968,7 +6109,8 @@
                 if (candidates.length === 0) {
                     list.innerHTML = `<div class="subloc-picker-empty">No matching ${
                         sublocPickerContext === "resident" ||
-                        sublocPickerContext.endsWith("-resident")
+                        sublocPickerContext.endsWith("-resident") ||
+                        speciesMode
                             ? "characters"
                             : "locations"
                     } found.</div>`;
@@ -5991,9 +6133,10 @@
                         (usedElsewhere ? " used-elsewhere" : "");
 
                     // Show the most specific label available
-                    const detailLabel =
-                        sublocPickerContext === "resident" ||
-                        sublocPickerContext.endsWith("-resident")
+                    const detailLabel = speciesMode
+                        ? "SPECIES"
+                        : (sublocPickerContext === "resident" ||
+                           sublocPickerContext.endsWith("-resident"))
                             ? "CHARACTER"
                             : (
                                   card.locationDetail ||
@@ -6054,6 +6197,11 @@
                 sublocSelections["country-kingdom"] = [];
                 sublocSelections["building"] = [];
                 residentSelections = [];
+                speciesSelections["village-city"] = [];
+                speciesSelections["country-kingdom"] = [];
+                speciesSelections["forest"] = [];
+                speciesSelections["landmark"] = [];
+                speciesSelections["ocean"] = [];
                 renderSublocTags("village-city");
                 renderSublocTags("country-kingdom");
                 renderSublocTags("building");
@@ -6074,6 +6222,10 @@
                 document.getElementById(
                     "resident-country-kingdom-group",
                 ).style.display = "none";
+                const otherTools = document.getElementById("other-tools-group");
+                const otherToolsRow = document.getElementById("tools-section-other");
+                if (otherTools) otherTools.style.display = "none";
+                if (otherToolsRow) otherToolsRow.style.display = "none";
                 // reset racial
                 racialSelections["village-city"] = [];
                 racialSelections["country-kingdom"] = [];
@@ -6123,6 +6275,23 @@
                               building: [
                                   ...(sublocSelections["building"] || []),
                               ],
+                          }
+                        : {};
+                const species =
+                    type === "location"
+                        ? {
+                              "village-city": [
+                                  ...(speciesSelections["village-city"] || []),
+                              ],
+                              "country-kingdom": [
+                                  ...(speciesSelections["country-kingdom"] ||
+                                      []),
+                              ],
+                              forest: [...(speciesSelections["forest"] || [])],
+                              landmark: [
+                                  ...(speciesSelections["landmark"] || []),
+                              ],
+                              ocean: [...(speciesSelections["ocean"] || [])],
                           }
                         : {};
 
@@ -6220,10 +6389,18 @@
                 const appearance =
                     type === "character"
                         ? document.getElementById("f-char-appearance").value.trim()
-                        : "";
+                        : (type === "species"
+                            ? document.getElementById("f-species-appearance").value.trim()
+                            : "");
                 const personality =
                     type === "character"
                         ? document.getElementById("f-char-personality").value.trim()
+                        : (type === "species"
+                            ? document.getElementById("f-species-personality").value.trim()
+                            : "");
+                const generally =
+                    type === "species"
+                        ? (document.getElementById("f-species-generally").value.trim())
                         : "";
                 const age =
                     type === "character"
@@ -6283,6 +6460,7 @@
                             shopWorkers: shopWorkersData,
                             canBeSpawn,
                             sublocations,
+                            species,
                             racialCivilization,
                             population,
                             events: zivilEventsData,
@@ -6296,6 +6474,7 @@
                             skincolorAllowed,
                             appearance,
                             personality,
+                            generally,
                             age,
                             gender,
                             raceId,
@@ -6322,6 +6501,7 @@
                         shopWorkers: shopWorkersData,
                         canBeSpawn,
                         sublocations,
+                        species,
                         racialCivilization,
                         population,
                         events: zivilEventsData,
@@ -6335,6 +6515,7 @@
                         skincolorAllowed,
                         appearance,
                         personality,
+                        generally,
                         age,
                         gender,
                         raceId,

@@ -1823,6 +1823,68 @@
                 }
             }
 
+            function speciesKeyForLoc(loc) {
+                const sub = (loc.locationSub || "").toLowerCase();
+                const det = (loc.locationDetail || "").toLowerCase();
+                if (sub === "zivil") {
+                    if (det === "village" || det === "city") return "village-city";
+                    if (det === "country" || det === "kingdom") return "country-kingdom";
+                    return null;
+                }
+                if (sub === "forest") return "forest";
+                if (sub === "landmark") return "landmark";
+                if (sub === "ocean") return "ocean";
+                return null;
+            }
+
+            function getPresentSpeciesCards() {
+                try {
+                    if (!currentLocationId) return [];
+                    const cards = getCards();
+                    const currentLoc = cards.find((c) => c.id === currentLocationId);
+                    if (!currentLoc) return [];
+                    const ancestors = [];
+                    let cur = currentLoc;
+                    while (cur) {
+                        ancestors.push(cur);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(cur.id));
+                        });
+                        cur = parent;
+                    }
+                    const ids = new Set();
+                    ancestors.forEach((loc) => {
+                        const key = speciesKeyForLoc(loc);
+                        if (!key) return;
+                        const spec = loc.species || {};
+                        (spec[key] || []).forEach((id) => ids.add(id));
+                    });
+                    return cards.filter((c) => c.genre === "species" && ids.has(c.id));
+                } catch (e) {
+                    console.error("Species presence error", e);
+                    return [];
+                }
+            }
+
+            function buildSpeciesPresenceContext() {
+                try {
+                    const species = getPresentSpeciesCards();
+                    if (species.length === 0) return "";
+                    let context = "\nPRESENT SPECIES (Allowed to appear here):\n";
+                    species.forEach((s) => {
+                        context += `- ${s.title}\n`;
+                        if (s.generally) context += `  Generally: ${s.generally}\n`;
+                        if (s.appearance) context += `  Appearance: ${s.appearance}\n`;
+                        if (s.personality) context += `  Personality: ${s.personality}\n`;
+                    });
+                    return context;
+                } catch (e) {
+                    console.error("Species context error", e);
+                    return "";
+                }
+            }
+
             function buildEventsContext() {
                 try {
                     const cards = getCards();
@@ -1984,12 +2046,14 @@
                 const charContext = buildCharacterContext();
                 const raceContext = buildRaceContext();
                 const itemContext = buildItemContext();
+                const speciesContext = buildSpeciesPresenceContext();
                 const playerContext = buildPlayerContext();
                 const eventsContext = buildEventsContext();
                 const relationshipSummary = buildRelationshipSummary();
                 const scheduleInfo = computeSchoolPresenceNow();
                 const scheduleContext = scheduleInfo.context || "";
                 const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
+                const presentSpecies = getPresentSpeciesCards().map(s => s.title).join(", ");
                 
                 const cards = getCards();
                 const allLocNames = cards
@@ -2033,6 +2097,7 @@ You are the Narrator of an immersive, interactive story. Your goal is to describ
 - CURRENT LOCATION: ${curLocName}
 - LOCATION PATH: ${curLocPath}
 - PRESENT NPCs: ${presentNPCs || "None"}
+- PRESENT SPECIES: ${presentSpecies || "None"}
 
 # PLAYER CHARACTER
 ${playerContext}
@@ -2042,6 +2107,7 @@ ${worldHierarchy}
 ${charContext}
 ${raceContext}
 ${itemContext}
+${speciesContext}
 ${eventsContext}
 ${relationshipSummary}
 ${scheduleContext}
