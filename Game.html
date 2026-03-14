@@ -2136,6 +2136,12 @@ ${scheduleContext}
 3. Available Location Names: ${allLocNames}
 4. For outdoor areas within a region, use: "Region Name (Outside)"
 
+# TIME CHANGE TAGS (MANDATORY WHEN TIME ADVANCES)
+- When your narration implies time advance (e.g., next day, later that week, a month passes, a year later, minutes/hours later), append a single control tag reflecting the change BEFORE the metadata block.
+- Use relative deltas: [[Day:+1]], [[Week:+1]], [[Month:+1]], [[Year:+1]], [[Time:+30]] (minutes). For explicit times write [[Time:HH:MM]].
+- Choose minimal, consistent increments based on the narration; do not guess multiple jumps unless clearly stated.
+- Always include the final metadata block after applying these changes.
+
 # RESPONSE FORMAT (MANDATORY)
 Your response MUST consist of two parts:
 1. The narration text (storytelling).
