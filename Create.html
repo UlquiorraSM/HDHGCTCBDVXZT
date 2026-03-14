@@ -4579,7 +4579,7 @@
                         const textEl = document.getElementById("f-lore-text");
                         const grp = document.getElementById("lore-tags-group");
                         if (modeEl) modeEl.value = card.loreMode || "always";
-                        if (textEl) textEl.value = card.lore || "";
+                        if (textEl) textEl.value = card.loreText || "";
                         loreTags = card.tags ? [...card.tags] : [];
                         renderGenericTags("lore");
                         if (grp) grp.style.display = (modeEl.value === "tags") ? "block" : "none";
