@@ -2285,6 +2285,7 @@
                             <option value="location">Location</option>
                             <option value="race">Race</option>
                             <option value="species">Species</option>
+                            <option value="lore">Lore</option>
                             <option value="character">Character</option>
                             <option value="item">Item</option>
                             <option value="skill">Skill</option>
@@ -2446,37 +2447,38 @@
                             placeholder="Describe typical personality traits..."
                         ></textarea>
                     </div>
+                </div>
+
+                <div id="lore-block" style="display: none">
                     <div class="form-group">
-                        <label class="form-label">Lore</label>
+                        <label class="form-label">Lore Visibility</label>
+                        <select class="form-select" id="f-lore-mode" onchange="onLoreModeChange()">
+                            <option value="always">Always</option>
+                            <option value="tags">Tags</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Lore Text</label>
                         <textarea
                             class="form-textarea"
-                            id="f-species-lore"
-                            placeholder="Write background lore for this species..."
+                            id="f-lore-text"
+                            placeholder="Write the lore text..."
                         ></textarea>
                     </div>
-                    <div class="form-group" style="margin-top: 10px;">
-                        <label class="form-label" style="font-size: 12px; color: rgba(255,255,255,0.4);">Tags (Bullet points for AI, max 10)</label>
-                        <div class="item-tag-container" id="species-tags-container"></div>
+                    <div class="form-group" id="lore-tags-group" style="display:none">
+                        <label class="form-label">Tags (max 10)</label>
+                        <div class="item-tag-container" id="lore-tags-container"></div>
                         <div class="item-tag-input-wrapper">
                             <input
                                 type="text"
                                 class="form-input"
-                                id="f-species-tag-input"
+                                id="f-lore-tag-input"
                                 placeholder="Add a tag and press Enter..."
-                                onkeydown="if(event.key === 'Enter') addGenericTag('species')"
+                                onkeydown="if(event.key === 'Enter') addLoreTag()"
                             />
-                            <button type="button" class="subloc-btn" onclick="addGenericTag('species')" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
+                            <button type="button" class="subloc-btn" onclick="addLoreTag()" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
                         </div>
-                        <div class="item-tag-count" id="species-tag-count">0 / 10 tags</div>
-                    </div>
-                    <div class="form-two-col" style="margin-top: 8px;">
-                        <div class="form-group">
-                            <label class="form-label">Lore Mode</label>
-                            <select class="form-select" id="f-species-lore-mode">
-                                <option value="always">Always</option>
-                                <option value="tags">Tags</option>
-                            </select>
-                        </div>
+                        <div class="item-tag-count" id="lore-tag-count">0 / 10 tags</div>
                     </div>
                 </div>
 
@@ -3635,7 +3637,7 @@
             let ctxTargetId = null; // for context-menu
             let itemTags = []; // for item tags
             let raceTags = []; // for race tags
-            let speciesTags = []; // for species tags
+            let loreTags = []; // for lore tags
 
             /* ─────────────────────────────────────────
            BACKGROUND
@@ -4567,18 +4569,23 @@
                             card.appearance || "";
                         document.getElementById("f-species-personality").value =
                             card.personality || "";
-                        const l = document.getElementById("f-species-lore");
-                        const lm = document.getElementById("f-species-lore-mode");
-                        if (l) l.value = card.speciesLore || "";
-                        if (lm) lm.value = card.speciesLoreMode || "always";
-                        speciesTags = Array.isArray(card.speciesTags) ? [...card.speciesTags] : [];
-                        renderGenericTags("species");
                     } else {
                         resetSpeciesFields();
-                        speciesTags = [];
-                        renderGenericTags("species");
                     }
 
+                    // restore lore category data
+                    if (card.genre === "lore") {
+                        const modeEl = document.getElementById("f-lore-mode");
+                        const textEl = document.getElementById("f-lore-text");
+                        const grp = document.getElementById("lore-tags-group");
+                        if (modeEl) modeEl.value = card.loreMode || "always";
+                        if (textEl) textEl.value = card.lore || "";
+                        loreTags = card.tags ? [...card.tags] : [];
+                        renderGenericTags("lore");
+                        if (grp) grp.style.display = (modeEl.value === "tags") ? "block" : "none";
+                    } else {
+                        resetLoreFields();
+                    }
                     // restore item data
                     if (card.genre === "item") {
                         itemTags = card.tags ? [...card.tags] : [];
@@ -4670,6 +4677,7 @@
                     resetLocationSubtype();
                     resetCharacterFields();
                     resetSpeciesFields();
+                    resetLoreFields();
                 }
 
                 // Update the small badge pill in form nav
@@ -4721,6 +4729,7 @@
                 renderItemTags();
                 raceTags = [];
                 renderGenericTags("race");
+                resetLoreFields();
                 renderList();
             }
 
@@ -4747,13 +4756,19 @@
                 const g = document.getElementById("f-species-generally");
                 const a = document.getElementById("f-species-appearance");
                 const p = document.getElementById("f-species-personality");
-                const l = document.getElementById("f-species-lore");
-                const lm = document.getElementById("f-species-lore-mode");
                 if (g) g.value = "";
                 if (a) a.value = "";
                 if (p) p.value = "";
-                if (l) l.value = "";
-                if (lm) lm.value = "always";
+            }
+            function resetLoreFields() {
+                const mode = document.getElementById("f-lore-mode");
+                const text = document.getElementById("f-lore-text");
+                const grp = document.getElementById("lore-tags-group");
+                if (mode) mode.value = "always";
+                if (text) text.value = "";
+                loreTags = [];
+                renderGenericTags("lore");
+                if (grp) grp.style.display = "none";
             }
 
             /* ─────────────────────────────────────────
@@ -4773,10 +4788,13 @@
                 // Show / hide Species block
                 document.getElementById("species-block").style.display =
                     type === "species" ? "block" : "none";
+                // Show / hide Lore block
+                document.getElementById("lore-block").style.display =
+                    type === "lore" ? "block" : "none";
 
                 // Show / hide Description at bottom for Character
                 const descGrp = document.getElementById("description-group");
-                if (descGrp) descGrp.style.display = (type === "character" || type === "species") ? "none" : "block";
+                if (descGrp) descGrp.style.display = (type === "character" || type === "lore") ? "none" : "block";
 
                 // Show / hide Item block
                 document.getElementById("item-block").style.display =
@@ -5157,6 +5175,12 @@
                 closeNameGen();
             }
 
+            function onLoreModeChange() {
+                const mode = document.getElementById("f-lore-mode").value;
+                const grp = document.getElementById("lore-tags-group");
+                if (grp) grp.style.display = mode === "tags" ? "block" : "none";
+            }
+
             /* gender = "male"|"female"   nameType = "first"|"last" */
             function addNameGenEntry(gender, nameType) {
                 const idMap = {
@@ -5514,18 +5538,12 @@
                GENERIC TAGS (Items, Races)
             ───────────────────────────────────────── */
             function addGenericTag(type) {
-                const inputId =
-                    type === "item"
-                        ? "f-item-tag-input"
-                        : (type === "race" ? "f-race-tag-input" : "f-species-tag-input");
+                const inputId = type === "item" ? "f-item-tag-input" : (type === "race" ? "f-race-tag-input" : "f-lore-tag-input");
                 const input = document.getElementById(inputId);
                 const tag = input.value.trim();
                 if (!tag) return;
 
-                let tagArray =
-                    type === "item"
-                        ? itemTags
-                        : (type === "race" ? raceTags : speciesTags);
+                let tagArray = type === "item" ? itemTags : (type === "race" ? raceTags : loreTags);
                 if (tagArray.length >= 10) {
                     showToast("Maximum 10 tags allowed.", "rgba(180, 60, 60, 0.9)");
                     return;
@@ -5542,24 +5560,19 @@
             function removeGenericTag(type, tag) {
                 if (type === "item") itemTags = itemTags.filter((t) => t !== tag);
                 else if (type === "race") raceTags = raceTags.filter((t) => t !== tag);
-                else speciesTags = speciesTags.filter((t) => t !== tag);
+                else loreTags = loreTags.filter((t) => t !== tag);
                 renderGenericTags(type);
             }
 
             function renderGenericTags(type) {
-                const containerId =
-                    type === "item"
-                        ? "item-tags-container"
-                        : (type === "race" ? "race-tags-container" : "species-tags-container");
-                const countId =
-                    type === "item"
-                        ? "item-tag-count"
-                        : (type === "race" ? "race-tag-count" : "species-tag-count");
+                const containerId = type === "item"
+                    ? "item-tags-container"
+                    : (type === "race" ? "race-tags-container" : "lore-tags-container");
+                const countId = type === "item"
+                    ? "item-tag-count"
+                    : (type === "race" ? "race-tag-count" : "lore-tag-count");
                 const container = document.getElementById(containerId);
-                const tagArray =
-                    type === "item"
-                        ? itemTags
-                        : (type === "race" ? raceTags : speciesTags);
+                const tagArray = type === "item" ? itemTags : (type === "race" ? raceTags : loreTags);
 
                 if (!container) return;
                 container.innerHTML = "";
@@ -5580,6 +5593,7 @@
             function addItemTag() { addGenericTag("item"); }
             function removeItemTag(tag) { removeGenericTag("item", tag); }
             function renderItemTags() { renderGenericTags("item"); }
+            function addLoreTag() { addGenericTag("lore"); }
 
             function loreInsert(before, after, mode) {
                 const ta = document.getElementById("lore-textarea");
@@ -6434,6 +6448,14 @@
                           };
 
                 const lore = type === "race" ? loreData : "";
+                const loreText =
+                    type === "lore"
+                        ? (document.getElementById("f-lore-text").value.trim())
+                        : "";
+                const loreMode =
+                    type === "lore"
+                        ? (document.getElementById("f-lore-mode").value || "always")
+                        : "";
                 const skincolorAllowed =
                     type === "race" ? [...skincolorData] : [];
 
@@ -6459,14 +6481,6 @@
                 const generally =
                     type === "species"
                         ? (document.getElementById("f-species-generally").value.trim())
-                        : "";
-                const speciesLore =
-                    type === "species"
-                        ? (document.getElementById("f-species-lore").value.trim())
-                        : "";
-                const speciesLoreMode =
-                    type === "species"
-                        ? (document.getElementById("f-species-lore-mode").value || "always")
                         : "";
                 const age =
                     type === "character"
@@ -6509,8 +6523,9 @@
                 const tags =
                     type === "item"
                         ? [...itemTags]
-                        : (type === "race" ? [...raceTags] : []);
-                const speciesTagsOut = type === "species" ? [...speciesTags] : [];
+                        : (type === "race"
+                            ? [...raceTags]
+                            : (type === "lore" ? [...loreTags] : []));
 
                 let cards = getCards();
 
@@ -6540,13 +6555,12 @@
                             skillName: type === "character" ? ((getCards().find(c => c.id === selectedSkillId) || {}).title || "") : (cards[idx].skillName || ""),
                             nameGenerator,
                             lore,
+                            loreText,
+                            loreMode,
                             skincolorAllowed,
                             appearance,
                             personality,
                             generally,
-                            speciesTags: speciesTagsOut.length ? speciesTagsOut : (cards[idx].speciesTags || []),
-                            speciesLore: type === "species" ? speciesLore : (cards[idx].speciesLore || ""),
-                            speciesLoreMode: type === "species" ? speciesLoreMode : (cards[idx].speciesLoreMode || ""),
                             age,
                             gender,
                             raceId,
@@ -6585,12 +6599,11 @@
                         nameGenerator,
                         lore,
                         skincolorAllowed,
+                        loreText,
+                        loreMode,
                         appearance,
                         personality,
                         generally,
-                        speciesTags: speciesTagsOut,
-                        speciesLore,
-                        speciesLoreMode,
                         age,
                         gender,
                         raceId,
