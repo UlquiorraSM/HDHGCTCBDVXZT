@@ -2042,9 +2042,13 @@
             .racial-tags {
                 display: none !important;
             }
+            .relation-tags {
+                display: none !important;
+            }
             [id^="racial-"] > .form-label,
             [id^="subloc-"] > .form-label,
             [id^="resident-"] > .form-label,
+            [id^="char-"] > .form-label,
             #house-residents-group > .form-label {
                 display: none !important;
             }
@@ -2399,14 +2403,28 @@
                             <span class="spawn-check-badge">PLAYER</span>
                         </div>
                     </div>
-                    <div id="char-relation-group" style="margin-top: 14px;">
+                    <div class="form-group">
+                        <label class="form-label">Tools</label>
+                        <div class="tools-row" id="tools-section-char">
+                            <button type="button" class="subloc-btn relation-btn" onclick="showSecretsScene()">
+                                <span class="subloc-icon">🕵️</span> Secrets
+                            </button>
+                            <button type="button" class="subloc-btn relation-btn" onclick="showRelationsScene()">
+                                <span class="subloc-icon">&#128101;</span> Relations
+                            </button>
+                            <button type="button" class="subloc-btn relation-btn" onclick="showSkillsScene()">
+                                <span class="subloc-icon">🛠️</span> Skills
+                            </button>
+                        </div>
+                    </div>
+                    <div id="char-relation-group" style="display:none; margin-top: 14px;">
                         <label class="form-label">Relations</label>
                         <div class="relation-tags" id="char-relation-tags"></div>
                         <button type="button" class="subloc-btn relation-btn" onclick="showRelationsScene()">
                             <span class="subloc-icon">&#128101;</span> Relations
                         </button>
                     </div>
-                    <div id="char-secrets-group" style="margin-top: 14px;">
+                    <div id="char-secrets-group" style="display:none; margin-top: 14px;">
                         <label class="form-label">Secrets</label>
                         <div class="relation-tags" id="char-secret-tags"></div>
                         <button type="button" class="subloc-btn relation-btn" onclick="showSecretsScene()">
@@ -4321,8 +4339,7 @@
             function updateSkillGroupVisibility() {
                 const grp = document.getElementById("char-skill-group");
                 if (!grp) return;
-                grp.style.display = getSkills().length > 0 ? "block" : "none";
-                renderSkillTag();
+                grp.style.display = "none";
             }
             function showSkillsScene() {
                 const list = document.getElementById("skills-list");
