@@ -1940,6 +1940,43 @@
                 }
             }
 
+            function buildLocationMemoryContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    const cards = getCards();
+                    const d = activeChar?.startingDate || {};
+                    const curDate = `${String(d.day || 1).padStart(2,"0")}.${String(d.month || 1).padStart(2,"0")}.${d.year || 1983}`;
+                    const curTime = d.time || "00:00";
+                    const ancestors = [];
+                    let current = cards.find(c => c.id === currentLocationId);
+                    if (!current) return "";
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const contextLines = [];
+                    contextLines.push("\nLOCATION MEMORIES (Current area and parent regions):");
+                    ancestors.forEach(loc => {
+                        const mem = Array.isArray(loc.memories) ? loc.memories : [];
+                        if (mem.length === 0) return;
+                        contextLines.push(`- ${loc.title}:`);
+                        mem.slice(-8).forEach(m => {
+                            contextLines.push(`  * ${m.date} ${m.time} — ${m.text}`);
+                        });
+                    });
+                    if (contextLines.length <= 1) return "";
+                    contextLines.push(`Current time reference: ${curDate} ${curTime}`);
+                    return contextLines.join("\n") + "\n";
+                } catch (e) {
+                    console.error("Location memory context error", e);
+                    return "";
+                }
+            }
+
             // Helpers for school schedules
             function _timeToMinutes(t) {
                 if (!t || typeof t !== "string") return 0;
@@ -2057,6 +2094,7 @@
                 const speciesContext = buildSpeciesPresenceContext();
                 const playerContext = buildPlayerContext();
                 const eventsContext = buildEventsContext();
+                const locationMemoryContext = buildLocationMemoryContext();
                 const relationshipSummary = buildRelationshipSummary();
                 const scheduleInfo = computeSchoolPresenceNow();
                 const scheduleContext = scheduleInfo.context || "";
@@ -2117,6 +2155,7 @@ ${raceContext}
 ${itemContext}
 ${speciesContext}
 ${eventsContext}
+${locationMemoryContext}
 ${relationshipSummary}
 ${scheduleContext}
 
@@ -2402,6 +2441,68 @@ Example:
                 bar.classList.add("visible");
             }
 
+            function getPresentNpcIds() {
+                const bar = document.getElementById("present-npcs-bar");
+                if (!bar) return [];
+                const cards = getCards();
+                return Array.from(bar.querySelectorAll(".npc-item"))
+                    .map((item) => {
+                        const name = item.querySelector(".npc-name-xs")?.textContent?.trim() || "";
+                        const card = cards.find((c) => c.genre === "character" && c.title === name);
+                        return card ? card.id : null;
+                    })
+                    .filter(Boolean);
+            }
+
+            function addNpcMemoriesFromNarration(text) {
+                const ids = getPresentNpcIds();
+                if (ids.length === 0) return;
+                const cards = getCards();
+                const d = activeChar?.startingDate || {};
+                const dateStr = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const timeStr = d.time || "00:00";
+                const loc = document.getElementById("header-location")?.textContent || "Unknown Location";
+                const entry = {
+                    date: dateStr,
+                    time: timeStr,
+                    location: loc,
+                    text: String(text || "").slice(0, 800)
+                };
+                let changed = false;
+                ids.forEach((id) => {
+                    const npc = cards.find((c) => c.id === id);
+                    if (!npc) return;
+                    if (!Array.isArray(npc.memories)) npc.memories = [];
+                    npc.memories.push(entry);
+                    if (npc.memories.length > 100) npc.memories = npc.memories.slice(-100);
+                    changed = true;
+                });
+                if (changed) {
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                }
+            }
+
+            function addLocationMemoryFromNarration(text) {
+                if (!currentLocationId) return;
+                const cards = getCards();
+                const locCard = cards.find((c) => c.id === currentLocationId);
+                if (!locCard) return;
+                const d = activeChar?.startingDate || {};
+                const dateStr = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const timeStr = d.time || "00:00";
+                const locName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                const entry = {
+                    date: dateStr,
+                    time: timeStr,
+                    location: locName,
+                    text: String(text || "").slice(0, 800)
+                };
+                if (!Array.isArray(locCard.memories)) locCard.memories = [];
+                locCard.memories.push(entry);
+                if (locCard.memories.length > 200) locCard.memories = locCard.memories.slice(-200);
+                sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+            }
+
             function showNPCInfo(id) {
                 const cards = getCards();
                 const npc = cards.find((c) => c.id === id);
@@ -2414,6 +2515,13 @@ Example:
                 if (npc.age) info += `Age: ${npc.age}\n`;
                 if (npc.personality) info += `\nPersonality:\n${npc.personality}\n`;
                 if (npc.appearance) info += `\nAppearance:\n${npc.appearance}\n`;
+                const mem = Array.isArray(npc.memories) ? npc.memories.slice(-3) : [];
+                if (mem.length > 0) {
+                    info += `\nMemories (latest):\n`;
+                    mem.forEach((m) => {
+                        info += `- ${m.date} ${m.time} @ ${m.location}\n`;
+                    });
+                }
                 
                 alert(info);
             }
@@ -2458,6 +2566,16 @@ Example:
                 }
             }
 
+            function buildHistoryLines(limitFirst = 15) {
+                const recentHistory = chatHistory.slice(0, Math.max(0, limitFirst));
+                return recentHistory
+                    .map((e) => {
+                        if (typeof e === "string") return `--- ${e} ---`;
+                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
+                    })
+                    .join("\n");
+            }
+
             async function triggerNarration(systemPrompt) {
                 if (isBusy) return;
                 isBusy = true;
@@ -2471,10 +2589,7 @@ Example:
 
                 try {
                     const recentHistory = chatHistory;
-                    const historyLines = recentHistory.map(e => {
-                        if (typeof e === 'string') return `--- ${e} ---`;
-                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
-                    }).join("\n");
+                    const historyLines = buildHistoryLines(15);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
@@ -2482,6 +2597,8 @@ Example:
                     const cleanResponse = processAICommands(response);
                     const finalText = applyTextSizeLimit(cleanResponse);
                     appendBubble("ai", finalText);
+                    addNpcMemoriesFromNarration(finalText);
+                    addLocationMemoryFromNarration(finalText);
                     addToStoryLog("Narrator", finalText);
                 } catch (err) {
                     removeTypingIndicator();
@@ -2554,10 +2671,7 @@ Example:
 
                 try {
                     const recentHistory = chatHistory;
-                    const historyLines = recentHistory.map(e => {
-                        if (typeof e === 'string') return `--- ${e} ---`;
-                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
-                    }).join("\n");
+                    const historyLines = buildHistoryLines(15);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
@@ -2565,6 +2679,8 @@ Example:
                     const cleanResponse = processAICommands(response);
                     const finalText = applyTextSizeLimit(cleanResponse);
                     appendBubble("ai", finalText);
+                    addNpcMemoriesFromNarration(finalText);
+                    addLocationMemoryFromNarration(finalText);
                     addToStoryLog("Narrator", finalText);
                 } catch (err) {
                     removeTypingIndicator();
@@ -2642,10 +2758,7 @@ Example:
 
                 try {
                     const recentHistory = chatHistory;
-                    const historyLines = recentHistory.map(e => {
-                        if (typeof e === 'string') return `--- ${e} ---`;
-                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
-                    }).join("\n");
+                    const historyLines = buildHistoryLines(15);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
@@ -2653,6 +2766,8 @@ Example:
                     const cleanR = processAICommands(r);
                     const finalText = applyTextSizeLimit(cleanR);
                     appendBubble("ai", finalText);
+                    addNpcMemoriesFromNarration(finalText);
+                    addLocationMemoryFromNarration(finalText);
                     addToStoryLog("Narrator", finalText);
                 } catch (e) {
                     removeTypingIndicator();
@@ -2678,17 +2793,16 @@ Example:
 
                 try {
                     const recentHistory = chatHistory.slice(-10);
-                    const historyLines = recentHistory.map(e => {
-                        if (typeof e === 'string') return `--- ${e} ---`;
-                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
-                    }).join("\n");
-                    const finalPrompt = systemInst + "\n\n### RECENT STORY HISTORY ###\n" + (chatHistory.length > 10 ? "...(older history omitted)...\n" : "") + historyLines + "\n\nNarrator:";
+                    const historyLines = buildHistoryLines(15);
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
                     const finalText = applyTextSizeLimit(cleanR);
                     appendBubble("ai", finalText);
+                    addNpcMemoriesFromNarration(finalText);
+                    addLocationMemoryFromNarration(finalText);
                     addToStoryLog("Narrator", finalText);
                 } catch (e) {
                     removeTypingIndicator();
