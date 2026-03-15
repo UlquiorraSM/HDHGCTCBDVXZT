@@ -1795,6 +1795,7 @@
                     let context = "\nPRESENT CHARACTERS (Residents of this location and its parent regions):\n";
                     context += "NOTE: Presence does NOT mean friendship. Check 'Character Relationships' for status.\n";
                     characters.forEach((c) => {
+                        if ((c.status || "Alive") === "Dead") return;
                         // If NPC is scheduled in school now, show only when current location includes that school
                         const sched = scheduledByNpc.get(c.id);
                         if (sched && !ancestorIds.has(sched.schoolId)) {
@@ -2090,20 +2091,22 @@
                         if (classes.length === 0) return;
                         context += `- ${school.title}: OPEN. Classes running now.\n`;
                         classes.forEach((cls, idx) => {
-                            const t = characters.find((c) => c.id === cls.teacherId);
+                            const t = characters.find((c) => c.id === cls.teacherId && (c.status || "Alive") !== "Dead");
                             const tName = t ? t.title : (cls.teacherId ? "(Unknown)" : "—");
                             const studs = (cls.studentIds || [])
                                 .map((id) => {
-                                    const ch = characters.find((c) => c.id === id);
-                                    return ch ? ch.title : "(Unknown)";
+                                    const ch = characters.find((c) => c.id === id && (c.status || "Alive") !== "Dead");
+                                    return ch ? ch.title : null;
                                 })
+                                .filter(Boolean)
                                 .join(", ");
                             context += `  * ${cls.name || "Class " + (idx + 1)} | Teacher: ${tName} | Students: ${studs || "—"}\n`;
                             // Fill lookup to constrain presence
-                            if (cls.teacherId) byNpc.set(cls.teacherId, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" });
-                            (cls.studentIds || []).forEach((sid) =>
-                                byNpc.set(sid, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" }),
-                            );
+                            if (t && cls.teacherId) byNpc.set(cls.teacherId, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" });
+                            (cls.studentIds || []).forEach((sid) => {
+                                const ch = characters.find((c) => c.id === sid && (c.status || "Alive") !== "Dead");
+                                if (ch) byNpc.set(sid, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" });
+                            });
                         });
                     });
                     if (byNpc.size === 0) context += "  (No classes in session)\n";
@@ -2487,7 +2490,7 @@ Example:
                     const char = cards.find(
                         (c) => c.genre === "character" && c.id === id,
                     );
-                    if (char) presentNPCs.push(char);
+                    if (char && (char.status || "Alive") !== "Dead") presentNPCs.push(char);
                 });
 
                 if (presentNPCs.length === 0) {
@@ -2664,6 +2667,8 @@ Example:
                 if (npc.raceName) info += `Race: ${npc.raceName}\n`;
                 if (npc.gender) info += `Gender: ${npc.gender}\n`;
                 if (npc.age) info += `Age: ${npc.age}\n`;
+                if (npc.status) info += `Status: ${npc.status}\n`;
+                if (npc.status === "Dead" && npc.deathCause) info += `Death: ${npc.deathCause}\n`;
                 if (npc.personality) info += `\nPersonality:\n${npc.personality}\n`;
                 if (npc.appearance) info += `\nAppearance:\n${npc.appearance}\n`;
                 const mem = Array.isArray(npc.memories) ? npc.memories.slice(-3) : [];

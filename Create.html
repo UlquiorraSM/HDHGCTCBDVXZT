@@ -2361,6 +2361,21 @@
                                 <option value="">Select race...</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="f-char-status" onchange="onCharStatusChange()">
+                                <option value="Alive">Alive</option>
+                                <option value="Dead">Dead</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" id="f-char-death-cause-group" style="display:none;">
+                        <label class="form-label">Death Description</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-char-death-cause"
+                            placeholder="Describe how the character died..."
+                        ></textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Birthdate</label>
@@ -4550,6 +4565,11 @@
                             card.age || "";
                         document.getElementById("f-char-gender").value =
                             card.gender || "male";
+                        const statusEl = document.getElementById("f-char-status");
+                        if (statusEl) statusEl.value = card.status || "Alive";
+                        const dcEl = document.getElementById("f-char-death-cause");
+                        if (dcEl) dcEl.value = card.deathCause || "";
+                        onCharStatusChange();
                         (function(){
                             const grp = document.getElementById("playable-check-group");
                             if (card.isPlayable) grp.classList.add("active");
@@ -4758,6 +4778,12 @@
                 populateRaceSelect();
                 const raceSel = document.getElementById("f-char-race");
                 if (raceSel) raceSel.value = "";
+                const statusEl = document.getElementById("f-char-status");
+                if (statusEl) statusEl.value = "Alive";
+                const dcGrp = document.getElementById("f-char-death-cause-group");
+                const dcEl = document.getElementById("f-char-death-cause");
+                if (dcGrp) dcGrp.style.display = "none";
+                if (dcEl) dcEl.value = "";
                 document.getElementById("f-char-birth-day").value = "";
                 document.getElementById("f-char-birth-month").value = "1";
                 (function(){
@@ -4768,6 +4794,11 @@
                 renderRelationTags();
                 secretSelections = [];
                 renderSecretTags();
+            }
+            function onCharStatusChange() {
+                const val = document.getElementById("f-char-status").value;
+                const grp = document.getElementById("f-char-death-cause-group");
+                if (grp) grp.style.display = (val === "Dead") ? "block" : "none";
             }
             function resetSpeciesFields() {
                 const g = document.getElementById("f-species-generally");
@@ -6515,6 +6546,14 @@
                     type === "character" && raceId
                         ? ((getCards().find(c => c.id === raceId) || {}).title || "")
                         : "";
+                const status =
+                    type === "character"
+                        ? (document.getElementById("f-char-status").value || "Alive")
+                        : "";
+                const deathCause =
+                    type === "character" && status === "Dead"
+                        ? document.getElementById("f-char-death-cause").value.trim()
+                        : "";
                 const isPlayable =
                     type === "character" &&
                     document
@@ -6582,6 +6621,8 @@
                             gender,
                             raceId,
                             raceName,
+                            status,
+                            deathCause,
                             isPlayable,
                             birthdate,
                             tags,
@@ -6625,6 +6666,8 @@
                         gender,
                         raceId,
                         raceName,
+                        status,
+                        deathCause,
                         isPlayable,
                         birthdate,
                         tags,
