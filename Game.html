@@ -1078,6 +1078,29 @@
                     const parts = content.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
 
                     for (const part of parts) {
+                        const locState = part.match(/^LocState\s*:\s*(.+)$/i);
+                        if (locState) {
+                            const payload = locState[1];
+                            const kvs = payload.split(/;\s*/).filter(Boolean);
+                            kvs.forEach(seg => {
+                                const m = seg.match(/^([^=]+)=([^;]+)$/);
+                                if (m) {
+                                    const key = m[1].trim();
+                                    const val = m[2].trim();
+                                    let ttlDays = null;
+                                    const ttlMatch = seg.match(/ttl\s*=\s*(\d+)\s*d/i);
+                                    if (ttlMatch) ttlDays = parseInt(ttlMatch[1], 10);
+                                    setLocationState(key, val, ttlDays);
+                                } else {
+                                    const ttlOnly = seg.match(/^ttl\s*=\s*(\d+)\s*d/i);
+                                    if (ttlOnly) {
+                                        const ttlDays = parseInt(ttlOnly[1], 10);
+                                        setLocationState("state", "updated", ttlDays);
+                                    }
+                                }
+                            });
+                            continue;
+                        }
                         const absTime = part.match(/^(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d{2}:\d{2})$/)
                             || part.match(/^(\d+),\s*(\d+),\s*(\d+),\s*(\d{2}:\d{2})$/);
                         if (absTime) {
@@ -1940,6 +1963,47 @@
                 }
             }
 
+            function buildLocationStateContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    clearExpiredLocationStates();
+                    const cards = getCards();
+                    const d = activeChar?.startingDate || {};
+                    const curDate = `${String(d.day || 1).padStart(2,"0")}.${String(d.month || 1).padStart(2,"0")}.${d.year || 1983}`;
+                    const curTime = d.time || "00:00";
+                    const ancestors = [];
+                    let current = cards.find(c => c.id === currentLocationId);
+                    if (!current) return "";
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const contextLines = [];
+                    contextLines.push("\nLOCATION STATES (Current area and parent regions):");
+                    ancestors.forEach(loc => {
+                        const st = loc.states || {};
+                        const keys = Object.keys(st);
+                        if (keys.length === 0) return;
+                        contextLines.push(`- ${loc.title}:`);
+                        keys.forEach(k => {
+                            const v = st[k];
+                            const until = v.untilDayCount != null ? ` (expires)` : "";
+                            contextLines.push(`  * ${k}: ${v.value}${until}`);
+                        });
+                    });
+                    if (contextLines.length <= 1) return "";
+                    contextLines.push(`Current time reference: ${curDate} ${curTime}`);
+                    return contextLines.join("\n") + "\n";
+                } catch (e) {
+                    console.error("Location state context error", e);
+                    return "";
+                }
+            }
+
             function buildLocationMemoryContext() {
                 try {
                     if (!currentLocationId) return "";
@@ -2095,6 +2159,7 @@
                 const playerContext = buildPlayerContext();
                 const eventsContext = buildEventsContext();
                 const locationMemoryContext = buildLocationMemoryContext();
+                const locationStateContext = buildLocationStateContext();
                 const relationshipSummary = buildRelationshipSummary();
                 const scheduleInfo = computeSchoolPresenceNow();
                 const scheduleContext = scheduleInfo.context || "";
@@ -2156,6 +2221,7 @@ ${itemContext}
 ${speciesContext}
 ${eventsContext}
 ${locationMemoryContext}
+${locationStateContext}
 ${relationshipSummary}
 ${scheduleContext}
 
@@ -2180,6 +2246,11 @@ ${scheduleContext}
 - Use relative deltas: [[Day:+1]], [[Week:+1]], [[Month:+1]], [[Year:+1]], [[Time:+30]] (minutes). For explicit times write [[Time:HH:MM]].
 - Choose minimal, consistent increments based on the narration; do not guess multiple jumps unless clearly stated.
 - Always include the final metadata block after applying these changes.
+
+# STATE CHANGE TAGS (MANDATORY WHEN WORLD STATE CHANGES)
+- When your narration changes a location’s persistent state, append a single control tag BEFORE the metadata block.
+- Syntax: [[LocState:key=value]] or with expiry [[LocState:key=value;ttl=19d]]. Multiple pairs may be separated by semicolons.
+- Examples: [[LocState:door=broken]] , [[LocState:gum_spot=present;ttl=30d]]
 
 # RESPONSE FORMAT (MANDATORY)
 Your response MUST consist of two parts:
@@ -2503,6 +2574,45 @@ Example:
                 sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
             }
 
+            function _worldDayCount(d) {
+                const day = d.day || 1;
+                const month = d.month || 1;
+                const year = d.year || 1983;
+                return (year * 360) + ((month - 1) * 30) + day;
+            }
+            function setLocationState(key, value, ttlDays = null) {
+                if (!currentLocationId) return;
+                const cards = getCards();
+                const locCard = cards.find((c) => c.id === currentLocationId);
+                if (!locCard) return;
+                const d = activeChar?.startingDate || {};
+                if (!locCard.states || typeof locCard.states !== "object") locCard.states = {};
+                const state = { value, updatedAt: Date.now(), untilDayCount: null };
+                if (ttlDays != null && !isNaN(ttlDays)) {
+                    state.untilDayCount = _worldDayCount(d) + parseInt(ttlDays, 10);
+                }
+                locCard.states[key] = state;
+                sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+            }
+            function clearExpiredLocationStates() {
+                if (!currentLocationId) return;
+                const cards = getCards();
+                const locCard = cards.find((c) => c.id === currentLocationId);
+                if (!locCard || !locCard.states) return;
+                const d = activeChar?.startingDate || {};
+                const nowCount = _worldDayCount(d);
+                let changed = false;
+                Object.keys(locCard.states).forEach((k) => {
+                    const st = locCard.states[k];
+                    if (st && st.untilDayCount != null && nowCount > st.untilDayCount) {
+                        delete locCard.states[k];
+                        changed = true;
+                    }
+                });
+                if (changed) {
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                }
+            }
             function showNPCInfo(id) {
                 const cards = getCards();
                 const npc = cards.find((c) => c.id === id);
