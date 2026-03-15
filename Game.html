@@ -845,6 +845,7 @@
             let activeChar = null;
             let currentLocationId = null;
             let isFirstMessageProtected = false;
+            let currentNarrationTs = null;
 
             /* ═══════════════════════════════════════
                TIME & COMMAND SYSTEM
@@ -941,7 +942,7 @@
                 }
             }
 
-            function addToStoryLog(sender, text) {
+            function addToStoryLog(sender, text, tsOverride = null) {
                 const d = activeChar?.startingDate || {};
                 const day = String(d.day || 1).padStart(2, "0");
                 const mon = String(d.month || 1).padStart(2, "0");
@@ -955,11 +956,12 @@
                     date: `${day}.${mon}.${yr}`,
                     time: tm,
                     location: loc,
-                    timestamp: Date.now()
+                    timestamp: tsOverride || Date.now()
                 };
 
                 chatHistory.push(entry);
                 saveStoryLog();
+                return entry.timestamp;
             }
 
             function updateHeaderTime() {
@@ -1090,12 +1092,12 @@
                                     let ttlDays = null;
                                     const ttlMatch = seg.match(/ttl\s*=\s*(\d+)\s*d/i);
                                     if (ttlMatch) ttlDays = parseInt(ttlMatch[1], 10);
-                                    setLocationState(key, val, ttlDays);
+                                    setLocationState(key, val, ttlDays, currentNarrationTs);
                                 } else {
                                     const ttlOnly = seg.match(/^ttl\s*=\s*(\d+)\s*d/i);
                                     if (ttlOnly) {
                                         const ttlDays = parseInt(ttlOnly[1], 10);
-                                        setLocationState("state", "updated", ttlDays);
+                                        setLocationState("state", "updated", ttlDays, currentNarrationTs);
                                     }
                                 }
                             });
@@ -2525,7 +2527,7 @@ Example:
                     .filter(Boolean);
             }
 
-            function addNpcMemoriesFromNarration(text) {
+            function addNpcMemoriesFromNarration(text, anchorTs = null) {
                 const ids = getPresentNpcIds();
                 if (ids.length === 0) return;
                 const cards = getCards();
@@ -2537,7 +2539,8 @@ Example:
                     date: dateStr,
                     time: timeStr,
                     location: loc,
-                    text: String(text || "").slice(0, 800)
+                    text: String(text || "").slice(0, 800),
+                    logTs: anchorTs || null
                 };
                 let changed = false;
                 ids.forEach((id) => {
@@ -2553,7 +2556,7 @@ Example:
                 }
             }
 
-            function addLocationMemoryFromNarration(text) {
+            function addLocationMemoryFromNarration(text, anchorTs = null) {
                 if (!currentLocationId) return;
                 const cards = getCards();
                 const locCard = cards.find((c) => c.id === currentLocationId);
@@ -2566,7 +2569,8 @@ Example:
                     date: dateStr,
                     time: timeStr,
                     location: locName,
-                    text: String(text || "").slice(0, 800)
+                    text: String(text || "").slice(0, 800),
+                    logTs: anchorTs || null
                 };
                 if (!Array.isArray(locCard.memories)) locCard.memories = [];
                 locCard.memories.push(entry);
@@ -2580,14 +2584,14 @@ Example:
                 const year = d.year || 1983;
                 return (year * 360) + ((month - 1) * 30) + day;
             }
-            function setLocationState(key, value, ttlDays = null) {
+            function setLocationState(key, value, ttlDays = null, byTs = null) {
                 if (!currentLocationId) return;
                 const cards = getCards();
                 const locCard = cards.find((c) => c.id === currentLocationId);
                 if (!locCard) return;
                 const d = activeChar?.startingDate || {};
                 if (!locCard.states || typeof locCard.states !== "object") locCard.states = {};
-                const state = { value, updatedAt: Date.now(), untilDayCount: null };
+                const state = { value, updatedAt: Date.now(), untilDayCount: null, updatedByTs: byTs || null };
                 if (ttlDays != null && !isNaN(ttlDays)) {
                     state.untilDayCount = _worldDayCount(d) + parseInt(ttlDays, 10);
                 }
@@ -2611,6 +2615,43 @@ Example:
                 });
                 if (changed) {
                     sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                }
+            }
+            function rollbackAnchoredChangesByTs(ts) {
+                try {
+                    if (!ts) return;
+                    const cards = getCards();
+                    let changed = false;
+                    cards.forEach(c => {
+                        if (c.genre === "character") {
+                            if (Array.isArray(c.memories)) {
+                                const lenBefore = c.memories.length;
+                                c.memories = c.memories.filter(m => m.logTs !== ts);
+                                if (c.memories.length !== lenBefore) changed = true;
+                            }
+                        } else if (c.genre === "location") {
+                            if (Array.isArray(c.memories)) {
+                                const lenBefore = c.memories.length;
+                                c.memories = c.memories.filter(m => m.logTs !== ts);
+                                if (c.memories.length !== lenBefore) changed = true;
+                            }
+                            if (c.states && typeof c.states === "object") {
+                                const keys = Object.keys(c.states);
+                                keys.forEach(k => {
+                                    const st = c.states[k];
+                                    if (st && st.updatedByTs === ts) {
+                                        delete c.states[k];
+                                        changed = true;
+                                    }
+                                });
+                            }
+                        }
+                    });
+                    if (changed) {
+                        sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                    }
+                } catch (e) {
+                    console.error("Rollback anchored changes failed", e);
                 }
             }
             function showNPCInfo(id) {
@@ -2698,6 +2739,7 @@ Example:
                 const systemInst = buildSystemPrompt();
 
                 try {
+                    currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
                     const historyLines = buildHistoryLines(15);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
@@ -2707,9 +2749,9 @@ Example:
                     const cleanResponse = processAICommands(response);
                     const finalText = applyTextSizeLimit(cleanResponse);
                     appendBubble("ai", finalText);
-                    addNpcMemoriesFromNarration(finalText);
-                    addLocationMemoryFromNarration(finalText);
-                    addToStoryLog("Narrator", finalText);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    addNpcMemoriesFromNarration(finalText, ts);
+                    addLocationMemoryFromNarration(finalText, ts);
                 } catch (err) {
                     removeTypingIndicator();
                     // No error bubble displayed to user
@@ -2719,6 +2761,7 @@ Example:
                     setSendDisabled(false);
                     setStatus(true);
                     unlockAllButtons(); // Unlock buttons when generation is complete
+                    currentNarrationTs = null;
                 }
             }
 
@@ -2780,6 +2823,7 @@ Example:
                 const systemInst = buildSystemPrompt();
 
                 try {
+                    currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
                     const historyLines = buildHistoryLines(15);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
@@ -2789,9 +2833,9 @@ Example:
                     const cleanResponse = processAICommands(response);
                     const finalText = applyTextSizeLimit(cleanResponse);
                     appendBubble("ai", finalText);
-                    addNpcMemoriesFromNarration(finalText);
-                    addLocationMemoryFromNarration(finalText);
-                    addToStoryLog("Narrator", finalText);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    addNpcMemoriesFromNarration(finalText, ts);
+                    addLocationMemoryFromNarration(finalText, ts);
                 } catch (err) {
                     removeTypingIndicator();
                     // No error bubble displayed to user
@@ -2800,6 +2844,7 @@ Example:
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
+                    currentNarrationTs = null;
                 }
             }
 
@@ -2847,15 +2892,18 @@ Example:
                 // Remove last AI message from DOM and history
                 aiRows[aiRows.length - 1].remove();
                 // Remove last narrator entry from history
+                let removedNarratorTs = null;
                 for (let i = chatHistory.length - 1; i >= 0; i--) {
                     const entry = chatHistory[i];
                     const isNarrator = typeof entry === 'string' ? entry.startsWith("Narrator:") : entry.sender === "Narrator";
                     if (isNarrator) {
+                        removedNarratorTs = typeof entry === 'string' ? null : entry.timestamp;
                         chatHistory.splice(i, 1);
                         break;
                     }
                 }
                 saveStoryLog();
+                if (removedNarratorTs) rollbackAnchoredChangesByTs(removedNarratorTs);
                 // Roll back world state to last remaining entry
                 rollbackToLastWorldState();
                 isBusy = true;
@@ -2867,6 +2915,7 @@ Example:
                 const systemInst = buildSystemPrompt();
 
                 try {
+                    currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
                     const historyLines = buildHistoryLines(15);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
@@ -2876,9 +2925,9 @@ Example:
                     const cleanR = processAICommands(r);
                     const finalText = applyTextSizeLimit(cleanR);
                     appendBubble("ai", finalText);
-                    addNpcMemoriesFromNarration(finalText);
-                    addLocationMemoryFromNarration(finalText);
-                    addToStoryLog("Narrator", finalText);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    addNpcMemoriesFromNarration(finalText, ts);
+                    addLocationMemoryFromNarration(finalText, ts);
                 } catch (e) {
                     removeTypingIndicator();
                     // No error bubble displayed to user
@@ -2888,6 +2937,7 @@ Example:
                     setSendDisabled(false);
                     setStatus(true);
                     unlockAllButtons(); // Unlock buttons when retry is complete
+                    currentNarrationTs = null;
                 }
             };
 
@@ -2902,6 +2952,7 @@ Example:
                 const systemInst = buildSystemPrompt();
 
                 try {
+                    currentNarrationTs = Date.now();
                     const recentHistory = chatHistory.slice(-10);
                     const historyLines = buildHistoryLines(15);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
@@ -2911,9 +2962,9 @@ Example:
                     const cleanR = processAICommands(r);
                     const finalText = applyTextSizeLimit(cleanR);
                     appendBubble("ai", finalText);
-                    addNpcMemoriesFromNarration(finalText);
-                    addLocationMemoryFromNarration(finalText);
-                    addToStoryLog("Narrator", finalText);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    addNpcMemoriesFromNarration(finalText, ts);
+                    addLocationMemoryFromNarration(finalText, ts);
                 } catch (e) {
                     removeTypingIndicator();
                     // No error bubble displayed to user
@@ -2923,6 +2974,7 @@ Example:
                     setSendDisabled(false);
                     setStatus(true);
                     unlockAllButtons(); // Unlock buttons when continue is complete
+                    currentNarrationTs = null;
                 }
             };
 
@@ -2976,9 +3028,12 @@ Example:
                 lastRow.remove();
 
                 if (chatHistory.length > 0) {
-                    chatHistory.pop();
+                    const removed = chatHistory.pop();
                     saveStoryLog();
                     // Roll back world state to last remaining entry after deletion
+                    if (removed && typeof removed !== 'string' && removed.sender === "Narrator") {
+                        rollbackAnchoredChangesByTs(removed.timestamp);
+                    }
                     rollbackToLastWorldState();
                     showToast("Message deleted.", "rgba(180, 60, 60, 0.85)");
                 }
