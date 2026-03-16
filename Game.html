@@ -2239,6 +2239,7 @@ ${scheduleContext}
 6. Secret Events are UNKNOWN to NPCs. Do NOT reveal them in dialogue; use them only to drive hidden world changes or narrative tension.
 7. ALWAYS close quotation marks. If a character speaks, end the spoken line with a closing quote.
 8. Do NOT end your narration with "..." unless it's intentional and the sentence is complete; prefer complete sentences.
+9. Do NOT repeat exact sentences from the STORY LOG; continue with new developments.
 
 # TIME & LOCATION MANAGEMENT (CRITICAL)
 1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
@@ -2744,6 +2745,46 @@ Example:
                 }
                 return "";
             }
+            function buildHistoryLinesCombined(firstCount = 10, lastCount = 5) {
+                const first = chatHistory.slice(0, Math.max(0, firstCount));
+                const last = chatHistory.slice(-Math.max(0, lastCount));
+                const merged = first.concat(last);
+                return merged
+                    .map((e) => {
+                        if (typeof e === "string") return `--- ${e} ---`;
+                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
+                    })
+                    .join("\n");
+            }
+            function getLastNarratorTexts(count = 10) {
+                const texts = [];
+                for (let i = chatHistory.length - 1; i >= 0 && texts.length < count; i--) {
+                    const e = chatHistory[i];
+                    if (typeof e !== "string" && e.sender === "Narrator") {
+                        texts.push(e.text || "");
+                    }
+                }
+                return texts;
+            }
+            function isDuplicateText(t) {
+                const norm = _normalizeText(t);
+                const prev = getLastNarratorTexts(10).map(_normalizeText);
+                return prev.includes(norm);
+            }
+            function uniqueSentences(t) {
+                const txt = String(t || "");
+                const parts = txt.split(/(?<=[\.!\?])\s+/).filter(Boolean);
+                const seen = new Set();
+                const out = [];
+                for (const p of parts) {
+                    const n = _normalizeText(p);
+                    if (!seen.has(n)) {
+                        seen.add(n);
+                        out.push(p);
+                    }
+                }
+                return out.join(" ").trim();
+            }
 
             async function triggerNarration(systemPrompt) {
                 if (isBusy) return;
@@ -2759,19 +2800,19 @@ Example:
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
-                    const historyLines = buildHistoryLines(15);
+                    const historyLines = buildHistoryLinesCombined(10, 5);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
-                    let finalText = applyTextSizeLimit(cleanResponse);
+                    let finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
                     const lastNarr = getLastNarratorText();
-                    if (_normalizeText(finalText) === _normalizeText(lastNarr)) {
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
                         const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
                         const response2 = await askAIWithRetry(finalPrompt2);
                         const clean2 = processAICommands(response2);
-                        finalText = applyTextSizeLimit(clean2);
+                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
@@ -2850,19 +2891,19 @@ Example:
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
-                    const historyLines = buildHistoryLines(15);
+                    const historyLines = buildHistoryLinesCombined(10, 5);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
-                    let finalText = applyTextSizeLimit(cleanResponse);
+                    let finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
                     const lastNarr = getLastNarratorText();
-                    if (_normalizeText(finalText) === _normalizeText(lastNarr)) {
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
                         const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
                         const response2 = await askAIWithRetry(finalPrompt2);
                         const clean2 = processAICommands(response2);
-                        finalText = applyTextSizeLimit(clean2);
+                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
@@ -2949,19 +2990,19 @@ Example:
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
-                    const historyLines = buildHistoryLines(15);
+                    const historyLines = buildHistoryLinesCombined(10, 5);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
-                    let finalText = applyTextSizeLimit(cleanR);
+                    let finalText = uniqueSentences(applyTextSizeLimit(cleanR));
                     const lastNarr = getLastNarratorText();
-                    if (_normalizeText(finalText) === _normalizeText(lastNarr)) {
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
                         const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
                         const r2 = await askAIWithRetry(finalPrompt2);
                         const clean2 = processAICommands(r2);
-                        finalText = applyTextSizeLimit(clean2);
+                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
@@ -2993,19 +3034,19 @@ Example:
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory.slice(-10);
-                    const historyLines = buildHistoryLines(15);
+                    const historyLines = buildHistoryLinesCombined(10, 5);
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
-                    let finalText = applyTextSizeLimit(cleanR);
+                    let finalText = uniqueSentences(applyTextSizeLimit(cleanR));
                     const lastNarr = getLastNarratorText();
-                    if (_normalizeText(finalText) === _normalizeText(lastNarr)) {
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
                         const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
                         const r2 = await askAIWithRetry(finalPrompt2);
                         const clean2 = processAICommands(r2);
-                        finalText = applyTextSizeLimit(clean2);
+                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
