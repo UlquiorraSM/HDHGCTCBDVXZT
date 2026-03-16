@@ -2732,6 +2732,19 @@ Example:
                     .join("\n");
             }
 
+            function _normalizeText(s) {
+                return String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+            }
+            function getLastNarratorText() {
+                for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    const e = chatHistory[i];
+                    if (typeof e !== "string" && e.sender === "Narrator") {
+                        return e.text || "";
+                    }
+                }
+                return "";
+            }
+
             async function triggerNarration(systemPrompt) {
                 if (isBusy) return;
                 isBusy = true;
@@ -2752,7 +2765,14 @@ Example:
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
-                    const finalText = applyTextSizeLimit(cleanResponse);
+                    let finalText = applyTextSizeLimit(cleanResponse);
+                    const lastNarr = getLastNarratorText();
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr)) {
+                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                        const response2 = await askAIWithRetry(finalPrompt2);
+                        const clean2 = processAICommands(response2);
+                        finalText = applyTextSizeLimit(clean2);
+                    }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
                     addNpcMemoriesFromNarration(finalText, ts);
@@ -2836,7 +2856,14 @@ Example:
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
-                    const finalText = applyTextSizeLimit(cleanResponse);
+                    let finalText = applyTextSizeLimit(cleanResponse);
+                    const lastNarr = getLastNarratorText();
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr)) {
+                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                        const response2 = await askAIWithRetry(finalPrompt2);
+                        const clean2 = processAICommands(response2);
+                        finalText = applyTextSizeLimit(clean2);
+                    }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
                     addNpcMemoriesFromNarration(finalText, ts);
@@ -2928,7 +2955,14 @@ Example:
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
-                    const finalText = applyTextSizeLimit(cleanR);
+                    let finalText = applyTextSizeLimit(cleanR);
+                    const lastNarr = getLastNarratorText();
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr)) {
+                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                        const r2 = await askAIWithRetry(finalPrompt2);
+                        const clean2 = processAICommands(r2);
+                        finalText = applyTextSizeLimit(clean2);
+                    }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
                     addNpcMemoriesFromNarration(finalText, ts);
@@ -2965,7 +2999,14 @@ Example:
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
-                    const finalText = applyTextSizeLimit(cleanR);
+                    let finalText = applyTextSizeLimit(cleanR);
+                    const lastNarr = getLastNarratorText();
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr)) {
+                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                        const r2 = await askAIWithRetry(finalPrompt2);
+                        const clean2 = processAICommands(r2);
+                        finalText = applyTextSizeLimit(clean2);
+                    }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
                     addNpcMemoriesFromNarration(finalText, ts);
