@@ -6384,47 +6384,44 @@
 
                 const sublocations =
                     type === "location"
-                        ? {
-                              "village-city": [
-                                  ...(sublocSelections["village-city"] || []),
-                              ],
-                              "country-kingdom": [
-                                  ...(sublocSelections["country-kingdom"] ||
-                                      []),
-                              ],
-                              building: [
-                                  ...(sublocSelections["building"] || []),
-                              ],
-                          }
+                        ? (() => {
+                            const out = {};
+                            const vc = (sublocSelections["village-city"] || []);
+                            const ck = (sublocSelections["country-kingdom"] || []);
+                            const bd = (sublocSelections["building"] || []);
+                            if (vc.length) out["village-city"] = [...vc];
+                            if (ck.length) out["country-kingdom"] = [...ck];
+                            if (bd.length) out["building"] = [...bd];
+                            return out;
+                        })()
                         : {};
                 const species =
                     type === "location"
-                        ? {
-                              "village-city": [
-                                  ...(speciesSelections["village-city"] || []),
-                              ],
-                              "country-kingdom": [
-                                  ...(speciesSelections["country-kingdom"] ||
-                                      []),
-                              ],
-                              forest: [...(speciesSelections["forest"] || [])],
-                              landmark: [
-                                  ...(speciesSelections["landmark"] || []),
-                              ],
-                              ocean: [...(speciesSelections["ocean"] || [])],
-                          }
+                        ? (() => {
+                            const out = {};
+                            const vc = (speciesSelections["village-city"] || []);
+                            const ck = (speciesSelections["country-kingdom"] || []);
+                            const fr = (speciesSelections["forest"] || []);
+                            const lm = (speciesSelections["landmark"] || []);
+                            const oc = (speciesSelections["ocean"] || []);
+                            if (vc.length) out["village-city"] = [...vc];
+                            if (ck.length) out["country-kingdom"] = [...ck];
+                            if (fr.length) out["forest"] = [...fr];
+                            if (lm.length) out["landmark"] = [...lm];
+                            if (oc.length) out["ocean"] = [...oc];
+                            return out;
+                        })()
                         : {};
-
                 const racialCivilization =
                     type === "location"
-                        ? {
-                              "village-city": (
-                                  racialSelections["village-city"] || []
-                              ).map((r) => ({ ...r })),
-                              "country-kingdom": (
-                                  racialSelections["country-kingdom"] || []
-                              ).map((r) => ({ ...r })),
-                          }
+                        ? (() => {
+                            const out = {};
+                            const vc = (racialSelections["village-city"] || []).map(r => ({...r}));
+                            const ck = (racialSelections["country-kingdom"] || []).map(r => ({...r}));
+                            if (vc.length) out["village-city"] = vc;
+                            if (ck.length) out["country-kingdom"] = ck;
+                            return out;
+                        })()
                         : {};
 
                 const population =
@@ -6450,10 +6447,14 @@
                         : null;
                 const zivilEventsData =
                     type === "location"
-                        ? {
-                              "village-city": (eventsSelections["village-city"] || []).map(e => ({ ...e })),
-                              "country-kingdom": (eventsSelections["country-kingdom"] || []).map(e => ({ ...e })),
-                          }
+                        ? (() => {
+                            const vc = (eventsSelections["village-city"] || []).map(e => ({...e}));
+                            const ck = (eventsSelections["country-kingdom"] || []).map(e => ({...e}));
+                            const out = {};
+                            if (vc.length) out["village-city"] = vc;
+                            if (ck.length) out["country-kingdom"] = ck;
+                            return Object.keys(out).length ? out : null;
+                        })()
                         : null;
                 const shopScheduleData =
                     type === "location" &&
@@ -6588,7 +6589,7 @@
                 if (editingId) {
                     const idx = cards.findIndex((c) => c.id === editingId);
                     if (idx !== -1) {
-                        cards[idx] = {
+                        const baseUpdate = {
                             ...cards[idx],
                             title: name,
                             genre: type,
@@ -6599,9 +6600,9 @@
                             shopSchedule: shopScheduleData,
                             shopWorkers: shopWorkersData,
                             canBeSpawn,
-                            sublocations,
-                            species,
-                            racialCivilization,
+                            ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
+                            ...(species && Object.keys(species).length ? { species } : {}),
+                            ...(racialCivilization && Object.keys(racialCivilization).length ? { racialCivilization } : {}),
                             population,
                             events: zivilEventsData,
                             residents,
@@ -6629,11 +6630,12 @@
                             description: desc,
                             updatedAt: new Date().toISOString(),
                         };
+                        cards[idx] = baseUpdate;
                         saveCards(cards);
                         showToast("Entry updated!");
                     }
                 } else {
-                    const newCard = {
+                    const baseNew = {
                         id: generateId(),
                         title: name,
                         genre: type,
@@ -6644,9 +6646,9 @@
                         shopSchedule: shopScheduleData,
                         shopWorkers: shopWorkersData,
                         canBeSpawn,
-                        sublocations,
-                        species,
-                        racialCivilization,
+                        ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
+                        ...(species && Object.keys(species).length ? { species } : {}),
+                        ...(racialCivilization && Object.keys(racialCivilization).length ? { racialCivilization } : {}),
                         population,
                         events: zivilEventsData,
                         residents,
@@ -6675,7 +6677,7 @@
                         createdAt: new Date().toISOString(),
                         version: "1.0",
                     };
-                    cards.push(newCard);
+                    cards.push(baseNew);
                     saveCards(cards);
                     showToast("Entry created!");
                 }
@@ -6752,11 +6754,101 @@
            IMPORT / EXPORT
         ───────────────────────────────────────── */
             function exportCards() {
-                const cards = getCards();
+                function pruneEmptyDeep(v) {
+                    if (Array.isArray(v)) {
+                        const arr = v.map(pruneEmptyDeep).filter(x => x !== undefined);
+                        return arr.length ? arr : undefined;
+                    }
+                    if (v && typeof v === "object") {
+                        const out = {};
+                        Object.keys(v).forEach(k => {
+                            const pv = pruneEmptyDeep(v[k]);
+                            if (pv !== undefined) out[k] = pv;
+                        });
+                        return Object.keys(out).length ? out : undefined;
+                    }
+                    if (v === null) return undefined;
+                    return v;
+                }
+                function sanitizeCard(card) {
+                    const g = (card.genre || "").toLowerCase();
+                    const out = {};
+                    const set = (k, v) => {
+                        if (v === null || v === undefined) return;
+                        if (typeof v === "string" && v.trim() === "") return;
+                        if (Array.isArray(v) && v.length === 0) return;
+                        if (typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0) return;
+                        if (typeof v === "boolean" && v === false) return;
+                        if (typeof v === "number" && v === 0) return;
+                        out[k] = v;
+                    };
+                    set("id", card.id);
+                    set("title", card.title);
+                    set("genre", card.genre);
+                    set("description", card.description);
+                    set("createdAt", card.createdAt);
+                    set("updatedAt", card.updatedAt);
+                    set("version", card.version);
+                    if (g === "location") {
+                        set("locationSub", card.locationSub);
+                        set("locationDetail", card.locationDetail);
+                        if (card.canBeSpawn === true) set("canBeSpawn", true);
+                        set("sublocations", card.sublocations || {});
+                        set("species", card.species || {});
+                        set("racialCivilization", card.racialCivilization || {});
+                        const pop = card.population || {};
+                        const popClean = {};
+                        Object.keys(pop).forEach(k => { if ((pop[k] || 0) > 0) popClean[k] = pop[k]; });
+                        if (Object.keys(popClean).length) set("population", popClean);
+                        set("events", card.events);
+                        set("residents", Array.isArray(card.residents) ? card.residents : []);
+                        set("schoolSchedule", card.schoolSchedule);
+                        set("schoolClasses", card.schoolClasses);
+                        set("shopSchedule", card.shopSchedule);
+                        set("shopWorkers", card.shopWorkers);
+                    } else if (g === "race") {
+                        set("nameGenerator", card.nameGenerator);
+                        set("lore", card.lore);
+                        set("skincolorAllowed", card.skincolorAllowed);
+                        set("tags", card.tags);
+                    } else if (g === "species") {
+                        set("generally", card.generally);
+                        set("appearance", card.appearance);
+                        set("personality", card.personality);
+                    } else if (g === "lore") {
+                        set("loreText", card.loreText);
+                        set("loreMode", card.loreMode);
+                        set("tags", card.tags);
+                    } else if (g === "character") {
+                        set("appearance", card.appearance);
+                        set("personality", card.personality);
+                        if ((card.age || 0) > 0) set("age", card.age);
+                        set("gender", card.gender);
+                        set("raceId", card.raceId);
+                        set("raceName", card.raceName);
+                        if (card.status === "Dead") set("status", "Dead");
+                        set("deathCause", card.deathCause);
+                        if (card.isPlayable === true) set("isPlayable", true);
+                        if (card.birthdate && (card.birthdate.day || card.birthdate.month)) set("birthdate", card.birthdate);
+                        set("relations", card.relations);
+                        set("secrets", card.secrets);
+                        set("skillId", card.skillId);
+                        set("skillName", card.skillName);
+                        set("spawnId", card.spawnId);
+                        set("currentLocationId", card.currentLocationId);
+                    } else if (g === "item") {
+                        set("tags", card.tags);
+                    } else if (g === "skill") {
+                        set("description", card.description);
+                    }
+                    return pruneEmptyDeep(out) || {};
+                }
+                let cards = getCards();
                 if (cards.length === 0) {
                     showToast("Nothing to export.", "#c04040");
                     return;
                 }
+                cards = cards.map(sanitizeCard);
                 const blob = new Blob([JSON.stringify(cards, null, 2)], {
                     type: "application/json",
                 });

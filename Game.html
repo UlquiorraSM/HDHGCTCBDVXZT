@@ -936,6 +936,7 @@
                                 appendBubble(role, entry.text, "", false);
                             }
                         });
+                        messagesEl.scrollTop = messagesEl.scrollHeight;
                     }
                 } catch (e) {
                     console.error("Failed to load story log", e);
@@ -2883,6 +2884,7 @@ Example:
                 isBusy = true;
                 setSendDisabled(true);
                 setStatus(false);
+                lockAllButtons(); // Lock buttons during generation
 
                 const typing = appendTypingIndicator();
 
@@ -2917,6 +2919,7 @@ Example:
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
+                    unlockAllButtons(); // Unlock buttons when generation is complete
                     currentNarrationTs = null;
                 }
             }
@@ -3138,7 +3141,7 @@ Example:
                         btn.classList.add('locked');
                         // Store original text
                         btn.dataset.originalText = btn.textContent.trim();
-                        btn.textContent = '🔒 ' + btn.dataset.originalText;
+                        btn.textContent = '🔒';
                     }
                 });
             }
