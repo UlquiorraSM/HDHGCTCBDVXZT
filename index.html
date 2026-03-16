@@ -332,6 +332,7 @@
                     max-width: 92vw;
                     padding: 16px;
                     gap: 10px;
+                    backdrop-filter: none;
                 }
                 .menu-button {
                     width: 100%;
@@ -347,6 +348,9 @@
                 }
                 .conf-actions {
                     gap: 10px;
+                }
+                #world-conf-overlay, #story-conf-overlay {
+                    backdrop-filter: none !important;
                 }
             }
         </style>
@@ -567,7 +571,20 @@
             });
 
             // Regelmäßig prüfen, ob sich der Hintergrund geändert hat
-            setInterval(loadBackground, 1000);
+            let _bgIntervalId = setInterval(loadBackground, 4000);
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) {
+                    if (_bgIntervalId) {
+                        clearInterval(_bgIntervalId);
+                        _bgIntervalId = null;
+                    }
+                } else {
+                    loadBackground();
+                    if (!_bgIntervalId) {
+                        _bgIntervalId = setInterval(loadBackground, 4000);
+                    }
+                }
+            });
 
             // --- Scenarios (Welten & Stories) ---
             function getScenarios() {

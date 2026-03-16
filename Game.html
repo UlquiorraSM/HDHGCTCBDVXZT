@@ -3154,7 +3154,20 @@ Example:
             ═══════════════════════════════════════ */
             window.addEventListener("load", () => {
                 loadBackground();
-                setInterval(loadBackground, 2000);
+                let _bgIntervalId = setInterval(loadBackground, 5000);
+                document.addEventListener("visibilitychange", () => {
+                    if (document.hidden) {
+                        if (_bgIntervalId) {
+                            clearInterval(_bgIntervalId);
+                            _bgIntervalId = null;
+                        }
+                    } else {
+                        loadBackground();
+                        if (!_bgIntervalId) {
+                            _bgIntervalId = setInterval(loadBackground, 5000);
+                        }
+                    }
+                });
 
                 const params = new URLSearchParams(window.location.search);
                 const isContinue = params.get("mode") === "continue";
