@@ -393,7 +393,7 @@
         </style>
     </head>
     <body>
-        <div id="version-badge" style="position: fixed; left: 12px; bottom: 12px; z-index: 3000; background: rgba(0,0,0,0.4); color: #fff; padding: 6px 10px; border-radius: 10px; font-size: 12px; letter-spacing: 0.03em; backdrop-filter: blur(8px); user-select: none;">v1.3.0</div>
+        <div id="version-badge" style="position: fixed; left: 12px; bottom: 12px; z-index: 3000; background: rgba(0,0,0,0.4); color: #fff; padding: 6px 10px; border-radius: 10px; font-size: 12px; letter-spacing: 0.03em; backdrop-filter: blur(8px); user-select: none;">v1.3.2</div>
         <div class="menu-container" id="main-menu">
             <h1>StoryKI</h1>
             
@@ -1279,6 +1279,47 @@
                 reader.onload = function(e) {
                     try {
                         const data = JSON.parse(e.target.result);
+                        // All worlds import (replace)
+                        if (data && data.type === "all_worlds_export" && Array.isArray(data.worlds)) {
+                            const scenarios = [];
+                            const now = Date.now();
+                            data.worlds.forEach(w => {
+                                let worldId = w.id || Math.random().toString(36).slice(2, 10);
+                                scenarios.push({
+                                    id: worldId,
+                                    name: w.name || "World",
+                                    createdAt: w.createdAt || now,
+                                    updatedAt: now,
+                                    data: {
+                                        cards: Array.isArray(w.data?.cards) ? w.data.cards : [],
+                                        settings: w.data?.settings || {}
+                                    }
+                                });
+                                const stories = Array.isArray(w.stories) ? w.stories : [];
+                                stories.forEach(st => {
+                                    let sid = st.id || Math.random().toString(36).slice(2, 10);
+                                    scenarios.push({
+                                        id: sid,
+                                        worldId: worldId,
+                                        name: st.name || "Story",
+                                        createdAt: st.createdAt || now,
+                                        updatedAt: now,
+                                        signature: st.signature || "",
+                                        data: {
+                                            cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
+                                            characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
+                                            log: Array.isArray(st.data?.log) ? st.data.log : [],
+                                            settings: st.data?.settings || {}
+                                        }
+                                    });
+                                });
+                            });
+                            setScenarios(scenarios);
+                            renderScenarios();
+                            loadBackground();
+                            alert("Alle Welten und Stories importiert.");
+                            return;
+                        }
                         // World export import
                         if (data && (data.type === "world_export" || data.world)) {
                             let scenarios = getScenarios();
@@ -1350,11 +1391,7 @@
 
             function saveGame() {
                 try {
-                    const cards = JSON.parse(Storage.get("storyki_storycards") || "[]");
-                    const log = JSON.parse(Storage.get("storyki_storylog") || "[]");
-                    const chars = JSON.parse(Storage.get("storyki_characters") || "[]");
-                    const settings = JSON.parse(Storage.get("storyki_settings") || "{}");
-
+                    const scenarios = getScenarios();
                     function pruneEmptyDeep(v) {
                         if (Array.isArray(v)) {
                             const arr = v.map(pruneEmptyDeep).filter(x => x !== undefined);
@@ -1372,7 +1409,7 @@
                         return v;
                     }
                     function sanitizeCard(card) {
-                        const g = (card.genre || "").toLowerCase();
+                        const g = (card?.genre || "").toLowerCase();
                         const out = {};
                         const set = (k, v) => {
                             if (v === null || v === undefined) return;
@@ -1444,30 +1481,50 @@
                         }
                         return pruneEmptyDeep(out) || {};
                     }
-
-                    let exportData = {
-                        create: cards.map(sanitizeCard),
-                        story: {
-                            create: cards.map(sanitizeCard),
-                            storyLog: log,
-                            characters: chars.map(sanitizeCard),
-                            settings: settings
-                        }
+                    const worlds = scenarios.filter(x => !x.worldId);
+                    const exportPayload = {
+                        version: 1,
+                        type: "all_worlds_export",
+                        exportedAt: new Date().toISOString(),
+                        worlds: worlds.map(w => ({
+                            id: w.id,
+                            name: w.name,
+                            createdAt: w.createdAt,
+                            updatedAt: w.updatedAt,
+                            data: {
+                                cards: (w.data?.cards || []).map(sanitizeCard),
+                                settings: w.data?.settings || {}
+                            },
+                            stories: scenarios
+                                .filter(s => s.worldId === w.id)
+                                .map(s => ({
+                                    id: s.id,
+                                    name: s.name,
+                                    createdAt: s.createdAt,
+                                    updatedAt: s.updatedAt,
+                                    signature: s.signature || "",
+                                    data: {
+                                        cards: (s.data?.cards || []).map(sanitizeCard),
+                                        characters: (s.data?.characters || []).map(sanitizeCard),
+                                        log: s.data?.log || [],
+                                        settings: s.data?.settings || {}
+                                    }
+                                }))
+                        }))
                     };
-                    exportData = pruneEmptyDeep(exportData);
-
-                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+                    const payload = pruneEmptyDeep(exportPayload);
+                    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
                     a.href = url;
-                    a.download = `StoryKI_Save_${timestamp}.json`;
+                    a.download = `StoryKI_AllWorlds_${timestamp}.json`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                     
-                    console.log("Game saved successfully");
+                    console.log("All worlds saved successfully");
                 } catch (e) {
                     console.error("Failed to save game", e);
                     alert("Fehler beim Speichern des Spielstands.");
