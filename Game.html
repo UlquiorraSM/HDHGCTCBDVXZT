@@ -968,6 +968,7 @@
             function updateHeaderTime() {
                 if (!activeChar) return;
                 const d = activeChar.startingDate || {};
+                try { updateNPCBirthdays(d); } catch {}
                 const day = String(d.day || 1).padStart(2, "0");
                 const mon = String(d.month || 1).padStart(2, "0");
                 const yr = d.year || 1983;
@@ -1056,6 +1057,7 @@
                         }
                     }
                 }
+                updateNPCBirthdays(d);
                 updateHeaderTime();
                 saveActiveCharacter();
                 console.log(`[Time Update] New Time: ${d.day}.${d.month}.${d.year} ${d.time}`);
@@ -1222,6 +1224,7 @@
                 if (!timeChanged) {
                     addMinutes(1);
                 } else {
+                    updateNPCBirthdays(d);
                     updateHeaderTime();
                     saveActiveCharacter();
                 }
@@ -1266,8 +1269,54 @@
                     updateLocation(val);
                 }
                 
+                updateNPCBirthdays(d);
                 updateHeaderTime();
                 saveActiveCharacter();
+            }
+
+            function _cmpDate(a, b) {
+                if ((a.year || 0) !== (b.year || 0)) return (a.year || 0) - (b.year || 0);
+                if ((a.month || 0) !== (b.month || 0)) return (a.month || 0) - (b.month || 0);
+                return (a.day || 0) - (b.day || 0);
+            }
+            function _doy(day, month) { return ((month || 1) - 1) * 30 + (day || 1); }
+            function _birthsUpTo(date, bd) {
+                if (!date || !bd) return 0;
+                const y = date.year || 0;
+                const passed = _doy(date.day || 1, date.month || 1) >= _doy(bd.day || 1, bd.month || 1) ? 1 : 0;
+                return y + passed;
+            }
+            function _birthdaysDiff(a, b, bd) {
+                if (!bd) return 0;
+                return _birthsUpTo(b, bd) - _birthsUpTo(a, bd);
+            }
+            function updateNPCBirthdays(currentDate) {
+                try {
+                    const raw = Storage.get(CHARS_KEY) || "[]";
+                    const chars = JSON.parse(raw);
+                    let changed = false;
+                    for (let i = 0; i < chars.length; i++) {
+                        const c = chars[i];
+                        if (!c || c.status === "Dead") continue;
+                        const bd = c.birthdate;
+                        if (!bd || (!bd.day && !bd.month)) continue;
+                        if (typeof c.age !== "number") continue;
+                        if (!c._ageCheck || typeof c._ageCheck !== "object") {
+                            c._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
+                            changed = true;
+                            continue;
+                        }
+                        const diff = _birthdaysDiff(c._ageCheck, currentDate, bd);
+                        if (diff !== 0) {
+                            c.age = Math.max(0, (c.age || 0) + diff);
+                            c._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
+                            changed = true;
+                        }
+                    }
+                    if (changed) {
+                        Storage.set(CHARS_KEY, JSON.stringify(chars));
+                    }
+                } catch {}
             }
 
             /* ═══════════════════════════════════════
@@ -3220,6 +3269,11 @@ Example:
                 if (char) {
                     applyCharacter(char);
                     loadStoryLog();
+                    // Ensure initial age baselines are set
+                    try {
+                        const d0 = (char && char.startingDate) ? char.startingDate : null;
+                        if (d0) updateNPCBirthdays(d0);
+                    } catch {}
                     // Overlay ausblenden, wenn bereits Nachrichten existieren
                     if (Array.isArray(chatHistory) && chatHistory.length > 0) {
                         const ov = document.getElementById("welcome-overlay");

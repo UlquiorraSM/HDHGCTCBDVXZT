@@ -917,12 +917,6 @@
                     
                     header.appendChild(nameRow);
                     
-                    const meta = document.createElement("div");
-                    const charCount = s.data?.characters?.length || 0;
-                    meta.textContent = `${charCount} Charakter${charCount===1?'':'e'}`;
-                    meta.style.cssText = "color:rgba(255,255,255,.5); font-size: 10px;";
-                    header.appendChild(meta);
-                    
                     const actions = document.createElement("div");
                     actions.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-top: auto;";
                     
