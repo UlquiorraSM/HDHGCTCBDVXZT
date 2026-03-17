@@ -2549,6 +2549,24 @@
                     </select>
                 </div>
 
+                <div class="form-group" id="location-map-group" style="display:none">
+                    <label class="form-label">Map</label>
+                    <div class="tools-row">
+                        <button
+                            type="button"
+                            class="subloc-btn"
+                            id="location-map-btn"
+                            onclick="openMapDialog()"
+                        >
+                            <span class="subloc-icon">🗺️</span>
+                            Map
+                        </button>
+                    </div>
+                    <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px;">
+                        Define distances from this location to its sibling sublocations.
+                    </div>
+                </div>
+
                 <div
                     class="form-group"
                     id="zivil-sub-group"
@@ -4762,6 +4780,83 @@
                 setTimeout(() => document.getElementById("f-name").focus(), 80);
             }
 
+            // Map distances editor
+            function openMapDialog() {
+                try {
+                    if (!editingId) return;
+                    const cards = getCards();
+                    const current = cards.find(c => c.id === editingId);
+                    if (!current || current.genre !== "location") return;
+                    const parent = cards.find(c => c.genre === "location" && c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(editingId)));
+                    if (!parent) { showToast("No parent found for this sublocation.", "#c04040"); return; }
+                    const sibIds = Object.values(parent.sublocations || {}).flat().filter(id => id !== editingId);
+                    if (sibIds.length === 0) { showToast("No sibling sublocations to map.", "#c04040"); return; }
+                    // Build overlay lazily
+                    let ov = document.getElementById("map-overlay");
+                    if (!ov) {
+                        ov = document.createElement("div");
+                        ov.id = "map-overlay";
+                        ov.style.cssText = "position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.7); z-index:5000;";
+                        ov.innerHTML = `
+                          <div id="map-panel" style="background:rgba(30,30,35,.96); border:1px solid rgba(255,255,255,.12); border-radius:14px; width:420px; max-width:92vw; padding:18px; display:flex; flex-direction:column; gap:12px;">
+                            <div style="color:#fff; font-weight:700; font-size:16px;">Map distances</div>
+                            <div id="map-overlay-list" style="display:flex; flex-direction:column; gap:10px; max-height:52vh; overflow:auto;"></div>
+                            <div style="display:flex; gap:10px; margin-top:8px;">
+                              <button id="map-cancel" class="btn-secondary" style="flex:1;">Cancel</button>
+                              <button id="map-save" class="btn" style="flex:1;">Save</button>
+                            </div>
+                          </div>`;
+                        document.body.appendChild(ov);
+                    }
+                    const list = ov.querySelector("#map-overlay-list");
+                    list.innerHTML = "";
+                    const dist = current.distances || {};
+                    sibIds.forEach(id => {
+                        const sib = cards.find(c => c.id === id);
+                        const title = sib ? (sib.title || id) : id;
+                        const row = document.createElement("div");
+                        row.style.cssText = "display:flex; align-items:center; gap:10px;";
+                        const label = document.createElement("div");
+                        label.style.cssText = "flex:1; color:#fff;";
+                        label.textContent = title;
+                        const input = document.createElement("input");
+                        input.type = "number";
+                        input.min = "0";
+                        input.step = "0.1";
+                        input.value = typeof dist[id] === "number" ? String(dist[id]) : "";
+                        input.style.cssText = "width:100px; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.4); color:#fff;";
+                        input.dataset.id = id;
+                        const unit = document.createElement("div");
+                        unit.textContent = "km";
+                        unit.style.cssText = "color:rgba(255,255,255,.7)";
+                        row.appendChild(label);
+                        row.appendChild(input);
+                        row.appendChild(unit);
+                        list.appendChild(row);
+                    });
+                    ov.querySelector("#map-cancel").onclick = () => { ov.style.display = "none"; };
+                    ov.querySelector("#map-save").onclick = () => {
+                        const inputs = Array.from(list.querySelectorAll("input[type='number']"));
+                        const out = {};
+                        inputs.forEach(inp => {
+                            const v = parseFloat(inp.value);
+                            if (!isNaN(v) && v >= 0) out[inp.dataset.id] = v;
+                        });
+                        current.distances = out;
+                        const idx = cards.findIndex(c => c.id === current.id);
+                        if (idx >= 0) {
+                            cards[idx] = current;
+                            saveCards(cards);
+                            showToast("Distances saved.");
+                        }
+                        ov.style.display = "none";
+                    };
+                    ov.style.display = "flex";
+                } catch (e) {
+                    console.error("Map dialog error", e);
+                }
+            }
+
             function closeForm() {
                 document
                     .getElementById("form-view")
@@ -4884,13 +4979,27 @@
                 const zivilGroup = document.getElementById("zivil-sub-group");
                 const buildingGroup =
                     document.getElementById("building-sub-group");
+                const mapGroup = document.getElementById("location-map-group");
 
                 if (type === "location") {
                     locGroup.style.display = "block";
+                    // Show Map button only if current card is sublocation and has sibling sublocations
+                    (function(){
+                        if (!mapGroup) return;
+                        const isSub = isSublocationOfAnything(editingId);
+                        if (!isSub) { mapGroup.style.display = "none"; return; }
+                        // find parent and siblings
+                        const cards = getCards();
+                        const parent = cards.find(c => c.genre === "location" && c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(editingId)));
+                        if (!parent) { mapGroup.style.display = "none"; return; }
+                        const sibIds = Object.values(parent.sublocations || {}).flat().filter(id => id !== editingId);
+                        mapGroup.style.display = sibIds.length > 0 ? "block" : "none";
+                    })();
                 } else {
                     locGroup.style.display = "none";
                     zivilGroup.style.display = "none";
                     buildingGroup.style.display = "none";
+                    if (mapGroup) mapGroup.style.display = "none";
                     document.getElementById("f-location-sub").value = "";
                     document.getElementById("f-zivil-sub").value = "";
                     document.getElementById("f-building-sub").value = "";
@@ -6838,6 +6947,7 @@
                         set("locationDetail", card.locationDetail);
                         if (card.canBeSpawn === true) set("canBeSpawn", true);
                         set("sublocations", card.sublocations || {});
+                        set("distances", card.distances || {});
                         set("species", card.species || {});
                         set("racialCivilization", card.racialCivilization || {});
                         const pop = card.population || {};

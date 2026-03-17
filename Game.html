@@ -968,7 +968,7 @@
             function updateHeaderTime() {
                 if (!activeChar) return;
                 const d = activeChar.startingDate || {};
-                try { updateNPCBirthdays(d); } catch {}
+                try { updateNPCBirthdays(d); updatePlayerBirthday(d); } catch {}
                 const day = String(d.day || 1).padStart(2, "0");
                 const mon = String(d.month || 1).padStart(2, "0");
                 const yr = d.year || 1983;
@@ -1047,6 +1047,7 @@
                     while ((d.month || 1) < 1) { d.month += 12; d.year = (d.year || 1983) - 1; }
                 })();
                 updateNPCBirthdays(d);
+                updatePlayerBirthday(d);
                 updateHeaderTime();
                 saveActiveCharacter();
                 console.log(`[Time Update] New Time: ${d.day}.${d.month}.${d.year} ${d.time}`);
@@ -1218,6 +1219,7 @@
                     addMinutes(1);
                 } else {
                     updateNPCBirthdays(d);
+                    updatePlayerBirthday(d);
                     updateHeaderTime();
                     saveActiveCharacter();
                 }
@@ -1263,6 +1265,7 @@
                 }
                 
                 updateNPCBirthdays(d);
+                updatePlayerBirthday(d);
                 updateHeaderTime();
                 saveActiveCharacter();
             }
@@ -1346,6 +1349,23 @@
                     }
                     if (changed) {
                         Storage.set(CHARS_KEY, JSON.stringify(chars));
+                    }
+                } catch {}
+            }
+            function updatePlayerBirthday(currentDate) {
+                try {
+                    if (!activeChar) return;
+                    const bd = activeChar.birthdate;
+                    if (!bd || (!bd.day && !bd.month)) return;
+                    if (typeof activeChar.age !== "number") return;
+                    if (!activeChar._ageCheck || typeof activeChar._ageCheck !== "object") {
+                        activeChar._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
+                        return;
+                    }
+                    const diff = _birthdaysDiff(activeChar._ageCheck, currentDate, bd);
+                    if (diff !== 0) {
+                        activeChar.age = Math.max(0, (activeChar.age || 0) + diff);
+                        activeChar._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
                     }
                 } catch {}
             }
@@ -2090,6 +2110,28 @@
                 }
             }
 
+            function buildLocationDistanceContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    const cards = getCards();
+                    const cur = cards.find(c => c.id === currentLocationId);
+                    if (!cur || cur.genre !== "location") return "";
+                    const dist = cur.distances || {};
+                    const keys = Object.keys(dist);
+                    if (keys.length === 0) return "";
+                    let out = "\nLOCATION DISTANCES (From current location):\n";
+                    keys.forEach(id => {
+                        const other = cards.find(c => c.id === id);
+                        const name = other ? (other.title || id) : id;
+                        out += `- To ${name}: ${dist[id]} km\n`;
+                    });
+                    return out;
+                } catch (e) {
+                    console.error("Distance context error", e);
+                    return "";
+                }
+            }
+
             function buildLocationMemoryContext() {
                 try {
                     if (!currentLocationId) return "";
@@ -2248,6 +2290,7 @@
                 const eventsContext = buildEventsContext();
                 const locationMemoryContext = buildLocationMemoryContext();
                 const locationStateContext = buildLocationStateContext();
+                const locationDistanceContext = buildLocationDistanceContext();
                 const relationshipSummary = buildRelationshipSummary();
                 const scheduleInfo = computeSchoolPresenceNow();
                 const scheduleContext = scheduleInfo.context || "";
@@ -2310,6 +2353,7 @@ ${speciesContext}
 ${eventsContext}
 ${locationMemoryContext}
 ${locationStateContext}
+${locationDistanceContext}
 ${relationshipSummary}
 ${scheduleContext}
 
