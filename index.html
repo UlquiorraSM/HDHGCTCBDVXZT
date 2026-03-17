@@ -112,6 +112,9 @@
 
             .world-card {
                 flex: 0 0 180px; /* narrower cards */
+                width: 180px;
+                min-width: 180px;
+                max-width: 180px;
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
@@ -120,16 +123,24 @@
                 border: 1px solid rgba(255, 255, 255, 0.12);
                 border-radius: 16px;
                 backdrop-filter: blur(12px);
-                transition: all 0.2s ease;
+                transition: transform 0.2s ease, border-color 0.2s ease;
                 height: 160px; /* reduce height a bit */
                 box-sizing: border-box; /* Ensure padding doesn't add to width */
                 scroll-snap-align: start;
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                overflow: hidden;
             }
             /* Story cards use a slightly smaller footprint */
             .story-card {
                 flex: 0 0 160px;
+                width: 160px;
+                min-width: 160px;
+                max-width: 160px;
                 padding: 12px;
                 height: 140px;
+                overflow: hidden;
             }
 
             /* Make buttons inside story cards compact */
@@ -149,8 +160,7 @@
             .world-card:hover {
                  transform: translateY(-5px);
                  border-color: rgba(255, 255, 255, 0.3);
-                 background: rgba(0, 0, 0, 0.65);
-             }
+            }
 
              /* Config Panel Styles */
              #world-conf-overlay {
@@ -267,6 +277,15 @@
                 width: 100%;
                 max-width: 320px;
             }
+            .menu-row {
+                display: flex;
+                gap: 12px;
+                width: 100%;
+            }
+            .menu-row .menu-button {
+                min-width: 0;
+                flex: 1;
+            }
 
             .menu-button {
                 background: rgba(80, 80, 80, 0.8);
@@ -299,6 +318,16 @@
                     min-height: 100vh;
                     align-items: flex-start;
                     padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0)) 12px;
+                }
+                .world-card {
+                    width: auto;
+                    min-width: 0;
+                    max-width: none;
+                }
+                .story-card {
+                    width: auto;
+                    min-width: 0;
+                    max-width: none;
                 }
                 h1 {
                     font-size: 1.8em;
@@ -341,6 +370,14 @@
                     font-size: 15px;
                     border-radius: 12px;
                 }
+                .menu-row {
+                    gap: 10px;
+                }
+                .menu-row .menu-button {
+                    width: auto;
+                    min-width: 0;
+                    padding: 14px 12px;
+                }
                 .conf-panel {
                     padding: 20px;
                     max-width: 94vw;
@@ -356,7 +393,7 @@
         </style>
     </head>
     <body>
-        <div id="version-badge" style="position: fixed; left: 12px; bottom: 12px; z-index: 3000; background: rgba(0,0,0,0.4); color: #fff; padding: 6px 10px; border-radius: 10px; font-size: 12px; letter-spacing: 0.03em; backdrop-filter: blur(8px); user-select: none;">v1.2.9</div>
+        <div id="version-badge" style="position: fixed; left: 12px; bottom: 12px; z-index: 3000; background: rgba(0,0,0,0.4); color: #fff; padding: 6px 10px; border-radius: 10px; font-size: 12px; letter-spacing: 0.03em; backdrop-filter: blur(8px); user-select: none;">v1.3.0</div>
         <div class="menu-container" id="main-menu">
             <h1>StoryKI</h1>
             
@@ -387,17 +424,19 @@
                 <button class="menu-button" onclick="createStory()">
                     Create World
                 </button>
-                <button class="menu-button" onclick="document.getElementById('file-input').click()">
-                    Load (.json)
-                </button>
-                <input
-                    type="file"
-                    id="file-input"
-                    style="display: none"
-                    accept=".json"
-                    onchange="loadGame(event)"
-                />
-                <button class="menu-button" onclick="saveGame()">Save</button>
+                <div class="menu-row">
+                    <button class="menu-button" onclick="document.getElementById('file-input').click()">
+                        Load (.json)
+                    </button>
+                    <input
+                        type="file"
+                        id="file-input"
+                        style="display: none"
+                        accept=".json"
+                        onchange="loadGame(event)"
+                    />
+                    <button class="menu-button" onclick="saveGame()">Save</button>
+                </div>
                 <button class="menu-button" onclick="openSettings()">
                     Settings
                 </button>
@@ -456,6 +495,12 @@
                     <input type="text" id="conf-world-bg" class="conf-input" placeholder="https://...">
                     <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">This image is used as the background in Game.html.</div>
                 </div>
+                
+                <div class="conf-group">
+                    <label class="conf-label">Cover URL</label>
+                    <input type="text" id="conf-world-cover" class="conf-input" placeholder="https://...">
+                    <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">Small image used as cover on the world card.</div>
+                </div>
 
                 <div class="conf-actions">
                     <button class="conf-btn conf-btn-cancel" onclick="closeWorldConf()">Cancel</button>
@@ -472,6 +517,12 @@
                 <div class="conf-group">
                     <label class="conf-label">Story title</label>
                     <input type="text" id="conf-story-name" class="conf-input" placeholder="Story Name...">
+                </div>
+                
+                <div class="conf-group">
+                    <label class="conf-label">Cover URL</label>
+                    <input type="text" id="conf-story-cover" class="conf-input" placeholder="https://...">
+                    <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">Small image used as cover on the story card.</div>
                 </div>
 
                 <div class="conf-actions">
@@ -594,6 +645,57 @@
                 localStorage.setItem(SCENARIOS_KEY, JSON.stringify(list));
             }
             
+            let _preloadedBg = new Map();
+            function preloadWorldBackgrounds() {
+                try {
+                    const scenarios = getScenarios();
+                    const urls = new Set();
+                    scenarios.forEach(s => {
+                        if (!s.worldId) {
+                            const u1 = s?.data?.settings?.backgroundUrl;
+                            const u2 = s?.data?.settings?.coverUrl;
+                            if (u1 && typeof u1 === "string" && u1.trim()) urls.add(u1.trim());
+                            if (u2 && typeof u2 === "string" && u2.trim()) urls.add(u2.trim());
+                        }
+                    });
+                    urls.forEach(u => {
+                        if (_preloadedBg.has(u)) return;
+                        const img = new Image();
+                        img.decoding = "async";
+                        img.loading = "eager";
+                        img.src = u;
+                        _preloadedBg.set(u, img);
+                        try {
+                            const link = document.createElement("link");
+                            link.rel = "preload";
+                            link.as = "image";
+                            link.href = u;
+                            if (document.head) document.head.appendChild(link);
+                        } catch(e) {}
+                    });
+                } catch(e) {}
+            }
+            function preloadStoryCovers(worldId) {
+                try {
+                    const scenarios = getScenarios();
+                    const urls = new Set();
+                    scenarios
+                        .filter(s => s.worldId === worldId)
+                        .forEach(s => {
+                            const u1 = s?.data?.settings?.coverUrl;
+                            if (u1 && typeof u1 === "string" && u1.trim()) urls.add(u1.trim());
+                        });
+                    urls.forEach(u => {
+                        if (_preloadedBg.has(u)) return;
+                        const img = new Image();
+                        img.decoding = "async";
+                        img.loading = "eager";
+                        img.src = u;
+                        _preloadedBg.set(u, img);
+                    });
+                } catch(e) {}
+            }
+            
             function renderScenarios() {
                 const listEl = document.getElementById("scenarios-list");
                 const hintEl = document.getElementById("no-scenarios-hint");
@@ -645,13 +747,25 @@
                     const card = document.createElement("div");
                     card.className = "world-card";
                     
+                    const coverUrl = (s?.data?.settings?.coverUrl || "").trim();
+                    if (coverUrl) {
+                        card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.55), rgba(10,10,15,.55)), url("${coverUrl}")`;
+                    } else {
+                        card.style.backgroundImage = "";
+                    }
+                    
                     const header = document.createElement("div");
-                    header.style.cssText = "display:flex; flex-direction:column; gap:2px; margin-bottom: 5px;";
+                    header.style.cssText = "display:flex; flex-direction:column; gap:6px; margin-bottom: 5px;";
+                    
+                    const nameRow = document.createElement("div");
+                    nameRow.style.cssText = "display:flex; align-items:center; gap:8px; width:100%; min-width:0;";
                     
                     const name = document.createElement("div");
                     name.textContent = s.name || "Unnamed World";
                     name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
-                    header.appendChild(name);
+                    nameRow.appendChild(name);
+                    
+                    header.appendChild(nameRow);
                     
                     const actions = document.createElement("div");
                     actions.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-top: auto;";
@@ -716,6 +830,8 @@
                     card.appendChild(actions);
                     listEl.appendChild(card);
                 });
+                
+                preloadWorldBackgrounds();
             }
 
             function openWorldStories(worldId) {
@@ -781,13 +897,25 @@
                     const card = document.createElement("div");
                     card.className = "world-card story-card";
                     
+                    let coverUrl = (s?.data?.settings?.coverUrl || "").trim();
+                    if (coverUrl) {
+                        card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.55), rgba(10,10,15,.55)), url("${coverUrl}")`;
+                    } else {
+                        card.style.backgroundImage = "";
+                    }
+                    
                     const header = document.createElement("div");
-                    header.style.cssText = "display:flex; flex-direction:column; gap:2px; margin-bottom: 5px;";
+                    header.style.cssText = "display:flex; flex-direction:column; gap:6px; margin-bottom: 5px;";
+                    
+                    const nameRow = document.createElement("div");
+                    nameRow.style.cssText = "display:flex; align-items:center; gap:8px; width:100%; min-width:0;";
                     
                     const name = document.createElement("div");
                     name.textContent = s.name || "Unnamed Story";
                     name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
-                    header.appendChild(name);
+                    nameRow.appendChild(name);
+                    
+                    header.appendChild(nameRow);
                     
                     const meta = document.createElement("div");
                     const charCount = s.data?.characters?.length || 0;
@@ -848,6 +976,8 @@
                     card.appendChild(actions);
                     listEl.appendChild(card);
                 });
+                
+                preloadStoryCovers(worldId);
             }
 
             let _confStoryId = null;
@@ -858,6 +988,8 @@
                 
                 _confStoryId = storyId;
                 document.getElementById("conf-story-name").value = story.name || "";
+                const coverInput = document.getElementById("conf-story-cover");
+                if (coverInput) coverInput.value = story.data?.settings?.coverUrl || "";
                 document.getElementById("story-conf-overlay").style.display = "flex";
             }
 
@@ -870,6 +1002,7 @@
                 if (!_confStoryId) return;
                 
                 const newName = document.getElementById("conf-story-name").value.trim();
+                const newCover = (document.getElementById("conf-story-cover")?.value || "").trim();
                 if (!newName) {
                     alert("Bitte einen Namen eingeben.");
                     return;
@@ -880,6 +1013,9 @@
                 
                 if (idx >= 0) {
                     scenarios[idx].name = newName;
+                    if (!scenarios[idx].data) scenarios[idx].data = {};
+                    if (!scenarios[idx].data.settings) scenarios[idx].data.settings = {};
+                    scenarios[idx].data.settings.coverUrl = newCover;
                     scenarios[idx].updatedAt = Date.now();
                     setScenarios(scenarios);
                     renderStories(Storage.get(SELECTED_WORLD_ID_KEY));
@@ -1087,6 +1223,7 @@
                  _confWorldId = worldId;
                  document.getElementById("conf-world-name").value = world.name || "";
                  document.getElementById("conf-world-bg").value = world.data?.settings?.backgroundUrl || "";
+                 document.getElementById("conf-world-cover").value = world.data?.settings?.coverUrl || "";
                  document.getElementById("conf-world-name-title").textContent = `„${world.name}“ konfigurieren`;
                  
                  document.getElementById("world-conf-overlay").style.display = "flex";
@@ -1102,6 +1239,7 @@
                  
                  const newName = document.getElementById("conf-world-name").value.trim();
                  const newBg = document.getElementById("conf-world-bg").value.trim();
+                 const newCover = document.getElementById("conf-world-cover").value.trim();
                  
                  if (!newName) {
                      alert("Bitte einen Namen eingeben.");
@@ -1115,6 +1253,7 @@
                      scenarios[idx].name = newName;
                      if (!scenarios[idx].data.settings) scenarios[idx].data.settings = {};
                      scenarios[idx].data.settings.backgroundUrl = newBg;
+                     scenarios[idx].data.settings.coverUrl = newCover;
                      scenarios[idx].updatedAt = Date.now();
                      
                      // Auch alle Stories dieser Welt aktualisieren
@@ -1361,6 +1500,7 @@
                         }
                     }, { passive: false });
                 }
+                preloadWorldBackgrounds();
             });
 
             function exportWorld(worldId) {
