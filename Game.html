@@ -1030,33 +1030,22 @@
                 const d = activeChar.startingDate;
 
                 let [h, m] = (d.time || "00:00").split(":").map(Number);
-                let totalMins = h * 60 + m + mins;
-
-                // Handle negative
-                if (totalMins < 0) {
-                    // Not fully robust for multi-day backward, but basic support
-                    totalMins += 24 * 60;
-                }
-
-                let extraDays = Math.floor(totalMins / (24 * 60));
-                totalMins = totalMins % (24 * 60);
-
-                h = Math.floor(totalMins / 60);
-                m = totalMins % 60;
-                d.time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-                
-                if (extraDays > 0) {
-                    d.day = (d.day || 1) + extraDays;
-                    // Simple month overflow (roughly 30 days)
-                    while (d.day > 30) {
-                        d.day -= 30;
-                        d.month = (d.month || 1) + 1;
-                        if (d.month > 12) {
-                            d.month = 1;
-                            d.year = (d.year || 1983) + 1;
-                        }
-                    }
-                }
+                let totalMins = h * 60 + m + (mins || 0);
+                const dayLen = 24 * 60;
+                let daysDelta = Math.floor(totalMins / dayLen);
+                let rest = totalMins % dayLen;
+                if (rest < 0) { rest += dayLen; daysDelta -= 1; }
+                const nh = Math.floor(rest / 60);
+                const nm = rest % 60;
+                d.time = `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+                d.day = (d.day || 1) + daysDelta;
+                // normalize Y/M/D with 30-day months
+                (function norm() {
+                    while ((d.day || 1) > 30) { d.day -= 30; d.month = (d.month || 1) + 1; }
+                    while ((d.day || 1) < 1) { d.month = (d.month || 1) - 1; d.day += 30; }
+                    while ((d.month || 1) > 12) { d.month -= 12; d.year = (d.year || 1983) + 1; }
+                    while ((d.month || 1) < 1) { d.month += 12; d.year = (d.year || 1983) - 1; }
+                })();
                 updateNPCBirthdays(d);
                 updateHeaderTime();
                 saveActiveCharacter();
@@ -1083,6 +1072,12 @@
                     const parts = content.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
 
                     for (const part of parts) {
+                        const addParty = part.match(/^AddToParty\s*:\s*(.+)$/i);
+                        if (addParty) {
+                            const payload = addParty[1].trim();
+                            addSpeciesToPartyByRef(payload);
+                            continue;
+                        }
                         const locState = part.match(/^LocState\s*:\s*(.+)$/i);
                         if (locState) {
                             const payload = locState[1];
@@ -1178,25 +1173,23 @@
                                 }
                             }
 
-                            let [hN, mN] = (d.time || "00:00").split(":").map(Number);
-                            while (mN >= 60) { mN -= 60; hN++; }
-                            while (mN < 0) { mN += 60; hN--; }
-                            while (hN >= 24) { hN -= 24; d.day = (d.day || 1) + 1; }
-                            while (hN < 0) { hN += 24; d.day = (d.day || 1) - 1; }
-                            d.time = `${String(hN).padStart(2, "0")}:${String(mN).padStart(2, "0")}`;
-
-                            while ((d.month || 1) > 12) { d.month -= 12; d.year = (d.year || 1983) + 1; }
-                            while ((d.month || 1) < 1) { d.month += 12; d.year = (d.year || 1983) - 1; }
-                            while ((d.day || 1) > 30) {
-                                d.day -= 30;
-                                d.month = (d.month || 1) + 1;
-                                if (d.month > 12) { d.month = 1; d.year = (d.year || 1983) + 1; }
-                            }
-                            while ((d.day || 1) < 1) {
-                                d.month = (d.month || 1) - 1;
-                                if (d.month < 1) { d.month = 12; d.year = (d.year || 1983) - 1; }
-                                d.day += 30;
-                            }
+                            // Normalize minutes and Y/M/D with 30-day months
+                            (function norm() {
+                                let [hh, mm] = (d.time || "00:00").split(":").map(Number);
+                                let total = hh * 60 + mm;
+                                const dayLen = 24 * 60;
+                                let dd = Math.floor(total / dayLen);
+                                let rest = total % dayLen;
+                                if (rest < 0) { rest += dayLen; dd -= 1; }
+                                hh = Math.floor(rest / 60);
+                                mm = rest % 60;
+                                d.time = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+                                d.day = (d.day || 1) + dd;
+                                while ((d.day || 1) > 30) { d.day -= 30; d.month = (d.month || 1) + 1; }
+                                while ((d.day || 1) < 1) { d.month = (d.month || 1) - 1; d.day += 30; }
+                                while ((d.month || 1) > 12) { d.month -= 12; d.year = (d.year || 1983) + 1; }
+                                while ((d.month || 1) < 1) { d.month += 12; d.year = (d.year || 1983) - 1; }
+                            })();
 
                             timeChanged = true;
                             continue;
@@ -1274,6 +1267,44 @@
                 saveActiveCharacter();
             }
 
+            function _genId() { return Math.random().toString(36).slice(2, 10); }
+            function addSpeciesToPartyByRef(ref) {
+                try {
+                    const cards = getCards();
+                    let spec = null;
+                    const idMatch = ref.match(/speciesId\s*=\s*([a-z0-9_-]+)/i);
+                    if (idMatch) {
+                        const id = idMatch[1];
+                        spec = cards.find(c => c.genre === "species" && c.id === id) || null;
+                    }
+                    if (!spec) {
+                        const quoted = ref.match(/["'](.+?)["']/);
+                        const title = quoted ? quoted[1] : ref;
+                        const t = title.trim().toLowerCase();
+                        spec = cards.find(c => c.genre === "species" && (c.title || "").toLowerCase() === t) || null;
+                    }
+                    if (!spec) return;
+                    const raw = Storage.get(CHARS_KEY) || "[]";
+                    const chars = JSON.parse(raw);
+                    const exists = chars.some(ch => (ch._fromSpeciesId && ch._fromSpeciesId === spec.id) && (ch.title || "") === (spec.title || ""));
+                    if (exists) return;
+                    const ch = {
+                        id: _genId(),
+                        genre: "character",
+                        title: spec.title || "Creature",
+                        appearance: spec.appearance || "",
+                        personality: spec.personality || "",
+                        raceName: spec.title || "",
+                        status: "Alive",
+                        isPlayable: false,
+                        _fromSpeciesId: spec.id || "",
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                    };
+                    chars.push(ch);
+                    Storage.set(CHARS_KEY, JSON.stringify(chars));
+                } catch {}
+            }
             function _cmpDate(a, b) {
                 if ((a.year || 0) !== (b.year || 0)) return (a.year || 0) - (b.year || 0);
                 if ((a.month || 0) !== (b.month || 0)) return (a.month || 0) - (b.month || 0);
@@ -1961,6 +1992,8 @@
                         if (s.generally) context += `  Generally: ${s.generally}\n`;
                         if (s.appearance) context += `  Appearance: ${s.appearance}\n`;
                         if (s.personality) context += `  Personality: ${s.personality}\n`;
+                        if (s.canBeCaught) context += `  Catchable: Yes\n`;
+                        if (s.canBeCaught && s.canBeCaughtHow) context += `  How: ${s.canBeCaughtHow}\n`;
                     });
                     return context;
                 } catch (e) {
