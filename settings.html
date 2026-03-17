@@ -313,98 +313,77 @@
             margin-top: 30px;
         }
         
-        .btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
+        .btn,
+        .btn-secondary,
+        .btn-danger {
+            background: #6f6f6f;
+            color: #fff;
             border: none;
             padding: 12px 25px;
             font-size: 1em;
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: background-color 0.2s ease, transform 0.2s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         
-        .btn:hover {
+        .btn:hover,
+        .btn-secondary:hover,
+        .btn-danger:hover {
+            background: #7a7a7a;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(45deg, #6c757d, #495057);
-        }
-        
-        .btn-danger {
-            background: linear-gradient(45deg, #dc3545, #c82333);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
         }
 
         .settings-footer {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            inset: 0 0 0 0;
             z-index: 100;
             pointer-events: none;
         }
 
         .footer-left, .footer-right {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             pointer-events: auto;
+        }
+        .footer-left {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .footer-right {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            align-items: center;
+            justify-content: flex-end;
         }
     </style>
 </head>
 <body>
     <div class="settings-sidebar">
-        <div class="settings-tab active" onclick="switchTab('general')">Allgemein</div>
-        <div class="settings-tab" onclick="switchTab('ai')">KI-Einstellungen</div>
-        <div class="settings-tab" onclick="switchTab('interface')">Interface</div>
-        <div class="settings-tab" onclick="switchTab('advanced')">Erweitert</div>
+        <div class="settings-tab active" onclick="switchTab('general')">General</div>
+        <div class="settings-tab" onclick="switchTab('ai')">AI Settings</div>
     </div>
     
     <div class="settings-content">
         <!-- Fixierter Titel für Allgemein -->
-        <div id="general-title" class="fixed-title">Allgemeine Einstellungen</div>
-        <div id="ai-title" class="fixed-title" style="display: none;">KI-Einstellungen</div>
-        <div id="interface-title" class="fixed-title" style="display: none;">Interface</div>
-        <div id="advanced-title" class="fixed-title" style="display: none;">Erweiterte Einstellungen</div>
+        <div id="general-title" class="fixed-title">General Settings</div>
+        <div id="ai-title" class="fixed-title" style="display: none;">AI Settings</div>
         
         <div class="content-padding">
             <!-- Allgemein Section -->
             <div id="general-section" class="settings-section active">
                 <div class="settings-group">
-                    <h3>Hintergrund</h3>
+                    <h3>Background</h3>
                     <div class="setting-item">
-                        <span class="setting-label">Hintergrund URL</span>
+                        <span class="setting-label">Background URL</span>
                         <div class="setting-control">
                             <input type="url" id="background-url" placeholder="https://...">
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="settings-group">
-                    <h3>Anzeige</h3>
-                    <div class="setting-item">
-                        <span class="setting-label">Sprache</span>
-                        <div class="setting-control">
-                            <select id="language">
-                                <option value="de">Deutsch</option>
-                                <option value="en">English</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">Thema</span>
-                        <div class="setting-control">
-                            <select id="theme">
-                                <option value="light">Hell</option>
-                                <option value="dark">Dunkel</option>
-                                <option value="auto">Auto</option>
-                            </select>
                         </div>
                     </div>
                 </div>
@@ -412,7 +391,7 @@
             <!-- KI-Einstellungen Section -->
             <div id="ai-section" class="settings-section">
                 <div class="settings-group">
-                    <h3>KI-Verhalten</h3>
+                    <h3>AI Behavior</h3>
                     <div class="setting-item">
                         <span class="setting-label">Text Size</span>
                         <div class="setting-control">
@@ -424,7 +403,7 @@
                         </div>
                     </div>
                     <div class="setting-item">
-                        <span class="setting-label">KI-Sprache</span>
+                        <span class="setting-label">AI Language</span>
                         <div class="setting-control">
                             <select id="ai-language">
                                 <option value="en" selected>English</option>
@@ -441,98 +420,16 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Interface Section -->
-            <div id="interface-section" class="settings-section">
-                <div class="settings-group">
-                    <h3>Benachrichtigungen</h3>
-                    <div class="setting-item">
-                        <span class="setting-label">Ton aktivieren</span>
-                        <div class="setting-control">
-                            <input type="checkbox" id="sound" checked>
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">Auto-Speichern</span>
-                        <div class="setting-control">
-                            <input type="checkbox" id="autosave" checked>
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">Animationen</span>
-                        <div class="setting-control">
-                            <input type="checkbox" id="animations" checked>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="settings-group">
-                    <h3>Chat</h3>
-                    <div class="setting-item">
-                        <span class="setting-label">Zeitstempel anzeigen</span>
-                        <div class="setting-control">
-                            <input type="checkbox" id="timestamps">
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">Zeichenlimit</span>
-                        <div class="setting-control">
-                            <input type="number" id="charlimit" value="1000" min="100" max="5000" style="width: 80px; padding: 5px;">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Erweitert Section -->
-            <div id="advanced-section" class="settings-section">
-                <div class="settings-group">
-                    <h3>Daten</h3>
-                    <div class="setting-item">
-                        <span class="setting-label">Cache leeren</span>
-                        <div class="setting-control">
-                            <button class="btn btn-secondary" onclick="clearCache()">Leeren</button>
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">Einstellungen exportieren</span>
-                        <div class="setting-control">
-                            <button class="btn" onclick="exportSettings()">Exportieren</button>
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">Einstellungen importieren</span>
-                        <div class="setting-control">
-                            <button class="btn btn-secondary" onclick="importSettings()">Importieren</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="settings-group">
-                    <h3>Entwickler</h3>
-                    <div class="setting-item">
-                        <span class="setting-label">Debug-Modus</span>
-                        <div class="setting-control">
-                            <input type="checkbox" id="debug">
-                        </div>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">Konsole anzeigen</span>
-                        <div class="setting-control">
-                            <input type="checkbox" id="console">
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
         
         <!-- Footer mit Save und Zurück Button -->
         <div class="settings-footer">
             <div class="footer-left">
-                <button class="btn btn-danger" onclick="backToMenu()">Zurück</button>
-                <button class="btn" onclick="saveSettings()">Speichern</button>
+                <button class="btn btn-danger" onclick="backToMenu()">Back</button>
+                <button class="btn" onclick="saveSettings()">Save</button>
             </div>
             <div class="footer-right">
-                <button class="btn btn-secondary" onclick="resetSettings()">Zurücksetzen</button>
+                <button class="btn btn-secondary" onclick="resetSettings()">Reset</button>
             </div>
         </div>
     </div>
@@ -580,23 +477,10 @@
                 const data = JSON.parse(settings);
                 // Allgemein
                 document.getElementById('background-url').value = data.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
-                document.getElementById('language').value = data.language || 'de';
-                document.getElementById('theme').value = data.theme || 'light';
                 
                 // KI-Einstellungen
                 document.getElementById('text-size').value = data.textSize || 'normal';
                 document.getElementById('ai-language').value = data.aiLanguage || 'en';
-                
-                // Interface
-                document.getElementById('sound').checked = data.sound !== false;
-                document.getElementById('autosave').checked = data.autosave !== false;
-                document.getElementById('animations').checked = data.animations !== false;
-                document.getElementById('timestamps').checked = data.timestamps || false;
-                document.getElementById('charlimit').value = data.charlimit || 1000;
-                
-                // Erweitert
-                document.getElementById('debug').checked = data.debug || false;
-                document.getElementById('console').checked = data.console || false;
                 
                 applyBackground(true);
             } else {
@@ -639,23 +523,10 @@
             const settings = {
                 // Allgemein
                 backgroundUrl: document.getElementById('background-url').value,
-                language: document.getElementById('language').value,
-                theme: document.getElementById('theme').value,
                 
                 // KI-Einstellungen
                 textSize: document.getElementById('text-size').value,
-                aiLanguage: document.getElementById('ai-language').value,
-                
-                // Interface
-                sound: document.getElementById('sound').checked,
-                autosave: document.getElementById('autosave').checked,
-                animations: document.getElementById('animations').checked,
-                timestamps: document.getElementById('timestamps').checked,
-                charlimit: document.getElementById('charlimit').value,
-                
-                // Erweitert
-                debug: document.getElementById('debug').checked,
-                console: document.getElementById('console').checked
+                aiLanguage: document.getElementById('ai-language').value
             };
             
             Storage.set('storyki_settings', JSON.stringify(settings));
@@ -738,17 +609,8 @@
         function hasUnsavedChanges() {
             const currentSettings = {
                 backgroundUrl: document.getElementById('background-url').value,
-                language: document.getElementById('language').value,
-                theme: document.getElementById('theme').value,
                 textSize: document.getElementById('text-size').value,
-                aiLanguage: document.getElementById('ai-language').value,
-                sound: document.getElementById('sound').checked,
-                autosave: document.getElementById('autosave').checked,
-                animations: document.getElementById('animations').checked,
-                timestamps: document.getElementById('timestamps').checked,
-                charlimit: document.getElementById('charlimit').value,
-                debug: document.getElementById('debug').checked,
-                console: document.getElementById('console').checked
+                aiLanguage: document.getElementById('ai-language').value
             };
             
             const savedSettingsRaw = Storage.get('storyki_settings');
@@ -759,17 +621,8 @@
             // Vergleiche alle Felder
             return (
                 currentSettings.backgroundUrl !== (savedSettings.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg') ||
-                currentSettings.language !== (savedSettings.language || 'de') ||
-                currentSettings.theme !== (savedSettings.theme || 'light') ||
                 currentSettings.textSize !== (savedSettings.textSize || 'normal') ||
-                currentSettings.aiLanguage !== (savedSettings.aiLanguage || 'en') ||
-                currentSettings.sound !== (savedSettings.sound !== false) ||
-                currentSettings.autosave !== (savedSettings.autosave !== false) ||
-                currentSettings.animations !== (savedSettings.animations !== false) ||
-                currentSettings.timestamps !== (savedSettings.timestamps || false) ||
-                currentSettings.charlimit !== String(savedSettings.charlimit || 1000) ||
-                currentSettings.debug !== (savedSettings.debug || false) ||
-                currentSettings.console !== (savedSettings.console || false)
+                currentSettings.aiLanguage !== (savedSettings.aiLanguage || 'en')
             );
         }
         

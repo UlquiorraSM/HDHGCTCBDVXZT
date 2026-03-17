@@ -426,7 +426,7 @@
                 </button>
                 <div class="menu-row">
                     <button class="menu-button" onclick="document.getElementById('file-input').click()">
-                        Load (.json)
+                        Load
                     </button>
                     <input
                         type="file"
@@ -444,7 +444,7 @@
         </div>
 
         <div class="stories-container" id="stories-menu">
-            <h1 id="selected-world-title">Welt Name</h1>
+            <h1 id="selected-world-title">World Name</h1>
             <div id="stories-wrap" style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
                 <div id="stories-title" style="color:#fff; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; opacity:.85; text-align:center;">
                     Your stories
@@ -1386,6 +1386,11 @@
             function saveGame() {
                 try {
                     const scenarios = getScenarios();
+                    const worldsCheck = scenarios.filter(x => !x.worldId);
+                    if (worldsCheck.length === 0) {
+                        alert("Currently, there are no worlds to save.");
+                        return;
+                    }
                     function pruneEmptyDeep(v) {
                         if (Array.isArray(v)) {
                             const arr = v.map(pruneEmptyDeep).filter(x => x !== undefined);
