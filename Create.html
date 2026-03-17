@@ -4843,12 +4843,28 @@
                             if (!isNaN(v) && v >= 0) out[inp.dataset.id] = v;
                         });
                         current.distances = out;
+                        // write back current
                         const idx = cards.findIndex(c => c.id === current.id);
-                        if (idx >= 0) {
-                            cards[idx] = current;
-                            saveCards(cards);
-                            showToast("Distances saved.");
-                        }
+                        if (idx >= 0) cards[idx] = current;
+                        // synchronize symmetric distances for siblings
+                        sibIds.forEach(sid => {
+                            const sibIdx = cards.findIndex(c => c.id === sid);
+                            if (sibIdx === -1) return;
+                            const sib = { ...cards[sibIdx] };
+                            if (sib.genre !== "location") return;
+                            sib.distances = sib.distances || {};
+                            if (Object.prototype.hasOwnProperty.call(out, sid)) {
+                                sib.distances[current.id] = out[sid];
+                            } else {
+                                // if current -> sid deleted, remove reverse if exists
+                                if (sib.distances[current.id] != null) {
+                                    delete sib.distances[current.id];
+                                }
+                            }
+                            cards[sibIdx] = sib;
+                        });
+                        saveCards(cards);
+                        showToast("Distances saved.");
                         ov.style.display = "none";
                     };
                     ov.style.display = "flex";
