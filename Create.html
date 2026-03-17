@@ -4618,6 +4618,12 @@
                             card.appearance || "";
                         document.getElementById("f-species-personality").value =
                             card.personality || "";
+                        const cb = document.getElementById("f-species-catchable");
+                        const how = document.getElementById("f-species-catch-how");
+                        const wrap = document.getElementById("species-catch-how-wrap");
+                        if (cb) cb.checked = !!card.canBeCaught;
+                        if (how) how.value = card.canBeCaughtHow || "";
+                        if (wrap) wrap.style.display = (cb && cb.checked) ? "block" : "none";
                     } else {
                         resetSpeciesFields();
                     }
