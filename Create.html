@@ -6417,20 +6417,21 @@
                     const detail =
                         document.getElementById("f-building-sub").value;
 
-                    if (
-                        type === "location" &&
-                        sub === "building" &&
-                        detail === "house"
-                    ) {
-                        // Find the parent location of this House
-                        parentCard = all.find((c) => {
-                            if (c.sublocations) {
-                                return Object.values(c.sublocations).some(
-                                    (arr) => (arr || []).includes(editingId),
-                                );
-                            }
-                            return false;
-                        });
+                    if (type === "location" && sub === "building" && detail === "house") {
+                        // Find nearest ancestor that has residents (e.g., Custom under Village/City)
+                        const findParentId = (childId) => {
+                            const p = all.find(c => c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(childId)));
+                            return p ? p.id : null;
+                        };
+                        let curId = editingId;
+                        while (true) {
+                            const pid = findParentId(curId);
+                            if (!pid) break;
+                            const pCard = all.find(c => c.id === pid);
+                            if (!pCard) break;
+                            if (Array.isArray(pCard.residents) && pCard.residents.length > 0) { parentCard = pCard; break; }
+                            curId = pid; // climb up to grandparent
+                        }
                     }
                 }
 
