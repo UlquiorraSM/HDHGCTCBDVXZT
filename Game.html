@@ -795,6 +795,12 @@
                     <button class="act-btn btn-erase" id="erase-btn">
                         ✕ Erase
                     </button>
+                <button class="act-btn btn-edit" id="edit-save-btn" style="display:none;">
+                    ✔ Save
+                </button>
+                <button class="act-btn btn-erase" id="edit-cancel-btn" style="display:none;">
+                    ✕ Cancel
+                </button>
                 </div>
             </div>
         </div>
@@ -845,6 +851,9 @@
             let activeChar = null;
             let currentLocationId = null;
             let isFirstMessageProtected = false;
+            let isEditing = false;
+            let _editRow = null;
+            let _editIndex = -1;
             let currentNarrationTs = null;
 
             /* ═══════════════════════════════════════
@@ -3237,36 +3246,85 @@ Example:
             };
 
             document.getElementById("edit-btn").onclick = () => {
+                if (isBusy) return;
                 const messagesEl = document.getElementById("messages");
-                const userRows = messagesEl.querySelectorAll(".msg-row.user");
-                if (!userRows.length) return;
-                const lastRow = userRows[userRows.length - 1];
+                const rows = Array.from(messagesEl.querySelectorAll(".msg-row"));
+                if (!rows.length) return;
+                const lastRow = rows[rows.length - 1];
                 const bubble = lastRow.querySelector(".msg-bubble");
                 const text = bubble ? bubble.textContent : "";
-                document.getElementById("user-input").value = text;
-                document.getElementById("user-input").focus();
-                // Remove from DOM
-                lastRow.remove();
-                // Remove from history
+                const role = lastRow.classList.contains("ai") ? "ai" : "user";
+                const input = document.getElementById("user-input");
+                input.value = text;
+                input.focus();
+                // Find corresponding history entry index from end
+                const playerName = activeChar ? [activeChar.firstName, activeChar.lastName].filter(Boolean).join(" ") : "Player";
+                const targetSender = role === "ai" ? "Narrator" : playerName;
+                let idx = -1;
                 for (let i = chatHistory.length - 1; i >= 0; i--) {
                     const entry = chatHistory[i];
-                    const prefix =
-                        (activeChar
-                            ? [activeChar.firstName, activeChar.lastName]
-                                  .filter(Boolean)
-                                  .join(" ")
-                            : "Player") + ":";
-                    
-                    const matches = typeof entry === 'string' 
-                        ? entry.startsWith(prefix)
-                        : entry.sender === (activeChar ? [activeChar.firstName, activeChar.lastName].filter(Boolean).join(" ") : "Player");
-
-                    if (matches) {
-                        chatHistory.splice(i, 1);
-                        saveStoryLog();
-                        break;
-                    }
+                    if (entry && typeof entry === "object" && entry.sender === targetSender) { idx = i; break; }
                 }
+                if (idx === -1) return;
+                isEditing = true;
+                _editRow = lastRow;
+                _editIndex = idx;
+                // Show Save / Cancel controls
+                const saveBtn = document.getElementById("edit-save-btn");
+                const cancelBtn = document.getElementById("edit-cancel-btn");
+                if (saveBtn) saveBtn.style.display = "inline-flex";
+                if (cancelBtn) cancelBtn.style.display = "inline-flex";
+                // Lock other action buttons
+                ['retry-btn','continue-btn','erase-btn'].forEach(id => {
+                    const b = document.getElementById(id);
+                    if (b) { b.disabled = true; b.classList.add('locked'); }
+                });
+            };
+            document.getElementById("edit-save-btn").onclick = () => {
+                if (!isEditing || _editIndex < 0 || !_editRow) return;
+                const input = document.getElementById("user-input");
+                const newText = (input.value || "").trim();
+                if (!newText) { showToast("Text darf nicht leer sein.", "rgba(180,60,60,0.85)"); return; }
+                const bubble = _editRow.querySelector(".msg-bubble");
+                if (bubble) bubble.textContent = newText;
+                // Update history
+                const entry = chatHistory[_editIndex];
+                if (entry && typeof entry === "object") {
+                    entry.text = newText;
+                    saveStoryLog();
+                }
+                // Reset edit state
+                isEditing = false;
+                _editIndex = -1;
+                _editRow = null;
+                input.value = "";
+                input.style.height = "auto";
+                const saveBtn = document.getElementById("edit-save-btn");
+                const cancelBtn = document.getElementById("edit-cancel-btn");
+                if (saveBtn) saveBtn.style.display = "none";
+                if (cancelBtn) cancelBtn.style.display = "none";
+                ['retry-btn','continue-btn','erase-btn'].forEach(id => {
+                    const b = document.getElementById(id);
+                    if (b) { b.disabled = false; b.classList.remove('locked'); }
+                });
+                showToast("Message edited.");
+            };
+            document.getElementById("edit-cancel-btn").onclick = () => {
+                if (!isEditing) return;
+                isEditing = false;
+                _editIndex = -1;
+                _editRow = null;
+                const input = document.getElementById("user-input");
+                input.value = "";
+                input.style.height = "auto";
+                const saveBtn = document.getElementById("edit-save-btn");
+                const cancelBtn = document.getElementById("edit-cancel-btn");
+                if (saveBtn) saveBtn.style.display = "none";
+                if (cancelBtn) cancelBtn.style.display = "none";
+                ['retry-btn','continue-btn','erase-btn'].forEach(id => {
+                    const b = document.getElementById(id);
+                    if (b) { b.disabled = false; b.classList.remove('locked'); }
+                });
             };
 
             document.getElementById("erase-btn").onclick = () => {

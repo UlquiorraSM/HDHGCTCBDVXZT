@@ -767,7 +767,12 @@
                     
                     <div class="form-group">
                         <label class="form-label">Select NPC</label>
-                        <input type="text" class="form-input" id="relation-add-search" placeholder="Search NPC..." style="margin-bottom:8px;" />
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+                            <input type="text" class="form-input" id="relation-add-search" placeholder="Search NPC..." style="flex:1;" />
+                            <select class="form-select" id="relation-location-filter" style="min-width:220px;">
+                                <option value="">All locations</option>
+                            </select>
+                        </div>
                         <select class="form-select" id="relation-add-select">
                             <option value="">Select NPC to add relation...</option>
                         </select>
@@ -1189,7 +1194,14 @@
             function relationRebuildSelect(filterText = "") {
                 const sel = document.getElementById("relation-add-select");
                 if (!sel) return;
-                const allChars = getCards().filter((c) => c.genre === "character");
+                const cards = getCards();
+                const locFilter = (document.getElementById("relation-location-filter") || {}).value || "";
+                const locResidents = new Set(
+                    locFilter
+                        ? ((cards.find(c => c.id === locFilter) || {}).residents || [])
+                        : []
+                );
+                const allChars = cards.filter((c) => c.genre === "character");
                 const excludeIds = new Set(
                     [...relationSelections, ...relationPickerTemp]
                         .map((r) => r.targetId)
@@ -1199,6 +1211,7 @@
                 sel.innerHTML = `<option value="">Select NPC to add relation...</option>`;
                 allChars.forEach((c) => {
                     if (excludeIds.has(c.id)) return;
+                    if (locFilter && !locResidents.has(c.id)) return;
                     if (q && !((c.title || "").toLowerCase().includes(q)))
                         return;
                     const opt = document.createElement("option");
@@ -1216,6 +1229,11 @@
                 if (search) {
                     search.value = "";
                     search.oninput = () => relationRebuildSelect(search.value);
+                }
+                const locSel = document.getElementById("relation-location-filter");
+                if (locSel) {
+                    buildRelationLocationFilter();
+                    locSel.onchange = () => relationRebuildSelect(search ? search.value : "");
                 }
                 const rowsSearch = document.getElementById("relation-rows-search");
                 if (rowsSearch) {
@@ -1264,6 +1282,28 @@
                 sel.value = "";
                 document.getElementById("relations-count").textContent = relationPickerTemp.length;
                 renderRelationPickerRows();
+            }
+            function buildRelationLocationFilter() {
+                const locSel = document.getElementById("relation-location-filter");
+                if (!locSel) return;
+                const cards = getCards();
+                const locs = cards
+                    .filter(c => 
+                        c.genre === "location" &&
+                        c.locationSub === "zivil" &&
+                        ["village","city"].includes(c.locationDetail) &&
+                        Array.isArray(c.residents) && c.residents.length > 0
+                    )
+                    .sort((a,b) => (a.title||"").localeCompare(b.title||""));
+                const prev = locSel.value;
+                locSel.innerHTML = `<option value="">All locations</option>`;
+                locs.forEach(l => {
+                    const opt = document.createElement("option");
+                    opt.value = l.id;
+                    opt.textContent = l.title;
+                    locSel.appendChild(opt);
+                });
+                if (prev && locs.some(l => l.id === prev)) locSel.value = prev;
             }
 
             function renderRelationPickerRows() {
