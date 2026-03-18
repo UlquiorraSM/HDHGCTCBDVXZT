@@ -4275,8 +4275,10 @@
                 start: "09:00",
                 end: "17:00"
             };
+            // Persisted per-shop workers: [{ npcId, days[7], start, end }]
             let shopWorkers = [];
-            let shopWorkersTemp = new Set();
+            // Temp edit state: Map<npcId, {days,start,end}>
+            let shopWorkersTemp = new Map();
             function renderShopDays() {
                 const wrap = document.getElementById("shop-days");
                 if (!wrap) return;
@@ -4334,21 +4336,74 @@
                     cb.type = "checkbox";
                     cb.checked = shopWorkersTemp.has(n.id);
                     cb.onchange = () => {
-                        if (cb.checked) shopWorkersTemp.add(n.id);
-                        else shopWorkersTemp.delete(n.id);
+                        if (cb.checked) {
+                            if (!shopWorkersTemp.has(n.id)) {
+                                shopWorkersTemp.set(n.id, { days: [...shopSchedule.days], start: shopSchedule.start, end: shopSchedule.end });
+                            }
+                        } else {
+                            shopWorkersTemp.delete(n.id);
+                        }
                         document.getElementById("work-count").textContent = shopWorkersTemp.size;
+                        // Re-render to show/hide per-NPC controls
+                        populateShopNPCList();
                     };
                     const label = document.createElement("div");
                     label.innerHTML = `<div style="font-weight:700;">${escHtml(n.title)}</div>${n.description ? `<div style="opacity:.8; font-size:12px;">${escHtml(n.description)}</div>` : ""}`;
                     row.appendChild(cb);
                     row.appendChild(label);
                     row.onclick = (e)=>{ if(e.target!==cb){ cb.checked = !cb.checked; cb.onchange(); } };
+                    // If selected, show per-NPC schedule controls
+                    if (shopWorkersTemp.has(n.id)) {
+                        const cfg = shopWorkersTemp.get(n.id) || { days:[...shopSchedule.days], start:shopSchedule.start, end:shopSchedule.end };
+                        const mini = document.createElement("div");
+                        mini.style.cssText = "margin-left:26px; margin-top:6px; display:flex; flex-direction:column; gap:6px;";
+                        const daysWrap = document.createElement("div");
+                        daysWrap.style.cssText = "display:flex; gap:6px; flex-wrap:wrap;";
+                        const labels = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+                        daysWrap.innerHTML = "";
+                        labels.forEach((lbl, idx) => {
+                            const b = document.createElement("button");
+                            b.type = "button";
+                            b.className = "day-toggle" + (cfg.days[idx] ? " active" : "");
+                            b.textContent = lbl;
+                            b.onclick = (ev) => {
+                                ev.stopPropagation();
+                                cfg.days[idx] = !cfg.days[idx];
+                                shopWorkersTemp.set(n.id, { ...cfg });
+                                populateShopNPCList();
+                            };
+                            daysWrap.appendChild(b);
+                        });
+                        const times = document.createElement("div");
+                        times.style.cssText = "display:flex; gap:10px; align-items:center;";
+                        const sIn = document.createElement("input");
+                        sIn.type = "time";
+                        sIn.className = "form-input";
+                        sIn.value = cfg.start || "09:00";
+                        sIn.onchange = (ev)=>{ cfg.start = ev.target.value || "09:00"; shopWorkersTemp.set(n.id, { ...cfg }); };
+                        const eIn = document.createElement("input");
+                        eIn.type = "time";
+                        eIn.className = "form-input";
+                        eIn.value = cfg.end || "17:00";
+                        eIn.onchange = (ev)=>{ cfg.end = ev.target.value || "17:00"; shopWorkersTemp.set(n.id, { ...cfg }); };
+                        times.appendChild(document.createTextNode("Start"));
+                        times.appendChild(sIn);
+                        times.appendChild(document.createTextNode("End"));
+                        times.appendChild(eIn);
+                        mini.appendChild(daysWrap);
+                        mini.appendChild(times);
+                        row.appendChild(mini);
+                    }
                     list.appendChild(row);
                 });
                 document.getElementById("work-count").textContent = shopWorkersTemp.size;
             }
             function showWorkScene() {
-                shopWorkersTemp = new Set(shopWorkers);
+                // Load existing per-NPC config into temp map
+                shopWorkersTemp = new Map();
+                (shopWorkers || []).forEach(w => {
+                    if (w && w.npcId) shopWorkersTemp.set(w.npcId, { days: Array.isArray(w.days) ? [...w.days] : [...shopSchedule.days], start: w.start || shopSchedule.start, end: w.end || shopSchedule.end });
+                });
                 renderShopDays();
                 const searchEl = document.getElementById("shop-search");
                 if (searchEl) {
@@ -4360,7 +4415,12 @@
                 document.getElementById("work-view").style.display = "flex";
             }
             function confirmWork() {
-                shopWorkers = Array.from(shopWorkersTemp);
+                shopWorkers = Array.from(shopWorkersTemp.entries()).map(([npcId, cfg]) => ({
+                    npcId,
+                    days: Array.isArray(cfg.days) ? [...cfg.days] : [...shopSchedule.days],
+                    start: cfg.start || shopSchedule.start,
+                    end: cfg.end || shopSchedule.end
+                }));
                 showFormView();
             }
 
@@ -5212,10 +5272,21 @@
                             end: card.shopSchedule.end || "17:00",
                         };
                     }
-                    if (card.locationDetail === "shop" && Array.isArray(card.shopWorkers)) {
-                        shopWorkers = [...card.shopWorkers];
-                    } else if (card.locationDetail === "shop") {
-                        shopWorkers = [];
+                    if (card.locationDetail === "shop") {
+                        if (Array.isArray(card.shopWorkers)) {
+                            if (card.shopWorkers.length > 0 && typeof card.shopWorkers[0] === "string") {
+                                shopWorkers = card.shopWorkers.map(id => ({ npcId: id, days: [...shopSchedule.days], start: shopSchedule.start, end: shopSchedule.end }));
+                            } else {
+                                shopWorkers = card.shopWorkers.map(w => ({
+                                    npcId: w.npcId,
+                                    days: Array.isArray(w.days) ? [...w.days] : [...shopSchedule.days],
+                                    start: w.start || shopSchedule.start,
+                                    end: w.end || shopSchedule.end
+                                }));
+                            }
+                        } else {
+                            shopWorkers = [];
+                        }
                     }
                     if (card.sublocations) {
                         sublocSelections["building"] =

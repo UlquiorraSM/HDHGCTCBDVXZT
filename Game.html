@@ -2242,6 +2242,46 @@
                 }
             }
 
+            function computeShopPresenceNow() {
+                try {
+                    const cards = getCards();
+                    const d = activeChar?.startingDate || {};
+                    const wday = _weekdayMon0(d.day, d.month, d.year);
+                    const nowMin = _timeToMinutes(d.time || "00:00");
+                    const shops = cards.filter(
+                        c => c.genre === "location" &&
+                             c.locationSub === "building" &&
+                             (c.locationDetail || "").toLowerCase() === "shop"
+                    );
+                    if (shops.length === 0) return "";
+                    const characters = cards.filter(c => c.genre === "character");
+                    let context = "\nSHOP WORK SHIFTS (Current time):\n";
+                    let any = false;
+                    shops.forEach(shop => {
+                        const workers = Array.isArray(shop.shopWorkers) ? shop.shopWorkers : [];
+                        const active = [];
+                        workers.forEach(w => {
+                            const days = Array.isArray(w.days) ? w.days : [];
+                            const st = _timeToMinutes(w.start || "09:00");
+                            const en = _timeToMinutes(w.end || "17:00");
+                            const on = !!days[wday] && nowMin >= st && nowMin < en;
+                            if (on) {
+                                const npc = characters.find(c => c.id === w.npcId);
+                                active.push(npc ? (npc.title || npc.id) : w.npcId);
+                            }
+                        });
+                        if (active.length > 0) {
+                            any = true;
+                            context += `- ${shop.title}: ${active.join(", ")}\n`;
+                        }
+                    });
+                    if (!any) context += "- No workers on duty right now.\n";
+                    return context;
+                } catch (e) {
+                    console.error("shop presence error", e);
+                    return "";
+                }
+            }
             function getCurrentLocationPath() {
                 if (!currentLocationId) return "Unknown Location";
                 try {
@@ -2294,6 +2334,7 @@
                 const relationshipSummary = buildRelationshipSummary();
                 const scheduleInfo = computeSchoolPresenceNow();
                 const scheduleContext = scheduleInfo.context || "";
+                const shopContext = computeShopPresenceNow();
                 const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
                 const presentSpecies = getPresentSpeciesCards().map(s => s.title).join(", ");
                 
@@ -2356,6 +2397,7 @@ ${locationStateContext}
 ${locationDistanceContext}
 ${relationshipSummary}
 ${scheduleContext}
+${shopContext}
 
 # ROLEPLAY RULES
 1. Write EXCLUSIVELY in ${aiLang}.
