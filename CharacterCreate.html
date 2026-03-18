@@ -640,6 +640,28 @@
                 flex-direction: column;
                 gap: 12px;
             }
+            .relation-pills {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            .relation-pill {
+                padding: 7px 10px;
+                border-radius: 8px;
+                border: 1px solid rgba(255,255,255,0.12);
+                background: rgba(22,22,28,0.7);
+                color: rgba(255,255,255,0.85);
+                font-size: 12px;
+                font-weight: 700;
+                cursor: pointer;
+                user-select: none;
+                transition: background .2s, border-color .2s, color .2s;
+            }
+            .relation-pill.active {
+                background: rgba(80,140,220,0.85);
+                border-color: rgba(120,180,255,0.6);
+                color: #fff;
+            }
 
             /* ─── NPC Setup Scene ─── */
             #npc-setup-view {
@@ -745,6 +767,7 @@
                     
                     <div class="form-group">
                         <label class="form-label">Select NPC</label>
+                        <input type="text" class="form-input" id="relation-add-search" placeholder="Search NPC..." style="margin-bottom:8px;" />
                         <select class="form-select" id="relation-add-select">
                             <option value="">Select NPC to add relation...</option>
                         </select>
@@ -758,6 +781,7 @@
                 <!-- Current Relations -->
                 <div class="section">
                     <div class="section-title">Current Relations</div>
+                    <input type="text" class="form-input" id="relation-rows-search" placeholder="Filter current relations..." style="margin-bottom:8px;" />
                     <div class="relation-rows" id="relation-rows">
                         <!-- filled dynamically -->
                     </div>
@@ -1156,32 +1180,55 @@
             ───────────────────────────────────────── */
             let relationSelections = [];
             let relationPickerTemp = [];
+            let relationRowsFilter = "";
 
             // Skills
             let skillSelections = []; // array of skill IDs
             let skillPickerTemp = [];
 
-            function showRelationsScene() {
-                relationPickerTemp = relationSelections.map((r) => ({ ...r }));
-                
-                // Populate NPC select
-                const npcCards = getCards().filter((c) => c.genre === "character");
+            function relationRebuildSelect(filterText = "") {
                 const sel = document.getElementById("relation-add-select");
+                if (!sel) return;
+                const allChars = getCards().filter((c) => c.genre === "character");
+                const excludeIds = new Set(
+                    [...relationSelections, ...relationPickerTemp]
+                        .map((r) => r.targetId)
+                        .filter(Boolean),
+                );
+                const q = (filterText || "").toLowerCase().trim();
                 sel.innerHTML = `<option value="">Select NPC to add relation...</option>`;
-                npcCards.forEach((c) => {
+                allChars.forEach((c) => {
+                    if (excludeIds.has(c.id)) return;
+                    if (q && !((c.title || "").toLowerCase().includes(q)))
+                        return;
                     const opt = document.createElement("option");
                     opt.value = c.id;
                     opt.textContent = c.title;
                     sel.appendChild(opt);
                 });
+            }
 
-                // Update count
-                document.getElementById("relations-count").textContent = relationPickerTemp.length;
+            function showRelationsScene() {
+                relationPickerTemp = relationSelections.map((r) => ({ ...r }));
                 
-                // Show relations scene, hide main scene
+                relationRebuildSelect("");
+                const search = document.getElementById("relation-add-search");
+                if (search) {
+                    search.value = "";
+                    search.oninput = () => relationRebuildSelect(search.value);
+                }
+                const rowsSearch = document.getElementById("relation-rows-search");
+                if (rowsSearch) {
+                    rowsSearch.value = "";
+                    rowsSearch.oninput = () => {
+                        relationRowsFilter = (rowsSearch.value || "").toLowerCase().trim();
+                        renderRelationPickerRows();
+                    };
+                }
+
+                document.getElementById("relations-count").textContent = relationPickerTemp.length;
                 document.getElementById("main-view").style.display = "none";
                 document.getElementById("relations-view").style.display = "flex";
-                
                 renderRelationPickerRows();
             }
 
@@ -1223,34 +1270,78 @@
                 const container = document.getElementById("relation-rows");
                 container.innerHTML = "";
 
-                relationPickerTemp.forEach((row, idx) => {
+                const list = relationPickerTemp
+                    .filter(r => !relationRowsFilter || ((r.targetName || "").toLowerCase().includes(relationRowsFilter)))
+                    .sort((a,b) => (a.targetName || "").localeCompare(b.targetName || ""));
+                
+                list.forEach((row) => {
                     const div = document.createElement("div");
                     div.className = "relation-row";
                     const isFamily = row.relation === "Family";
+                    const cardsAll = getCards();
+                    const target = cardsAll.find(c => c.id === row.targetId) || {};
+                    const origIndex = relationPickerTemp.findIndex(r => r.targetId === row.targetId);
+                    if (origIndex < 0) return;
+
+                    const tg = (target.gender || "").toLowerCase();
+                    const sa = parseInt(document.getElementById("c-age").value) || 0;
+                    const ta = typeof target.age === "number" ? target.age : 0;
+                    let familyOptions = tg === "female"
+                        ? ["Mother","Daughter","Sister","Half-Sister","Grandmother","Granddaughter","Aunt","Niece","Step-Mother","Step-Daughter","Step-Sister","Cousin"]
+                        : (tg === "male"
+                            ? ["Father","Son","Brother","Half-Brother","Grandfather","Grandson","Uncle","Nephew","Step-Father","Step-Son","Step-Brother","Cousin"]
+                            : ["Mother","Father","Son","Daughter","Brother","Sister","Half-Brother","Half-Sister","Grandfather","Grandmother","Grandson","Granddaughter","Uncle","Aunt","Nephew","Niece","Step-Father","Step-Mother","Step-Son","Step-Daughter","Step-Brother","Step-Sister","Cousin"]);
+                    if (sa > 0 && ta > 0 && ta !== sa) {
+                        const parentRoles = new Set(["Mother","Father","Step-Mother","Step-Father"]);
+                        const childRoles = new Set(["Daughter","Son","Step-Daughter","Step-Son"]);
+                        const grandparentRoles = new Set(["Grandmother","Grandfather"]);
+                        const grandchildRoles = new Set(["Granddaughter","Grandson"]);
+                        if (ta < sa) {
+                            familyOptions = familyOptions.filter(r => !parentRoles.has(r) && !grandparentRoles.has(r));
+                        } else if (ta > sa) {
+                            familyOptions = familyOptions.filter(r => !childRoles.has(r) && !grandchildRoles.has(r));
+                        }
+                    }
+                    const famOptsHtml = [`<option value="">Select family role...</option>`]
+                        .concat(familyOptions.map(opt => `<option value="${opt}" ${row.familySub === opt ? "selected" : ""}>${opt}</option>`))
+                        .join("");
 
                     div.innerHTML = `
                         <div class="relation-row-header">
                             <span class="relation-target-name">${escHtml(row.targetName)}</span>
-                            <button class="relation-row-remove" onclick="relationRemoveRow(${idx})">Remove</button>
+                            <button class="relation-row-remove" onclick="relationRemoveRow(${origIndex})">Remove</button>
                         </div>
                         <div class="relation-controls">
-                            <select class="relation-select" onchange="relationUpdateType(${idx}, this.value)">
-                                <option value="Unknown" ${row.relation === "Unknown" ? "selected" : ""}>Unknown</option>
-                                <option value="Friends" ${row.relation === "Friends" ? "selected" : ""}>Friends</option>
-                                <option value="Lover" ${row.relation === "Lover" ? "selected" : ""}>Lover</option>
-                                <option value="Husband" ${row.relation === "Husband" ? "selected" : ""}>Husband</option>
-                                <option value="Family" ${row.relation === "Family" ? "selected" : ""}>Family</option>
+                            <div class="relation-pills">
+                                <button type="button" class="relation-pill ${row.relation === "Unknown" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Unknown')">Unknown</button>
+                                <button type="button" class="relation-pill ${row.relation === "Friends" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Friends')">Friends</button>
+                                <button type="button" class="relation-pill ${row.relation === "Lover" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Lover')">Lover</button>
+                                <button type="button" class="relation-pill ${row.relation === "Spouse" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Spouse')">Spouse</button>
+                                <button type="button" class="relation-pill ${row.relation === "Family" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Family')">Family</button>
+                            </div>
+                            <select class="relation-select" onchange="relationUpdateType(${origIndex}, this.value)">
+                                <option value="">More types…</option>
+                                <option value="Acquaintance" ${row.relation === "Acquaintance" ? "selected" : ""}>Acquaintance</option>
+                                <option value="Enemy" ${row.relation === "Enemy" ? "selected" : ""}>Enemy</option>
+                                <option value="Rival" ${row.relation === "Rival" ? "selected" : ""}>Rival</option>
+                                <option value="Ally" ${row.relation === "Ally" ? "selected" : ""}>Ally</option>
+                                <option value="Colleague" ${row.relation === "Colleague" ? "selected" : ""}>Colleague</option>
+                                <option value="Classmate" ${row.relation === "Classmate" ? "selected" : ""}>Classmate</option>
+                                <option value="Mentor" ${row.relation === "Mentor" ? "selected" : ""}>Mentor</option>
+                                <option value="Student" ${row.relation === "Student" ? "selected" : ""}>Student</option>
+                                <option value="Boss" ${row.relation === "Boss" ? "selected" : ""}>Boss</option>
+                                <option value="Employee" ${row.relation === "Employee" ? "selected" : ""}>Employee</option>
+                                <option value="Neighbor" ${row.relation === "Neighbor" ? "selected" : ""}>Neighbor</option>
+                                <option value="Ex-Lover" ${row.relation === "Ex-Lover" ? "selected" : ""}>Ex-Lover</option>
+                                <option value="Boyfriend" ${row.relation === "Boyfriend" ? "selected" : ""}>Boyfriend</option>
+                                <option value="Girlfriend" ${row.relation === "Girlfriend" ? "selected" : ""}>Girlfriend</option>
+                                <option value="Fiancé" ${row.relation === "Fiancé" ? "selected" : ""}>Fiancé</option>
+                                <option value="Fiancée" ${row.relation === "Fiancée" ? "selected" : ""}>Fiancée</option>
                             </select>
                             <select class="relation-select family-sub-select" 
                                 style="display: ${isFamily ? "block" : "none"}"
-                                onchange="relationUpdateFamilySub(${idx}, this.value)">
-                                <option value="">Select family role...</option>
-                                <option value="Parents" ${row.familySub === "Parents" ? "selected" : ""}>Parents</option>
-                                <option value="Child" ${row.familySub === "Child" ? "selected" : ""}>Child</option>
-                                <option value="Sibling" ${row.familySub === "Sibling" ? "selected" : ""}>Sibling</option>
-                                <option value="Aunt/Uncle" ${row.familySub === "Aunt/Uncle" ? "selected" : ""}>Aunt/Uncle</option>
-                                <option value="Cousin" ${row.familySub === "Cousin" ? "selected" : ""}>Cousin</option>
-                                <option value="Grandparents" ${row.familySub === "Grandparents" ? "selected" : ""}>Grandparents</option>
+                                onchange="relationUpdateFamilySub(${origIndex}, this.value)">
+                                ${famOptsHtml}
                             </select>
                         </div>
                     `;
@@ -1372,6 +1463,11 @@
                         c.canBeSpawn === true,
                 );
             }
+            let spawnFolderOpen = {};
+            function findParentLocation(id) {
+                const cards = getCards();
+                return cards.find(c => c.genre === "location" && c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(id))) || null;
+            }
 
             /* Race cards */
             function getRaceCards() {
@@ -1457,37 +1553,124 @@
                 }
                 if (emptyPlaceholder) emptyPlaceholder.style.display = "none";
 
-                spawns.forEach((b) => {
-                    const isSelected = selectedId === b.id;
-                    const item = document.createElement("div");
-                    item.className =
-                        "spawn-item" + (isSelected ? " selected" : "");
-                    item.dataset.id = b.id;
-
-                    const detail = b.locationDetail
-                        ? b.locationDetail.toUpperCase()
-                        : "BUILDING";
-
-                    item.innerHTML = `
-                        <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
+                const groupsByGP = new Map(); // gpId -> { gp, parents: Map(parentId -> { parent, buildings: [] }) }
+                spawns.forEach(b => {
+                    const parent = findParentLocation(b.id);
+                    const gp = parent ? findParentLocation(parent.id) : null;
+                    const gpId = gp ? gp.id : (parent ? parent.id : "__root__");
+                    if (!groupsByGP.has(gpId)) groupsByGP.set(gpId, { gp, parents: new Map() });
+                    const parentId = parent ? parent.id : "__root__";
+                    const entry = groupsByGP.get(gpId);
+                    if (!entry.parents.has(parentId)) entry.parents.set(parentId, { parent, buildings: [] });
+                    entry.parents.get(parentId).buildings.push(b);
+                });
+                const topGroups = Array.from(groupsByGP.values()).sort((a,b) => {
+                    const at = (a.gp ? a.gp.title : "(Ungrouped)") || "";
+                    const bt = (b.gp ? b.gp.title : "(Ungrouped)") || "";
+                    return at.localeCompare(bt);
+                });
+                topGroups.forEach(g => {
+                    const gpId = g.gp ? g.gp.id : "__root__";
+                    const gpTitle = g.gp ? (g.gp.title || "—") : "Ungrouped";
+                    const gpDetail = g.gp ? ((g.gp.locationDetail || g.gp.locationSub || "").toUpperCase()) : "";
+                    const gpFolder = document.createElement("div");
+                    gpFolder.className = "spawn-item";
+                    gpFolder.innerHTML = `
+                        <div class="spawn-radio"><div class="spawn-radio-dot" style="display:${spawnFolderOpen[gpId] ? 'block' : 'none'};"></div></div>
                         <div class="spawn-item-info">
-                            <div class="spawn-item-name">${escHtml(b.title)}</div>
-                            <div class="spawn-item-detail">${detail}</div>
+                            <div class="spawn-item-name">📁 ${escHtml(gpTitle)}</div>
+                            <div class="spawn-item-detail">${escHtml(gpDetail)}</div>
                         </div>
-                        <span class="spawn-item-badge">SPAWN</span>
+                        <span class="spawn-item-badge">FOLDER</span>
                     `;
-
-                    item.addEventListener("click", () => {
-                        selectedSpawnId = b.id;
-                        if (listContainer.id === "spawn-list") {
-                            renderSpawnListInto("spawn-list", "spawn-empty", b.id);
-                        } else {
-                            renderSpawnListInto(listContainer.id, emptyId, b.id);
-                        }
-                        updateSummary();
+                    gpFolder.addEventListener("click", () => {
+                        spawnFolderOpen[gpId] = !spawnFolderOpen[gpId];
+                        renderSpawnListInto(listId, emptyId, selectedId);
                     });
-
-                    listContainer.appendChild(item);
+                    listContainer.appendChild(gpFolder);
+                    if (spawnFolderOpen[gpId]) {
+                        const parentsArr = Array.from(g.parents.values()).sort((a,b) => {
+                            const at = (a.parent ? a.parent.title : "(Ungrouped)") || "";
+                            const bt = (b.parent ? b.parent.title : "(Ungrouped)") || "";
+                            return at.localeCompare(bt);
+                        });
+                        parentsArr.forEach(p => {
+                            if (p.parent) {
+                                const pid = p.parent.id;
+                                const pTitle = p.parent.title || "—";
+                                const pDetail = (p.parent.locationDetail || p.parent.locationSub || "").toUpperCase();
+                                const pFolder = document.createElement("div");
+                                pFolder.className = "spawn-item";
+                                pFolder.style.marginLeft = "24px";
+                                pFolder.innerHTML = `
+                                    <div class="spawn-radio"><div class="spawn-radio-dot" style="display:${spawnFolderOpen[pid] ? 'block' : 'none'};"></div></div>
+                                    <div class="spawn-item-info">
+                                        <div class="spawn-item-name">📁 ${escHtml(pTitle)}</div>
+                                        <div class="spawn-item-detail">${escHtml(pDetail)}</div>
+                                    </div>
+                                    <span class="spawn-item-badge">FOLDER</span>
+                                `;
+                                pFolder.addEventListener("click", () => {
+                                    spawnFolderOpen[pid] = !spawnFolderOpen[pid];
+                                    renderSpawnListInto(listId, emptyId, selectedId);
+                                });
+                                listContainer.appendChild(pFolder);
+                                if (spawnFolderOpen[pid]) {
+                                    p.buildings
+                                        .sort((a,b) => (a.title||"").localeCompare(b.title||""))
+                                        .forEach(b => {
+                                            const isSelected = selectedId === b.id;
+                                            const item = document.createElement("div");
+                                            item.className = "spawn-item" + (isSelected ? " selected" : "");
+                                            item.dataset.id = b.id;
+                                            const detail = b.locationDetail ? b.locationDetail.toUpperCase() : "BUILDING";
+                                            item.innerHTML = `
+                                                <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
+                                                <div class="spawn-item-info">
+                                                    <div class="spawn-item-name">${escHtml(b.title)}</div>
+                                                    <div class="spawn-item-detail">${detail}</div>
+                                                </div>
+                                                <span class="spawn-item-badge">SPAWN</span>
+                                            `;
+                                            item.style.marginLeft = "48px";
+                                            item.addEventListener("click", (e) => {
+                                                e.stopPropagation();
+                                                selectedSpawnId = b.id;
+                                                renderSpawnListInto(listId, emptyId, b.id);
+                                                updateSummary();
+                                            });
+                                            listContainer.appendChild(item);
+                                        });
+                                }
+                            } else {
+                                p.buildings
+                                    .sort((a,b) => (a.title||"").localeCompare(b.title||""))
+                                    .forEach(b => {
+                                        const isSelected = selectedId === b.id;
+                                        const item = document.createElement("div");
+                                        item.className = "spawn-item" + (isSelected ? " selected" : "");
+                                        item.dataset.id = b.id;
+                                        const detail = b.locationDetail ? b.locationDetail.toUpperCase() : "BUILDING";
+                                        item.innerHTML = `
+                                            <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
+                                            <div class="spawn-item-info">
+                                                <div class="spawn-item-name">${escHtml(b.title)}</div>
+                                                <div class="spawn-item-detail">${detail}</div>
+                                            </div>
+                                            <span class="spawn-item-badge">SPAWN</span>
+                                        `;
+                                        item.style.marginLeft = "24px";
+                                        item.addEventListener("click", (e) => {
+                                            e.stopPropagation();
+                                            selectedSpawnId = b.id;
+                                            renderSpawnListInto(listId, emptyId, b.id);
+                                            updateSummary();
+                                        });
+                                        listContainer.appendChild(item);
+                                    });
+                            }
+                        });
+                    }
                 });
             }
 

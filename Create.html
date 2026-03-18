@@ -2427,7 +2427,7 @@
                             <button type="button" class="subloc-btn relation-btn" onclick="showRelationsScene()">
                                 <span class="subloc-icon">&#128101;</span> Relations
                             </button>
-                            <button type="button" class="subloc-btn relation-btn" onclick="showSkillsScene()">
+                            <button type="button" class="subloc-btn relation-btn" id="tool-btn-skills" onclick="showSkillsScene()">
                                 <span class="subloc-icon">🛠️</span> Skills
                             </button>
                         </div>
@@ -3367,6 +3367,7 @@
                 <!-- Current Relations -->
                 <div class="form-group">
                     <label class="form-label">Current Relations</label>
+                    <input type="text" class="relation-add-search" id="relation-rows-search" placeholder="Filter current relations..." />
                     <div class="relation-rows" id="relation-rows">
                         <!-- filled dynamically -->
                     </div>
@@ -3669,8 +3670,8 @@
             <div class="context-menu-item" onclick="ctxEdit()">
                 &#9998;&nbsp; Edit
             </div>
-            <div class="context-menu-item" onclick="ctxPlay()">
-                &#9654;&nbsp; Play
+            <div class="context-menu-item" onclick="ctxDuplicate()">
+                &#128260;&nbsp; Duplicate
             </div>
             <div class="context-menu-sep"></div>
             <div class="context-menu-item danger" onclick="ctxDelete()">
@@ -3915,6 +3916,7 @@
             // Array of { targetId, targetName, relation, familySub }
             let relationSelections = [];
             let relationPickerTemp = [];
+            let relationRowsFilter = "";
 
             function relationRebuildSelect(filterText = "") {
                 const sel = document.getElementById("relation-add-select");
@@ -3952,6 +3954,14 @@
                     search.value = "";
                     search.oninput = () => {
                         relationRebuildSelect(search.value);
+                    };
+                }
+                const rowsSearch = document.getElementById("relation-rows-search");
+                if (rowsSearch) {
+                    rowsSearch.value = "";
+                    rowsSearch.oninput = () => {
+                        relationRowsFilter = (rowsSearch.value || "").toLowerCase().trim();
+                        renderRelationPickerRows();
                     };
                 }
 
@@ -4005,7 +4015,7 @@
                     targetId: id,
                     targetName: card.title,
                     relation: "Unknown",
-                    familySub: "",
+                    familySub: ""
                 });
                 sel.value = "";
                 document.getElementById("relations-count").textContent = relationPickerTemp.length;
@@ -4018,35 +4028,78 @@
                 const container = document.getElementById("relation-rows");
                 container.innerHTML = "";
 
-                relationPickerTemp.forEach((row, idx) => {
+                const list = relationPickerTemp
+                    .filter(r => !relationRowsFilter || ((r.targetName || "").toLowerCase().includes(relationRowsFilter)))
+                    .sort((a,b) => (a.targetName || "").localeCompare(b.targetName || ""));
+                list.forEach((row) => {
                     const div = document.createElement("div");
                     div.className = "relation-row";
 
                     const isFamily = row.relation === "Family";
+                    const cardsAll = getCards();
+                    const target = cardsAll.find(c => c.id === row.targetId) || {};
+                    const subject = cardsAll.find(c => c.id === editingId) || {};
+                    const origIndex = relationPickerTemp.findIndex(r => r.targetId === row.targetId);
+                    if (origIndex < 0) return;
+                    const tg = (target.gender || "").toLowerCase();
+                    let familyOptions = tg === "female"
+                        ? ["Mother","Daughter","Sister","Half-Sister","Grandmother","Granddaughter","Aunt","Niece","Step-Mother","Step-Daughter","Step-Sister","Cousin"]
+                        : (tg === "male"
+                            ? ["Father","Son","Brother","Half-Brother","Grandfather","Grandson","Uncle","Nephew","Step-Father","Step-Son","Step-Brother","Cousin"]
+                            : ["Mother","Father","Son","Daughter","Brother","Sister","Half-Brother","Half-Sister","Grandfather","Grandmother","Grandson","Granddaughter","Uncle","Aunt","Nephew","Niece","Step-Father","Step-Mother","Step-Son","Step-Daughter","Step-Brother","Step-Sister","Cousin"]);
+                    const sa = typeof subject.age === "number" ? subject.age : 0;
+                    const ta = typeof target.age === "number" ? target.age : 0;
+                    if (sa > 0 && ta > 0 && ta !== sa) {
+                        const parentRoles = new Set(["Mother","Father","Step-Mother","Step-Father"]);
+                        const childRoles = new Set(["Daughter","Son","Step-Daughter","Step-Son"]);
+                        const grandparentRoles = new Set(["Grandmother","Grandfather"]);
+                        const grandchildRoles = new Set(["Granddaughter","Grandson"]);
+                        if (ta < sa) {
+                            familyOptions = familyOptions.filter(r => !parentRoles.has(r) && !grandparentRoles.has(r));
+                        } else if (ta > sa) {
+                            familyOptions = familyOptions.filter(r => !childRoles.has(r) && !grandchildRoles.has(r));
+                        }
+                    }
+                    const famOptsHtml = [`<option value="">Select family role...</option>`]
+                        .concat(familyOptions.map(opt => `<option value="${opt}" ${row.familySub === opt ? "selected" : ""}>${opt}</option>`))
+                        .join("");
 
                     div.innerHTML = `
                         <div class="relation-row-header">
                             <span class="relation-target-name">${escHtml(row.targetName)}</span>
-                            <button class="relation-row-remove" onclick="relationRemoveRow(${idx})">Remove</button>
+                            <button class="relation-row-remove" onclick="relationRemoveRow(${origIndex})">Remove</button>
                         </div>
                         <div class="relation-controls">
                             <div class="relation-pills">
-                                <button type="button" class="relation-pill ${row.relation === "Unknown" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Unknown')">Unknown</button>
-                                <button type="button" class="relation-pill ${row.relation === "Friends" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Friends')">Friends</button>
-                                <button type="button" class="relation-pill ${row.relation === "Lover" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Lover')">Lover</button>
-                                <button type="button" class="relation-pill ${row.relation === "Husband" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Husband')">Husband</button>
-                                <button type="button" class="relation-pill ${row.relation === "Family" ? "active": ""}" onclick="relationUpdateType(${idx}, 'Family')">Family</button>
+                                <button type="button" class="relation-pill ${row.relation === "Unknown" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Unknown')">Unknown</button>
+                                <button type="button" class="relation-pill ${row.relation === "Friends" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Friends')">Friends</button>
+                                <button type="button" class="relation-pill ${row.relation === "Lover" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Lover')">Lover</button>
+                                <button type="button" class="relation-pill ${row.relation === "Spouse" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Spouse')">Spouse</button>
+                                <button type="button" class="relation-pill ${row.relation === "Family" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Family')">Family</button>
                             </div>
+                            <select class="relation-select" onchange="relationUpdateType(${origIndex}, this.value)">
+                                <option value="">More types…</option>
+                                <option value="Acquaintance" ${row.relation === "Acquaintance" ? "selected" : ""}>Acquaintance</option>
+                                <option value="Enemy" ${row.relation === "Enemy" ? "selected" : ""}>Enemy</option>
+                                <option value="Rival" ${row.relation === "Rival" ? "selected" : ""}>Rival</option>
+                                <option value="Ally" ${row.relation === "Ally" ? "selected" : ""}>Ally</option>
+                                <option value="Colleague" ${row.relation === "Colleague" ? "selected" : ""}>Colleague</option>
+                                <option value="Classmate" ${row.relation === "Classmate" ? "selected" : ""}>Classmate</option>
+                                <option value="Mentor" ${row.relation === "Mentor" ? "selected" : ""}>Mentor</option>
+                                <option value="Student" ${row.relation === "Student" ? "selected" : ""}>Student</option>
+                                <option value="Boss" ${row.relation === "Boss" ? "selected" : ""}>Boss</option>
+                                <option value="Employee" ${row.relation === "Employee" ? "selected" : ""}>Employee</option>
+                                <option value="Neighbor" ${row.relation === "Neighbor" ? "selected" : ""}>Neighbor</option>
+                                <option value="Ex-Lover" ${row.relation === "Ex-Lover" ? "selected" : ""}>Ex-Lover</option>
+                                <option value="Boyfriend" ${row.relation === "Boyfriend" ? "selected" : ""}>Boyfriend</option>
+                                <option value="Girlfriend" ${row.relation === "Girlfriend" ? "selected" : ""}>Girlfriend</option>
+                                <option value="Fiancé" ${row.relation === "Fiancé" ? "selected" : ""}>Fiancé</option>
+                                <option value="Fiancée" ${row.relation === "Fiancée" ? "selected" : ""}>Fiancée</option>
+                            </select>
                             <select class="relation-select family-sub-select" 
                                 style="display: ${isFamily ? "block" : "none"}"
-                                onchange="relationUpdateFamilySub(${idx}, this.value)">
-                                <option value="">Select family role...</option>
-                                <option value="Parents" ${row.familySub === "Parents" ? "selected" : ""}>Parents</option>
-                                <option value="Child" ${row.familySub === "Child" ? "selected" : ""}>Child</option>
-                                <option value="Sibling" ${row.familySub === "Sibling" ? "selected" : ""}>Sibling</option>
-                                <option value="Aunt/Uncle" ${row.familySub === "Aunt/Uncle" ? "selected" : ""}>Aunt/Uncle</option>
-                                <option value="Cousin" ${row.familySub === "Cousin" ? "selected" : ""}>Cousin</option>
-                                <option value="Grandparents" ${row.familySub === "Grandparents" ? "selected" : ""}>Grandparents</option>
+                                onchange="relationUpdateFamilySub(${origIndex}, this.value)">
+                                ${famOptsHtml}
                             </select>
                         </div>
                     `;
@@ -4065,6 +4118,8 @@
             function relationUpdateFamilySub(idx, val) {
                 relationPickerTemp[idx].familySub = val;
             }
+
+            
 
             function relationRemoveRow(idx) {
                 relationPickerTemp.splice(idx, 1);
@@ -4085,9 +4140,7 @@
                     if (rel.relation === "Family" && rel.familySub) {
                         label = rel.familySub;
                     }
-                    tag.innerHTML = `
-                        <span>${escHtml(rel.targetName)}: ${label}</span>
-                    `;
+                    tag.innerHTML = `<span>${escHtml(rel.targetName)}: ${label}</span>`;
                     container.appendChild(tag);
                 });
             }
@@ -4443,12 +4496,15 @@
             }
             function updateSkillGroupVisibility() {
                 const grp = document.getElementById("char-skill-group");
-                if (!grp) return;
-                grp.style.display = "none";
+                const btn = document.getElementById("tool-btn-skills");
+                const hasSkills = getSkills().length > 0;
+                if (grp) grp.style.display = hasSkills ? "block" : "none";
+                if (btn) btn.style.display = hasSkills ? "inline-flex" : "none";
             }
             function showSkillsScene() {
                 const list = document.getElementById("skills-list");
                 const skills = getSkills();
+                if (!skills.length) { showToast("No skills available.", "#c04040"); return; }
                 document.getElementById("skills-count").textContent = skills.length;
                 list.innerHTML = "";
                 skills.forEach(sk => {
@@ -6832,9 +6888,116 @@
 
                 let cards = getCards();
 
+                if (type === "character" && !editingId) {
+                    const bdDayStr = (document.getElementById("f-char-birth-day").value || "").trim();
+                    const bdMonthStr = (document.getElementById("f-char-birth-month").value || "").trim();
+                    if (!name || (age || 0) <= 0 || !raceId || !bdDayStr || !bdMonthStr) {
+                        showToast("Please fill required fields: Name, Age, Race, Birthdate.", "#c04040");
+                        return;
+                    }
+                }
+
+                function computeReciprocalRelation(subject, target, rel) {
+                    const sg = (subject.gender || "").toLowerCase();
+                    const tg = (target.gender || "").toLowerCase();
+                    if (rel.relation === "Family") {
+                        const f = rel.familySub || "";
+                        if (f === "Mother" || f === "Father") {
+                            if (tg === "female") return { relation: "Family", familySub: "Daughter" };
+                            if (tg === "male") return { relation: "Family", familySub: "Son" };
+                            return null;
+                        }
+                        if (f === "Son" || f === "Daughter") {
+                            const parent = sg === "female" ? "Mother" : "Father";
+                            return { relation: "Family", familySub: parent };
+                        }
+                        if (f === "Brother" || f === "Sister") {
+                            const sib = sg === "female" ? "Sister" : "Brother";
+                            return { relation: "Family", familySub: sib };
+                        }
+                        if (f === "Half-Brother" || f === "Half-Sister") {
+                            const hs = sg === "female" ? "Half-Sister" : "Half-Brother";
+                            return { relation: "Family", familySub: hs };
+                        }
+                        if (f === "Grandmother" || f === "Grandfather") {
+                            if (tg === "female") return { relation: "Family", familySub: "Granddaughter" };
+                            if (tg === "male") return { relation: "Family", familySub: "Grandson" };
+                            return null;
+                        }
+                        if (f === "Granddaughter" || f === "Grandson") {
+                            const gp = sg === "female" ? "Grandmother" : "Grandfather";
+                            return { relation: "Family", familySub: gp };
+                        }
+                        if (f === "Aunt" || f === "Uncle") {
+                            if (tg === "female") return { relation: "Family", familySub: "Niece" };
+                            if (tg === "male") return { relation: "Family", familySub: "Nephew" };
+                            return null;
+                        }
+                        if (f === "Niece" || f === "Nephew") {
+                            const au = sg === "female" ? "Aunt" : "Uncle";
+                            return { relation: "Family", familySub: au };
+                        }
+                        if (f === "Step-Mother" || f === "Step-Father") {
+                            if (tg === "female") return { relation: "Family", familySub: "Step-Daughter" };
+                            if (tg === "male") return { relation: "Family", familySub: "Step-Son" };
+                            return null;
+                        }
+                        if (f === "Step-Daughter" || f === "Step-Son") {
+                            const sp = sg === "female" ? "Step-Mother" : "Step-Father";
+                            return { relation: "Family", familySub: sp };
+                        }
+                        if (f === "Step-Brother" || f === "Step-Sister") {
+                            const sb = sg === "female" ? "Step-Sister" : "Step-Brother";
+                            return { relation: "Family", familySub: sb };
+                        }
+                        if (f === "Cousin") {
+                            return { relation: "Family", familySub: "Cousin" };
+                        }
+                        return null;
+                    }
+                    const r = rel.relation || "";
+                    if (r === "Boss") return { relation: "Employee", familySub: "" };
+                    if (r === "Employee") return { relation: "Boss", familySub: "" };
+                    if (r === "Mentor") return { relation: "Student", familySub: "" };
+                    if (r === "Student") return { relation: "Mentor", familySub: "" };
+                    if (r === "Boyfriend") return { relation: sg === "female" ? "Girlfriend" : "Boyfriend", familySub: "" };
+                    if (r === "Girlfriend") return { relation: sg === "male" ? "Boyfriend" : "Girlfriend", familySub: "" };
+                    if (r === "Fiancé") return { relation: sg === "female" ? "Fiancée" : "Fiancé", familySub: "" };
+                    if (r === "Fiancée") return { relation: sg === "male" ? "Fiancé" : "Fiancée", familySub: "" };
+                    if (["Friends","Lover","Spouse","Enemy","Rival","Ally","Colleague","Classmate","Neighbor","Ex-Lover","Unknown","Acquaintance"].includes(r)) {
+                        return { relation: r, familySub: "" };
+                    }
+                    return null;
+                }
+
+                function syncRelationsForSubject(cardsArr, subjectCard, oldRels) {
+                    const oldTargets = new Set((oldRels || []).map(r => r.targetId).filter(Boolean));
+                    const newTargets = new Set((subjectCard.relations || []).map(r => r.targetId).filter(Boolean));
+                    (subjectCard.relations || []).forEach(rel => {
+                        const target = cardsArr.find(c => c.id === rel.targetId);
+                        if (!target) return;
+                        const rec = computeReciprocalRelation(subjectCard, target, rel);
+                        if (!rec) return;
+                        const tr = Array.isArray(target.relations) ? [...target.relations] : [];
+                        const idx = tr.findIndex(r => r.targetId === subjectCard.id);
+                        const entry = { targetId: subjectCard.id, targetName: subjectCard.title || subjectCard.id, relation: rec.relation, familySub: rec.familySub || "" };
+                        if (idx >= 0) tr[idx] = entry; else tr.push(entry);
+                        const tIdx = cardsArr.findIndex(c => c.id === target.id);
+                        if (tIdx >= 0) cardsArr[tIdx] = { ...cardsArr[tIdx], relations: tr };
+                    });
+                    oldTargets.forEach(tid => {
+                        if (newTargets.has(tid)) return;
+                        const tIdx = cardsArr.findIndex(c => c.id === tid);
+                        if (tIdx < 0) return;
+                        const tr = Array.isArray(cardsArr[tIdx].relations) ? cardsArr[tIdx].relations.filter(r => r.targetId !== subjectCard.id) : [];
+                        cardsArr[tIdx] = { ...cardsArr[tIdx], relations: tr };
+                    });
+                }
+
                 if (editingId) {
                     const idx = cards.findIndex((c) => c.id === editingId);
                     if (idx !== -1) {
+                        const prev = { ...cards[idx] };
                         const baseUpdate = {
                             ...cards[idx],
                             title: name,
@@ -6879,6 +7042,9 @@
                             updatedAt: new Date().toISOString(),
                         };
                         cards[idx] = baseUpdate;
+                        if (baseUpdate.genre === "character") {
+                            syncRelationsForSubject(cards, baseUpdate, Array.isArray(prev.relations) ? prev.relations : []);
+                        }
                         saveCards(cards);
                         showToast("Entry updated!");
                     }
@@ -6928,6 +7094,9 @@
                         version: "1.0",
                     };
                     cards.push(baseNew);
+                    if (baseNew.genre === "character") {
+                        syncRelationsForSubject(cards, baseNew, []);
+                    }
                     saveCards(cards);
                     showToast("Entry created!");
                 }
@@ -6969,21 +7138,18 @@
                 if (id) openForm(id);
             }
 
-            function ctxPlay() {
+            function ctxDuplicate() {
                 const id = ctxTargetId;
                 closeContextMenu();
                 if (!id) return;
-                const card = getCards().find((c) => c.id === id);
-                if (card) {
-                    Storage.set(
-                        "storyki_current_story",
-                        JSON.stringify(card),
-                    );
-                    document.body.style.opacity = "0";
-                    setTimeout(() => {
-                        window.location.href = "Game.html";
-                    }, 400);
-                }
+                const cards = getCards();
+                const idx = cards.findIndex(c => c.id === id);
+                if (idx === -1) return;
+                const copy = { ...cards[idx], id: generateId() };
+                cards.push(copy);
+                saveCards(cards);
+                showToast("Entry duplicated.");
+                renderList();
             }
 
             function ctxDelete() {
