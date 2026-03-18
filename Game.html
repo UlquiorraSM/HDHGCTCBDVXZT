@@ -1526,11 +1526,13 @@
             ═══════════════════════════════════════ */
             function loadLatestCharacter() {
                 try {
-                    const chars = JSON.parse(
-                        Storage.get(CHARS_KEY) || "[]",
-                    );
-                    if (!chars.length) return null;
-                    return chars[chars.length - 1];
+                    const chars = JSON.parse(Storage.get(CHARS_KEY) || "[]");
+                    if (!Array.isArray(chars) || chars.length === 0) return null;
+                    // Prefer playable characters
+                    const playable = chars.filter(c => c && c.isPlayable === true);
+                    if (playable.length > 0) return playable[playable.length - 1];
+                    // Otherwise take the last character
+                    return chars[chars.length - 1] || null;
                 } catch {
                     return null;
                 }
@@ -1544,12 +1546,28 @@
                 if (!ch) return;
                 activeChar = ch;
 
-                const fullName =
-                    [ch.firstName, ch.lastName].filter(Boolean).join(" ") ||
-                    "Unknown";
+                // Derive missing fields from title if necessary
+                try {
+                    if ((!ch.firstName || !ch.lastName) && (ch.title || "").trim()) {
+                        const parts = (ch.title || "").trim().split(/\s+/);
+                        if (!ch.firstName) ch.firstName = parts[0] || "Unknown";
+                        if (!ch.lastName) ch.lastName = parts.slice(1).join(" ");
+                    }
+                    if (!ch.raceName) {
+                        if (ch.raceId) {
+                            const raceCard = getCards().find(c => c.genre === "race" && c.id === ch.raceId);
+                            if (raceCard) ch.raceName = raceCard.title || "Unknown Race";
+                        }
+                        if (!ch.raceName) ch.raceName = "Unknown Race";
+                    }
+                    if (ch.isPlayable !== true) ch.isPlayable = true;
+                } catch {}
+
+                const fullName = [ch.firstName, ch.lastName].filter(Boolean).join(" ") || (ch.title || "Unknown");
                 const isF = ch.gender === "female";
                 const icon = isF ? "♀" : "♂";
                 const avatarClass = isF ? "female" : "male";
+
 
                 // Header badge
                 const badge = document.getElementById("char-badge");

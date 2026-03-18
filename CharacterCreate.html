@@ -1774,6 +1774,8 @@
                 const chars = getCharacters();
                 const newChar = {
                     id: generateId(),
+                    genre: "character",
+                    title: [fn, ln].filter(Boolean).join(" "),
                     firstName: fn,
                     lastName: ln,
                     raceId,
@@ -1787,6 +1789,8 @@
                     skills: [...skillSelections],
                     startingDate: { day, month, year, time },
                     introduction: introduction,
+                    isPlayable: true,
+                    status: "Alive",
                     createdAt: new Date().toISOString(),
                 };
                 chars.push(newChar);
@@ -1980,6 +1984,8 @@
 
                 const newChar = {
                     id: generateId(),
+                    genre: "character",
+                    title: npc.title || `${firstName} ${lastName}`.trim(),
                     firstName,
                     lastName,
                     raceId: npc.raceId || null,
@@ -1993,6 +1999,8 @@
                     skills: [...(npc.skills || [])],
                     startingDate: { day, month, year, time },
                     introduction: intro,
+                    isPlayable: true,
+                    status: npc.status || "Alive",
                     createdAt: new Date().toISOString(),
                 };
                 chars.push(newChar);
