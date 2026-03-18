@@ -109,6 +109,26 @@
             #scenarios-list::-webkit-scrollbar-thumb:hover {
                 background: rgba(255, 255, 255, 0.3);
             }
+            /* Universe list horizontal scroll */
+            #universe-list {
+                scroll-snap-type: x mandatory;
+                scroll-padding-left: 16px;
+                scroll-padding-right: 16px;
+            }
+            #universe-list::-webkit-scrollbar {
+                height: 6px;
+            }
+            #universe-list::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+            }
+            #universe-list::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 10px;
+            }
+            #universe-list::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
 
             .world-card {
                 flex: 0 0 180px; /* narrower cards */
@@ -440,6 +460,9 @@
                 <button class="menu-button" onclick="openSettings()">
                     Settings
                 </button>
+                <button class="menu-button" onclick="openUniverse()">
+                    Search Worlds
+                </button>
             </div>
         </div>
 
@@ -505,6 +528,27 @@
                 <div class="conf-actions">
                     <button class="conf-btn conf-btn-cancel" onclick="closeWorldConf()">Cancel</button>
                     <button class="conf-btn conf-btn-save" onclick="saveWorldConf()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stories-container" id="universe-menu" style="display:none;">
+            <h1>Universe</h1>
+            <div id="universe-wrap" style="width:100%; display:flex; flex-direction:column; align-items:center; margin-bottom:20px;">
+                <div style="color:#fff; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; opacity:.85; text-align:center;">
+                    Browse Worlds
+                </div>
+                <div class="search-container">
+                    <input
+                        id="universe-search"
+                        class="search-input"
+                        placeholder="Search default worlds..."
+                        oninput="renderUniverse()"
+                    />
+                </div>
+                <div id="universe-list" style="width:100%; display:flex; gap:12px; overflow-x:auto; margin-top:14px; padding: 0 16px; max-width: 600px; margin-left:auto; margin-right:auto; justify-content:center;"></div>
+                <div class="menu-actions" style="margin-top:16px;">
+                    <button class="menu-button" onclick="closeUniverse()">Back</button>
                 </div>
             </div>
         </div>
@@ -690,6 +734,193 @@
                     setScenarios(scenarios);
                 } catch (e) {
                     console.warn("Default world load failed", e);
+                }
+            }
+            const BUILTIN_WORLD_FILES = ["worlds/DefaultWorld.json","worlds/Higurashi.json"];
+            const WORLD_COVER_FALLBACKS = {
+                "DefaultWorld": "https://i.pinimg.com/736x/b5/50/11/b55011336000f4b29fdd5703dc0506de.jpg",
+                "Higurashi": "https://i.pinimg.com/736x/67/c4/0e/67c40e8b2b1d55ddf7e4913bff34aee4.jpg",
+            };
+            async function listUniverseWorlds() {
+                const results = [];
+                for (const url of BUILTIN_WORLD_FILES) {
+                    try {
+                        const resp = await fetch(url);
+                        if (!resp.ok) {
+                            const base = url.split("/").pop().replace(/\.json$/i, "");
+                            results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                            continue;
+                        }
+                        const data = await resp.json();
+                        if (data?.world?.data?.cards) {
+                            results.push({
+                                url,
+                                id: data.world.id || "",
+                                name: data.world.name || "World",
+                                settings: data.world.data.settings || {},
+                                cardsCount: Array.isArray(data.world.data.cards) ? data.world.data.cards.length : 0,
+                            });
+                        } else if (data?.data?.cards && data?.name) {
+                            results.push({
+                                url,
+                                id: data.id || "",
+                                name: data.name || "World",
+                                settings: data.data.settings || {},
+                                cardsCount: Array.isArray(data.data.cards) ? data.data.cards.length : 0,
+                            });
+                        } else if (Array.isArray(data.cards) && data.name) {
+                            results.push({
+                                url,
+                                id: data.id || "",
+                                name: data.name || "World",
+                                settings: data.settings || {},
+                                cardsCount: data.cards.length,
+                            });
+                        } else {
+                            const base = url.split("/").pop().replace(/\.json$/i, "");
+                            results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                        }
+                    } catch {
+                        const base = url.split("/").pop().replace(/\.json$/i, "");
+                        results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                    }
+                }
+                return results;
+            }
+            function openUniverse() {
+                document.getElementById("main-menu").style.opacity = "0";
+                setTimeout(async () => {
+                    document.getElementById("main-menu").style.display = "none";
+                    document.getElementById("universe-menu").style.display = "flex";
+                    renderUniverse();
+                }, 200);
+            }
+            function closeUniverse() {
+                document.getElementById("universe-menu").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("universe-menu").style.display = "none";
+                    document.getElementById("main-menu").style.display = "flex";
+                    setTimeout(() => { document.getElementById("main-menu").style.opacity = "1"; }, 50);
+                }, 200);
+            }
+            async function renderUniverse() {
+                const listEl = document.getElementById("universe-list");
+                const q = (document.getElementById("universe-search")?.value || "").toLowerCase().trim();
+                listEl.innerHTML = "";
+                const worlds = await listUniverseWorlds();
+                worlds
+                    .filter(w => !q || (w.name || "").toLowerCase().includes(q))
+                    .sort((a,b) => (a.name || "").localeCompare(b.name || ""))
+                    .forEach(w => {
+                        const row = document.createElement("div");
+                        row.className = "world-card";
+                        const coverUrl = w.coverUrl || w.settings?.coverUrl || w.settings?.backgroundUrl || "";
+                        if (coverUrl) row.style.backgroundImage = `url('${coverUrl}')`;
+                        const info = document.createElement("div");
+                        info.style.cssText = "display:flex; flex-direction:column; gap:6px;";
+                        const nameEl = document.createElement("div");
+                        nameEl.textContent = w.name;
+                        nameEl.style.cssText = "color:#fff; font-weight:700; text-shadow: 0 1px 3px rgba(0,0,0,0.6);";
+                        const countEl = document.createElement("div");
+                        countEl.textContent = `${w.cardsCount} cards`;
+                        countEl.style.cssText = "color:rgba(255,255,255,0.8); font-size:12px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);";
+                        info.appendChild(nameEl);
+                        info.appendChild(countEl);
+                        const btns = document.createElement("div");
+                        const choose = document.createElement("button");
+                        choose.className = "menu-button";
+                        choose.textContent = "Choose";
+                        choose.style.cssText = "padding:8px 10px; font-size:12px; width:88px;";
+                        choose.onclick = async () => {
+                            await chooseUniverseWorld(w.url);
+                        };
+                        btns.appendChild(choose);
+                        row.appendChild(info);
+                        row.appendChild(btns);
+                        listEl.appendChild(row);
+                    });
+            }
+            async function chooseUniverseWorld(url) {
+                try {
+                    const resp = await fetch(url);
+                    let world = null;
+                    let stories = [];
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data?.world?.data?.cards) {
+                            world = data.world;
+                            stories = Array.isArray(data.stories) ? data.stories : [];
+                        } else if (data?.data?.cards && data?.name) {
+                            // Single world file without "world" wrapper
+                            world = { id: data.id || data.name, name: data.name, data: { cards: data.data.cards, settings: data.data.settings || {} } };
+                            stories = Array.isArray(data.stories) ? data.stories : [];
+                        } else if (Array.isArray(data.cards) && data.name) {
+                            // Very simple format: { name, cards, settings? }
+                            world = { id: data.id || data.name, name: data.name, data: { cards: data.cards, settings: data.settings || {} } };
+                        }
+                    }
+                    if (!world) {
+                        // Fallback: create a minimal world from filename and cover fallback
+                        const base = url.split("/").pop().replace(/\.json$/i, "");
+                        const cover = WORLD_COVER_FALLBACKS[base] || "";
+                        world = {
+                            id: base,
+                            name: base,
+                            data: { cards: [], settings: { coverUrl: cover } }
+                        };
+                    }
+                    const scenarios = getScenarios();
+                    const exists = scenarios.some(s => !s.worldId && (s.name === world.name || s.id === (world.id || world.name)));
+                    if (exists) { alert("World already added."); return; }
+                    const now = Date.now();
+                    const worldId = world.id || Math.random().toString(36).slice(2, 10);
+                    scenarios.push({
+                        id: world.id || Math.random().toString(36).slice(2, 10),
+                        name: world.name || "World",
+                        createdAt: now,
+                        updatedAt: now,
+                        data: {
+                            cards: Array.isArray(world.data.cards) ? world.data.cards : [],
+                            settings: world.data.settings || {}
+                        }
+                    });
+                    if (stories && stories.length) {
+                        stories.forEach(st => {
+                            scenarios.push({
+                                id: st.id || Math.random().toString(36).slice(2, 10),
+                                worldId,
+                                name: st.name || "Story",
+                                createdAt: now,
+                                updatedAt: now,
+                                signature: st.signature || "",
+                                data: {
+                                    cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
+                                    characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
+                                    log: Array.isArray(st.data?.log) ? st.data.log : [],
+                                    settings: st.data?.settings || {}
+                                }
+                            });
+                        });
+                    }
+                    setScenarios(scenarios);
+                    renderScenarios();
+                    alert("World added to your Worlds.");
+                } catch (e) {
+                    // As a last resort, add a stub with only name and cover
+                    const base = url.split("/").pop().replace(/\.json$/i, "");
+                    const scenarios = getScenarios();
+                    if (scenarios.some(s => !s.worldId && s.name === base)) { alert("World already added."); return; }
+                    const now = Date.now();
+                    scenarios.push({
+                        id: base,
+                        name: base,
+                        createdAt: now,
+                        updatedAt: now,
+                        data: { cards: [], settings: { coverUrl: WORLD_COVER_FALLBACKS[base] || "" } }
+                    });
+                    setScenarios(scenarios);
+                    renderScenarios();
+                    alert("World added to your Worlds.");
                 }
             }
             function preloadWorldBackgrounds() {

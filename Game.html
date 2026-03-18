@@ -2119,6 +2119,39 @@
                 }
             }
 
+            function buildLocationCurseContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    const cards = getCards();
+                    const ancestors = [];
+                    let current = cards.find(c => c.id === currentLocationId);
+                    if (!current) return "";
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const curseList = [];
+                    ancestors.forEach(loc => {
+                        const curses = Array.isArray(loc.curseTags) ? loc.curseTags : [];
+                        if (curses.length === 0) return;
+                        const formatted = curses.map(c => {
+                            if (typeof c === "string") return c;
+                            return `${c.name}${c.description ? ` (${c.description})` : ""}`;
+                        }).join(", ");
+                        curseList.push(`[${loc.title}: ${formatted}]`);
+                    });
+                    if (curseList.length === 0) return "";
+                    return `- ACTIVE CURSES: ${curseList.join(" ")}\n`;
+                } catch (e) {
+                    console.error("Curse context error", e);
+                    return "";
+                }
+            }
+
             function buildLocationDistanceContext() {
                 try {
                     if (!currentLocationId) return "";
@@ -2339,6 +2372,7 @@
                 const eventsContext = buildEventsContext();
                 const locationMemoryContext = buildLocationMemoryContext();
                 const locationStateContext = buildLocationStateContext();
+                const locationCurseContext = buildLocationCurseContext();
                 const locationDistanceContext = buildLocationDistanceContext();
                 const relationshipSummary = buildRelationshipSummary();
                 const scheduleInfo = computeSchoolPresenceNow();
@@ -2388,7 +2422,7 @@ You are the Narrator of an immersive, interactive story. Your goal is to describ
 - WEEKDAY: ${curWeekday}
 - CURRENT LOCATION: ${curLocName}
 - LOCATION PATH: ${curLocPath}
-- PRESENT NPCs: ${presentNPCs || "None"}
+${locationCurseContext}- PRESENT NPCs: ${presentNPCs || "None"}
 - PRESENT SPECIES: ${presentSpecies || "None"}
 
 # PLAYER CHARACTER

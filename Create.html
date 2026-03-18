@@ -828,6 +828,30 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            #curse-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #curse-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #curse-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
             #work-view {
                 position: fixed;
                 inset: 0;
@@ -2272,6 +2296,50 @@
             </div>
         </div>
 
+        <!-- ══════════════════════════════
+             CURSE SCENE (Zivil)
+        ══════════════════════════════ -->
+        <div id="curse-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">LOCATION CURSES</span>
+                <div class="nav-count" id="curse-count">0</div>
+            </nav>
+
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Manage Curses</h2>
+                    <span class="entry-badge badge-locations">ZIVIL</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">New Curse</label>
+                    <div class="form-group">
+                        <label class="form-label">Curse Name</label>
+                        <input type="text" class="form-input" id="curse-name-input" placeholder="e.g. Eternal Night" />
+                    </div>
+                    <div class="form-group" style="margin-top: 8px;">
+                        <label class="form-label">Detailed Description</label>
+                        <textarea class="form-textarea" id="curse-desc-input" placeholder="Describe the effects of the curse..."></textarea>
+                    </div>
+                    <div class="form-actions" style="margin-top: 8px;">
+                        <button class="btn-save" onclick="curseAdd()">+ Add Curse</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Current Curses</label>
+                    <div id="curse-rows"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-save" onclick="confirmCurses()">Done</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ════════════════════════════════════
              FORM VIEW (free scene, not a modal)
         ════════════════════════════════════ -->
@@ -2607,6 +2675,7 @@
                         <option value="village">Village</option>
                         <option value="city">City</option>
                         <option value="country">Country</option>
+                        <option value="county">County</option>
                         <option value="kingdom">Kingdom</option>
                     </select>
                 </div>
@@ -2675,6 +2744,14 @@
                                     <span class="subloc-icon">🐾</span>
                                     Species
                                 </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="addCursePrompt('village-city')"
+                                >
+                                    <span class="subloc-icon">💀</span>
+                                    Curse
+                                </button>
                             </div>
                             <!-- RacialCivilization for Village / City -->
                             <div
@@ -2709,15 +2786,6 @@
                                     class="subloc-tags"
                                     id="subloc-village-city-tags"
                                 ></div>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="openSublocPicker('village-city')"
-                                    style="display:none"
-                                >
-                                    <span class="subloc-icon">&#43;</span>
-                                    Sublocations
-                                </button>
                             </div>
 
                             <!-- Residents for Village / City -->
@@ -2825,6 +2893,14 @@
                                     <span class="subloc-icon">🐾</span>
                                     Species
                                 </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="addCursePrompt('country-kingdom')"
+                                >
+                                    <span class="subloc-icon">💀</span>
+                                    Curse
+                                </button>
                             </div>
                             <!-- RacialCivilization for Country / Kingdom -->
                             <div
@@ -2861,17 +2937,6 @@
                                     class="subloc-tags"
                                     id="subloc-country-kingdom-tags"
                                 ></div>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="
-                                        openSublocPicker('country-kingdom')
-                                    "
-                                    style="display:none"
-                                >
-                                    <span class="subloc-icon">&#43;</span>
-                                    Sublocations
-                                </button>
                             </div>
 
                             <!-- Residents for Country / Kingdom -->
@@ -3760,6 +3825,9 @@
             let itemTags = []; // for item tags
             let raceTags = []; // for race tags
             let loreTags = []; // for lore tags
+            let curseTags = []; // for curse tags
+            let curseTemp = [];
+            let curseCtx = null;
 
             /* ─────────────────────────────────────────
            BACKGROUND
@@ -4055,6 +4123,7 @@
                 const ev = document.getElementById("events-view");
                 const wrk = document.getElementById("work-view");
                 const map = document.getElementById("map-view");
+                const cur = document.getElementById("curse-view");
                 if (rel) rel.style.display = "none";
                 if (sec) sec.style.display = "none";
                 if (cls) cls.style.display = "none";
@@ -4062,6 +4131,7 @@
                 if (ev) ev.style.display = "none";
                 if (wrk) wrk.style.display = "none";
                 if (map) map.style.display = "none";
+                if (cur) cur.style.display = "none";
                 document.getElementById("form-view").style.display = "flex";
                 relationPickerTemp = [];
                 secretTemp = [];
@@ -5374,6 +5444,8 @@
                         renderRacialTags("village-city");
                         renderRacialTags("country-kingdom");
                     }
+                    // restore curse tags
+                    curseTags = card.curseTags || [];
                     // restore population
                     if (card.population) {
                         setPopulation(
@@ -5456,6 +5528,7 @@
                 document.getElementById("f-location-sub").value = "";
                 document.getElementById("f-zivil-sub").value = "";
                 document.getElementById("f-building-sub").value = "";
+                curseTags = [];
                 onBuildingSubChange();
                 resetSpawnCheck();
                 document.getElementById("location-sub-group").style.display =
@@ -6019,6 +6092,86 @@
             function renderItemTags() { renderGenericTags("item"); }
             function addLoreTag() { addGenericTag("lore"); }
 
+            function addCursePrompt(ctx) {
+                curseCtx = ctx;
+                curseTemp = (curseTags || []).map(c => typeof c === "string" ? { name: c, description: "" } : { ...c });
+                document.getElementById("curse-count").textContent = curseTemp.length;
+                document.getElementById("form-view").style.display = "none";
+                document.getElementById("curse-view").style.display = "flex";
+                renderCurseRows();
+            }
+
+            function curseAdd() {
+                const nameInput = document.getElementById("curse-name-input");
+                const descInput = document.getElementById("curse-desc-input");
+                const name = nameInput.value.trim();
+                const desc = descInput.value.trim();
+                
+                if (!name) return;
+                // prevent duplicate names (case-insensitive)
+                const exists = curseTemp.some(c => (c.name || "").toLowerCase() === name.toLowerCase());
+                if (exists) {
+                    showToast("Curse already exists.", "rgba(180, 60, 60, 0.9)");
+                    return;
+                }
+                if (curseTemp.length >= 10) {
+                    showToast("Maximum 10 curses allowed.", "rgba(180, 60, 60, 0.9)");
+                    return;
+                }
+                
+                curseTemp.push({ name, description: desc });
+                document.getElementById("curse-count").textContent = curseTemp.length;
+                nameInput.value = "";
+                descInput.value = "";
+                renderCurseRows();
+            }
+
+            function renderCurseRows() {
+                const wrap = document.getElementById("curse-rows");
+                if (!wrap) return;
+                wrap.innerHTML = "";
+                curseTemp.forEach((c, idx) => {
+                    const row = document.createElement("div");
+                    row.className = "relation-row";
+                    row.innerHTML = `
+                        <div class="relation-row-header" style="gap:8px;">
+                            <input class="form-input" value="${escHtml(c.name || "")}" placeholder="Curse name" oninput="curseUpdateName(${idx}, this.value)" style="flex:1;"/>
+                            <button class="relation-row-remove" onclick="curseRemove(${idx})">Remove</button>
+                        </div>
+                        <div class="relation-controls">
+                            <textarea class="form-textarea" onchange="curseUpdateDesc(${idx}, this.value)" placeholder="Curse details...">${c.description || ""}</textarea>
+                        </div>
+                    `;
+                    wrap.appendChild(row);
+                });
+            }
+
+            function curseUpdateName(idx, val) {
+                const name = (val || "").trim();
+                if (!name) return;
+                const dup = curseTemp.some((c, i) => i !== idx && (c.name || "").toLowerCase() === name.toLowerCase());
+                if (dup) {
+                    showToast("Duplicate curse name.", "rgba(180, 60, 60, 0.9)");
+                    return;
+                }
+                curseTemp[idx].name = name;
+            }
+
+            function curseUpdateDesc(idx, val) {
+                curseTemp[idx].description = val || "";
+            }
+
+            function curseRemove(idx) {
+                curseTemp.splice(idx, 1);
+                document.getElementById("curse-count").textContent = curseTemp.length;
+                renderCurseRows();
+            }
+
+            function confirmCurses() {
+                curseTags = curseTemp.map(c => ({ ...c }));
+                showFormView();
+            }
+
             function loreInsert(before, after, mode) {
                 const ta = document.getElementById("lore-textarea");
                 const start = ta.selectionStart;
@@ -6069,12 +6222,12 @@
                 vcBlock.style.display =
                     val === "village" || val === "city" ? "block" : "none";
                 ckBlock.style.display =
-                    val === "country" || val === "kingdom" ? "block" : "none";
+                    val === "country" || val === "county" || val === "kingdom" ? "block" : "none";
 
                 vcGroup.style.display =
                     val === "village" || val === "city" ? "block" : "none";
                 ckGroup.style.display =
-                    val === "country" || val === "kingdom" ? "block" : "none";
+                    val === "country" || val === "county" || val === "kingdom" ? "block" : "none";
 
                 // Resident blocks
                 const resVcGroup = document.getElementById(
@@ -6087,7 +6240,7 @@
                     resVcGroup.style.display =
                         val === "village" || val === "city" ? "block" : "none";
                 if (resCkGroup)
-                    resCkGroup.style.display = val === "kingdom" ? "block" : "none";
+                    resCkGroup.style.display = val === "kingdom" || val === "country" || val === "county" ? "block" : "none";
 
                 // Tools sections and Resident tool buttons
                 const toolsVc = document.getElementById("tools-section-vc");
@@ -6097,7 +6250,7 @@
                         val === "village" || val === "city" ? "flex" : "none";
                 if (toolsCk)
                     toolsCk.style.display =
-                        val === "country" || val === "kingdom" ? "flex" : "none";
+                        val === "country" || val === "county" || val === "kingdom" ? "flex" : "none";
                 const toolsResVc = document.getElementById("tools-resident-vc");
                 const toolsResCk = document.getElementById("tools-resident-ck");
                 if (toolsResVc)
@@ -6105,7 +6258,7 @@
                         val === "village" || val === "city" ? "inline-flex" : "none";
                 if (toolsResCk)
                     toolsResCk.style.display =
-                        val === "kingdom" ? "inline-flex" : "none";
+                        val === "kingdom" || val === "country" || val === "county" ? "inline-flex" : "none";
 
                 // clear tags & population when hidden
                 if (val !== "village" && val !== "city") {
@@ -6120,7 +6273,7 @@
                     const hasResidents =
                         (sub === "building" && buildDetail === "house") ||
                         (sub === "zivil" &&
-                            ["village", "city", "kingdom"].includes(
+                            ["village", "city", "kingdom", "country", "county"].includes(
                                 zivilDetail,
                             ));
                     if (!hasResidents) {
@@ -6134,7 +6287,7 @@
                         "pop-village-city-fmt",
                     ).textContent = "";
                 }
-                if (val !== "country" && val !== "kingdom") {
+                if (val !== "country" && val !== "county" && val !== "kingdom") {
                     sublocSelections["country-kingdom"] = [];
                     racialSelections["country-kingdom"] = [];
                     document.getElementById("pop-country-kingdom").value = "";
@@ -6728,6 +6881,8 @@
                 racialSelections["country-kingdom"] = [];
                 renderRacialTags("village-city");
                 renderRacialTags("country-kingdom");
+                // reset curses
+                curseTags = [];
                 // reset population
                 document.getElementById("pop-village-city").value = "";
                 document.getElementById("pop-village-city-fmt").textContent =
@@ -6968,6 +7123,7 @@
                         : (type === "race"
                             ? [...raceTags]
                             : (type === "lore" ? [...loreTags] : []));
+                const currentCurseTags = type === "location" ? [...curseTags] : [];
 
                 let cards = getCards();
 
@@ -7121,6 +7277,7 @@
                             isPlayable,
                             birthdate,
                             tags,
+                            curseTags: currentCurseTags,
                             description: desc,
                             updatedAt: new Date().toISOString(),
                         };
@@ -7172,6 +7329,7 @@
                         isPlayable,
                         birthdate,
                         tags,
+                        curseTags: currentCurseTags,
                         description: desc,
                         createdAt: new Date().toISOString(),
                         version: "1.0",
