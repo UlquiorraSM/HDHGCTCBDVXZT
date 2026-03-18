@@ -1562,14 +1562,67 @@
                 document.getElementById("header-char-race").textContent =
                     ch.raceName || "Unknown Race";
 
+                // Ensure starting date/time defaults if missing (derive from earliest event if available)
+                try {
+                    if (!activeChar.startingDate || typeof activeChar.startingDate !== "object") {
+                        activeChar.startingDate = {};
+                    }
+                    const d = activeChar.startingDate;
+                    if (!d.day || !d.month || !d.year || !d.time) {
+                        const cards = getCards();
+                        // Find earliest public event date in world
+                        let earliest = null;
+                        cards.filter(c => c.genre === "location").forEach(loc => {
+                            const ev = loc.events || {};
+                            ["village-city","country-kingdom"].forEach(k => {
+                                (Array.isArray(ev[k]) ? ev[k] : []).forEach(e => {
+                                    if (!e || e.type === "secret") return;
+                                    const key = `${String(e.year||0).padStart(4,"0")}-${String(e.month||0).padStart(2,"0")}-${String(e.day||0).padStart(2,"0")} ${e.time||"00:00"}`;
+                                    if (!earliest || key < earliest.key) earliest = { key, day: e.day||1, month: e.month||1, year: e.year||1983, time: e.time||"00:00" };
+                                });
+                            });
+                        });
+                        if (earliest) {
+                            d.day = earliest.day;
+                            d.month = earliest.month;
+                            d.year = earliest.year;
+                            d.time = earliest.time;
+                        } else {
+                            d.day = d.day || 1;
+                            d.month = d.month || 1;
+                            d.year = d.year || 1983;
+                            d.time = d.time || "00:00";
+                        }
+                    }
+                } catch {}
+
                 // Time & Location
                 updateHeaderTime();
 
-                if (ch.currentLocationId) {
-                    updateLocation(ch.currentLocationId);
-                } else if (ch.spawnId) {
-                    updateLocation(ch.spawnId);
-                } else {
+                // Ensure a valid location (currentLocationId or spawnId or resident-derived)
+                try {
+                    if (activeChar.currentLocationId) {
+                        updateLocation(activeChar.currentLocationId);
+                    } else if (activeChar.spawnId) {
+                        updateLocation(activeChar.spawnId);
+                        activeChar.currentLocationId = activeChar.spawnId;
+                    } else {
+                        const cards = getCards();
+                        // Find location where this character is a resident
+                        let loc = cards.find(c => c.genre === "location" && Array.isArray(c.residents) && c.residents.includes(activeChar.id));
+                        // Else: choose any spawnable location
+                        if (!loc) loc = cards.find(c => c.genre === "location" && c.canBeSpawn);
+                        // Else: choose the first location
+                        if (!loc) loc = cards.find(c => c.genre === "location");
+                        if (loc) {
+                            updateLocation(loc.id);
+                            activeChar.currentLocationId = loc.id;
+                        } else {
+                            document.getElementById("header-location").textContent = "UNKNOWN LOCATION";
+                            updatePresentNPCs();
+                        }
+                    }
+                } catch {
                     document.getElementById("header-location").textContent = "UNKNOWN LOCATION";
                     updatePresentNPCs();
                 }
@@ -1605,6 +1658,7 @@
                 ]
                     .filter(Boolean)
                     .join("  ·  ");
+                try { saveActiveCharacter(); } catch {}
             }
 
             /* ═══════════════════════════════════════
