@@ -3557,6 +3557,63 @@ Example:
                         const ov = document.getElementById("welcome-overlay");
                         ov.style.display = "none";
                     }
+                } else {
+                    // Fallback: create a default playable character from world cards
+                    try {
+                        const cards = getCards();
+                        const playable = cards.find(c => c.genre === "character" && c.isPlayable === true) || cards.find(c => c.genre === "character");
+                        if (playable) {
+                            const title = (playable.title || "Unknown").trim();
+                            const parts = title.split(/\s+/);
+                            const firstName = parts[0] || "Unknown";
+                            const lastName = parts.slice(1).join(" ");
+                            // Determine initial location
+                            let spawnLoc = cards.find(c => c.genre === "location" && Array.isArray(c.residents) && c.residents.includes(playable.id) && c.canBeSpawn);
+                            if (!spawnLoc) spawnLoc = cards.find(c => c.genre === "location" && Array.isArray(c.residents) && c.residents.includes(playable.id));
+                            if (!spawnLoc) spawnLoc = cards.find(c => c.genre === "location" && c.canBeSpawn);
+                            if (!spawnLoc) spawnLoc = cards.find(c => c.genre === "location");
+                            const earliest = (() => {
+                                let e = null;
+                                cards.filter(c => c.genre === "location").forEach(loc => {
+                                    const ev = loc.events || {};
+                                    ["village-city","country-kingdom"].forEach(k => {
+                                        (Array.isArray(ev[k]) ? ev[k] : []).forEach(v => {
+                                            if (!v || v.type === "secret") return;
+                                            const key = `${String(v.year||0).padStart(4,"0")}-${String(v.month||0).padStart(2,"0")}-${String(v.day||0).padStart(2,"0")} ${v.time||"00:00"}`;
+                                            if (!e || key < e.key) e = { key, day: v.day||1, month: v.month||1, year: v.year||1983, time: v.time||"00:00" };
+                                        });
+                                    });
+                                });
+                                return e;
+                            })();
+                            const d = earliest ? { day: earliest.day, month: earliest.month, year: earliest.year, time: earliest.time } : { day: 1, month: 1, year: 1983, time: "00:00" };
+                            const chObj = {
+                                id: playable.id,
+                                genre: "character",
+                                firstName,
+                                lastName,
+                                title,
+                                raceName: playable.raceName || "Unknown Race",
+                                gender: playable.gender || "",
+                                age: playable.age || 0,
+                                birthdate: playable.birthdate || null,
+                                status: playable.status || "Alive",
+                                isPlayable: true,
+                                spawnId: spawnLoc ? spawnLoc.id : "",
+                                currentLocationId: spawnLoc ? spawnLoc.id : "",
+                                startingDate: d,
+                                createdAt: Date.now(),
+                                updatedAt: Date.now()
+                            };
+                            const arr = JSON.parse(Storage.get(CHARS_KEY) || "[]");
+                            arr.push(chObj);
+                            Storage.set(CHARS_KEY, JSON.stringify(arr));
+                            applyCharacter(chObj);
+                            loadStoryLog();
+                        }
+                    } catch (e) {
+                        console.error("Failed to create default character from world", e);
+                    }
                 }
 
                 ensureStoryRecord();
