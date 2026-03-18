@@ -4849,8 +4849,17 @@
                     if (!current || current.genre !== "location") return;
                     const parent = cards.find(c => c.genre === "location" && c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(editingId)));
                     if (!parent) { showToast("No parent found for this sublocation.", "#c04040"); return; }
-                    const sibIds = Object.values(parent.sublocations || {}).flat().filter(id => id !== editingId);
+                    // Build sibling list and keep only existing locations
+                    const sibIdsRaw = Object.values(parent.sublocations || {}).flat().filter(id => id !== editingId);
+                    const existingLocIds = new Set(cards.filter(c => c.genre === "location").map(c => c.id));
+                    const sibIds = sibIdsRaw.filter(id => existingLocIds.has(id));
                     if (sibIds.length === 0) { showToast("No sibling sublocations to map.", "#c04040"); return; }
+                    // Prune stale distance entries that reference deleted locations
+                    if (current.distances) {
+                        Object.keys(current.distances).forEach(k => {
+                            if (!existingLocIds.has(k)) delete current.distances[k];
+                        });
+                    }
                     // Build overlay lazily
                     let ov = document.getElementById("map-overlay");
                     if (!ov) {
@@ -4873,7 +4882,8 @@
                     const dist = current.distances || {};
                     sibIds.forEach(id => {
                         const sib = cards.find(c => c.id === id);
-                        const title = sib ? (sib.title || id) : id;
+                        if (!sib) return; // skip deleted
+                        const title = sib.title || id;
                         const row = document.createElement("div");
                         row.style.cssText = "display:flex; align-items:center; gap:10px;";
                         const label = document.createElement("div");
@@ -6981,7 +6991,31 @@
                 closeContextMenu();
                 if (!id) return;
                 if (!confirm("Delete this entry?")) return;
-                const cards = getCards().filter((c) => c.id !== id);
+                // Remove the card
+                let cards = getCards().filter((c) => c.id !== id);
+                // Cleanup: remove references to this location from sublocations and distances
+                const isLocRemoved = true; // we don't have the removed card anymore; clean regardless
+                if (isLocRemoved) {
+                    cards = cards.map(c => {
+                        if (c.genre !== "location") return c;
+                        const copy = { ...c };
+                        // scrub from sublocations
+                        if (copy.sublocations) {
+                            Object.keys(copy.sublocations).forEach(k => {
+                                copy.sublocations[k] = (copy.sublocations[k] || []).filter(x => x !== id);
+                                if (copy.sublocations[k].length === 0) delete copy.sublocations[k];
+                            });
+                        }
+                        // scrub from distances
+                        if (copy.distances && Object.prototype.hasOwnProperty.call(copy.distances, id)) {
+                            const distCopy = { ...copy.distances };
+                            delete distCopy[id];
+                            // remove empty object
+                            copy.distances = Object.keys(distCopy).length ? distCopy : undefined;
+                        }
+                        return copy;
+                    });
+                }
                 saveCards(cards);
                 showToast("Entry deleted.", "#c04040");
                 renderList();
