@@ -646,6 +646,52 @@
             }
             
             let _preloadedBg = new Map();
+            async function ensureDefaultWorlds() {
+                try {
+                    const scenarios = getScenarios();
+                    const hasWorld = scenarios.some(x => !x.worldId);
+                    if (hasWorld) return;
+                    const resp = await fetch("worlds/DefaultWorld.json");
+                    if (!resp.ok) return;
+                    const data = await resp.json();
+                    if (!data || !data.world || !data.world.data) return;
+                    const now = Date.now();
+                    const world = data.world;
+                    const worldId = world.id || Math.random().toString(36).slice(2, 10);
+                    scenarios.push({
+                        id: worldId,
+                        name: world.name || "Default World",
+                        createdAt: now,
+                        updatedAt: now,
+                        data: {
+                            cards: Array.isArray(world.data.cards) ? world.data.cards : [],
+                            settings: world.data.settings || {}
+                        }
+                    });
+                    // Optional stories array support
+                    if (Array.isArray(data.stories)) {
+                        data.stories.forEach(st => {
+                            scenarios.push({
+                                id: st.id || Math.random().toString(36).slice(2, 10),
+                                worldId,
+                                name: st.name || "Story",
+                                createdAt: now,
+                                updatedAt: now,
+                                signature: st.signature || "",
+                                data: {
+                                    cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
+                                    characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
+                                    log: Array.isArray(st.data?.log) ? st.data.log : [],
+                                    settings: st.data?.settings || {}
+                                }
+                            });
+                        });
+                    }
+                    setScenarios(scenarios);
+                } catch (e) {
+                    console.warn("Default world load failed", e);
+                }
+            }
             function preloadWorldBackgrounds() {
                 try {
                     const scenarios = getScenarios();
@@ -1545,7 +1591,8 @@
             // Hintergrund beim Laden
             window.addEventListener("load", loadBackground);
             // Render scenarios and capture drafts if returned from Create.html
-            window.addEventListener("load", () => {
+            window.addEventListener("load", async () => {
+                await ensureDefaultWorlds();
                 captureDraftFromSessionIfAny();
                 renderScenarios();
                 const listEl = document.getElementById("scenarios-list");

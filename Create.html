@@ -778,6 +778,31 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            /* ─── Map Scene (same layout) ─── */
+            #map-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #map-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #map-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
             /* ─── Events Scene (same layout) ─── */
             #events-view {
                 position: fixed;
@@ -2556,7 +2581,7 @@
                             type="button"
                             class="subloc-btn"
                             id="location-map-btn"
-                            onclick="openMapDialog()"
+                            onclick="showMapScene()"
                         >
                             <span class="subloc-icon">🗺️</span>
                             Map
@@ -3542,6 +3567,34 @@
             </div>
         </div>
 
+        <!-- ══════════════════════════════
+             MAP DISTANCES SCENE (Location)
+        ══════════════════════════════ -->
+        <div id="map-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">MAP DISTANCES</span>
+                <div class="nav-count" id="map-count">0</div>
+            </nav>
+
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Map Distances</h2>
+                    <span class="entry-badge badge-location">LOCATION</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Siblings</label>
+                    <div id="map-rows" class="relation-rows"></div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-save" onclick="confirmMapScene()">Done</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ── SUBLOCATION PICKER ── -->
         <div id="subloc-picker">
             <div class="subloc-picker-panel">
@@ -3983,15 +4036,18 @@
                 const skl = document.getElementById("skills-view");
                 const ev = document.getElementById("events-view");
                 const wrk = document.getElementById("work-view");
+                const map = document.getElementById("map-view");
                 if (rel) rel.style.display = "none";
                 if (sec) sec.style.display = "none";
                 if (cls) cls.style.display = "none";
                 if (skl) skl.style.display = "none";
                 if (ev) ev.style.display = "none";
                 if (wrk) wrk.style.display = "none";
+                if (map) map.style.display = "none";
                 document.getElementById("form-view").style.display = "flex";
                 relationPickerTemp = [];
                 secretTemp = [];
+                mapTemp = [];
             }
 
             function confirmRelations() {
@@ -4896,8 +4952,9 @@
                 setTimeout(() => document.getElementById("f-name").focus(), 80);
             }
 
-            // Map distances editor
-            function openMapDialog() {
+            // Map distances scene
+            let mapTemp = []; // [{ id, name, value, unit }]
+            function showMapScene() {
                 try {
                     if (!editingId) return;
                     const cards = getCards();
@@ -4905,97 +4962,82 @@
                     if (!current || current.genre !== "location") return;
                     const parent = cards.find(c => c.genre === "location" && c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(editingId)));
                     if (!parent) { showToast("No parent found for this sublocation.", "#c04040"); return; }
-                    // Build sibling list and keep only existing locations
                     const sibIdsRaw = Object.values(parent.sublocations || {}).flat().filter(id => id !== editingId);
                     const existingLocIds = new Set(cards.filter(c => c.genre === "location").map(c => c.id));
                     const sibIds = sibIdsRaw.filter(id => existingLocIds.has(id));
                     if (sibIds.length === 0) { showToast("No sibling sublocations to map.", "#c04040"); return; }
-                    // Prune stale distance entries that reference deleted locations
-                    if (current.distances) {
-                        Object.keys(current.distances).forEach(k => {
-                            if (!existingLocIds.has(k)) delete current.distances[k];
-                        });
-                    }
-                    // Build overlay lazily
-                    let ov = document.getElementById("map-overlay");
-                    if (!ov) {
-                        ov = document.createElement("div");
-                        ov.id = "map-overlay";
-                        ov.style.cssText = "position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.7); z-index:5000;";
-                        ov.innerHTML = `
-                          <div id="map-panel" style="background:rgba(30,30,35,.96); border:1px solid rgba(255,255,255,.12); border-radius:14px; width:420px; max-width:92vw; padding:18px; display:flex; flex-direction:column; gap:12px;">
-                            <div style="color:#fff; font-weight:700; font-size:16px;">Map distances</div>
-                            <div id="map-overlay-list" style="display:flex; flex-direction:column; gap:10px; max-height:52vh; overflow:auto;"></div>
-                            <div style="display:flex; gap:10px; margin-top:8px;">
-                              <button id="map-cancel" class="btn-secondary" style="flex:1;">Cancel</button>
-                              <button id="map-save" class="btn" style="flex:1;">Save</button>
-                            </div>
-                          </div>`;
-                        document.body.appendChild(ov);
-                    }
-                    const list = ov.querySelector("#map-overlay-list");
-                    list.innerHTML = "";
                     const dist = current.distances || {};
-                    sibIds.forEach(id => {
+                    mapTemp = sibIds.map(id => {
                         const sib = cards.find(c => c.id === id);
-                        if (!sib) return; // skip deleted
-                        const title = sib.title || id;
-                        const row = document.createElement("div");
-                        row.style.cssText = "display:flex; align-items:center; gap:10px;";
-                        const label = document.createElement("div");
-                        label.style.cssText = "flex:1; color:#fff;";
-                        label.textContent = title;
-                        const input = document.createElement("input");
-                        input.type = "number";
-                        input.min = "0";
-                        input.step = "0.1";
-                        input.value = typeof dist[id] === "number" ? String(dist[id]) : "";
-                        input.style.cssText = "width:100px; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.4); color:#fff;";
-                        input.dataset.id = id;
-                        const unit = document.createElement("div");
-                        unit.textContent = "km";
-                        unit.style.cssText = "color:rgba(255,255,255,.7)";
-                        row.appendChild(label);
-                        row.appendChild(input);
-                        row.appendChild(unit);
-                        list.appendChild(row);
+                        const entry = dist[id];
+                        let value = "";
+                        let unit = "km";
+                        if (typeof entry === "number") { value = String(entry); unit = "km"; }
+                        else if (entry && typeof entry === "object") {
+                            value = String(entry.value ?? "");
+                            unit = entry.unit === "m" ? "m" : "km";
+                        }
+                        return { id, name: (sib?.title || id), value, unit };
                     });
-                    ov.querySelector("#map-cancel").onclick = () => { ov.style.display = "none"; };
-                    ov.querySelector("#map-save").onclick = () => {
-                        const inputs = Array.from(list.querySelectorAll("input[type='number']"));
-                        const out = {};
-                        inputs.forEach(inp => {
-                            const v = parseFloat(inp.value);
-                            if (!isNaN(v) && v >= 0) out[inp.dataset.id] = v;
-                        });
-                        current.distances = out;
-                        // write back current
-                        const idx = cards.findIndex(c => c.id === current.id);
-                        if (idx >= 0) cards[idx] = current;
-                        // synchronize symmetric distances for siblings
-                        sibIds.forEach(sid => {
-                            const sibIdx = cards.findIndex(c => c.id === sid);
-                            if (sibIdx === -1) return;
-                            const sib = { ...cards[sibIdx] };
-                            if (sib.genre !== "location") return;
-                            sib.distances = sib.distances || {};
-                            if (Object.prototype.hasOwnProperty.call(out, sid)) {
-                                sib.distances[current.id] = out[sid];
-                            } else {
-                                // if current -> sid deleted, remove reverse if exists
-                                if (sib.distances[current.id] != null) {
-                                    delete sib.distances[current.id];
-                                }
-                            }
-                            cards[sibIdx] = sib;
-                        });
-                        saveCards(cards);
-                        showToast("Distances saved.");
-                        ov.style.display = "none";
-                    };
-                    ov.style.display = "flex";
+                    document.getElementById("map-count").textContent = mapTemp.length;
+                    document.getElementById("form-view").style.display = "none";
+                    document.getElementById("map-view").style.display = "flex";
+                    renderMapRows();
                 } catch (e) {
-                    console.error("Map dialog error", e);
+                    console.error("Map scene error", e);
+                }
+            }
+            function renderMapRows() {
+                const rows = document.getElementById("map-rows");
+                rows.innerHTML = "";
+                mapTemp.forEach((r, idx) => {
+                    const div = document.createElement("div");
+                    div.className = "relation-row";
+                    div.innerHTML = `
+                        <div class="relation-row-header">
+                            <span class="relation-target-name">${escHtml(r.name)}</span>
+                        </div>
+                        <div class="relation-controls">
+                            <input type="number" min="0" step="0.1" class="form-input" style="max-width:140px;" value="${escHtml(r.value)}" onchange="mapUpdateValue(${idx}, this.value)" />
+                            <select class="relation-select" style="max-width:120px;" onchange="mapUpdateUnit(${idx}, this.value)">
+                                <option value="km" ${r.unit === "km" ? "selected" : ""}>km</option>
+                                <option value="m" ${r.unit === "m" ? "selected" : ""}>m</option>
+                            </select>
+                        </div>
+                    `;
+                    rows.appendChild(div);
+                });
+            }
+            function mapUpdateValue(idx, val) { mapTemp[idx].value = val; }
+            function mapUpdateUnit(idx, val) { mapTemp[idx].unit = (val === "m" ? "m" : "km"); }
+            function confirmMapScene() {
+                try {
+                    const cards = getCards();
+                    const curIdx = cards.findIndex(c => c.id === editingId);
+                    if (curIdx === -1) { showFormView(); return; }
+                    const current = { ...cards[curIdx] };
+                    const out = {};
+                    mapTemp.forEach(r => {
+                        const v = parseFloat(r.value);
+                        if (!isNaN(v) && v >= 0) out[r.id] = { value: v, unit: r.unit };
+                    });
+                    current.distances = out;
+                    cards[curIdx] = current;
+                    // synchronize symmetric distances
+                    Object.keys(out).forEach(sid => {
+                        const sibIdx = cards.findIndex(c => c.id === sid);
+                        if (sibIdx === -1) return;
+                        const sib = { ...cards[sibIdx] };
+                        if (sib.genre !== "location") return;
+                        sib.distances = sib.distances || {};
+                        sib.distances[current.id] = { value: out[sid].value, unit: out[sid].unit };
+                        cards[sibIdx] = sib;
+                    });
+                    saveCards(cards);
+                    showToast("Distances saved.");
+                    showFormView();
+                } catch (e) {
+                    console.error("Map confirm error", e);
                 }
             }
 
