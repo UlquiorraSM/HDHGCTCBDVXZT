@@ -3012,6 +3012,7 @@ Example:
             async function sendMessage() {
                 const inputEl = document.getElementById("user-input");
                 const text = inputEl.value.trim();
+                if (isEditing) { showToast("Finish editing with Save or Cancel.", "rgba(180,60,60,0.85)"); return; }
                 if (!text || isBusy) return;
 
                 // Time set command: standalone H:MM or HH:MM without quotes triggers time change
@@ -3113,6 +3114,14 @@ Example:
             document
                 .getElementById("user-input")
                 .addEventListener("keydown", (e) => {
+                    if (isEditing) {
+                        // Block Enter send while editing; require Save or Cancel
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            showToast("Use Save or Cancel while editing.", "rgba(180,60,60,0.85)");
+                        }
+                        return;
+                    }
                     if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         sendMessage();
@@ -3275,7 +3284,7 @@ Example:
                 if (saveBtn) saveBtn.style.display = "inline-flex";
                 if (cancelBtn) cancelBtn.style.display = "inline-flex";
                 // Lock other action buttons
-                ['retry-btn','continue-btn','erase-btn'].forEach(id => {
+                ['retry-btn','continue-btn','erase-btn','edit-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = true; b.classList.add('locked'); }
                 });
@@ -3303,7 +3312,7 @@ Example:
                 const cancelBtn = document.getElementById("edit-cancel-btn");
                 if (saveBtn) saveBtn.style.display = "none";
                 if (cancelBtn) cancelBtn.style.display = "none";
-                ['retry-btn','continue-btn','erase-btn'].forEach(id => {
+                ['retry-btn','continue-btn','erase-btn','edit-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = false; b.classList.remove('locked'); }
                 });
@@ -3321,7 +3330,7 @@ Example:
                 const cancelBtn = document.getElementById("edit-cancel-btn");
                 if (saveBtn) saveBtn.style.display = "none";
                 if (cancelBtn) cancelBtn.style.display = "none";
-                ['retry-btn','continue-btn','erase-btn'].forEach(id => {
+                ['retry-btn','continue-btn','erase-btn','edit-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = false; b.classList.remove('locked'); }
                 });
