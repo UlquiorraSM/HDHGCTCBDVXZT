@@ -635,7 +635,7 @@
                 }
                 
                 // Default-Fallback
-                applyBg("https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg");
+                applyBg("https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp");
             }
 
             // Hintergrund beim Laden anwenden
@@ -741,17 +741,54 @@
                 "DefaultWorld": "https://i.pinimg.com/736x/b5/50/11/b55011336000f4b29fdd5703dc0506de.jpg",
                 "Higurashi": "https://i.pinimg.com/736x/67/c4/0e/67c40e8b2b1d55ddf7e4913bff34aee4.jpg",
             };
+            async function _loadJsonLocal(url) {
+                // Try fetch JSON
+                try {
+                    const resp = await fetch(url, { cache: "no-cache" });
+                    if (resp && typeof resp.json === "function") {
+                        try { return await resp.json(); } catch {}
+                    }
+                    if (resp && typeof resp.text === "function") {
+                        try {
+                            const txt = await resp.text();
+                            return JSON.parse(txt);
+                        } catch {}
+                    }
+                } catch {}
+                // Fallback: XHR (works better with file:// in some browsers)
+                try {
+                    return await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open("GET", url, true);
+                        xhr.overrideMimeType("application/json");
+                        xhr.onreadystatechange = () => {
+                            if (xhr.readyState === 4) {
+                                if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 0) {
+                                    try {
+                                        const data = JSON.parse(xhr.responseText);
+                                        resolve(data);
+                                    } catch (e) { resolve(null); }
+                                } else {
+                                    resolve(null);
+                                }
+                            }
+                        };
+                        xhr.onerror = () => resolve(null);
+                        try { xhr.send(); } catch { resolve(null); }
+                    });
+                } catch {}
+                return null;
+            }
             async function listUniverseWorlds() {
                 const results = [];
                 for (const url of BUILTIN_WORLD_FILES) {
                     try {
-                        const resp = await fetch(url);
-                        if (!resp.ok) {
+                        const data = await _loadJsonLocal(url);
+                        if (!data) {
                             const base = url.split("/").pop().replace(/\.json$/i, "");
                             results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
                             continue;
                         }
-                        const data = await resp.json();
                         if (data?.world?.data?.cards) {
                             results.push({
                                 url,
@@ -842,20 +879,17 @@
             }
             async function chooseUniverseWorld(url) {
                 try {
-                    const resp = await fetch(url);
                     let world = null;
                     let stories = [];
-                    if (resp.ok) {
-                        const data = await resp.json();
+                    const data = await _loadJsonLocal(url);
+                    if (data) {
                         if (data?.world?.data?.cards) {
                             world = data.world;
                             stories = Array.isArray(data.stories) ? data.stories : [];
                         } else if (data?.data?.cards && data?.name) {
-                            // Single world file without "world" wrapper
                             world = { id: data.id || data.name, name: data.name, data: { cards: data.data.cards, settings: data.data.settings || {} } };
                             stories = Array.isArray(data.stories) ? data.stories : [];
                         } else if (Array.isArray(data.cards) && data.name) {
-                            // Very simple format: { name, cards, settings? }
                             world = { id: data.id || data.name, name: data.name, data: { cards: data.cards, settings: data.settings || {} } };
                         }
                     }
@@ -875,7 +909,7 @@
                     const now = Date.now();
                     const worldId = world.id || Math.random().toString(36).slice(2, 10);
                     scenarios.push({
-                        id: world.id || Math.random().toString(36).slice(2, 10),
+                        id: worldId,
                         name: world.name || "World",
                         createdAt: now,
                         updatedAt: now,

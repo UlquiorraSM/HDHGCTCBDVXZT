@@ -476,7 +476,7 @@
             if (settings) {
                 const data = JSON.parse(settings);
                 // Allgemein
-                document.getElementById('background-url').value = data.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
+                document.getElementById('background-url').value = data.backgroundUrl || 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp';
                 
                 // KI-Einstellungen
                 document.getElementById('text-size').value = data.textSize || 'normal';
@@ -485,7 +485,7 @@
                 applyBackground(true);
             } else {
                 // Standard-Hintergrund anwenden
-                document.getElementById('background-url').value = 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg';
+                document.getElementById('background-url').value = 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp';
                 applyBackground(true);
             }
             
@@ -620,7 +620,7 @@
             
             // Vergleiche alle Felder
             return (
-                currentSettings.backgroundUrl !== (savedSettings.backgroundUrl || 'https://4kwallpapers.com/images/walls/thumbs_3t/25523.jpg') ||
+                currentSettings.backgroundUrl !== (savedSettings.backgroundUrl || 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp') ||
                 currentSettings.textSize !== (savedSettings.textSize || 'normal') ||
                 currentSettings.aiLanguage !== (savedSettings.aiLanguage || 'en')
             );
