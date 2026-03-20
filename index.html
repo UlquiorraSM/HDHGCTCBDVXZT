@@ -782,6 +782,19 @@
                 } catch {}
                 return null;
             }
+            function _safeParseJson(text) {
+                if (typeof text !== "string") return null;
+                try { return JSON.parse(text); } catch {}
+                try {
+                    const start = text.indexOf("{");
+                    const end = text.lastIndexOf("}");
+                    if (start >= 0 && end > start) {
+                        const slice = text.slice(start, end + 1);
+                        return JSON.parse(slice);
+                    }
+                } catch {}
+                return null;
+            }
             async function _loadJsonLocal(url) {
                 // Try fetch JSON
                 try {
@@ -792,7 +805,7 @@
                     if (resp && typeof resp.text === "function") {
                         try {
                             const txt = await resp.text();
-                            return JSON.parse(txt);
+                            return _safeParseJson(txt);
                         } catch {}
                     }
                 } catch {}
@@ -806,7 +819,7 @@
                             if (xhr.readyState === 4) {
                                 if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 0) {
                                     try {
-                                        const data = JSON.parse(xhr.responseText);
+                                        const data = _safeParseJson(xhr.responseText);
                                         resolve(data);
                                     } catch (e) { resolve(null); }
                                 } else {
@@ -977,6 +990,31 @@
                     alert("World added to your Worlds.");
                 }
             }
+
+            async function loadAllWorlds() { 
+                try { 
+                    const manifestResponse = await fetch("worlds/manifest.json"); 
+                    if (!manifestResponse.ok) throw new Error("Manifest nicht gefunden"); 
+                    const worldFiles = await manifestResponse.json(); 
+                    for (const fileName of worldFiles) { 
+                        const worldResponse = await fetch(`worlds/${fileName}`); 
+                        if (worldResponse.ok) { 
+                            const data = await worldResponse.json(); 
+                            const worldData = data.world; 
+                            if (worldData && worldData.id) { 
+                                localStorage.setItem("world_" + worldData.id, JSON.stringify(worldData)); 
+                                console.log(`Geladen: ${worldData.name}`); 
+                            } 
+                        } 
+                    } 
+                    if (typeof renderWorlds === "function") { 
+                        renderWorlds(); 
+                    } 
+                } catch (error) { 
+                    console.error("Fehler beim Laden der Welten:", error); 
+                } 
+            } 
+            window.addEventListener("DOMContentLoaded", loadAllWorlds);
             function preloadWorldBackgrounds() {
                 try {
                     const scenarios = getScenarios();
