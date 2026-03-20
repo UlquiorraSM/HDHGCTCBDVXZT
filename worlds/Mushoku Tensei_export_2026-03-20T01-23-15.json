@@ -1,0 +1,565 @@
+{
+  "version": 1,
+  "type": "world_export",
+  "exportedAt": "2026-03-20T01:23:15.652Z",
+  "world": {
+    "id": "LCNV-JZO0-OVJ8",
+    "name": "Mushoku Tensei",
+    "data": {
+      "cards": [
+        {
+          "id": "HRRM-2GQP-PEXI",
+          "title": "Zenith Greyrat",
+          "genre": "character",
+          "createdAt": "2026-03-09T22:11:05.777Z",
+          "updatedAt": "2026-03-16T00:00:14.172Z",
+          "version": "1.0",
+          "age": 30,
+          "gender": "female",
+          "raceId": "PCCI-KYTK-SI01",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 16,
+            "month": 7
+          },
+          "relations": [
+            {
+              "targetId": "CG44-2TQ3-CGID",
+              "targetName": "Paul Greyrat",
+              "relation": "Lover",
+              "familySub": ""
+            },
+            {
+              "targetId": "RY3H-V8F9-EEFP",
+              "targetName": "Lilia Greyrat",
+              "relation": "Friends",
+              "familySub": ""
+            }
+          ],
+          "skillId": "VKY4-3A8A-CGP0",
+          "skillName": "Healing magic"
+        },
+        {
+          "id": "MEQU-ABIP-UAYO",
+          "title": "Buena Village",
+          "genre": "location",
+          "description": "Buena is a small hamlet surrounded by vast expanse of agricultural fields and prairies which comprised of approximately thirty households where most of the houses are built far apart from each other.",
+          "createdAt": "2026-03-14T02:24:28.832Z",
+          "updatedAt": "2026-03-14T02:39:48.935Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "village",
+          "sublocations": {
+            "village-city": [
+              "SSMA-DAUT-KKQN"
+            ]
+          },
+          "population": {
+            "village-city": 163
+          },
+          "residents": [
+            "HRRM-2GQP-PEXI",
+            "CG44-2TQ3-CGID",
+            "RY3H-V8F9-EEFP"
+          ]
+        },
+        {
+          "id": "PCCI-KYTK-SI01",
+          "title": "Human",
+          "genre": "race",
+          "description": "Humans are the main race that lives in the Human World, ruled by the Human God.",
+          "createdAt": "2026-03-14T02:26:11.400Z",
+          "version": "1.0",
+          "tags": [
+            "Human",
+            "Mensch"
+          ]
+        },
+        {
+          "id": "GD1W-HI4F-IRCG",
+          "title": "Beast",
+          "genre": "race",
+          "description": "Beast Race is a multi tribe race that originally lives in the Beast World and ruled by the Beast God until the destruction of their world where they live in the Great Forest in the Milis Continent of the Human World.\n\nMost of the Beast Race share similarities with the Human Race in terms of having a humanoid form, 2 arms and 2 legs but they have a diagonal hairline where humans have ears while the Beast Race's ears are located on their head and a tail at their lower back. Depending on the Tribe the ears can be further at the side.",
+          "createdAt": "2026-03-14T02:27:37.088Z",
+          "version": "1.0",
+          "tags": [
+            "Beast"
+          ]
+        },
+        {
+          "id": "5LJZ-9HDQ-XM8U",
+          "title": "Dwarf",
+          "genre": "race",
+          "description": "Dwarves are a race of people who currently live at the foot of the Blue Dragon Mountain Range in the Millis Continent.\n\nDue to the Dwarves being created during the Age of Chaos, they are sometimes classified as a Demon Race. When the Human World change from a world of endless grass lands to a world that has the terrain features of the rest of the Six-Faced World due to the war of the First Dragon God with the rest of the world, the Dwarves chose to settle at the foot of the Blue Dragon Mountain Range in the Millis Continent like other Races who settled in the terrain that is close to their previous world while the Humans and Demons are at a ceaseless conflict for dominance of the Human World.",
+          "createdAt": "2026-03-14T02:28:28.544Z",
+          "version": "1.0",
+          "tags": [
+            "Dwarf",
+            "Zwerg"
+          ]
+        },
+        {
+          "id": "XUI3-ZSF8-W1UT",
+          "title": "Dragon",
+          "genre": "race",
+          "description": "The Dragon Tribe is a race of humanoids with scales, known for their use of Dragon Battle Aura that lives in the Dragon World and is ruled by the First Dragon God until the destruction of their world at the hands of Hitogami. They are known to be very strong and can fly by infusing their wings with Touki.",
+          "createdAt": "2026-03-14T02:29:05.103Z",
+          "version": "1.0",
+          "tags": [
+            "Dragon"
+          ]
+        },
+        {
+          "id": "KSZR-125G-CBC7",
+          "title": "Superd",
+          "genre": "race",
+          "description": "The Superd Tribe are a tribal race of infamous warriors from the Demon Continent. Due to the tales of their fearsome rampage without distinguishing ally from enemy in the war four hundred years ago, they are loathed and feared by all races. They now reside inside a forest in the Biheiril Kingdom, where they are know as \"The Forest People\" by a local village.",
+          "createdAt": "2026-03-14T02:29:41.864Z",
+          "version": "1.0",
+          "tags": [
+            "Superd"
+          ]
+        },
+        {
+          "id": "CG44-2TQ3-CGID",
+          "title": "Paul Greyrat",
+          "genre": "character",
+          "createdAt": "2026-03-14T02:34:09.128Z",
+          "updatedAt": "2026-03-16T00:00:06.772Z",
+          "version": "1.0",
+          "appearance": "he has blond hair and is 181cm tall, trained, has green eyes, a small tail (12cm dick).",
+          "personality": "Paul Greyrat is an honorable warrior, kind, humorous, and caring.",
+          "age": 27,
+          "gender": "male",
+          "raceId": "PCCI-KYTK-SI01",
+          "raceName": "Human",
+          "status": "Dead",
+          "deathCause": "Died in an ambush while hunting",
+          "birthdate": {
+            "day": 18,
+            "month": 4
+          },
+          "relations": [
+            {
+              "targetId": "HRRM-2GQP-PEXI",
+              "targetName": "Zenith Greyrat",
+              "relation": "Lover",
+              "familySub": ""
+            },
+            {
+              "targetId": "RY3H-V8F9-EEFP",
+              "targetName": "Lilia Greyrat",
+              "relation": "Friends",
+              "familySub": ""
+            }
+          ]
+        },
+        {
+          "id": "SSMA-DAUT-KKQN",
+          "title": "Greyrat House",
+          "genre": "location",
+          "description": "A beautiful house in a secluded location, Paul and Zenith share a room, Lilia has her own room, and Kei",
+          "createdAt": "2026-03-14T02:35:52.719Z",
+          "updatedAt": "2026-03-14T02:40:25.439Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "house",
+          "canBeSpawn": true,
+          "residents": [
+            "HRRM-2GQP-PEXI",
+            "CG44-2TQ3-CGID",
+            "RY3H-V8F9-EEFP"
+          ]
+        },
+        {
+          "id": "RY3H-V8F9-EEFP",
+          "title": "Lilia Greyrat",
+          "genre": "character",
+          "createdAt": "2026-03-14T02:39:26.727Z",
+          "updatedAt": "2026-03-16T00:00:19.852Z",
+          "version": "1.0",
+          "appearance": "Lilia Greyrat is a woman of disciplined grace who maintains the tall, slender physique and impeccable posture of a former royal guard, typically characterized by her sharp, observant eyes and dark hair kept in a neat, professional style. She is almost exclusively seen in her pristine maid’s uniform, which she wears as a symbol of her unwavering dedication to the Greyrat household, presenting an aura of stoic elegance that rarely falters.",
+          "personality": "Her personality is defined by a profound sense of duty and a quiet, complex loyalty that evolved from a rigid, professional distance into a deep, maternal devotion toward both her daughter Aisha and her step-son Rudeus. While she often hides her emotions behind a mask of stoische professionalism and humility due to her past complications with the family, she possesses a sharp, tactical mind and a fierce protective instinct that makes her the silent, indispensable backbone of the household.",
+          "age": 29,
+          "gender": "female",
+          "raceId": "PCCI-KYTK-SI01",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 4,
+            "month": 11
+          },
+          "relations": [
+            {
+              "targetId": "HRRM-2GQP-PEXI",
+              "targetName": "Zenith Greyrat",
+              "relation": "Friends",
+              "familySub": ""
+            },
+            {
+              "targetId": "CG44-2TQ3-CGID",
+              "targetName": "Paul Greyrat",
+              "relation": "Friends",
+              "familySub": ""
+            }
+          ]
+        },
+        {
+          "id": "O11T-OFOX-803C",
+          "title": "Greyrat",
+          "genre": "lore",
+          "createdAt": "2026-03-14T02:41:05.975Z",
+          "version": "1.0",
+          "loreText": "Greyrat is a noble family.",
+          "loreMode": "tags",
+          "tags": [
+            "Greyrat"
+          ]
+        },
+        {
+          "id": "VKY4-3A8A-CGP0",
+          "title": "Healing magic",
+          "genre": "skill",
+          "description": "Can heal wounds",
+          "createdAt": "2026-03-14T02:41:53.271Z",
+          "version": "1.0"
+        },
+        {
+          "id": "CY9V-SJ2D-EJCK",
+          "title": "Absolutely nothing",
+          "genre": "skill",
+          "description": "Allows the user to erase anything and anyone with a single touch.",
+          "createdAt": "2026-03-14T02:42:45.015Z",
+          "version": "1.0"
+        },
+        {
+          "id": "S1IV-5AO8-SUXA",
+          "title": "Time manipulation",
+          "genre": "skill",
+          "description": "It allows the user to freeze time in their environment; everything within it is stopped and frozen. Individuals who are frozen are aware of everything but cannot move.",
+          "createdAt": "2026-03-14T02:43:57.631Z",
+          "version": "1.0"
+        },
+        {
+          "id": "SHM3-PUXV-9L4L",
+          "title": "World",
+          "genre": "lore",
+          "createdAt": "2026-03-14T02:44:58.847Z",
+          "version": "1.0",
+          "loreText": "The world is medieval; there is no electronics or electricity.\n\nThere is magic and monsters.",
+          "loreMode": "always"
+        },
+        {
+          "id": "TY74-KTWT-61DX",
+          "title": "Angel",
+          "genre": "race",
+          "description": "Angels have never been seen, so it's impossible to say if they exist, but Kei is an angel.",
+          "createdAt": "2026-03-15T21:55:52.715Z",
+          "version": "1.0",
+          "tags": [
+            "Angel",
+            "Engel"
+          ]
+        }
+      ],
+      "settings": {
+        "backgroundUrl": "https://wallpapercave.com/wp/wp12843692.jpg",
+        "coverUrl": "https://i.pinimg.com/1200x/da/5d/b1/da5db1eb6519e6b29974881f5ccf93f5.jpg"
+      }
+    }
+  },
+  "stories": [
+    {
+      "id": "86xnia8w",
+      "name": "Kei Greyrat",
+      "signature": "{\"w\":\"LCNV-JZO0-OVJ8\",\"c\":16,\"ch\":1,\"l\":1,\"s\":13}",
+      "data": {
+        "cards": [
+          {
+            "id": "HRRM-2GQP-PEXI",
+            "title": "Zenith Greyrat",
+            "genre": "character",
+            "createdAt": "2026-03-09T22:11:05.777Z",
+            "updatedAt": "2026-03-16T00:00:14.172Z",
+            "version": "1.0",
+            "age": 30,
+            "gender": "female",
+            "raceId": "PCCI-KYTK-SI01",
+            "raceName": "Human",
+            "birthdate": {
+              "day": 16,
+              "month": 7
+            },
+            "relations": [
+              {
+                "targetId": "CG44-2TQ3-CGID",
+                "targetName": "Paul Greyrat",
+                "relation": "Lover",
+                "familySub": ""
+              },
+              {
+                "targetId": "RY3H-V8F9-EEFP",
+                "targetName": "Lilia Greyrat",
+                "relation": "Friends",
+                "familySub": ""
+              }
+            ],
+            "skillId": "VKY4-3A8A-CGP0",
+            "skillName": "Healing magic"
+          },
+          {
+            "id": "MEQU-ABIP-UAYO",
+            "title": "Buena Village",
+            "genre": "location",
+            "description": "Buena is a small hamlet surrounded by vast expanse of agricultural fields and prairies which comprised of approximately thirty households where most of the houses are built far apart from each other.",
+            "createdAt": "2026-03-14T02:24:28.832Z",
+            "updatedAt": "2026-03-14T02:39:48.935Z",
+            "version": "1.0",
+            "locationSub": "zivil",
+            "locationDetail": "village",
+            "sublocations": {
+              "village-city": [
+                "SSMA-DAUT-KKQN"
+              ]
+            },
+            "population": {
+              "village-city": 163
+            },
+            "residents": [
+              "HRRM-2GQP-PEXI",
+              "CG44-2TQ3-CGID",
+              "RY3H-V8F9-EEFP"
+            ]
+          },
+          {
+            "id": "PCCI-KYTK-SI01",
+            "title": "Human",
+            "genre": "race",
+            "description": "Humans are the main race that lives in the Human World, ruled by the Human God.",
+            "createdAt": "2026-03-14T02:26:11.400Z",
+            "version": "1.0",
+            "tags": [
+              "Human",
+              "Mensch"
+            ]
+          },
+          {
+            "id": "GD1W-HI4F-IRCG",
+            "title": "Beast",
+            "genre": "race",
+            "description": "Beast Race is a multi tribe race that originally lives in the Beast World and ruled by the Beast God until the destruction of their world where they live in the Great Forest in the Milis Continent of the Human World.\n\nMost of the Beast Race share similarities with the Human Race in terms of having a humanoid form, 2 arms and 2 legs but they have a diagonal hairline where humans have ears while the Beast Race's ears are located on their head and a tail at their lower back. Depending on the Tribe the ears can be further at the side.",
+            "createdAt": "2026-03-14T02:27:37.088Z",
+            "version": "1.0",
+            "tags": [
+              "Beast"
+            ]
+          },
+          {
+            "id": "5LJZ-9HDQ-XM8U",
+            "title": "Dwarf",
+            "genre": "race",
+            "description": "Dwarves are a race of people who currently live at the foot of the Blue Dragon Mountain Range in the Millis Continent.\n\nDue to the Dwarves being created during the Age of Chaos, they are sometimes classified as a Demon Race. When the Human World change from a world of endless grass lands to a world that has the terrain features of the rest of the Six-Faced World due to the war of the First Dragon God with the rest of the world, the Dwarves chose to settle at the foot of the Blue Dragon Mountain Range in the Millis Continent like other Races who settled in the terrain that is close to their previous world while the Humans and Demons are at a ceaseless conflict for dominance of the Human World.",
+            "createdAt": "2026-03-14T02:28:28.544Z",
+            "version": "1.0",
+            "tags": [
+              "Dwarf",
+              "Zwerg"
+            ]
+          },
+          {
+            "id": "XUI3-ZSF8-W1UT",
+            "title": "Dragon",
+            "genre": "race",
+            "description": "The Dragon Tribe is a race of humanoids with scales, known for their use of Dragon Battle Aura that lives in the Dragon World and is ruled by the First Dragon God until the destruction of their world at the hands of Hitogami. They are known to be very strong and can fly by infusing their wings with Touki.",
+            "createdAt": "2026-03-14T02:29:05.103Z",
+            "version": "1.0",
+            "tags": [
+              "Dragon"
+            ]
+          },
+          {
+            "id": "KSZR-125G-CBC7",
+            "title": "Superd",
+            "genre": "race",
+            "description": "The Superd Tribe are a tribal race of infamous warriors from the Demon Continent. Due to the tales of their fearsome rampage without distinguishing ally from enemy in the war four hundred years ago, they are loathed and feared by all races. They now reside inside a forest in the Biheiril Kingdom, where they are know as \"The Forest People\" by a local village.",
+            "createdAt": "2026-03-14T02:29:41.864Z",
+            "version": "1.0",
+            "tags": [
+              "Superd"
+            ]
+          },
+          {
+            "id": "CG44-2TQ3-CGID",
+            "title": "Paul Greyrat",
+            "genre": "character",
+            "createdAt": "2026-03-14T02:34:09.128Z",
+            "updatedAt": "2026-03-16T00:00:06.772Z",
+            "version": "1.0",
+            "appearance": "he has blond hair and is 181cm tall, trained, has green eyes, a small tail (12cm dick).",
+            "personality": "Paul Greyrat is an honorable warrior, kind, humorous, and caring.",
+            "age": 27,
+            "gender": "male",
+            "raceId": "PCCI-KYTK-SI01",
+            "raceName": "Human",
+            "status": "Dead",
+            "deathCause": "Died in an ambush while hunting",
+            "birthdate": {
+              "day": 18,
+              "month": 4
+            },
+            "relations": [
+              {
+                "targetId": "HRRM-2GQP-PEXI",
+                "targetName": "Zenith Greyrat",
+                "relation": "Lover",
+                "familySub": ""
+              },
+              {
+                "targetId": "RY3H-V8F9-EEFP",
+                "targetName": "Lilia Greyrat",
+                "relation": "Friends",
+                "familySub": ""
+              }
+            ]
+          },
+          {
+            "id": "SSMA-DAUT-KKQN",
+            "title": "Greyrat House",
+            "genre": "location",
+            "description": "A beautiful house in a secluded location, Paul and Zenith share a room, Lilia has her own room, and Kei",
+            "createdAt": "2026-03-14T02:35:52.719Z",
+            "updatedAt": "2026-03-14T02:40:25.439Z",
+            "version": "1.0",
+            "locationSub": "building",
+            "locationDetail": "house",
+            "canBeSpawn": true,
+            "residents": [
+              "HRRM-2GQP-PEXI",
+              "CG44-2TQ3-CGID",
+              "RY3H-V8F9-EEFP"
+            ]
+          },
+          {
+            "id": "RY3H-V8F9-EEFP",
+            "title": "Lilia Greyrat",
+            "genre": "character",
+            "createdAt": "2026-03-14T02:39:26.727Z",
+            "updatedAt": "2026-03-16T00:00:19.852Z",
+            "version": "1.0",
+            "appearance": "Lilia Greyrat is a woman of disciplined grace who maintains the tall, slender physique and impeccable posture of a former royal guard, typically characterized by her sharp, observant eyes and dark hair kept in a neat, professional style. She is almost exclusively seen in her pristine maid’s uniform, which she wears as a symbol of her unwavering dedication to the Greyrat household, presenting an aura of stoic elegance that rarely falters.",
+            "personality": "Her personality is defined by a profound sense of duty and a quiet, complex loyalty that evolved from a rigid, professional distance into a deep, maternal devotion toward both her daughter Aisha and her step-son Rudeus. While she often hides her emotions behind a mask of stoische professionalism and humility due to her past complications with the family, she possesses a sharp, tactical mind and a fierce protective instinct that makes her the silent, indispensable backbone of the household.",
+            "age": 29,
+            "gender": "female",
+            "raceId": "PCCI-KYTK-SI01",
+            "raceName": "Human",
+            "birthdate": {
+              "day": 4,
+              "month": 11
+            },
+            "relations": [
+              {
+                "targetId": "HRRM-2GQP-PEXI",
+                "targetName": "Zenith Greyrat",
+                "relation": "Friends",
+                "familySub": ""
+              },
+              {
+                "targetId": "CG44-2TQ3-CGID",
+                "targetName": "Paul Greyrat",
+                "relation": "Friends",
+                "familySub": ""
+              }
+            ]
+          },
+          {
+            "id": "O11T-OFOX-803C",
+            "title": "Greyrat",
+            "genre": "lore",
+            "createdAt": "2026-03-14T02:41:05.975Z",
+            "version": "1.0",
+            "loreText": "Greyrat is a noble family.",
+            "loreMode": "tags",
+            "tags": [
+              "Greyrat"
+            ]
+          },
+          {
+            "id": "VKY4-3A8A-CGP0",
+            "title": "Healing magic",
+            "genre": "skill",
+            "description": "Can heal wounds",
+            "createdAt": "2026-03-14T02:41:53.271Z",
+            "version": "1.0"
+          },
+          {
+            "id": "CY9V-SJ2D-EJCK",
+            "title": "Absolutely nothing",
+            "genre": "skill",
+            "description": "Allows the user to erase anything and anyone with a single touch.",
+            "createdAt": "2026-03-14T02:42:45.015Z",
+            "version": "1.0"
+          },
+          {
+            "id": "S1IV-5AO8-SUXA",
+            "title": "Time manipulation",
+            "genre": "skill",
+            "description": "It allows the user to freeze time in their environment; everything within it is stopped and frozen. Individuals who are frozen are aware of everything but cannot move.",
+            "createdAt": "2026-03-14T02:43:57.631Z",
+            "version": "1.0"
+          },
+          {
+            "id": "SHM3-PUXV-9L4L",
+            "title": "World",
+            "genre": "lore",
+            "createdAt": "2026-03-14T02:44:58.847Z",
+            "version": "1.0",
+            "loreText": "The world is medieval; there is no electronics or electricity.\n\nThere is magic and monsters.",
+            "loreMode": "always"
+          },
+          {
+            "id": "TY74-KTWT-61DX",
+            "title": "Angel",
+            "genre": "race",
+            "description": "Angels have never been seen, so it's impossible to say if they exist, but Kei is an angel.",
+            "createdAt": "2026-03-15T21:55:52.715Z",
+            "version": "1.0",
+            "tags": [
+              "Angel",
+              "Engel"
+            ]
+          }
+        ],
+        "characters": [
+          {
+            "id": "SJTN-U639-8APA",
+            "createdAt": "2026-03-17T18:01:10.558Z"
+          }
+        ],
+        "log": [
+          {
+            "sender": "Narrator",
+            "text": "Du liegst im Bett und schläfst.",
+            "date": "07.07.383",
+            "time": "08:00",
+            "location": "GREYRAT HOUSE",
+            "timestamp": 1773770474518
+          }
+        ],
+        "settings": {
+          "backgroundUrl": "https://wallpapercave.com/wp/wp12843692.jpg",
+          "language": "de",
+          "theme": "light",
+          "textSize": "short",
+          "aiLanguage": "de",
+          "sound": true,
+          "autosave": true,
+          "animations": true,
+          "timestamps": false,
+          "charlimit": "1000",
+          "debug": false,
+          "console": false,
+          "coverUrl": "https://i.pinimg.com/1200x/da/5d/b1/da5db1eb6519e6b29974881f5ccf93f5.jpg"
+        }
+      }
+    }
+  ]
+}
