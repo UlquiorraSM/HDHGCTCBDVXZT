@@ -741,6 +741,47 @@
                 "DefaultWorld": "https://i.pinimg.com/736x/b5/50/11/b55011336000f4b29fdd5703dc0506de.jpg",
                 "Higurashi": "https://i.pinimg.com/736x/67/c4/0e/67c40e8b2b1d55ddf7e4913bff34aee4.jpg",
             };
+            function _extractWorld(payload) {
+                try {
+                    // Standard export: { version, type, world: { id, name, data: { cards, settings } }, stories? }
+                    if (payload && payload.world && payload.world.data && Array.isArray(payload.world.data.cards)) {
+                        return {
+                            id: payload.world.id || "",
+                            name: payload.world.name || "World",
+                            data: {
+                                cards: payload.world.data.cards || [],
+                                settings: payload.world.data.settings || {}
+                            },
+                            stories: Array.isArray(payload.stories) ? payload.stories : []
+                        };
+                    }
+                    // Variant: { id, name, data: { cards, settings }, stories? }
+                    if (payload && payload.data && Array.isArray(payload.data.cards)) {
+                        return {
+                            id: payload.id || "",
+                            name: payload.name || "World",
+                            data: {
+                                cards: payload.data.cards || [],
+                                settings: payload.data.settings || {}
+                            },
+                            stories: Array.isArray(payload.stories) ? payload.stories : []
+                        };
+                    }
+                    // Simple: { name, cards, settings? }
+                    if (payload && Array.isArray(payload.cards) && payload.name) {
+                        return {
+                            id: payload.id || payload.name || "",
+                            name: payload.name || "World",
+                            data: {
+                                cards: payload.cards || [],
+                                settings: payload.settings || {}
+                            },
+                            stories: []
+                        };
+                    }
+                } catch {}
+                return null;
+            }
             async function _loadJsonLocal(url) {
                 // Try fetch JSON
                 try {
@@ -789,33 +830,18 @@
                             results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
                             continue;
                         }
-                        if (data?.world?.data?.cards) {
-                            results.push({
-                                url,
-                                id: data.world.id || "",
-                                name: data.world.name || "World",
-                                settings: data.world.data.settings || {},
-                                cardsCount: Array.isArray(data.world.data.cards) ? data.world.data.cards.length : 0,
-                            });
-                        } else if (data?.data?.cards && data?.name) {
-                            results.push({
-                                url,
-                                id: data.id || "",
-                                name: data.name || "World",
-                                settings: data.data.settings || {},
-                                cardsCount: Array.isArray(data.data.cards) ? data.data.cards.length : 0,
-                            });
-                        } else if (Array.isArray(data.cards) && data.name) {
-                            results.push({
-                                url,
-                                id: data.id || "",
-                                name: data.name || "World",
-                                settings: data.settings || {},
-                                cardsCount: data.cards.length,
-                            });
-                        } else {
+                        const w = _extractWorld(data);
+                        if (!w) {
                             const base = url.split("/").pop().replace(/\.json$/i, "");
                             results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                        } else {
+                            results.push({
+                                url,
+                                id: w.id || "",
+                                name: w.name || "World",
+                                settings: w.data?.settings || {},
+                                cardsCount: Array.isArray(w.data?.cards) ? w.data.cards.length : 0,
+                            });
                         }
                     } catch {
                         const base = url.split("/").pop().replace(/\.json$/i, "");
@@ -882,16 +908,10 @@
                     let world = null;
                     let stories = [];
                     const data = await _loadJsonLocal(url);
-                    if (data) {
-                        if (data?.world?.data?.cards) {
-                            world = data.world;
-                            stories = Array.isArray(data.stories) ? data.stories : [];
-                        } else if (data?.data?.cards && data?.name) {
-                            world = { id: data.id || data.name, name: data.name, data: { cards: data.data.cards, settings: data.data.settings || {} } };
-                            stories = Array.isArray(data.stories) ? data.stories : [];
-                        } else if (Array.isArray(data.cards) && data.name) {
-                            world = { id: data.id || data.name, name: data.name, data: { cards: data.cards, settings: data.settings || {} } };
-                        }
+                    const w = data ? _extractWorld(data) : null;
+                    if (w) {
+                        world = { id: w.id, name: w.name, data: w.data };
+                        stories = Array.isArray(w.stories) ? w.stories : [];
                     }
                     if (!world) {
                         // Fallback: create a minimal world from filename and cover fallback
