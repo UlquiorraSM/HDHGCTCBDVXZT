@@ -9,16 +9,20 @@
             margin: 0;
             font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
             color: #fff;
-            background: #0e0f13 url("https://wallpapercave.com/wp/wp2394189.jpg") center/cover fixed no-repeat;
+            background: #0e0f13 url("https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdXk5emR1bW9na2hzenEybzlvemllem4wZXlxZ2J3MnI2eXM5MTZscyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/iicDrNGWxHmDrIni6j/giphy.gif") center/cover fixed no-repeat;
             background-attachment: fixed;
             background-size: cover;
             background-position: center;
+            overflow: hidden;
         }
         .page {
+            position: fixed;
+            inset: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            justify-content: center;
+            gap: 12px;
             padding: 24px 16px 40px;
             backdrop-filter: blur(2px);
             background: linear-gradient(180deg, rgba(10,10,15,.55), rgba(10,10,15,.65));
@@ -63,7 +67,7 @@
         }
         .world-grid {
             width: 100%;
-            max-width: 720px;
+            max-width: 820px;
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
@@ -80,13 +84,15 @@
             text-shadow: 0 1px 3px rgba(0,0,0,.6);
         }
         .menu-button {
-            padding: 8px 10px;
+            padding: 12px 18px;
             background: rgba(255,255,255,.12);
             border: 1px solid rgba(255,255,255,.15);
             color: #fff;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
             font-weight: 700;
+            font-size: 15px;
+            min-width: 120px;
             transition: background .2s, border-color .2s, transform .05s;
         }
         .menu-button:hover{
@@ -110,11 +116,36 @@
         <input id="universe-search" class="search-input" placeholder="Search default worlds..." />
         <div id="universe-list" class="world-grid"></div>
         <div class="top-row">
-            <button class="menu-button" onclick="window.location.href='index.html'">Back</button>
+            <button class="menu-button" onclick="navigateWithDissolve('index.html')">Back</button>
         </div>
     </div>
 
     <script>
+        (function(){
+            function onReady(fn){ if(document.readyState!=="loading") fn(); else document.addEventListener("DOMContentLoaded", fn); }
+            onReady(function(){
+                try{
+                    document.body.style.opacity = "0";
+                    document.body.style.transition = "opacity .35s ease";
+                    requestAnimationFrame(function(){ document.body.style.opacity = "1"; });
+                }catch(e){}
+            });
+            window.navigateWithDissolve = function(url){
+                try{
+                    const overlay = document.createElement("div");
+                    overlay.id = "page-fade";
+                    overlay.style.cssText = "position:fixed;inset:0;background:#000;opacity:0;transition:opacity .35s ease;pointer-events:none;z-index:5000;";
+                    document.body.appendChild(overlay);
+                    requestAnimationFrame(function(){
+                        overlay.style.opacity = "1";
+                        setTimeout(function(){ window.location.href = url; }, 380);
+                    });
+                }catch(_){
+                    window.location.href = url;
+                }
+            };
+        })();
+
         function _safeParseJson(text) {
             if (typeof text !== "string") return null;
             try { return JSON.parse(text); } catch {}

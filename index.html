@@ -460,7 +460,7 @@
                 <button class="menu-button" onclick="openSettings()">
                     Settings
                 </button>
-                <button class="menu-button" onclick="window.location.href='universe.html'">
+                <button class="menu-button" onclick="navigateWithDissolve('universe.html')">
                     Search Worlds
                 </button>
             </div>
@@ -533,6 +533,33 @@
         </div>
 
         <!-- Universe scene moved to universe.html -->
+
+        <script>
+            (function(){
+                function onReady(fn){ if(document.readyState!=="loading") fn(); else document.addEventListener("DOMContentLoaded", fn); }
+                onReady(function(){
+                    try{
+                        document.body.style.opacity = "0";
+                        document.body.style.transition = "opacity .35s ease";
+                        requestAnimationFrame(function(){ document.body.style.opacity = "1"; });
+                    }catch(e){}
+                });
+                window.navigateWithDissolve = function(url){
+                    try{
+                        const overlay = document.createElement("div");
+                        overlay.id = "page-fade";
+                        overlay.style.cssText = "position:fixed;inset:0;background:#000;opacity:0;transition:opacity .35s ease;pointer-events:none;z-index:5000;";
+                        document.body.appendChild(overlay);
+                        requestAnimationFrame(function(){
+                            overlay.style.opacity = "1";
+                            setTimeout(function(){ window.location.href = url; }, 380);
+                        });
+                    }catch(_){
+                        window.location.href = url;
+                    }
+                };
+            })();
+        </script>
 
         <!-- Story Configuration Panel -->
         <div id="story-conf-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:2000; backdrop-filter:blur(10px);">
