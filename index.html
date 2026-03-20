@@ -460,7 +460,7 @@
                 <button class="menu-button" onclick="openSettings()">
                     Settings
                 </button>
-                <button class="menu-button" onclick="openUniverse()">
+                <button class="menu-button" onclick="window.location.href='universe.html'">
                     Search Worlds
                 </button>
             </div>
@@ -532,26 +532,7 @@
             </div>
         </div>
 
-        <div class="stories-container" id="universe-menu" style="display:none;">
-            <h1>Universe</h1>
-            <div id="universe-wrap" style="width:100%; display:flex; flex-direction:column; align-items:center; margin-bottom:20px;">
-                <div style="color:#fff; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:12px; opacity:.85; text-align:center;">
-                    Browse Worlds
-                </div>
-                <div class="search-container">
-                    <input
-                        id="universe-search"
-                        class="search-input"
-                        placeholder="Search default worlds..."
-                        oninput="renderUniverse()"
-                    />
-                </div>
-                <div id="universe-list" style="width:100%; display:flex; gap:12px; overflow-x:auto; margin-top:14px; padding: 0 16px; max-width: 600px; margin-left:auto; margin-right:auto; justify-content:center;"></div>
-                <div class="menu-actions" style="margin-top:16px;">
-                    <button class="menu-button" onclick="closeUniverse()">Back</button>
-                </div>
-            </div>
-        </div>
+        <!-- Universe scene moved to universe.html -->
 
         <!-- Story Configuration Panel -->
         <div id="story-conf-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:2000; backdrop-filter:blur(10px);">
