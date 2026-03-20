@@ -1173,22 +1173,30 @@
                     downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
                     downloadBtn.onclick = () => { exportWorld(s.id); };
 
-                    const deleteBtn = document.createElement("button");
-                    deleteBtn.textContent = "🗑️";
-                    deleteBtn.className = "menu-button";
-                    deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,0.7); border-radius:0;";
-                    deleteBtn.onclick = () => {
-                        if (!confirm("Welt wirklich löschen? Alle zugehörigen Stories gehen verloren!")) return;
-                        const items = getScenarios().filter(x => x.id !== s.id && x.worldId !== s.id);
-                        setScenarios(items);
-                        renderScenarios();
-                    };
-                    deleteBtn.style.borderTopRightRadius = "8px";
-                    deleteBtn.style.borderBottomRightRadius = "8px";
+                    const isDefaultWorld = ((s.name || "").toLowerCase() === "defaultworld") || ((s.name || "").toLowerCase() === "world");
+                    let deleteBtn = null;
+                    if (!isDefaultWorld) {
+                        deleteBtn = document.createElement("button");
+                        deleteBtn.textContent = "🗑️";
+                        deleteBtn.className = "menu-button";
+                        deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,0.7); border-radius:0;";
+                        deleteBtn.onclick = () => {
+                            if (!confirm("Welt wirklich löschen? Alle zugehörigen Stories gehen verloren!")) return;
+                            const items = getScenarios().filter(x => x.id !== s.id && x.worldId !== s.id);
+                            setScenarios(items);
+                            renderScenarios();
+                        };
+                        deleteBtn.style.borderTopRightRadius = "8px";
+                        deleteBtn.style.borderBottomRightRadius = "8px";
+                    } else {
+                        // Rundung für Download-Button, wenn Delete fehlt
+                        downloadBtn.style.borderTopRightRadius = "8px";
+                        downloadBtn.style.borderBottomRightRadius = "8px";
+                    }
 
                     row2.appendChild(editBtn);
                     row2.appendChild(downloadBtn);
-                    row2.appendChild(deleteBtn);
+                    if (deleteBtn) row2.appendChild(deleteBtn);
                     
                     actions.appendChild(row1);
                     actions.appendChild(row2);
