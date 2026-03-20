@@ -1,0 +1,635 @@
+{
+  "version": 1,
+  "type": "world_export",
+  "exportedAt": "2026-03-18T18:08:59.224Z",
+  "world": {
+    "id": "3S1A-UUWU-US1V",
+    "name": "Higurashi",
+    "data": {
+      "cards": [
+        {
+          "id": "MBCD-YB65-15DN",
+          "title": "Rena Ryuugu",
+          "genre": "character",
+          "createdAt": "2026-03-05T20:42:09.135Z",
+          "updatedAt": "2026-03-18T14:13:27.233Z",
+          "version": "1.0",
+          "appearance": "She is easily recognized by her short, ginger-colored bob with a signature diagonal forelock and her iconic white sailor-style outfit accented by a yellow tie and a violet bow. When her \"cleaver-girl\" side emerges, her blue eyes lose their shine, and she is often seen wielding a large, intimidating nata.",
+          "personality": "Rena is typically sweet, air-headed, and obsessed with anything she finds \"cute,\" often ending her sentences with her signature \"kana, kana?\" catchphrase; however, she possesses a chillingly sharp intuition and can flip into a state of cold, ruthless determination when she feels threatened or betrayed.",
+          "age": 15,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "isPlayable": true,
+          "birthdate": {
+            "day": 15,
+            "month": 6
+          },
+          "relations": [
+            {
+              "targetId": "UN2C-87DP-HOBP",
+              "targetName": "Mion Sonozaki",
+              "relation": "Friends",
+              "familySub": ""
+            }
+          ]
+        },
+        {
+          "id": "EA1T-9D3B-7J4V",
+          "title": "Hinamizawa",
+          "genre": "location",
+          "createdAt": "2026-03-05T20:42:39.311Z",
+          "updatedAt": "2026-03-18T14:01:55.384Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "village",
+          "sublocations": {
+            "village-city": [
+              "8222-SMK4-WL2K",
+              "6O8M-P0AF-JIYN",
+              "8OCW-M3VG-3GR5",
+              "W7L3-JHFY-6K47",
+              "FKRT-Y3KC-47SJ"
+            ]
+          },
+          "racialCivilization": {
+            "village-city": [
+              {
+                "id": "KZEK-8H4B-ZUOD",
+                "name": "Human",
+                "pct": 100
+              }
+            ]
+          },
+          "population": {
+            "village-city": 54
+          },
+          "events": {
+            "village-city": [
+              {
+                "type": "public",
+                "day": 19,
+                "month": 6,
+                "year": 1983,
+                "time": "21:00",
+                "description": "The Watanagashi Festival is celebrated in honor of Oyashiro-sama."
+              },
+              {
+                "type": "secret",
+                "day": 20,
+                "month": 6,
+                "year": 1983,
+                "time": "00:00",
+                "description": "Rika is murdered after the Watanagashi Festival."
+              }
+            ]
+          },
+          "residents": [
+            "MBCD-YB65-15DN",
+            "UN2C-87DP-HOBP",
+            "DLXN-JTUN-663Z",
+            "EFFY-JKCF-LI8O",
+            "G57K-PLN8-PFWD",
+            "NZMD-J4JD-QKS5",
+            "HJMG-R6WM-AAW7",
+            "VA8J-XDW4-F5PL",
+            "AR39-LM2Y-HP7Z",
+            "XPU8-B9CA-7NQS",
+            "TWH2-VEYX-JSY2",
+            "7PDM-LYVS-860S"
+          ]
+        },
+        {
+          "id": "KZEK-8H4B-ZUOD",
+          "title": "Human",
+          "genre": "race",
+          "createdAt": "2026-03-05T20:42:46.055Z",
+          "updatedAt": "2026-03-17T23:34:51.802Z",
+          "version": "1.0"
+        },
+        {
+          "id": "8222-SMK4-WL2K",
+          "title": "Ryuugu Anwesen",
+          "genre": "location",
+          "createdAt": "2026-03-05T21:12:41.396Z",
+          "updatedAt": "2026-03-06T13:18:07.247Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "house",
+          "canBeSpawn": true,
+          "residents": [
+            "MBCD-YB65-15DN"
+          ]
+        },
+        {
+          "id": "ATSS-I40P-Z16S",
+          "title": "Japan",
+          "genre": "location",
+          "createdAt": "2026-03-05T22:13:43.950Z",
+          "updatedAt": "2026-03-18T14:01:45.369Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "country",
+          "sublocations": {
+            "country-kingdom": [
+              "EA1T-9D3B-7J4V",
+              "EKPV-KM5J-QQD5"
+            ]
+          }
+        },
+        {
+          "id": "UN2C-87DP-HOBP",
+          "title": "Mion Sonozaki",
+          "genre": "character",
+          "createdAt": "2026-03-06T13:16:29.160Z",
+          "updatedAt": "2026-03-18T13:44:49.858Z",
+          "version": "1.0",
+          "appearance": "She sports long, vibrant green hair tied back in a high ponytail and is most often seen in her casual attire consisting of a yellow sleeveless vest, a white shirt, and denim jeans. Her most striking accessory is the holstered model airsoft gun she wears across her shoulder, signaling her authority and love for games.",
+          "personality": "Mion is the energetic, tomboyish leader of the club who often refers to herself as an \"old man\" to maintain her tough exterior, yet she hides a deeply sensitive and feminine side that she struggles to express. Despite her playful leadership, she carries the heavy burden of being the heir to the powerful Sonozaki family, which forces her to balance her loyalty to her friends with dark clan traditions.",
+          "age": 17,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 11,
+            "month": 2
+          },
+          "relations": [
+            {
+              "targetId": "MBCD-YB65-15DN",
+              "targetName": "Rena Ryuugu",
+              "relation": "Friends",
+              "familySub": ""
+            },
+            {
+              "targetId": "7PDM-LYVS-860S",
+              "targetName": "Oryou Sonozaki",
+              "relation": "Family",
+              "familySub": "Grandmother"
+            },
+            {
+              "targetId": "TWH2-VEYX-JSY2",
+              "targetName": "Akane Sonozaki",
+              "relation": "Family",
+              "familySub": "Mother"
+            },
+            {
+              "targetId": "HJMG-R6WM-AAW7",
+              "targetName": "Shion Sonozaki",
+              "relation": "Family",
+              "familySub": "Sister"
+            }
+          ]
+        },
+        {
+          "id": "DLXN-JTUN-663Z",
+          "title": "Elena Topic",
+          "genre": "character",
+          "createdAt": "2026-03-06T13:17:04.208Z",
+          "updatedAt": "2026-03-17T23:28:23.267Z",
+          "version": "1.0",
+          "age": 13,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 21,
+            "month": 11
+          }
+        },
+        {
+          "id": "6O8M-P0AF-JIYN",
+          "title": "Sonozaki Anwesen",
+          "genre": "location",
+          "createdAt": "2026-03-06T13:18:32.431Z",
+          "updatedAt": "2026-03-17T23:32:49.203Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "house",
+          "canBeSpawn": true,
+          "residents": [
+            "UN2C-87DP-HOBP",
+            "TWH2-VEYX-JSY2",
+            "7PDM-LYVS-860S"
+          ]
+        },
+        {
+          "id": "8OCW-M3VG-3GR5",
+          "title": "Topic Anwesen",
+          "genre": "location",
+          "description": "A small cabin where Elena Topic lives alone",
+          "createdAt": "2026-03-06T13:19:10.551Z",
+          "updatedAt": "2026-03-17T23:33:23.026Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "house",
+          "residents": [
+            "DLXN-JTUN-663Z"
+          ]
+        },
+        {
+          "id": "W7L3-JHFY-6K47",
+          "title": "Hinamizawa Branch School",
+          "genre": "location",
+          "createdAt": "2026-03-10T01:49:08.549Z",
+          "updatedAt": "2026-03-17T23:34:42.138Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "school",
+          "canBeSpawn": true,
+          "schoolSchedule": {
+            "days": [
+              true,
+              true,
+              true,
+              true,
+              true,
+              false,
+              false
+            ],
+            "start": "08:00",
+            "end": "14:00"
+          },
+          "schoolClasses": [
+            {
+              "name": "Klasse A",
+              "teacherId": "EFFY-JKCF-LI8O",
+              "studentIds": [
+                "MBCD-YB65-15DN",
+                "UN2C-87DP-HOBP",
+                "NZMD-J4JD-QKS5",
+                "G57K-PLN8-PFWD"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "EFFY-JKCF-LI8O",
+          "title": "Chie Rumiko",
+          "genre": "character",
+          "createdAt": "2026-03-10T02:00:07.380Z",
+          "updatedAt": "2026-03-17T23:28:25.283Z",
+          "version": "1.0",
+          "appearance": "She has a professional yet approachable look, characterized by her short blue hair and thin-rimmed glasses that frame her studious face. Her standard outfit consists of a simple white blouse paired with a long teal skirt, giving her the classic silhouette of a humble village educator.",
+          "personality": "Chie is a kind-hearted and dedicated teacher who provides a sense of normalcy in Hinamizawa, though she is most famous for her absolute, borderline religious obsession with curry. She is generally easygoing and supportive of her students, but she can become comically intense or even devastated if her favorite dish is insulted or unavailable.",
+          "age": 26,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 7,
+            "month": 3
+          }
+        },
+        {
+          "id": "G57K-PLN8-PFWD",
+          "title": "Satoko Houjou",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:20:56.948Z",
+          "version": "1.0",
+          "appearance": "She is a petite young girl with short blonde hair held back by a black headband and distinctive, drooping purple eyes. She is usually seen in her green school uniform dress with a yellow ribbon, though her mischievous grin and energetic posture are what truly define her look.",
+          "personality": "Satoko is a mischievous and resilient girl who masks her past trauma with a boisterous, haughty laugh and a talent for setting complex, highly effective physical traps. Despite her bratty persona and prideful refusal to ask for help, she is deeply loyal to her friends and harbors a fragile heart that yearns for the protection of her missing older brother.",
+          "age": 11,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 24,
+            "month": 6
+          }
+        },
+        {
+          "id": "NZMD-J4JD-QKS5",
+          "title": "Rika Furude",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:21:41.427Z",
+          "version": "1.0",
+          "appearance": "She is a small girl with long, flowing indigo hair cut into straight bangs and calm, deep violet eyes that occasionally turn cold and \"dead\" when her true personality surfaces. She is typically seen in her school uniform—a white shirt with a red ribbon and a blue skirt—or her traditional miko (shrine maiden) attire during the Watanagashi Festival.",
+          "personality": "Rika initially appears to be a sweet, \"nipah~\"-chirping girl who plays the role of the village’s innocent mascot, but she secretly possesses the weary, cynical mind of a \"hundred-year-old witch\" who has relived the same tragedies countless times. She oscillates between her adorable child persona and a hauntingly mature, fatalistic voice that reveals her struggle against a seemingly inescapable destiny.",
+          "age": 11,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 25,
+            "month": 8
+          }
+        },
+        {
+          "id": "HJMG-R6WM-AAW7",
+          "title": "Shion Sonozaki",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:22:33.060Z",
+          "version": "1.0",
+          "appearance": "Shion is a mirror image of Mion with long, vibrant green hair, but she distinguishes herself by wearing it down with a single yellow ribbon on the side and a slightly more provocative fashion sense. She is most often seen in her \"Angel Mort\" waitress uniform or a sleeveless turtleneck paired with a pinstriped skirt, often carrying a hidden taser as her weapon of choice.",
+          "personality": "While she initially appears more refined and \"ladylike\" than her sister, Shion possesses a rebellious, manipulative streak and a capacity for intense, obsessive passion that can spiral into madness. Driven by a deep-seated resentment toward the Sonozaki family and a tragic devotion to Satoshi Houjou, she is a master of deception who can be incredibly charming or terrifyingly cruel.",
+          "age": 17,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 11,
+            "month": 2
+          },
+          "relations": [
+            {
+              "targetId": "7PDM-LYVS-860S",
+              "targetName": "Oryou Sonozaki",
+              "relation": "Family",
+              "familySub": "Grandmother"
+            },
+            {
+              "targetId": "TWH2-VEYX-JSY2",
+              "targetName": "Akane Sonozaki",
+              "relation": "Family",
+              "familySub": "Mother"
+            },
+            {
+              "targetId": "UN2C-87DP-HOBP",
+              "targetName": "Mion Sonozaki",
+              "relation": "Family",
+              "familySub": "Sister"
+            }
+          ]
+        },
+        {
+          "id": "5QTR-D35W-8WRN",
+          "title": "Satoshi Houjou",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:24:06.803Z",
+          "version": "1.0",
+          "age": 16,
+          "gender": "male",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "status": "Dead",
+          "deathCause": "He was kidnapped and murdered, but the public is not being informed.",
+          "birthdate": {
+            "day": 12,
+            "month": 5
+          }
+        },
+        {
+          "id": "2MB3-WDLU-RPEZ",
+          "title": "Mamoru Akasaka",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:24:56.235Z",
+          "updatedAt": "2026-03-17T23:28:36.651Z",
+          "version": "1.0",
+          "appearance": "He is a tall, well-built man with short, dark hair and sharp, determined features that reflect his background in martial arts. He is typically seen in a sharp 1970s-style beige trench coat over a professional suit, though in his younger years, he appeared in a more casual button-up shirt and slacks.",
+          "personality": "Akasaka is a righteous, brave, and exceptionally skilled police investigator who serves as a rare beacon of hope and sanity within the supernatural mysteries of Hinamizawa. Though he is a professional driven by duty, he is deeply compassionate",
+          "age": 24,
+          "gender": "male",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 12,
+            "month": 10
+          }
+        },
+        {
+          "id": "VA8J-XDW4-F5PL",
+          "title": "Jirou Tomitake",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:27:27.443Z",
+          "updatedAt": "2026-03-17T23:28:33.227Z",
+          "version": "1.0",
+          "appearance": "He is a sturdy, muscular man with short brown hair and a friendly face, usually seen wearing a simple green polo shirt and tan shorts. He is almost never without his professional camera hanging from his neck, which serves as both his artistic tool and his cover for more classified observations.",
+          "personality": "Tomitake is a cheerful, easygoing professional who visits the village every year to photograph local birds, serving as a friendly outside perspective to the club members. Despite his pleasant demeanor and his comical \"Tomitake-flash\" antics, he is deeply entangled in the village's dark military secrets and shares a complex, protective bond with Miyo Takano.",
+          "age": 38,
+          "gender": "male",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 14,
+            "month": 9
+          }
+        },
+        {
+          "id": "AR39-LM2Y-HP7Z",
+          "title": "Miyo Takano",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:28:19.243Z",
+          "updatedAt": "2026-03-17T23:28:29.459Z",
+          "version": "1.0",
+          "appearance": "She is an elegant woman with chin-length blonde hair and sharp, mocking green eyes that often hide behind a pair of stylish glasses. She is most frequently seen in her white nurse's uniform, though she also wears a dark, militaristic tactical outfit when overseeing the secretive \"Mountain Dogs\" operations.",
+          "personality": "Miyo is a brilliant, cold-blooded intellectual driven by an obsessive desire to prove her grandfather’s controversial medical theories and achieve \"godhood\" through scientific legacy. Beneath her professional and occasionally playful facade lies a deeply traumatized woman who will stop at nothing—including mass tragedy—to ensure her name is never forgotten by history.",
+          "age": 32,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 20,
+            "month": 6
+          }
+        },
+        {
+          "id": "XPU8-B9CA-7NQS",
+          "title": "Kyousuke Irie",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:29:15.035Z",
+          "version": "1.0",
+          "appearance": "He is a tall, slender man with a gentle face, short light-brown hair, and neat spectacles that give him a professional, intellectual air. He is almost always seen in a pristine white lab coat over a simple dress shirt and tie, embodying the classic image of a dedicated country doctor.",
+          "personality": "Dr. Irie is a brilliant and deeply compassionate surgeon who operates with a \"savior complex,\" dedicated to finding a medical cure for the Hinamizawa Syndrome to atone for his past. While he is a dependable and kind-hearted soul, he is also known for his eccentric and often inappropriate \"maid fetish,\" which provides a bizarre comedic contrast to his serious underground research.",
+          "age": 38,
+          "gender": "male",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 3,
+            "month": 9
+          }
+        },
+        {
+          "id": "TWH2-VEYX-JSY2",
+          "title": "Akane Sonozaki",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:30:06.203Z",
+          "updatedAt": "2026-03-18T13:41:07.194Z",
+          "version": "1.0",
+          "appearance": "She is a strikingly beautiful woman with long, dark green hair tied back in a low, elegant ponytail and sharp, piercing eyes that reflect her iron will. She is typically seen in traditional Japanese attire, specifically a high-quality dark kimono, which reinforces her status as a powerful figure within the village’s hierarchy.",
+          "personality": "Akane is a sharp-tongued, dignified woman who commands absolute respect through her fierce loyalty to the Sonozaki clan and her hidden, expert skill with a katana. Despite her intimidating aura as a high-ranking yakuza figure, she possesses a dry sense of humor and a protective, albeit strict, love for her daughters, Mion and Shion.",
+          "age": 39,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 6,
+            "month": 11
+          },
+          "relations": [
+            {
+              "targetId": "7PDM-LYVS-860S",
+              "targetName": "Oryou Sonozaki",
+              "relation": "Family",
+              "familySub": "Mother"
+            },
+            {
+              "targetId": "UN2C-87DP-HOBP",
+              "targetName": "Mion Sonozaki",
+              "relation": "Family",
+              "familySub": "Daughter"
+            },
+            {
+              "targetId": "HJMG-R6WM-AAW7",
+              "targetName": "Shion Sonozaki",
+              "relation": "Family",
+              "familySub": "Daughter"
+            }
+          ]
+        },
+        {
+          "id": "7PDM-LYVS-860S",
+          "title": "Oryou Sonozaki",
+          "genre": "character",
+          "createdAt": "2026-03-17T23:31:12.627Z",
+          "updatedAt": "2026-03-18T13:40:48.522Z",
+          "version": "1.0",
+          "appearance": "She is a frail-looking but imposing elderly woman with grey hair tied back in a traditional bun and sharp, squinted eyes that seem to see through any deception. She is almost exclusively seen wearing a formal, dark kimono, often seated in a commanding position within the Sonozaki estate to emphasize her status as the village’s ultimate power broker.",
+          "personality": "Oryou is the terrifying, traditionalist \"Empress\" of Hinamizawa who rules both her family and the village with an absolute authority that demands total obedience. Despite her cold, ruthless reputation as a leader who would sacrifice anything for the clan's honor, she secretly possesses a hidden layer of wisdom and a surprisingly soft spot for her granddaughters, Mion and Shion.",
+          "age": 70,
+          "gender": "female",
+          "raceId": "KZEK-8H4B-ZUOD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 12,
+            "month": 10
+          },
+          "relations": [
+            {
+              "targetId": "UN2C-87DP-HOBP",
+              "targetName": "Mion Sonozaki",
+              "relation": "Family",
+              "familySub": "Granddaughter"
+            },
+            {
+              "targetId": "HJMG-R6WM-AAW7",
+              "targetName": "Shion Sonozaki",
+              "relation": "Family",
+              "familySub": "Granddaughter"
+            },
+            {
+              "targetId": "TWH2-VEYX-JSY2",
+              "targetName": "Akane Sonozaki",
+              "relation": "Family",
+              "familySub": "Daughter"
+            }
+          ]
+        },
+        {
+          "id": "KOLD-QWG3-ZPTK",
+          "title": "Rika und Satokos Hütte",
+          "genre": "location",
+          "description": "Rika und Satoko leben zusammen in einer Hütte am Furude Shrine.",
+          "createdAt": "2026-03-17T23:40:49.906Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "house",
+          "events": {
+            "village-city": [
+              {
+                "type": "public",
+                "day": 19,
+                "month": 6,
+                "year": 1983,
+                "time": "21:00",
+                "description": "Das Watanagashi Festival wird zu ehren für Oyashiro-sama gefeiert."
+              },
+              {
+                "type": "secret",
+                "day": 20,
+                "month": 6,
+                "year": 1983,
+                "time": "00:00",
+                "description": "Rika wird nach dem Watanagashi Festival ermordet."
+              }
+            ]
+          }
+        },
+        {
+          "id": "FKRT-Y3KC-47SJ",
+          "title": "Furude Shrine",
+          "genre": "location",
+          "description": "Ein Shrine der Familie Furude, dieser befindet sich auf einem Berg.",
+          "createdAt": "2026-03-17T23:41:31.746Z",
+          "updatedAt": "2026-03-17T23:41:47.258Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "custom",
+          "canBeSpawn": true,
+          "sublocations": {
+            "building": [
+              "KOLD-QWG3-ZPTK"
+            ]
+          },
+          "events": {
+            "village-city": [
+              {
+                "type": "public",
+                "day": 19,
+                "month": 6,
+                "year": 1983,
+                "time": "21:00",
+                "description": "Das Watanagashi Festival wird zu ehren für Oyashiro-sama gefeiert."
+              },
+              {
+                "type": "secret",
+                "day": 20,
+                "month": 6,
+                "year": 1983,
+                "time": "00:00",
+                "description": "Rika wird nach dem Watanagashi Festival ermordet."
+              }
+            ]
+          }
+        },
+        {
+          "id": "EKPV-KM5J-QQD5",
+          "title": "Okinomiya",
+          "genre": "location",
+          "createdAt": "2026-03-18T14:01:39.577Z",
+          "updatedAt": "2026-03-18T14:02:55.632Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "city",
+          "sublocations": {
+            "village-city": [
+              "KQUY-QGLE-9U97"
+            ]
+          },
+          "population": {
+            "village-city": 2142
+          }
+        },
+        {
+          "id": "KQUY-QGLE-9U97",
+          "title": "Okinomiya Police Department",
+          "genre": "location",
+          "description": "Polizeistation",
+          "createdAt": "2026-03-18T14:02:49.553Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "shop",
+          "canBeSpawn": true,
+          "shopSchedule": {
+            "days": [
+              true,
+              true,
+              true,
+              true,
+              true,
+              false,
+              false
+            ],
+            "start": "09:00",
+            "end": "17:00"
+          }
+        }
+      ],
+      "settings": {
+        "backgroundUrl": "https://wallpapercave.com/wp/wp2538710.jpg",
+        "coverUrl": "https://i.pinimg.com/736x/67/c4/0e/67c40e8b2b1d55ddf7e4913bff34aee4.jpg"
+      }
+    }
+  }
+}
