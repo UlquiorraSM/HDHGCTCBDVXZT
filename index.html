@@ -857,52 +857,23 @@
             }
             async function listUniverseWorlds() {
                 const results = [];
-                // 0) Prefer locally cached worlds first
-                const cached = _getLocalStoredWorlds();
-                const seenNames = new Set();
-                cached.forEach(w => {
-                    results.push({
-                        url: "(local)" + (w.id || w.name || ""),
-                        id: w.id || "",
-                        name: w.name || "World",
-                        settings: w.data?.settings || {},
-                        cardsCount: w.cardsCount || 0
-                    });
-                    if (w.name) seenNames.add((w.name || "").toLowerCase());
-                });
-                for (const url of BUILTIN_WORLD_FILES) {
-                    try {
+                try {
+                    const manifest = await _loadJsonLocal("worlds/manifest.json");
+                    const files = Array.isArray(manifest) ? manifest : [];
+                    for (const name of files) {
+                        const url = `worlds/${name}`;
                         const data = await _loadJsonLocal(url);
-                        if (!data) {
-                            const base = url.split("/").pop().replace(/\.json$/i, "");
-                            if (!seenNames.has(base.toLowerCase())) {
-                                results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
-                            }
-                            continue;
-                        }
-                        const w = _extractWorld(data);
-                        if (!w) {
-                            const base = url.split("/").pop().replace(/\.json$/i, "");
-                            if (!seenNames.has(base.toLowerCase())) {
-                                results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
-                            }
-                        } else {
-                            if (seenNames.has((w.name || "").toLowerCase())) continue; // local cached takes precedence
-                            results.push({
-                                url,
-                                id: w.id || "",
-                                name: w.name || "World",
-                                settings: w.data?.settings || {},
-                                cardsCount: Array.isArray(w.data?.cards) ? w.data.cards.length : 0,
-                            });
-                        }
-                    } catch {
-                        const base = url.split("/").pop().replace(/\.json$/i, "");
-                        if (!seenNames.has(base.toLowerCase())) {
-                            results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
-                        }
+                        const w = data ? _extractWorld(data) : null;
+                        if (!w) continue;
+                        results.push({
+                            url,
+                            id: w.id || "",
+                            name: w.name || (name.replace(/\.json$/i, "")) || "World",
+                            settings: w.data?.settings || {},
+                            cardsCount: Array.isArray(w.data?.cards) ? w.data.cards.length : 0
+                        });
                     }
-                }
+                } catch {}
                 return results;
             }
             function openUniverse() {
@@ -962,23 +933,16 @@
                 try {
                     let world = null;
                     let stories = [];
-                    // Try to match locally cached world first by name/id
-                    const base = (url || "").split("/").pop().replace(/\.json$/i, "");
-                    const local = _getLocalStoredWorlds().find(x => (x.name || "").toLowerCase() === base.toLowerCase() || (x.id || "").toLowerCase() === base.toLowerCase());
-                    if (local) {
-                        world = { id: local.id, name: local.name, data: local.data };
-                        stories = [];
-                    } else {
-                        const data = await _loadJsonLocal(url);
-                        const w = data ? _extractWorld(data) : null;
-                        if (w) {
-                            world = { id: w.id, name: w.name, data: w.data };
-                            stories = Array.isArray(w.stories) ? w.stories : [];
-                        }
+                    const data = await _loadJsonLocal(url);
+                    const w = data ? _extractWorld(data) : null;
+                    if (w) {
+                        world = { id: w.id, name: w.name, data: w.data };
+                        stories = Array.isArray(w.stories) ? w.stories : [];
                     }
                     if (!world) {
                         // Fallback: create a minimal world from filename and cover fallback
-                        const cover = WORLD_COVER_FALLBACKS[base] || "";
+                        const base = (url || "").split("/").pop().replace(/\.json$/i, "");
+                        const cover = "";
                         world = {
                             id: base,
                             name: base,
@@ -1040,30 +1004,7 @@
                 }
             }
 
-            async function loadAllWorlds() { 
-                try { 
-                    const manifestResponse = await fetch("worlds/manifest.json"); 
-                    if (!manifestResponse.ok) throw new Error("Manifest nicht gefunden"); 
-                    const worldFiles = await manifestResponse.json(); 
-                    for (const fileName of worldFiles) { 
-                        const worldResponse = await fetch(`worlds/${fileName}`); 
-                        if (worldResponse.ok) { 
-                            const data = await worldResponse.json(); 
-                            const worldData = data.world; 
-                            if (worldData && worldData.id) { 
-                                localStorage.setItem("world_" + worldData.id, JSON.stringify(worldData)); 
-                                console.log(`Geladen: ${worldData.name}`); 
-                            } 
-                        } 
-                    } 
-                    if (typeof renderWorlds === "function") { 
-                        renderWorlds(); 
-                    } 
-                } catch (error) { 
-                    console.error("Fehler beim Laden der Welten:", error); 
-                } 
-            } 
-            window.addEventListener("DOMContentLoaded", loadAllWorlds);
+            /* removed auto-preload of worlds to avoid stale or duplicated entries */
             function preloadWorldBackgrounds() {
                 try {
                     const scenarios = getScenarios();
