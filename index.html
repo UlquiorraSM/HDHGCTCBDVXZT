@@ -340,18 +340,18 @@
                     padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0)) 12px;
                 }
                 .world-card {
-                    flex: 0 0 72vw;
-                    width: 72vw;
+                    flex: 0 0 62vw;
+                    width: 62vw;
                     min-width: 0;
-                    max-width: 420px;
+                    max-width: 360px;
                     aspect-ratio: 1 / 1;
                     height: auto;
-                    padding: 12px;
-                    gap: 8px;
+                    padding: 10px;
+                    gap: 6px;
                 }
                 .world-card .menu-button {
-                    padding: 8px 8px;
-                    font-size: 12px;
+                    padding: 7px 8px;
+                    font-size: 11.5px;
                 }
                 .story-card {
                     flex: 0 0 68vw;
@@ -410,6 +410,13 @@
                 }
                 #world-conf-overlay, #story-conf-overlay {
                     backdrop-filter: none !important;
+                }
+            }
+            @media (max-width: 400px) {
+                .world-card {
+                    flex: 0 0 56vw;
+                    width: 56vw;
+                    max-width: 320px;
                 }
             }
         </style>
