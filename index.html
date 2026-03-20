@@ -340,14 +340,14 @@
                     padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0)) 12px;
                 }
                 .world-card {
-                    flex: 0 0 62vw;
-                    width: 62vw;
+                    flex: 0 0 50vw;          /* Vorher 62vw */
+                    width: 50vw;             /* Vorher 62vw */
                     min-width: 0;
-                    max-width: 360px;
+                    max-width: 280px;        /* Vorher 360px */
                     aspect-ratio: 1 / 1;
-                    height: min(62vw, 360px);
-                    padding: 10px;
-                    gap: 6px;
+                    height: auto;            /* Vereinfacht, da aspect-ratio den Rest erledigt */
+                    padding: 8px;            /* Etwas weniger Innenabstand */
+                    gap: 4px;                /* Etwas weniger Abstand zwischen Elementen */
                 }
                 .world-card > * { min-height: 0; }
                 .world-card .menu-button {
