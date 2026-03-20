@@ -795,6 +795,28 @@
                 } catch {}
                 return null;
             }
+            function _getLocalStoredWorlds() {
+                const out = [];
+                try {
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i) || "";
+                        if (!/^world_/i.test(k)) continue;
+                        const raw = localStorage.getItem(k);
+                        if (!raw) continue;
+                        const data = _safeParseJson(raw);
+                        const w = _extractWorld({ world: data }) || (data && data.data ? { id: data.id, name: data.name, data: data.data } : null);
+                        if (w && Array.isArray(w.data?.cards)) {
+                            out.push({
+                                id: w.id || "",
+                                name: w.name || "World",
+                                data: w.data,
+                                cardsCount: w.data.cards.length
+                            });
+                        }
+                    }
+                } catch {}
+                return out;
+            }
             async function _loadJsonLocal(url) {
                 // Try fetch JSON
                 try {
@@ -835,19 +857,37 @@
             }
             async function listUniverseWorlds() {
                 const results = [];
+                // 0) Prefer locally cached worlds first
+                const cached = _getLocalStoredWorlds();
+                const seenNames = new Set();
+                cached.forEach(w => {
+                    results.push({
+                        url: "(local)" + (w.id || w.name || ""),
+                        id: w.id || "",
+                        name: w.name || "World",
+                        settings: w.data?.settings || {},
+                        cardsCount: w.cardsCount || 0
+                    });
+                    if (w.name) seenNames.add((w.name || "").toLowerCase());
+                });
                 for (const url of BUILTIN_WORLD_FILES) {
                     try {
                         const data = await _loadJsonLocal(url);
                         if (!data) {
                             const base = url.split("/").pop().replace(/\.json$/i, "");
-                            results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                            if (!seenNames.has(base.toLowerCase())) {
+                                results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                            }
                             continue;
                         }
                         const w = _extractWorld(data);
                         if (!w) {
                             const base = url.split("/").pop().replace(/\.json$/i, "");
-                            results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                            if (!seenNames.has(base.toLowerCase())) {
+                                results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                            }
                         } else {
+                            if (seenNames.has((w.name || "").toLowerCase())) continue; // local cached takes precedence
                             results.push({
                                 url,
                                 id: w.id || "",
@@ -858,7 +898,9 @@
                         }
                     } catch {
                         const base = url.split("/").pop().replace(/\.json$/i, "");
-                        results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                        if (!seenNames.has(base.toLowerCase())) {
+                            results.push({ url, id: "", name: base, settings: {}, cardsCount: 0, coverUrl: WORLD_COVER_FALLBACKS[base] || "" });
+                        }
                     }
                 }
                 return results;
@@ -920,15 +962,22 @@
                 try {
                     let world = null;
                     let stories = [];
-                    const data = await _loadJsonLocal(url);
-                    const w = data ? _extractWorld(data) : null;
-                    if (w) {
-                        world = { id: w.id, name: w.name, data: w.data };
-                        stories = Array.isArray(w.stories) ? w.stories : [];
+                    // Try to match locally cached world first by name/id
+                    const base = (url || "").split("/").pop().replace(/\.json$/i, "");
+                    const local = _getLocalStoredWorlds().find(x => (x.name || "").toLowerCase() === base.toLowerCase() || (x.id || "").toLowerCase() === base.toLowerCase());
+                    if (local) {
+                        world = { id: local.id, name: local.name, data: local.data };
+                        stories = [];
+                    } else {
+                        const data = await _loadJsonLocal(url);
+                        const w = data ? _extractWorld(data) : null;
+                        if (w) {
+                            world = { id: w.id, name: w.name, data: w.data };
+                            stories = Array.isArray(w.stories) ? w.stories : [];
+                        }
                     }
                     if (!world) {
                         // Fallback: create a minimal world from filename and cover fallback
-                        const base = url.split("/").pop().replace(/\.json$/i, "");
                         const cover = WORLD_COVER_FALLBACKS[base] || "";
                         world = {
                             id: base,
