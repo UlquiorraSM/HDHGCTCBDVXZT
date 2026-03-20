@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>StoryKI - Hauptmenü</title>
+        <title>StoryKI - Main Menu</title>
         <link rel="prefetch" href="Game.html" />
         <link rel="prefetch" href="settings.html" />
         <style>
@@ -340,14 +340,27 @@
                     padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0)) 12px;
                 }
                 .world-card {
-                    width: auto;
+                    flex: 0 0 72vw;
+                    width: 72vw;
                     min-width: 0;
-                    max-width: none;
+                    max-width: 420px;
+                    aspect-ratio: 1 / 1;
+                    height: auto;
+                    padding: 12px;
+                    gap: 8px;
+                }
+                .world-card .menu-button {
+                    padding: 8px 8px;
+                    font-size: 12px;
                 }
                 .story-card {
-                    width: auto;
+                    flex: 0 0 68vw;
+                    width: 68vw;
                     min-width: 0;
-                    max-width: none;
+                    max-width: 420px;
+                    aspect-ratio: 3 / 4;
+                    height: auto;
+                    padding: 10px;
                 }
                 h1 {
                     font-size: 1.8em;
@@ -364,17 +377,6 @@
                     gap: 12px;
                     padding: 12px 6px;
                     justify-content: flex-start;
-                }
-                .world-card {
-                    flex: 0 0 78vw;
-                    height: auto;
-                    padding: 14px;
-                    gap: 10px;
-                }
-                .story-card {
-                    flex: 0 0 74vw;
-                    height: auto;
-                    padding: 12px;
                 }
                 .menu-buttons {
                     width: 100%;

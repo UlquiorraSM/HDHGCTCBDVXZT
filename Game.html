@@ -3162,8 +3162,8 @@ Example:
                         addSystemDivider(`TIME SET: ${activeChar.startingDate.time} (${activeChar.startingDate.day}.${String(activeChar.startingDate.month).padStart(2,"0")}.${activeChar.startingDate.year})`);
                         // do not consume the user's message; continue to send it for narration
                     } catch (e) {
-                        console.error("Zeitstellen fehlgeschlagen", e);
-                        showToast("Zeit konnte nicht gesetzt werden.", "rgba(180,60,60,0.85)");
+                        console.error("Time slots failed", e);
+                        showToast("Time could not be set.", "rgba(180,60,60,0.85)");
                         // continue with message to avoid blocking progression
                     }
                 }
