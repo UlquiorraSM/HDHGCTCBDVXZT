@@ -2006,8 +2006,14 @@
                             set("shopSchedule", card.shopSchedule);
                             set("shopWorkers", card.shopWorkers);
                             set("states", card.states);
-                            // Location memories have no level concept; pass through as-is
-                            set("memories", Array.isArray(card.memories) ? card.memories : undefined);
+                            // Ensure each location memory contains a 'level' (default to 'Common' for legacy entries)
+                            if (Array.isArray(card.memories)) {
+                                const memsLoc = card.memories.map(m => {
+                                    const lvl = (typeof m?.level === "string" && m.level.toLowerCase() === "important") ? "Important" : "Common";
+                                    return { ...m, level: lvl };
+                                });
+                                set("memories", memsLoc);
+                            }
                         } else if (g === "race") {
                             set("nameGenerator", card.nameGenerator);
                             set("lore", card.lore);
@@ -2195,7 +2201,13 @@
                         set("shopSchedule", card.shopSchedule);
                         set("shopWorkers", card.shopWorkers);
                         set("states", card.states);
-                        set("memories", Array.isArray(card.memories) ? card.memories : undefined);
+                        if (Array.isArray(card.memories)) {
+                            const memsLoc = card.memories.map(m => {
+                                const lvl = (typeof m?.level === "string" && m.level.toLowerCase() === "important") ? "Important" : "Common";
+                                return { ...m, level: lvl };
+                            });
+                            set("memories", memsLoc);
+                        }
                     } else if (g === "race") {
                         set("nameGenerator", card.nameGenerator);
                         set("lore", card.lore);

@@ -2963,6 +2963,8 @@ Example:
                     date: dateStr,
                     time: timeStr,
                     location: locName,
+                    level: "Common",
+                    dayCount: _worldDayCount(d),
                     text: String(text || "").slice(0, 800),
                     logTs: anchorTs || null
                 };
