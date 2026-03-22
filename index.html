@@ -2005,6 +2005,8 @@
                             set("schoolClasses", card.schoolClasses);
                             set("shopSchedule", card.shopSchedule);
                             set("shopWorkers", card.shopWorkers);
+                            set("states", card.states);
+                            set("memories", Array.isArray(card.memories) ? card.memories : undefined);
                         } else if (g === "race") {
                             set("nameGenerator", card.nameGenerator);
                             set("lore", card.lore);
@@ -2039,6 +2041,7 @@
                             set("skillName", card.skillName);
                             set("spawnId", card.spawnId);
                             set("currentLocationId", card.currentLocationId);
+                            set("memories", Array.isArray(card.memories) ? card.memories : undefined);
                         } else if (g === "item") {
                             set("tags", card.tags);
                         } else if (g === "skill") {
@@ -2183,6 +2186,8 @@
                         set("schoolClasses", card.schoolClasses);
                         set("shopSchedule", card.shopSchedule);
                         set("shopWorkers", card.shopWorkers);
+                        set("states", card.states);
+                        set("memories", Array.isArray(card.memories) ? card.memories : undefined);
                     } else if (g === "race") {
                         set("nameGenerator", card.nameGenerator);
                         set("lore", card.lore);
@@ -2217,6 +2222,7 @@
                         set("skillName", card.skillName);
                         set("spawnId", card.spawnId);
                         set("currentLocationId", card.currentLocationId);
+                        set("memories", Array.isArray(card.memories) ? card.memories : undefined);
                     } else if (g === "item") {
                         set("tags", card.tags);
                     } else if (g === "skill") {
