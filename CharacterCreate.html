@@ -1796,10 +1796,10 @@
                 chars.push(newChar);
                 saveCharacters(chars);
 
-                // Navigate to loading screen (NPC generation)
+                // Navigate directly to game
                 document.body.style.opacity = "0";
                 setTimeout(() => {
-                    window.location.href = "Loading.html";
+                    window.location.href = "Game.html";
                 }, 400);
             }
 
@@ -2012,7 +2012,7 @@
 
                 document.getElementById("npc-setup-view").style.display = "none";
                 document.body.style.opacity = "0";
-                setTimeout(() => { window.location.href = "Loading.html"; }, 400);
+                setTimeout(() => { window.location.href = "Game.html"; }, 400);
             }
         </script>
     </body>
