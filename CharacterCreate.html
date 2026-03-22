@@ -1078,7 +1078,7 @@
 
                     <!-- Story Introduction -->
                     <div class="form-group" style="margin-top: 20px;">
-                        <label class="form-label">Story Introduction (Optional)</label>
+                        <label class="form-label">Story Introduction</label>
                         <textarea
                             class="form-input"
                             id="c-introduction"
@@ -1546,12 +1546,42 @@
                 // Enter in Vorname -> focus Nachname
                 const fnEl = document.getElementById("c-firstname");
                 const lnEl = document.getElementById("c-lastname");
+                const appEl = document.getElementById("c-appearance");
+                const ageEl = document.getElementById("c-age");
+                const dayEl = document.getElementById("c-day");
                 if (fnEl && lnEl) {
                     fnEl.addEventListener("keydown", (e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
                             lnEl.focus();
                             try { lnEl.select(); } catch {}
+                        }
+                    });
+                }
+                if (lnEl && appEl) {
+                    lnEl.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            appEl.focus();
+                            try { appEl.select(); } catch {}
+                        }
+                    });
+                }
+                if (appEl && ageEl) {
+                    appEl.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            ageEl.focus();
+                            try { ageEl.select(); } catch {}
+                        }
+                    });
+                }
+                if (ageEl && dayEl) {
+                    ageEl.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            dayEl.focus();
+                            try { dayEl.select(); } catch {}
                         }
                     });
                 }
