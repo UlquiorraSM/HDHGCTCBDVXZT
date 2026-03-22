@@ -1099,62 +1099,29 @@
                 let match;
                 let timeChanged = false;
                 let locationChanged = false;
+                // Reset pending memory targets for this response
+                window._pendingMemoryTargets = [];
 
                 while ((match = tagPattern.exec(text)) !== null) {
                     const content = match[1].trim();
-                    // Handle NPC memory tags as a whole block to preserve content
-                    const memNpcBlock = content.match(/^MemNPC\s*:\s*(.+)$/i);
-                    if (memNpcBlock) {
+                    // Handle NPC memory ID list tags: [[Memory:ID1:Common,ID2:Important]]
+                    const memIdList = content.match(/^Memory\s*:\s*(.+)$/i);
+                    if (memIdList) {
                         try {
-                            const payload = memNpcBlock[1].trim();
-                            const segments = payload.split(/;\s*/).map(s => s.trim()).filter(Boolean);
-                            if (segments.length > 0) {
-                                const idsPresent = getPresentNpcIds();
-                                const cards = getCards();
-                                const dNow = activeChar?.startingDate || {};
-                                const dateStr = `${String(dNow.day || 1).padStart(2, "0")}.${String(dNow.month || 1).padStart(2, "0")}.${dNow.year || 1983}`;
-                                const timeStr = dNow.time || "00:00";
-                                const locName = document.getElementById("header-location")?.textContent || "Unknown Location";
-                                segments.forEach(seg => {
-                                    const parts = seg.split("|").map(p => p.trim());
-                                    if (parts.length >= 3) {
-                                        const name = parts[0];
-                                        const level = (parts[1] || "Common").toLowerCase() === "important" ? "Important" : "Common";
-                                        const memoText = parts.slice(2).join("|"); // in case '|' used in text
-                                        // Find matching NPC(s)
-                                        let targets = [];
-                                        // Prefer present NPCs by title
-                                        if (idsPresent.length > 0) {
-                                            targets = idsPresent
-                                                .map(id => cards.find(c => c.id === id))
-                                                .filter(c => c && c.genre === "character" && (c.title || "").trim().toLowerCase() === name.toLowerCase());
-                                        }
-                                        if (targets.length === 0) {
-                                            // Fallback: search all characters
-                                            const t = cards.filter(c => c.genre === "character" && (c.title || "").trim().toLowerCase() === name.toLowerCase());
-                                            targets = t;
-                                        }
-                                        if (targets.length > 0) {
-                                            targets.forEach(npc => {
-                                                if (!Array.isArray(npc.memories)) npc.memories = [];
-                                                npc.memories.push({
-                                                    date: dateStr,
-                                                    time: timeStr,
-                                                    location: locName,
-                                                    level,
-                                                    dayCount: _worldDayCount(dNow),
-                                                    text: String(memoText || "").slice(0, 800),
-                                                    logTs: currentNarrationTs || null
-                                                });
-                                                if (npc.memories.length > 200) npc.memories = npc.memories.slice(-200);
-                                            });
-                                            sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
-                                        }
-                                    }
-                                });
-                            }
+                            const payload = memIdList[1].trim();
+                            const items = payload.split(/,\s*/).map(s => s.trim()).filter(Boolean);
+                            const targets = [];
+                            items.forEach(it => {
+                                const m = it.match(/^([A-Za-z0-9\-]+)\s*:\s*(Common|Important)$/i);
+                                if (m) {
+                                    const id = m[1].trim();
+                                    const level = (m[2] || "Common").toLowerCase() === "important" ? "Important" : "Common";
+                                    targets.push({ id, level });
+                                }
+                            });
+                            window._pendingMemoryTargets = targets;
                         } catch (e) {
-                            console.warn("MemNPC parse failed", e);
+                            console.warn("Memory tag parse failed", e);
                         }
                         continue;
                     }
@@ -2640,15 +2607,13 @@ ${shopContext}
 
 # NPC MEMORY TAGS (MANDATORY WHEN PRESENT NPCs ACT)
 - Whenever any PRESENT NPC performs an explicit action in your narration:
-  - Append one or more NPC memory tags BEFORE the final metadata block.
+  - Append a single NPC memory tag BEFORE the final metadata block.
   - Use 'Common' for everyday actions; use 'Important' for significant events (kissed, slept together, fought, confessed, etc.).
-- Syntax:
-  [[MemNPC: Name|Level|What they did; Name2|Level|What they did; ...]]
-  - Name: exact NPC name (as shown in PRESENT NPCs)
+- Syntax (IDs only; no extra text here — the full narration becomes the memory text):
+  [[Memory: ID1:Common,ID2:Important,ID3:Common]]
+  - IDs are character IDs of the NPCs that acted
   - Level: Common or Important
-  - Text: brief action summary in plain language
-- Examples:
-  [[MemNPC: Keiichi Maebara|Common|helped carry boxes to the shrine; Mion Sonozaki|Important|kissed Keiichi behind the store]]
+  - The entire narration text will be stored for each listed NPC as their memory
 
 # RESPONSE FORMAT (MANDATORY)
 Your response MUST consist of two parts:
@@ -2953,6 +2918,37 @@ Example:
                     sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
                 }
             }
+            
+            function addNpcMemoriesFromPending(narrativeText, anchorTs = null) {
+                const targets = Array.isArray(window._pendingMemoryTargets) ? window._pendingMemoryTargets : [];
+                if (targets.length === 0) return;
+                const cards = getCards();
+                const d = activeChar?.startingDate || {};
+                const dateStr = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const timeStr = d.time || "00:00";
+                const locName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                let changed = false;
+                targets.forEach(({ id, level }) => {
+                    const npc = cards.find(c => c.genre === "character" && c.id === id);
+                    if (!npc) return;
+                    if (!Array.isArray(npc.memories)) npc.memories = [];
+                    npc.memories.push({
+                        date: dateStr,
+                        time: timeStr,
+                        location: locName,
+                        level: (level || "Common"),
+                        dayCount: _worldDayCount(d),
+                        text: String(narrativeText || "").slice(0, 800),
+                        logTs: anchorTs || null
+                    });
+                    if (npc.memories.length > 200) npc.memories = npc.memories.slice(-200);
+                    changed = true;
+                });
+                if (changed) {
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                }
+                window._pendingMemoryTargets = [];
+            }
 
             function addLocationMemoryFromNarration(text, anchorTs = null) {
                 if (!currentLocationId) return;
@@ -3241,7 +3237,7 @@ Example:
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
-                    addNpcMemoriesFromNarration(finalText, ts);
+                    addNpcMemoriesFromPending(finalText, ts);
                     addLocationMemoryFromNarration(finalText, ts);
                 } catch (err) {
                     removeTypingIndicator();
@@ -3332,7 +3328,7 @@ Example:
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
-                    addNpcMemoriesFromNarration(finalText, ts);
+                    addNpcMemoriesFromPending(finalText, ts);
                     addLocationMemoryFromNarration(finalText, ts);
                 } catch (err) {
                     removeTypingIndicator();
@@ -3440,7 +3436,7 @@ Example:
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
-                    addNpcMemoriesFromNarration(finalText, ts);
+                    addNpcMemoriesFromPending(finalText, ts);
                     addLocationMemoryFromNarration(finalText, ts);
                 } catch (e) {
                     removeTypingIndicator();
@@ -3484,7 +3480,7 @@ Example:
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
-                    addNpcMemoriesFromNarration(finalText, ts);
+                    addNpcMemoriesFromPending(finalText, ts);
                     addLocationMemoryFromNarration(finalText, ts);
                 } catch (e) {
                     removeTypingIndicator();
