@@ -1542,6 +1542,19 @@
 
                 // Initialize introduction field
                 document.getElementById("c-introduction").value = "";
+                
+                // Enter in Vorname -> focus Nachname
+                const fnEl = document.getElementById("c-firstname");
+                const lnEl = document.getElementById("c-lastname");
+                if (fnEl && lnEl) {
+                    fnEl.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            lnEl.focus();
+                            try { lnEl.select(); } catch {}
+                        }
+                    });
+                }
 
                 document.getElementById("create-count").textContent =
                     getCharacters().length;

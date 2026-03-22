@@ -1102,6 +1102,62 @@
 
                 while ((match = tagPattern.exec(text)) !== null) {
                     const content = match[1].trim();
+                    // Handle NPC memory tags as a whole block to preserve content
+                    const memNpcBlock = content.match(/^MemNPC\s*:\s*(.+)$/i);
+                    if (memNpcBlock) {
+                        try {
+                            const payload = memNpcBlock[1].trim();
+                            const segments = payload.split(/;\s*/).map(s => s.trim()).filter(Boolean);
+                            if (segments.length > 0) {
+                                const idsPresent = getPresentNpcIds();
+                                const cards = getCards();
+                                const dNow = activeChar?.startingDate || {};
+                                const dateStr = `${String(dNow.day || 1).padStart(2, "0")}.${String(dNow.month || 1).padStart(2, "0")}.${dNow.year || 1983}`;
+                                const timeStr = dNow.time || "00:00";
+                                const locName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                                segments.forEach(seg => {
+                                    const parts = seg.split("|").map(p => p.trim());
+                                    if (parts.length >= 3) {
+                                        const name = parts[0];
+                                        const level = (parts[1] || "Common").toLowerCase() === "important" ? "Important" : "Common";
+                                        const memoText = parts.slice(2).join("|"); // in case '|' used in text
+                                        // Find matching NPC(s)
+                                        let targets = [];
+                                        // Prefer present NPCs by title
+                                        if (idsPresent.length > 0) {
+                                            targets = idsPresent
+                                                .map(id => cards.find(c => c.id === id))
+                                                .filter(c => c && c.genre === "character" && (c.title || "").trim().toLowerCase() === name.toLowerCase());
+                                        }
+                                        if (targets.length === 0) {
+                                            // Fallback: search all characters
+                                            const t = cards.filter(c => c.genre === "character" && (c.title || "").trim().toLowerCase() === name.toLowerCase());
+                                            targets = t;
+                                        }
+                                        if (targets.length > 0) {
+                                            targets.forEach(npc => {
+                                                if (!Array.isArray(npc.memories)) npc.memories = [];
+                                                npc.memories.push({
+                                                    date: dateStr,
+                                                    time: timeStr,
+                                                    location: locName,
+                                                    level,
+                                                    dayCount: _worldDayCount(dNow),
+                                                    text: String(memoText || "").slice(0, 800),
+                                                    logTs: currentNarrationTs || null
+                                                });
+                                                if (npc.memories.length > 200) npc.memories = npc.memories.slice(-200);
+                                            });
+                                            sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                                        }
+                                    }
+                                });
+                            }
+                        } catch (e) {
+                            console.warn("MemNPC parse failed", e);
+                        }
+                        continue;
+                    }
                     const parts = content.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
 
                     for (const part of parts) {
@@ -1264,11 +1320,13 @@
 
                 if (!timeChanged) {
                     addMinutes(1);
+                    clearExpiredNpcMemories();
                 } else {
                     updateNPCBirthdays(d);
                     updatePlayerBirthday(d);
                     updateHeaderTime();
                     saveActiveCharacter();
+                    clearExpiredNpcMemories();
                 }
 
                 return text.replace(/\[\[.*?\]\]/g, "").replace(/\s+/g, " ").trim();
@@ -2580,6 +2638,18 @@ ${shopContext}
 - Syntax: [[LocState:key=value]] or with expiry [[LocState:key=value;ttl=19d]]. Multiple pairs may be separated by semicolons.
 - Examples: [[LocState:door=broken]] , [[LocState:gum_spot=present;ttl=30d]]
 
+# NPC MEMORY TAGS (MANDATORY WHEN PRESENT NPCs ACT)
+- Whenever any PRESENT NPC performs an explicit action in your narration:
+  - Append one or more NPC memory tags BEFORE the final metadata block.
+  - Use 'Common' for everyday actions; use 'Important' for significant events (kissed, slept together, fought, confessed, etc.).
+- Syntax:
+  [[MemNPC: Name|Level|What they did; Name2|Level|What they did; ...]]
+  - Name: exact NPC name (as shown in PRESENT NPCs)
+  - Level: Common or Important
+  - Text: brief action summary in plain language
+- Examples:
+  [[MemNPC: Keiichi Maebara|Common|helped carry boxes to the shrine; Mion Sonozaki|Important|kissed Keiichi behind the store]]
+
 # RESPONSE FORMAT (MANDATORY)
 Your response MUST consist of two parts:
 1. The narration text (storytelling).
@@ -2865,6 +2935,8 @@ Example:
                     date: dateStr,
                     time: timeStr,
                     location: loc,
+                    level: "Common",
+                    dayCount: _worldDayCount(d),
                     text: String(text || "").slice(0, 800),
                     logTs: anchorTs || null
                 };
@@ -2938,6 +3010,37 @@ Example:
                         delete locCard.states[k];
                         changed = true;
                     }
+                });
+                if (changed) {
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                }
+            }
+            function clearExpiredNpcMemories() {
+                const cards = getCards();
+                const d = activeChar?.startingDate || {};
+                const nowCount = _worldDayCount(d);
+                let changed = false;
+                const parseCount = (m) => {
+                    if (m.dayCount != null) return m.dayCount;
+                    const parts = (m.date || "").split(".");
+                    if (parts.length === 3) {
+                        const dd = parseInt(parts[0]) || 1;
+                        const mm = parseInt(parts[1]) || 1;
+                        const yy = parseInt(parts[2]) || 1983;
+                        return _worldDayCount({ day: dd, month: mm, year: yy });
+                    }
+                    return null;
+                };
+                cards.forEach((c) => {
+                    if (c.genre !== "character" || !Array.isArray(c.memories)) return;
+                    const before = c.memories.length;
+                    c.memories = c.memories.filter((m) => {
+                        if ((m.level || "Common") !== "Common") return true;
+                        const mc = parseCount(m);
+                        if (mc == null) return true;
+                        return mc > (nowCount - 10);
+                    });
+                    if (c.memories.length !== before) changed = true;
                 });
                 if (changed) {
                     sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
