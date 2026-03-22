@@ -1548,7 +1548,7 @@
                 const lnEl = document.getElementById("c-lastname");
                 const appEl = document.getElementById("c-appearance");
                 const ageEl = document.getElementById("c-age");
-                const dayEl = document.getElementById("c-day");
+                const birthDayEl = document.getElementById("c-birth-day");
                 if (fnEl && lnEl) {
                     fnEl.addEventListener("keydown", (e) => {
                         if (e.key === "Enter") {
@@ -1576,12 +1576,12 @@
                         }
                     });
                 }
-                if (ageEl && dayEl) {
+                if (ageEl && birthDayEl) {
                     ageEl.addEventListener("keydown", (e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
-                            dayEl.focus();
-                            try { dayEl.select(); } catch {}
+                            birthDayEl.focus();
+                            try { birthDayEl.select(); } catch {}
                         }
                     });
                 }
