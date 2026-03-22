@@ -932,23 +932,46 @@
                     const raw = Storage.get(LOG_KEY);
                     if (raw) {
                         chatHistory = JSON.parse(raw);
-                        // Render log
+                        if (!window._chatPageSize) window._chatPageSize = 12;
+                        if (!window._chatLoadedCount) window._chatLoadedCount = 0;
+                        window._chatLoadedCount = Math.min(window._chatPageSize, chatHistory.length);
+                        renderChatWindow(false, 0);
                         const messagesEl = document.getElementById("messages");
-                        messagesEl.innerHTML = "";
-                        chatHistory.forEach((entry) => {
-                            if (typeof entry === "string") {
-                                // Divider
-                                addSystemDivider(entry, false);
-                            } else {
-                                // New object format
-                                const role = entry.sender === "Narrator" ? "ai" : "user";
-                                appendBubble(role, entry.text, "", false);
-                            }
-                        });
-                        messagesEl.scrollTop = messagesEl.scrollHeight;
+                        if (messagesEl && !window._chatScrollBound) {
+                            window._chatScrollBound = true;
+                            messagesEl.addEventListener("scroll", function () {
+                                if (messagesEl.scrollTop <= 5 && window._chatLoadedCount < chatHistory.length) {
+                                    const prevHeight = messagesEl.scrollHeight;
+                                    window._chatLoadedCount = Math.min(window._chatLoadedCount + window._chatPageSize, chatHistory.length);
+                                    renderChatWindow(true, prevHeight);
+                                }
+                            });
+                        }
                     }
                 } catch (e) {
                     console.error("Failed to load story log", e);
+                }
+            }
+
+            function renderChatWindow(preserve, prevHeight) {
+                const messagesEl = document.getElementById("messages");
+                if (!messagesEl) return;
+                messagesEl.innerHTML = "";
+                const total = chatHistory.length;
+                const start = Math.max(0, total - (window._chatLoadedCount || 0));
+                for (let i = start; i < total; i++) {
+                    const entry = chatHistory[i];
+                    if (typeof entry === "string") {
+                        addSystemDivider(entry, false);
+                    } else {
+                        const role = entry.sender === "Narrator" ? "ai" : "user";
+                        appendBubble(role, entry.text, "", false);
+                    }
+                }
+                if (preserve) {
+                    messagesEl.scrollTop = messagesEl.scrollHeight - prevHeight + 5;
+                } else {
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
                 }
             }
 
