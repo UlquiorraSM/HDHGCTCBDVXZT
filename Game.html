@@ -2564,6 +2564,7 @@
                 };
                 const aiLang = aiLangMap[settings.aiLanguage] || "English";
                 const sizePref = (settings.textSize || "normal").toLowerCase();
+                const perspective = (settings.perspective || "narrator").toLowerCase();
                 let lengthInstruction = "";
                 if (sizePref === "short") {
                     lengthInstruction = "WRITE 1–2 COMPLETE SENTENCES. Do NOT end with '...'. Close all quotes.";
@@ -2572,11 +2573,18 @@
                 } else {
                     lengthInstruction = "Write a response of normal length. Aim for about 4-6 sentences, balanced detail.";
                 }
+                let perspectiveInstruction = "";
+                if (perspective === "player") {
+                    perspectiveInstruction = "Write in FIRST-PERSON from the PLAYER'S perspective.";
+                } else {
+                    perspectiveInstruction = "Write in SECOND-PERSON addressing the PLAYER.";
+                }
 
                 return `[SYSTEM INSTRUCTIONS]
 You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
 
  ${lengthInstruction}
+ ${perspectiveInstruction}
  
 # CURRENT WORLD STATE
 - DATE: ${curDate}

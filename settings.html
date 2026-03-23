@@ -418,6 +418,15 @@
                             </select>
                         </div>
                     </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Perspective</span>
+                        <div class="setting-control">
+                            <select id="ai-perspective">
+                                <option value="narrator" selected>Narrator perspective (Du)</option>
+                                <option value="player">Player perspective (Ich)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -481,6 +490,7 @@
                 // KI-Einstellungen
                 document.getElementById('text-size').value = data.textSize || 'normal';
                 document.getElementById('ai-language').value = data.aiLanguage || 'en';
+                document.getElementById('ai-perspective').value = data.perspective || 'narrator';
                 
                 applyBackground(true);
             } else {
@@ -526,7 +536,8 @@
                 
                 // KI-Einstellungen
                 textSize: document.getElementById('text-size').value,
-                aiLanguage: document.getElementById('ai-language').value
+                aiLanguage: document.getElementById('ai-language').value,
+                perspective: document.getElementById('ai-perspective').value
             };
             
             Storage.set('storyki_settings', JSON.stringify(settings));
@@ -610,7 +621,8 @@
             const currentSettings = {
                 backgroundUrl: document.getElementById('background-url').value,
                 textSize: document.getElementById('text-size').value,
-                aiLanguage: document.getElementById('ai-language').value
+                aiLanguage: document.getElementById('ai-language').value,
+                perspective: document.getElementById('ai-perspective').value
             };
             
             const savedSettingsRaw = Storage.get('storyki_settings');
@@ -622,7 +634,8 @@
             return (
                 currentSettings.backgroundUrl !== (savedSettings.backgroundUrl || 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp') ||
                 currentSettings.textSize !== (savedSettings.textSize || 'normal') ||
-                currentSettings.aiLanguage !== (savedSettings.aiLanguage || 'en')
+                currentSettings.aiLanguage !== (savedSettings.aiLanguage || 'en') ||
+                currentSettings.perspective !== (savedSettings.perspective || 'narrator')
             );
         }
         
