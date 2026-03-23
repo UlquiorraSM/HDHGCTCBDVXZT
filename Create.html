@@ -6563,18 +6563,16 @@
             ───────────────────────────────────────── */
             // Returns which locationSub values are allowed in a given picker context
             function sublocAllowedTypes(ctx) {
-                if (ctx === "village-city") return ["building"];
-                if (ctx === "country-kingdom") return ["zivil", "building"]; // zivil-sub village/city + buildings
+                // Allow all location types for sublocation picking to enable cross-linking
                 if (ctx === "building") return ["building"];
                 if (ctx === "resident" || ctx.endsWith("-resident"))
                     return ["character"];
-                return [];
+                return null; // null = no restriction by locationSub
             }
 
             // For country-kingdom: which zivil-sub detail values count as "village/city"
             function sublocAllowedDetails(ctx) {
-                if (ctx === "country-kingdom") return ["village", "city"];
-                return null; // null = don't filter by locationDetail
+                return null; // no restriction by locationDetail
             }
 
             function openSublocPicker(ctx) {
@@ -6590,8 +6588,8 @@
                 }
 
                 const titles = {
-                    "village-city": "Select Buildings",
-                    "country-kingdom": "Select Villages, Cities & Buildings",
+                    "village-city": "Select Sublocations",
+                    "country-kingdom": "Select Sublocations",
                     building: "Select Buildings",
                     resident: "Select Residents (NPCs)",
                     "village-city-resident": "Select Residents (NPCs)",
@@ -6744,7 +6742,7 @@
                         if (c.genre !== "location") return false;
 
                         // Must match one of the allowed locationSub values
-                        const subMatch = allowed.includes(c.locationSub);
+                        const subMatch = !allowed || allowed.includes(c.locationSub);
 
                         // For country-kingdom we also want village/city zivil entries:
                         // those have locationSub="zivil" and locationDetail in ["village","city"]
