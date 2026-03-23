@@ -2671,7 +2671,6 @@
                         <option value="village">Village</option>
                         <option value="city">City</option>
                         <option value="country">Country</option>
-                        <option value="county">County</option>
                         <option value="kingdom">Kingdom</option>
                     </select>
                 </div>
@@ -2704,7 +2703,7 @@
                                     onclick="openRacialPicker('village-city')"
                                 >
                                     <span class="subloc-icon">&#9670;</span>
-                                    RacialCivilization
+                                    Racial civilization
                                 </button>
                                 <button
                                     type="button"
@@ -2755,7 +2754,7 @@
                                 id="racial-village-city-group"
                             >
                                 <label class="form-label"
-                                    >RacialCivilization</label
+                                    >Racial civilization</label
                                 >
                                 <div
                                     class="racial-tags"
@@ -2768,7 +2767,7 @@
                                     style="margin-top: 8px; display:none"
                                 >
                                     <span class="subloc-icon">&#9670;</span>
-                                    RacialCivilization
+                                    Racial civilization
                                 </button>
                             </div>
 
@@ -2851,7 +2850,7 @@
                                     "
                                 >
                                     <span class="subloc-icon">&#9670;</span>
-                                    RacialCivilization
+                                    Racial civilization
                                 </button>
                                 <button
                                     type="button"
@@ -2904,7 +2903,7 @@
                                 id="racial-country-kingdom-group"
                             >
                                 <label class="form-label"
-                                    >RacialCivilization</label
+                                    >Racial civilization</label
                                 >
                                 <div
                                     class="racial-tags"
@@ -2919,7 +2918,7 @@
                                     style="margin-top: 8px; display:none"
                                 >
                                     <span class="subloc-icon">&#9670;</span>
-                                    RacialCivilization
+                                    Racial civilization
                                 </button>
                             </div>
 
@@ -3699,7 +3698,7 @@
             <div class="racial-panel">
                 <div class="racial-panel-header">
                     <span class="racial-panel-title" id="racial-panel-title"
-                        >RacialCivilization</span
+                        >Racial civilization</span
                     >
                     <button
                         class="racial-panel-close"
@@ -5290,6 +5289,27 @@
                     zivilGroup.style.display = "none";
                     buildingGroup.style.display = "none";
                     if (mapGroup) mapGroup.style.display = "none";
+                    // Hide any location-specific tool sections that may still be visible
+                    const otherTools = document.getElementById("other-tools-group");
+                    const otherToolsRow = document.getElementById("tools-section-other");
+                    const toolsVc = document.getElementById("tools-section-vc");
+                    const toolsCk = document.getElementById("tools-section-ck");
+                    const resVcGrp = document.getElementById("resident-village-city-group");
+                    const resCkGrp = document.getElementById("resident-country-kingdom-group");
+                    const sublocBuildGrp = document.getElementById("subloc-building-group");
+                    const houseResGrp = document.getElementById("house-residents-group");
+                    const schoolSchedGrp = document.getElementById("school-schedule-group");
+                    const shopWorkGrp = document.getElementById("shop-work-group");
+                    if (otherTools) otherTools.style.display = "none";
+                    if (otherToolsRow) otherToolsRow.style.display = "none";
+                    if (toolsVc) toolsVc.style.display = "none";
+                    if (toolsCk) toolsCk.style.display = "none";
+                    if (resVcGrp) resVcGrp.style.display = "none";
+                    if (resCkGrp) resCkGrp.style.display = "none";
+                    if (sublocBuildGrp) sublocBuildGrp.style.display = "none";
+                    if (houseResGrp) houseResGrp.style.display = "none";
+                    if (schoolSchedGrp) schoolSchedGrp.style.display = "none";
+                    if (shopWorkGrp) shopWorkGrp.style.display = "none";
                     document.getElementById("f-location-sub").value = "";
                     document.getElementById("f-zivil-sub").value = "";
                     document.getElementById("f-building-sub").value = "";
