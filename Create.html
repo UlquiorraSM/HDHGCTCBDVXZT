@@ -5014,7 +5014,10 @@
                     document.getElementById("form-title").textContent =
                         "Add Entry";
                     document.getElementById("f-name").value = "";
-                    document.getElementById("f-type").value = "";
+                    (function(){
+                        const t = ["location","race","character"].includes(activeFilter) ? activeFilter : "";
+                        document.getElementById("f-type").value = t;
+                    })();
                     document.getElementById("f-description").value = "";
                     resetNameGen();
                     loreData = "";
@@ -5025,6 +5028,7 @@
                     document.getElementById("form-id-row").textContent = "";
                     document.getElementById("btn-save").textContent = "Create";
                     resetLocationSubtype();
+                    onTypeChange();
                     resetCharacterFields();
                     resetSpeciesFields();
                     resetLoreFields();
