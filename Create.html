@@ -5217,9 +5217,62 @@
                 if (!grp) return;
                 grp.style.display = grp.style.display === "none" ? "block" : "none";
             }
-            function generateNPCWithAI() {
-                const p = (document.getElementById("f-char-ai-prompt")?.value || "").trim();
-                const lower = p.toLowerCase();
+            async function askAI(prompt) {
+                const requestId = Math.random().toString(36).slice(2);
+                return new Promise((resolve, reject) => {
+                    const handler = (event) => {
+                        if (!event || !event.data || event.data.requestId !== requestId) return;
+                        window.removeEventListener("message", handler);
+                        if (event.data.type === "AI_RESPONSE") resolve(event.data.instruction || "");
+                        else reject(event.data.error || "AI error");
+                    };
+                    window.addEventListener("message", handler);
+                    window.parent.postMessage({ type: "AI_REQUEST", instruction: prompt, requestId }, "*");
+                });
+            }
+            async function askAIWithRetry(prompt) {
+                while (true) {
+                    try {
+                        return await askAI(prompt);
+                    } catch (e) {
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
+                }
+            }
+            async function generateNPCWithAI() {
+                const prompt = (document.getElementById("f-char-ai-prompt")?.value || "").trim();
+                const races = getCards().filter(c => c.genre === "race").map(r => r.title).slice(0, 50);
+                const npcs = getCards().filter(c => c.genre === "character").map(c => c.title).slice(0, 100);
+                const sys = [
+                    "You generate one NPC as strict JSON. Output ONLY JSON with keys:",
+                    "name, appearance, personality, age, gender, raceName, status, birthdate:{day,month},",
+                    "secrets:[string], relations:[{targetName, relation, familySub}]",
+                    "Constraints: age 5..120; gender one of male|female|other; status Alive|Dead;",
+                    "raceName in this list: " + races.join(", "),
+                    "targetName must be one of these NPCs (optional): " + npcs.join(", "),
+                    "Example:",
+                    "{\"name\":\"Keiichi Maebara\",\"appearance\":\"slim\",\"personality\":\"curious\",\"age\":16,\"gender\":\"male\",\"raceName\":\"Human\",\"status\":\"Alive\",\"birthdate\":{\"day\":15,\"month\":6},\"secrets\":[\"stashes a note\"],\"relations\":[{\"targetName\":\"Mion Sonozaki\",\"relation\":\"Friend\",\"familySub\":\"\"}]}"
+                ].join("\n");
+                let raw = "";
+                try {
+                    raw = await askAIWithRetry(sys + "\n\nUser Prompt:\n" + prompt + "\nJSON:");
+                } catch (e) {
+                    showToast("AI unavailable.", "rgba(180,60,60,0.85)");
+                    return;
+                }
+                const jsonText = (() => {
+                    const s = String(raw || "");
+                    const i = s.indexOf("{");
+                    const j = s.lastIndexOf("}");
+                    if (i >= 0 && j > i) return s.slice(i, j + 1);
+                    return "";
+                })();
+                let obj = null;
+                try { obj = JSON.parse(jsonText); } catch {}
+                if (!obj) {
+                    showToast("AI response invalid.", "rgba(180,60,60,0.85)");
+                    return;
+                }
                 const nameEl = document.getElementById("f-name");
                 const appEl = document.getElementById("f-char-appearance");
                 const perEl = document.getElementById("f-char-personality");
@@ -5229,58 +5282,44 @@
                 const statusEl = document.getElementById("f-char-status");
                 const bDayEl = document.getElementById("f-char-birth-day");
                 const bMonthEl = document.getElementById("f-char-birth-month");
-                let gender = "male";
-                if (/(female|woman|girl|she|her)\b/.test(lower)) gender = "female";
-                if (/(male|man|boy|he|him)\b/.test(lower) && gender !== "female") gender = "male";
-                if (genderEl) genderEl.value = gender;
-                const races = getCards().filter(c => c.genre === "race");
-                let raceId = "";
-                const hit = races.find(r => lower.includes((r.title || "").toLowerCase()));
-                raceId = hit ? hit.id : (races[0]?.id || "");
-                if (raceEl) raceEl.value = raceId;
-                let age = 18;
-                const ageMatch = lower.match(/\b(\d{1,3})\b/);
-                if (ageMatch) {
-                    const a = parseInt(ageMatch[1], 10);
-                    if (a >= 5 && a <= 120) age = a;
-                }
-                if (ageEl) ageEl.value = String(age);
-                let status = "Alive";
-                if (/(dead|died|killed|deceased|murdered)/.test(lower)) status = "Dead";
-                if (statusEl) statusEl.value = status;
-                const month = Math.max(1, Math.min(12, Math.floor(Math.random() * 12) + 1));
-                const dim = month === 2 ? 29 : ([4,6,9,11].includes(month) ? 30 : 31);
-                const day = Math.max(1, Math.min(dim, Math.floor(Math.random() * dim) + 1));
-                if (bMonthEl) bMonthEl.value = String(month);
-                if (bDayEl) {
+                if (nameEl && obj.name) nameEl.value = obj.name;
+                if (appEl && obj.appearance) appEl.value = obj.appearance;
+                if (perEl && obj.personality) perEl.value = obj.personality;
+                if (ageEl && obj.age) ageEl.value = String(obj.age);
+                if (genderEl && obj.gender) genderEl.value = String(obj.gender).toLowerCase();
+                if (statusEl && obj.status) statusEl.value = obj.status;
+                if (bMonthEl && obj.birthdate && obj.birthdate.month) bMonthEl.value = String(obj.birthdate.month);
+                if (bDayEl && obj.birthdate && obj.birthdate.day) {
+                    const m = parseInt(bMonthEl ? bMonthEl.value : "1", 10);
+                    const dim = m === 2 ? 29 : ([4,6,9,11].includes(m) ? 30 : 31);
                     bDayEl.max = String(dim);
-                    bDayEl.value = String(day);
+                    bDayEl.value = String(Math.max(1, Math.min(dim, obj.birthdate.day)));
                 }
-                const words = p.split(/\s+/).filter(Boolean);
-                const base = words.slice(0, 2).map(w => w.replace(/[^a-zA-Z]/g, "")).filter(Boolean);
-                const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
-                const first = cap(base[0] || (gender === "female" ? "Rena" : "Keiichi"));
-                const last = cap(base[1] || "Maebara");
-                if (nameEl) nameEl.value = `${first} ${last}`;
-                if (appEl && !appEl.value.trim()) appEl.value = p ? p : "Average height and build.";
-                if (perEl && !perEl.value.trim()) perEl.value = "Calm, observant, and loyal.";
-                const secHint = p ? p : "Keeps a hidden letter in the desk.";
-                secretSelections = [{ text: secHint }];
+                if (raceEl && obj.raceName) {
+                    const all = getCards().filter(c => c.genre === "race");
+                    const hit = all.find(r => (r.title || "").toLowerCase() === String(obj.raceName || "").toLowerCase());
+                    if (hit) raceEl.value = hit.id;
+                }
+                secretSelections = Array.isArray(obj.secrets) ? obj.secrets.filter(s => s && s.trim()).map(t => ({ text: t })) : [];
                 renderSecretTags();
                 const others = getCards().filter(c => c.genre === "character" && c.id !== editingId);
-                const pick = others.slice(0, 2);
-                relationSelections = pick.map(t => ({
-                    targetId: t.id,
-                    targetName: t.title,
-                    relation: /(rival|enemy|hate)/.test(lower) ? "Rival" : "Friend",
-                    familySub: ""
-                }));
+                const rels = Array.isArray(obj.relations) ? obj.relations : [];
+                relationSelections = rels.map(r => {
+                    const tn = String(r.targetName || "").trim().toLowerCase();
+                    const tgt = others.find(o => (o.title || "").trim().toLowerCase() === tn);
+                    return {
+                        targetId: tgt ? tgt.id : "",
+                        targetName: tgt ? tgt.title : r.targetName || "",
+                        relation: r.relation || "Unknown",
+                        familySub: r.familySub || ""
+                    };
+                }).filter(x => x.targetId || x.targetName);
                 renderRelationTags();
                 const secGrp = document.getElementById("char-secrets-group");
                 const relGrp = document.getElementById("char-relation-group");
-                if (secGrp) secGrp.style.display = "block";
-                if (relGrp) relGrp.style.display = "block";
-                showToast("NPC draft generated.", "rgba(50,160,80,0.85)");
+                if (secGrp) secGrp.style.display = secretSelections.length ? "block" : "none";
+                if (relGrp) relGrp.style.display = relationSelections.length ? "block" : "none";
+                showToast("AI NPC generated.", "rgba(50,160,80,0.85)");
             }
             function resetSpeciesFields() {
                 const g = document.getElementById("f-species-generally");
