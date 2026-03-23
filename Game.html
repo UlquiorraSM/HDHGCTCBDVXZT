@@ -2588,6 +2588,11 @@ ${shopContext}
 8. Do NOT end your narration with "..." unless it's intentional and the sentence is complete; prefer complete sentences.
 9. Do NOT repeat exact sentences from the STORY LOG; continue with new developments.
 
+# KNOWLEDGE BOUNDARY (STRICT)
+- DO NOT HALLUCINATE. Only use facts present in the WORLD KNOWLEDGE, PLAYER CHARACTER, PRESENT NPCs, MEMORIES, EVENTS, and LOCATION STATES above.
+- If an NPC would not reasonably know something (not in their relations, memories, or current scene context), explicitly have them NOT know it; do NOT fill gaps with assumptions or "logical" guesses.
+- Do not attribute knowledge of SECRET EVENTS to NPCs; they remain unknown unless learned in-scene.
+
 # TIME & LOCATION MANAGEMENT (CRITICAL)
 1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
 2. You MUST track movement. If a player enters or leaves a building/area, you MUST update the location.
@@ -3081,6 +3086,30 @@ Example:
                     console.error("Rollback anchored changes failed", e);
                 }
             }
+            function updateMemoriesTextByTs(ts, newText) {
+                try {
+                    if (!ts) return;
+                    const maxLen = 800;
+                    const newT = String(newText || "").slice(0, maxLen);
+                    const cards = getCards();
+                    let changed = false;
+                    cards.forEach(c => {
+                        if (Array.isArray(c.memories)) {
+                            c.memories.forEach(m => {
+                                if (m && m.logTs === ts) {
+                                    m.text = newT;
+                                    changed = true;
+                                }
+                            });
+                        }
+                    });
+                    if (changed) {
+                        sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                    }
+                } catch (e) {
+                    console.warn("updateMemoriesTextByTs failed", e);
+                }
+            }
             function showNPCInfo(id) {
                 const cards = getCards();
                 const npc = cards.find((c) => c.id === id);
@@ -3254,6 +3283,7 @@ Example:
                 }
             }
 
+            let _pendingPreUserDividerLabel = null;
             async function sendMessage() {
                 const inputEl = document.getElementById("user-input");
                 const text = inputEl.value.trim();
@@ -3283,7 +3313,7 @@ Example:
                             time: `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`
                         };
                         saveActiveCharacter();
-                        addSystemDivider(`TIME SET: ${activeChar.startingDate.time} (${activeChar.startingDate.day}.${String(activeChar.startingDate.month).padStart(2,"0")}.${activeChar.startingDate.year})`);
+                        _pendingPreUserDividerLabel = `TIME SET: ${activeChar.startingDate.time} (${activeChar.startingDate.day}.${String(activeChar.startingDate.month).padStart(2,"0")}.${activeChar.startingDate.year})`;
                         // do not consume the user's message; continue to send it for narration
                     } catch (e) {
                         console.error("Time slots failed", e);
@@ -3292,13 +3322,30 @@ Example:
                     }
                 }
 
-                appendBubble("user", text);
+                const bubble = appendBubble("user", text);
                 const senderName = activeChar
                     ? [activeChar.firstName, activeChar.lastName]
                           .filter(Boolean)
                           .join(" ")
                     : "Player";
-                addToStoryLog(senderName, text);
+                const ts = addToStoryLog(senderName, text);
+                // Link bubble and potential pre-divider via timestamp
+                try {
+                    if (bubble && bubble.parentElement) {
+                        bubble.parentElement.dataset.ts = String(ts || "");
+                    }
+                    if (_pendingPreUserDividerLabel) {
+                        const messagesEl = document.getElementById("messages");
+                        if (messagesEl && bubble && bubble.parentElement) {
+                            const div = document.createElement("div");
+                            div.className = "chat-divider";
+                            div.dataset.linkedTs = String(ts || "");
+                            div.innerHTML = `<span class="chat-divider-label">${_pendingPreUserDividerLabel}</span>`;
+                            messagesEl.insertBefore(div, bubble.parentElement);
+                        }
+                    }
+                } catch {}
+                _pendingPreUserDividerLabel = null;
                 inputEl.value = "";
                 inputEl.style.height = "auto";
 
@@ -3543,6 +3590,9 @@ Example:
                 const entry = chatHistory[_editIndex];
                 if (entry && typeof entry === "object") {
                     entry.text = newText;
+                    if (entry.timestamp) {
+                        updateMemoriesTextByTs(entry.timestamp, newText);
+                    }
                     saveStoryLog();
                 }
                 // Reset edit state
@@ -3597,6 +3647,14 @@ Example:
 
                 if (chatHistory.length > 0) {
                     const removed = chatHistory.pop();
+                    // Also remove any pre-divider linked to this user message
+                    try {
+                        if (removed && typeof removed === 'object' && removed.sender !== "Narrator") {
+                            const ts = removed.timestamp;
+                            const linked = document.querySelector(`.chat-divider[data-linked-ts="${ts}"]`);
+                            if (linked) linked.remove();
+                        }
+                    } catch {}
                     saveStoryLog();
                     // Roll back world state to last remaining entry after deletion
                     if (removed && typeof removed !== 'string' && removed.sender === "Narrator") {
