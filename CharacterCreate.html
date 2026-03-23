@@ -1212,8 +1212,6 @@
                 allChars.forEach((c) => {
                     if (excludeIds.has(c.id)) return;
                     if (locFilter && !locResidents.has(c.id)) return;
-                    // Exclude NPCs that already have any relation defined in world data
-                    if (Array.isArray(c.relations) && c.relations.length > 0) return;
                     if (q && !((c.title || "").toLowerCase().includes(q)))
                         return;
                     const opt = document.createElement("option");
