@@ -5265,6 +5265,38 @@
                 }
                 return "";
             }
+            function sanitizeJSONCandidate(raw) {
+                let s = String(raw || "");
+                // Strip code fences
+                s = s.replace(/```json/gi, "```").replace(/```/g, "");
+                // Normalize fancy quotes
+                s = s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+                // Remove inline comments (// ... and /* ... */)
+                s = s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|\n)\s*\/\/.*(?=\n|$)/g, "$1");
+                // Remove trailing commas before } or ]
+                s = s.replace(/,\s*([}\]])/g, "$1");
+                return s;
+            }
+            function tryParseAIJSON(raw) {
+                // First, try strict extraction of first balanced object
+                let candidate = extractFirstJSONObject(raw);
+                if (!candidate) candidate = sanitizeJSONCandidate(raw);
+                try {
+                    return JSON.parse(candidate);
+                } catch {}
+                // Try converting single-quoted JSON-ish to double-quoted
+                let s = sanitizeJSONCandidate(raw);
+                // Extract between first { ... }
+                const between = extractFirstJSONObject(s) || s;
+                // Replace single-quoted keys and values (naive but effective for simple cases)
+                let t = between
+                    .replace(/([,{]\s*)'([^'\\]*?)'\s*:/g, '$1"$2":')
+                    .replace(/:\s*'([^'\\]*?)'(\s*[},])/g, ':"$1"$2');
+                // Remove trailing commas again
+                t = t.replace(/,\s*([}\]])/g, "$1");
+                try { return JSON.parse(t); } catch {}
+                return null;
+            }
             function fallbackGenerateNPCFromPrompt(p) {
                 const lower = (p || "").toLowerCase();
                 const nameEl = document.getElementById("f-name");
@@ -5327,8 +5359,10 @@
                     "name, appearance, personality, age, gender, raceName, status, birthdate:{day,month},",
                     "secrets:[string], relations:[{targetName, relation, familySub}]",
                     "Constraints: age 5..120; gender one of male|female|other; status Alive|Dead;",
-                    "raceName in this list: " + races.join(", "),
-                    "targetName must be one of these NPCs (optional): " + npcs.join(", "),
+                    "raceName must be chosen from this list ONLY: " + races.join(", "),
+                    "targetName must be one of these existing NPCs (optional): " + npcs.join(", "),
+                    "If the user prompt references copyrighted/IP names, create an ORIGINAL NPC inspired by the theme. Do not copy names; still return valid JSON.",
+                    "Return exactly one JSON object. Do NOT include code fences or commentary.",
                     "Example:",
                     "{\"name\":\"Keiichi Maebara\",\"appearance\":\"slim\",\"personality\":\"curious\",\"age\":16,\"gender\":\"male\",\"raceName\":\"Human\",\"status\":\"Alive\",\"birthdate\":{\"day\":15,\"month\":6},\"secrets\":[\"stashes a note\"],\"relations\":[{\"targetName\":\"Mion Sonozaki\",\"relation\":\"Friend\",\"familySub\":\"\"}]}"
                 ].join("\n");
@@ -5339,9 +5373,15 @@
                     showToast("AI unavailable.", "rgba(180,60,60,0.85)");
                     return;
                 }
-                const jsonText = extractFirstJSONObject(raw);
-                let obj = null;
-                try { obj = JSON.parse(jsonText); } catch {}
+                let obj = tryParseAIJSON(raw);
+                if (!obj) {
+                    // Second attempt with stricter instruction
+                    try {
+                        const retrySys = sys + "\nRespond again. Output ONLY raw JSON without any extra text.";
+                        const raw2 = await askAIWithRetry(retrySys + "\n\nUser Prompt:\n" + prompt + "\nJSON:");
+                        obj = tryParseAIJSON(raw2);
+                    } catch {}
+                }
                 if (!obj) {
                     // Fallback to heuristic generation so the flow doesn't break
                     fallbackGenerateNPCFromPrompt(prompt);
