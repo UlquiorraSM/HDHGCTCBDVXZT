@@ -1798,9 +1798,12 @@
                 const birthDay = parseInt(document.getElementById("c-birth-day").value) || null;
                 const birthMonth = parseInt(document.getElementById("c-birth-month").value) || null;
 
-                const day = parseInt(document.getElementById("c-day").value) || 1;
-                const month = parseInt(document.getElementById("c-month").value) || 1;
-                const year = parseInt(document.getElementById("c-year").value) || 1983;
+                const dayRaw = document.getElementById("c-day").value;
+                const monthRaw = document.getElementById("c-month").value;
+                const yearRaw = document.getElementById("c-year").value;
+                const day = parseInt(dayRaw);
+                const month = parseInt(monthRaw);
+                const year = parseInt(yearRaw);
                 const time = document.getElementById("c-time").value || "00:00";
                 const introduction = document.getElementById("c-introduction").value.trim();
 
@@ -1808,8 +1811,36 @@
                     showToast("Please enter a first name.", "#c04040");
                     return;
                 }
+                if (!ln) {
+                    showToast("Please enter a last name.", "#c04040");
+                    return;
+                }
                 if (!raceId) {
                     showToast("Please select a race.", "#c04040");
+                    return;
+                }
+                if (!appearance) {
+                    showToast("Please enter an appearance.", "#c04040");
+                    return;
+                }
+                if (!age || age <= 0) {
+                    showToast("Please enter a valid age.", "#c04040");
+                    return;
+                }
+                if (!birthDay || !birthMonth) {
+                    showToast("Please set a birthdate (day and month).", "#c04040");
+                    return;
+                }
+                if (!selectedSpawnId) {
+                    showToast("Please choose a spawn location.", "#c04040");
+                    return;
+                }
+                if (!day || !month || !year) {
+                    showToast("Please set a starting date (day, month, year).", "#c04040");
+                    return;
+                }
+                if (!introduction) {
+                    showToast("Please enter a story introduction.", "#c04040");
                     return;
                 }
 
