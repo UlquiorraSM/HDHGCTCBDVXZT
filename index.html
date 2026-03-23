@@ -1500,6 +1500,17 @@
                     copyBtn.title = "Copy";
                     copyBtn.onclick = () => { copyStory(s.id); };
 
+                    const logLen = Array.isArray(s?.data?.log) ? s.data.log.length : 0;
+                    let novelBtn = null;
+                    if (logLen > 10) {
+                        novelBtn = document.createElement("button");
+                        novelBtn.textContent = "📖";
+                        novelBtn.className = "menu-button";
+                        novelBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90, 110, 180, 0.6); border-radius:0;";
+                        novelBtn.title = "Light Novel";
+                        novelBtn.onclick = () => { navigateWithTransition(`lightnovel.html?story=${encodeURIComponent(s.id)}`); };
+                    }
+
                     const deleteBtn = document.createElement("button");
                     deleteBtn.textContent = "🗑️";
                     deleteBtn.className = "menu-button";
@@ -1515,6 +1526,7 @@
                     deleteBtn.style.borderBottomRightRadius = "8px";
                     
                     btnRow.appendChild(confBtn);
+                    if (novelBtn) btnRow.appendChild(novelBtn);
                     btnRow.appendChild(copyBtn);
                     btnRow.appendChild(deleteBtn);
 
