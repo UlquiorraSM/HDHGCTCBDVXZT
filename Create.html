@@ -2523,6 +2523,16 @@
                             <button type="button" class="subloc-btn relation-btn" id="tool-btn-skills" onclick="showSkillsScene()">
                                 <span class="subloc-icon">🛠️</span> Skills
                             </button>
+                            <button type="button" class="subloc-btn relation-btn" id="tool-btn-ai" onclick="toggleAIHelp()">
+                                <span class="subloc-icon">🤖</span> AI Help
+                            </button>
+                        </div>
+                    </div>
+                    <div id="char-ai-group" style="display:none; margin-top: 14px;">
+                        <label class="form-label">AI</label>
+                        <textarea class="form-textarea" id="f-char-ai-prompt" placeholder="Describe the NPC (role, traits, background, relations)..."></textarea>
+                        <div class="form-actions" style="margin-top: 12px;">
+                            <button class="btn-save" onclick="generateNPCWithAI()">Generate NPC</button>
                         </div>
                     </div>
                     <div id="char-relation-group" style="display:none; margin-top: 14px;">
@@ -5201,6 +5211,76 @@
                 const val = document.getElementById("f-char-status").value;
                 const grp = document.getElementById("f-char-death-cause-group");
                 if (grp) grp.style.display = (val === "Dead") ? "block" : "none";
+            }
+            function toggleAIHelp() {
+                const grp = document.getElementById("char-ai-group");
+                if (!grp) return;
+                grp.style.display = grp.style.display === "none" ? "block" : "none";
+            }
+            function generateNPCWithAI() {
+                const p = (document.getElementById("f-char-ai-prompt")?.value || "").trim();
+                const lower = p.toLowerCase();
+                const nameEl = document.getElementById("f-name");
+                const appEl = document.getElementById("f-char-appearance");
+                const perEl = document.getElementById("f-char-personality");
+                const ageEl = document.getElementById("f-char-age");
+                const genderEl = document.getElementById("f-char-gender");
+                const raceEl = document.getElementById("f-char-race");
+                const statusEl = document.getElementById("f-char-status");
+                const bDayEl = document.getElementById("f-char-birth-day");
+                const bMonthEl = document.getElementById("f-char-birth-month");
+                let gender = "male";
+                if (/(female|woman|girl|she|her)\b/.test(lower)) gender = "female";
+                if (/(male|man|boy|he|him)\b/.test(lower) && gender !== "female") gender = "male";
+                if (genderEl) genderEl.value = gender;
+                const races = getCards().filter(c => c.genre === "race");
+                let raceId = "";
+                const hit = races.find(r => lower.includes((r.title || "").toLowerCase()));
+                raceId = hit ? hit.id : (races[0]?.id || "");
+                if (raceEl) raceEl.value = raceId;
+                let age = 18;
+                const ageMatch = lower.match(/\b(\d{1,3})\b/);
+                if (ageMatch) {
+                    const a = parseInt(ageMatch[1], 10);
+                    if (a >= 5 && a <= 120) age = a;
+                }
+                if (ageEl) ageEl.value = String(age);
+                let status = "Alive";
+                if (/(dead|died|killed|deceased|murdered)/.test(lower)) status = "Dead";
+                if (statusEl) statusEl.value = status;
+                const month = Math.max(1, Math.min(12, Math.floor(Math.random() * 12) + 1));
+                const dim = month === 2 ? 29 : ([4,6,9,11].includes(month) ? 30 : 31);
+                const day = Math.max(1, Math.min(dim, Math.floor(Math.random() * dim) + 1));
+                if (bMonthEl) bMonthEl.value = String(month);
+                if (bDayEl) {
+                    bDayEl.max = String(dim);
+                    bDayEl.value = String(day);
+                }
+                const words = p.split(/\s+/).filter(Boolean);
+                const base = words.slice(0, 2).map(w => w.replace(/[^a-zA-Z]/g, "")).filter(Boolean);
+                const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
+                const first = cap(base[0] || (gender === "female" ? "Rena" : "Keiichi"));
+                const last = cap(base[1] || "Maebara");
+                if (nameEl) nameEl.value = `${first} ${last}`;
+                if (appEl && !appEl.value.trim()) appEl.value = p ? p : "Average height and build.";
+                if (perEl && !perEl.value.trim()) perEl.value = "Calm, observant, and loyal.";
+                const secHint = p ? p : "Keeps a hidden letter in the desk.";
+                secretSelections = [{ text: secHint }];
+                renderSecretTags();
+                const others = getCards().filter(c => c.genre === "character" && c.id !== editingId);
+                const pick = others.slice(0, 2);
+                relationSelections = pick.map(t => ({
+                    targetId: t.id,
+                    targetName: t.title,
+                    relation: /(rival|enemy|hate)/.test(lower) ? "Rival" : "Friend",
+                    familySub: ""
+                }));
+                renderRelationTags();
+                const secGrp = document.getElementById("char-secrets-group");
+                const relGrp = document.getElementById("char-relation-group");
+                if (secGrp) secGrp.style.display = "block";
+                if (relGrp) relGrp.style.display = "block";
+                showToast("NPC draft generated.", "rgba(50,160,80,0.85)");
             }
             function resetSpeciesFields() {
                 const g = document.getElementById("f-species-generally");
