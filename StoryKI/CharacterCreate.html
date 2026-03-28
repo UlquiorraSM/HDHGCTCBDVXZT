@@ -1,0 +1,2145 @@
+<!doctype html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>StoryKI - Character Creator</title>
+        <link rel="prefetch" href="../index.html" />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            *::-webkit-scrollbar {
+                display: none;
+            }
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                font-family: "Segoe UI", Arial, sans-serif;
+            }
+            body {
+                background: #0a0a0a;
+                color: #fff;
+                opacity: 0;
+                transition: opacity 0.4s ease-in-out;
+            }
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.72);
+                z-index: 0;
+            }
+
+            /* ─── Background ─── */
+            #bg-layer {
+                position: fixed;
+                inset: 0;
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+                z-index: -1;
+                filter: blur(2px) brightness(0.4);
+            }
+
+            /* ─── App Shell ─── */
+            #app {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                align-items: center;
+            }
+
+            /* ════════════════════════════════════
+               TOP NAV
+            ════════════════════════════════════ */
+            .top-nav {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 18px 24px 12px 24px;
+                width: 100%;
+                max-width: 900px;
+                flex-shrink: 0;
+            }
+            .nav-back-btn {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.25);
+                background: rgba(30, 30, 30, 0.7);
+                color: #fff;
+                font-size: 16px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+                flex-shrink: 0;
+            }
+            .nav-back-btn:hover {
+                background: rgba(60, 60, 60, 0.9);
+                border-color: rgba(255, 255, 255, 0.5);
+            }
+            .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+            }
+            .nav-count {
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                background: rgba(60, 60, 60, 0.85);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                border: 2px solid rgba(255, 255, 255, 0.12);
+            }
+
+            /* ════════════════════════════════════
+               SCROLL AREA
+            ════════════════════════════════════ */
+            .page-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 900px;
+                padding: 0 24px 40px 24px;
+            }
+
+            /* ─── Page Title ─── */
+            .page-title-row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 32px;
+                flex-wrap: wrap;
+            }
+            .page-title-row h1 {
+                font-size: 26px;
+                font-weight: 700;
+                color: #fff;
+                margin: 0;
+                flex: 1;
+                min-width: 0;
+            }
+            .page-title-badge {
+                padding: 4px 13px;
+                border-radius: 6px;
+                background: rgba(40, 60, 100, 0.9);
+                border: 1.5px solid rgba(80, 120, 200, 0.4);
+                color: #88aaee;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                flex-shrink: 0;
+            }
+
+            /* ════════════════════════════════════
+               FORM SECTIONS
+            ════════════════════════════════════ */
+            .section {
+                background: rgba(20, 20, 20, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+                padding: 24px 22px 20px 22px;
+                margin-bottom: 18px;
+            }
+            .section-title {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.4);
+                margin-bottom: 16px;
+            }
+
+            /* ─── Form Elements ─── */
+            .form-group {
+                margin-bottom: 16px;
+            }
+            .form-group:last-child {
+                margin-bottom: 0;
+            }
+            .form-label {
+                display: block;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.45);
+                margin-bottom: 8px;
+            }
+            .form-input,
+            .form-select {
+                width: 100%;
+                padding: 13px 16px;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 9px;
+                color: #fff;
+                font-size: 14px;
+                outline: none;
+                transition: border-color 0.2s;
+                -webkit-appearance: none;
+                appearance: none;
+                font-family: inherit;
+            }
+            .form-input::placeholder {
+                color: rgba(255, 255, 255, 0.25);
+            }
+            .form-input:focus,
+            .form-select:focus {
+                border-color: rgba(255, 255, 255, 0.32);
+                background: rgba(18, 18, 18, 0.95);
+            }
+            .form-select option {
+                background: #1a1a1a;
+                color: #fff;
+            }
+            .two-col {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+            @media (max-width: 580px) {
+                .two-col {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* ─── Race Card Preview ─── */
+            .race-preview {
+                display: none;
+                margin-top: 12px;
+                padding: 14px 16px;
+                background: rgba(50, 38, 10, 0.5);
+                border: 1.5px solid rgba(180, 130, 40, 0.3);
+                border-radius: 9px;
+                gap: 10px;
+                flex-direction: column;
+            }
+            .race-preview.visible {
+                display: flex;
+            }
+            .race-preview-name {
+                font-size: 15px;
+                font-weight: 700;
+                color: #f0cc70;
+            }
+            .race-preview-lore {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.5);
+                line-height: 1.6;
+                max-height: 80px;
+                overflow: hidden;
+                position: relative;
+            }
+            .race-preview-lore::after {
+                content: "";
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 28px;
+                background: linear-gradient(transparent, rgba(50, 38, 10, 0.5));
+            }
+
+            /* ─── Gender Toggle ─── */
+            .gender-toggle {
+                display: flex;
+                gap: 8px;
+            }
+            .gender-btn {
+                flex: 1;
+                padding: 11px 0;
+                border-radius: 9px;
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                background: rgba(14, 14, 14, 0.9);
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s,
+                    color 0.2s;
+                letter-spacing: 0.03em;
+            }
+            .gender-btn:hover {
+                background: rgba(35, 35, 35, 0.95);
+                color: rgba(255, 255, 255, 0.8);
+            }
+            .gender-btn.active-male {
+                background: rgba(40, 80, 140, 0.55);
+                border-color: rgba(80, 140, 220, 0.55);
+                color: #88b8f0;
+            }
+            .gender-btn.active-female {
+                background: rgba(140, 40, 80, 0.55);
+                border-color: rgba(220, 80, 140, 0.55);
+                color: #f088b8;
+            }
+
+            /* ─── Spawn Card List ─── */
+            .spawn-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .spawn-item {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 14px 16px;
+                background: rgba(28, 28, 28, 0.88);
+                border: 1.5px solid rgba(255, 255, 255, 0.07);
+                border-radius: 10px;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .spawn-item:hover {
+                background: rgba(42, 42, 42, 0.95);
+                border-color: rgba(255, 255, 255, 0.15);
+            }
+            .spawn-item.selected {
+                border-color: rgba(80, 200, 100, 0.55);
+                background: rgba(20, 50, 25, 0.6);
+            }
+            .spawn-radio {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.25);
+                background: rgba(14, 14, 14, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                transition:
+                    border-color 0.2s,
+                    background 0.2s;
+            }
+            .spawn-item.selected .spawn-radio {
+                border-color: rgba(80, 200, 100, 0.9);
+                background: rgba(50, 160, 70, 0.9);
+            }
+            .spawn-radio-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: #fff;
+                display: none;
+            }
+            .spawn-item.selected .spawn-radio-dot {
+                display: block;
+            }
+            .spawn-item-info {
+                flex: 1;
+            }
+            .spawn-item-name {
+                font-size: 14px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 3px;
+            }
+            .spawn-item-detail {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.38);
+                font-family: monospace;
+            }
+            .spawn-item-badge {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                padding: 3px 9px;
+                border-radius: 5px;
+                background: rgba(50, 160, 70, 0.2);
+                color: rgba(80, 200, 100, 0.85);
+                border: 1px solid rgba(80, 200, 100, 0.25);
+            }
+            .spawn-empty {
+                text-align: center;
+                padding: 30px 16px;
+                color: rgba(255, 255, 255, 0.3);
+                font-size: 13px;
+            }
+
+            /* ─── Name Roll Preview ─── */
+            .name-roll-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 10px;
+            }
+            .name-roll-btn {
+                padding: 8px 16px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                background: rgba(35, 35, 35, 0.9);
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s;
+                white-space: nowrap;
+            }
+            .name-roll-btn:hover {
+                background: rgba(55, 55, 55, 0.95);
+                color: #fff;
+            }
+            .name-roll-hint {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.28);
+                font-style: italic;
+            }
+
+            /* ─── Summary Preview ─── */
+            .summary-card {
+                display: none;
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                padding: 18px 18px;
+                margin-top: 14px;
+                gap: 10px;
+                flex-direction: column;
+            }
+            .summary-card.visible {
+                display: flex;
+            }
+            .summary-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .summary-key {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.35);
+                min-width: 80px;
+            }
+            .summary-val {
+                font-size: 13px;
+                font-weight: 600;
+                color: #fff;
+            }
+            .summary-val.green {
+                color: #80d890;
+            }
+            .summary-val.gold {
+                color: #d4a840;
+            }
+            .summary-val.blue {
+                color: #88b8f0;
+            }
+            .summary-val.pink {
+                color: #f088b8;
+            }
+
+            /* ─── Action Buttons ─── */
+            .form-actions {
+                display: flex;
+                gap: 12px;
+                margin-top: 8px;
+            }
+            .btn-cancel {
+                padding: 12px 26px;
+                border-radius: 9px;
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                background: transparent;
+                color: rgba(255, 255, 255, 0.65);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    color 0.2s;
+            }
+            .btn-cancel:hover {
+                background: rgba(255, 255, 255, 0.07);
+                color: #fff;
+            }
+            .btn-create {
+                padding: 12px 32px;
+                border-radius: 9px;
+                border: 1.5px solid rgba(80, 200, 100, 0.4);
+                background: rgba(30, 90, 45, 0.9);
+                color: #fff;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .btn-create:hover {
+                background: rgba(40, 120, 60, 0.99);
+            }
+
+            /* ─── Toast ─── */
+            .toast {
+                position: fixed;
+                bottom: 28px;
+                left: 50%;
+                transform: translateX(-50%) translateY(80px);
+                background: rgba(40, 140, 80, 0.95);
+                color: #fff;
+                padding: 13px 26px;
+                border-radius: 9px;
+                font-size: 14px;
+                font-weight: 600;
+                z-index: 2000;
+                opacity: 0;
+                transition:
+                    transform 0.3s ease,
+                    opacity 0.3s ease;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                white-space: nowrap;
+            }
+            .toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+
+            /* ─── Main View ─── */
+            #main-view {
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                align-items: center;
+                position: relative;
+                z-index: 1;
+            }
+
+            /* ─── Relation Button & Picker ─── */
+            .subloc-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 10px;
+                padding: 9px 18px;
+                border-radius: 8px;
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                background: rgba(28, 28, 28, 0.85);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .subloc-btn:hover {
+                background: rgba(50, 50, 50, 0.95);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+            .subloc-btn.relation-btn {
+                background: rgba(80, 50, 110, 0.6);
+                border-color: rgba(160, 100, 220, 0.3);
+                margin-top: 14px;
+            }
+            .subloc-btn.relation-btn:hover {
+                background: rgba(100, 60, 140, 0.8);
+                border-color: rgba(160, 100, 220, 0.5);
+            }
+            .subloc-icon {
+                font-size: 15px;
+            }
+
+            .relation-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 10px;
+            }
+            .relation-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 12px;
+                border-radius: 6px;
+                background: rgba(80, 50, 110, 0.4);
+                border: 1.5px solid rgba(160, 100, 220, 0.2);
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            /* ─── Relations Scene ─── */
+            #relations-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #relations-view .page-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 900px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #relations-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
+            /* ─── Skills Scene (same layout) ─── */
+            #skills-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #skills-view .page-scroll {
+                flex: 1;
+                overflow-y: auto;
+                max-width: 1000px;
+                margin: 0 auto;
+                padding: 0 24px 40px 24px;
+            }
+            #skills-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
+            .relation-rows {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .relation-pills {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            .relation-pill {
+                padding: 7px 10px;
+                border-radius: 8px;
+                border: 1px solid rgba(255,255,255,0.12);
+                background: rgba(22,22,28,0.7);
+                color: rgba(255,255,255,0.85);
+                font-size: 12px;
+                font-weight: 700;
+                cursor: pointer;
+                user-select: none;
+                transition: background .2s, border-color .2s, color .2s;
+            }
+            .relation-pill.active {
+                background: rgba(80,140,220,0.85);
+                border-color: rgba(120,180,255,0.6);
+                color: #fff;
+            }
+
+            /* ─── NPC Setup Scene ─── */
+            #npc-setup-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #npc-setup-view .page-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 900px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            .relation-row {
+                background: rgba(35, 35, 45, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 12px;
+                padding: 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .relation-row-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .relation-target-name {
+                font-weight: 700;
+                font-size: 14px;
+                color: rgba(255, 255, 255, 0.9);
+            }
+            .relation-row-remove {
+                background: none;
+                border: none;
+                color: rgba(255, 80, 80, 0.6);
+                cursor: pointer;
+                font-size: 14px;
+                transition: color 0.2s;
+            }
+            .relation-row-remove:hover {
+                color: rgba(255, 80, 80, 0.9);
+            }
+            .relation-controls {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .relation-select {
+                flex: 1;
+                min-width: 120px;
+                background: rgba(15, 15, 20, 0.8);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 8px;
+                color: #fff;
+                padding: 8px 10px;
+                font-size: 13px;
+                outline: none;
+            }
+
+            @media (max-width: 600px) {
+                .page-scroll, .form-scroll { padding: 0 14px 28px 14px; max-width: 94vw; }
+                .form-two-col { display: flex; flex-direction: column; gap: 10px; }
+                .form-group { width: 100%; }
+                .form-input, .form-select, .form-textarea { width: 100%; font-size: 14px; }
+                .top-nav { padding: 8px 10px; }
+                .nav-back-btn { width: 34px; height: 34px; }
+                .relation-row { padding: 12px; }
+                .relation-target-name { font-size: 13px; }
+                .relation-select { font-size: 13px; }
+                .student-list { max-height: 200px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="bg-layer"></div>
+
+        <!-- ══════════════════════════════
+             RELATIONS SCENE
+        ══════════════════════════════ -->
+        <div id="relations-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showCharacterCreateScene()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">CHARACTER RELATIONS</span>
+                <div class="nav-count" id="relations-count">0</div>
+            </nav>
+
+            <div class="page-scroll">
+                <div class="page-title-row">
+                    <h1>Manage Relations</h1>
+                    <span class="page-title-badge">RELATIONS</span>
+                </div>
+
+                <!-- Add Relations Section -->
+                <div class="section">
+                    <div class="section-title">Add Relations</div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Select NPC</label>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+                            <input type="text" class="form-input" id="relation-add-search" placeholder="Search NPC..." style="flex:1;" />
+                            <select class="form-select" id="relation-location-filter" style="min-width:220px;">
+                                <option value="">All locations</option>
+                            </select>
+                        </div>
+                        <select class="form-select" id="relation-add-select">
+                            <option value="">Select NPC to add relation...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="btn-create" onclick="relationAddRow()">+ Add Relation</button>
+                    </div>
+                </div>
+
+                <!-- Current Relations -->
+                <div class="section">
+                    <div class="section-title">Current Relations</div>
+                    <input type="text" class="form-input" id="relation-rows-search" placeholder="Filter current relations..." style="margin-bottom:8px;" />
+                    <div class="relation-rows" id="relation-rows">
+                        <!-- filled dynamically -->
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="section">
+                    <div class="form-actions">
+                        <button class="btn-cancel" onclick="showCharacterCreateScene()">← Back</button>
+                        <button class="btn-create" onclick="confirmRelations()">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             SKILLS SCENE
+        ══════════════════════════════ -->
+        <div id="skills-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="hideSkillsScene()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">CHARACTER SKILLS</span>
+                <div class="nav-count" id="skills-count">0</div>
+            </nav>
+
+            <div class="page-scroll">
+                <div class="page-title-row">
+                    <h1>Choose Skills</h1>
+                    <span class="page-title-badge">SKILLS</span>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Available Skills</div>
+                    <input type="text" class="form-input" id="skills-search" placeholder="Search skills..." style="margin-bottom:10px;">
+                    <div id="skills-list" class="relation-rows"></div>
+                </div>
+
+                <div class="section">
+                    <div class="form-actions">
+                        <button class="btn-cancel" onclick="hideSkillsScene()">← Back</button>
+                        <button class="btn-create" onclick="confirmSkills()">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             CHARACTER CREATE VIEW
+        ══════════════════════════════ -->
+        <div id="main-view">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="goBack()" title="Back">
+                    &#8592;
+                </button>
+                <span class="nav-title">NEW CHARACTER</span>
+                <div class="nav-count" id="create-count">0</div>
+            </nav>
+
+            <div class="page-scroll">
+                <div class="page-title-row">
+                    <h1 id="create-title">Create Character</h1>
+                    <span class="page-title-badge">CHARACTER</span>
+                </div>
+
+                <!-- ── IDENTITY ── -->
+                <div class="section">
+                    <div class="section-title">Identity</div>
+
+                    <!-- Race -->
+                    <div class="form-group">
+                        <label class="form-label">Race</label>
+                        <select
+                            class="form-select"
+                            id="c-race"
+                            onchange="onRaceChange()"
+                        >
+                            <option value="">Select a race...</option>
+                        </select>
+                    </div>
+
+                    <!-- Gender -->
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <div class="gender-toggle">
+                            <button
+                                class="gender-btn active-male"
+                                id="btn-male"
+                                onclick="setGender('male')"
+                            >
+                                &#9794; Male
+                            </button>
+                            <button
+                                class="gender-btn"
+                                id="btn-female"
+                                onclick="setGender('female')"
+                            >
+                                &#9792; Female
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Name -->
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <div class="two-col">
+                            <div>
+                                <input
+                                    type="text"
+                                    class="form-input"
+                                    id="c-firstname"
+                                    placeholder="First name..."
+                                    oninput="updateSummary()"
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    class="form-input"
+                                    id="c-lastname"
+                                    placeholder="Last name..."
+                                    oninput="updateSummary()"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Appearance -->
+                    <div class="form-group">
+                        <label class="form-label">Appearance</label>
+                        <textarea
+                            class="form-input"
+                            id="c-appearance"
+                            placeholder="Describe the character's appearance (hair, eyes, body, outfit, style)…"
+                            rows="3"
+                            style="resize: vertical; min-height: 72px;"
+                        ></textarea>
+                    </div>
+                    
+                    <!-- Age & Birthdate -->
+                    <div class="form-group">
+                        <label class="form-label">Age & Birthdate</label>
+                        <div class="two-col">
+                            <div>
+                                <input
+                                    type="number"
+                                    class="form-input"
+                                    id="c-age"
+                                    placeholder="Age"
+                                    min="0"
+                                    style="text-align:center;"
+                                />
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <input
+                                    type="number"
+                                    class="form-input"
+                                    id="c-birth-day"
+                                    placeholder="Day"
+                                    min="1"
+                                    max="31"
+                                    style="width:70px; text-align:center;"
+                                />
+                                <select class="form-input" id="c-birth-month" style="flex:1;">
+                                    <option value="1">Jan</option>
+                                    <option value="2">Feb</option>
+                                    <option value="3">Mar</option>
+                                    <option value="4">Apr</option>
+                                    <option value="5">May</option>
+                                    <option value="6">Jun</option>
+                                    <option value="7">Jul</option>
+                                    <option value="8">Aug</option>
+                                    <option value="9">Sep</option>
+                                    <option value="10">Oct</option>
+                                    <option value="11">Nov</option>
+                                    <option value="12">Dec</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Date & Time -->
+                    <div class="form-group" style="margin-top: 24px;">
+                        <label class="form-label">Starting Date & Time</label>
+                        <div class="two-col">
+                            <div style="display: flex; gap: 8px;">
+                                <input
+                                    type="number"
+                                    class="form-input"
+                                    id="c-day"
+                                    placeholder="DD"
+                                    min="1"
+                                    max="31"
+                                    value="1"
+                                    style="width: 70px; text-align: center; padding-left: 4px; padding-right: 4px;"
+                                />
+                                <select class="form-input" id="c-month" style="flex: 1; padding-left: 8px; padding-right: 8px;">
+                                    <option value="1">Jan</option>
+                                    <option value="2">Feb</option>
+                                    <option value="3">Mar</option>
+                                    <option value="4">Apr</option>
+                                    <option value="5">May</option>
+                                    <option value="6">Jun</option>
+                                    <option value="7">Jul</option>
+                                    <option value="8">Aug</option>
+                                    <option value="9">Sep</option>
+                                    <option value="10">Oct</option>
+                                    <option value="11">Nov</option>
+                                    <option value="12">Dec</option>
+                                </select>
+                                <input
+                                    type="number"
+                                    class="form-input"
+                                    id="c-year"
+                                    placeholder="YYYY"
+                                    value="1983"
+                                    style="width: 90px; text-align: center; padding-left: 4px; padding-right: 4px;"
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="time"
+                                    class="form-input"
+                                    id="c-time"
+                                    value="00:00"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Relations -->
+                    <div class="form-group" style="margin-top: 24px;">
+                        <label class="form-label">Relations</label>
+                        <div class="relation-tags" id="char-relation-tags"></div>
+                        <button type="button" class="subloc-btn relation-btn" onclick="showRelationsScene()">
+                            <span class="subloc-icon">&#128101;</span> Relations
+                        </button>
+                    </div>
+                    <!-- Skills (visible only if at least one Skill exists) -->
+                    <div class="form-group" id="skills-block" style="margin-top: 14px; display: none;">
+                        <label class="form-label">Skills</label>
+                        <div class="relation-tags" id="char-skill-tags"></div>
+                        <button type="button" class="subloc-btn relation-btn" onclick="showSkillsScene()">
+                            <span class="subloc-icon">🛠️</span> Skills
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── SPAWN LOCATION ── -->
+                <div class="section">
+                    <div class="section-title">Spawn Location</div>
+                    <div class="spawn-list" id="spawn-list">
+                        <div class="spawn-empty" id="spawn-empty">
+                            No spawn locations available.<br />
+                            <span style="font-size: 11px; opacity: 0.6"
+                                >Add Buildings with "Can be Spawn" checked in
+                                the World Creator.</span
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── SUMMARY ── -->
+                <div class="section">
+                    <div class="section-title">Summary</div>
+                    <div class="summary-card visible" id="summary-card">
+                        <div class="summary-row">
+                            <span class="summary-key">Name</span>
+                            <span class="summary-val" id="sum-name">—</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-key">Race</span>
+                            <span class="summary-val gold" id="sum-race"
+                                >—</span
+                            >
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-key">Gender</span>
+                            <span class="summary-val" id="sum-gender">—</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-key">Spawn</span>
+                            <span class="summary-val green" id="sum-spawn"
+                                >—</span
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Story Introduction -->
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label class="form-label">Story Introduction</label>
+                        <textarea
+                            class="form-input"
+                            id="c-introduction"
+                            placeholder="Enter an introduction for your story... This will appear at the beginning of your adventure."
+                            rows="4"
+                            style="resize: vertical; min-height: 100px;"
+                        ></textarea>
+                        <div style="font-size: 11px; color: rgba(255, 255, 255, 0.3); margin-top: 6px;">
+                            This text will be displayed when your story begins ingame
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn-cancel" onclick="goBack()">
+                            ← Back
+                        </button>
+                        <button
+                            class="btn-create"
+                            id="btn-create-char"
+                            onclick="startGame()"
+                        >
+                            Play ▶
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TOAST ── -->
+        <div class="toast" id="toast"></div>
+
+        <script>
+            /* ═══════════════════════════════════════
+               CONSTANTS & STATE
+            ═══════════════════════════════════════ */
+            const CARDS_KEY = "storyki_storycards";
+            const CHARS_KEY = "storyki_characters";
+            const SETTINGS_KEY = "storyki_settings";
+
+            // Storage Helper (Non-persistent session storage)
+            const Storage = {
+                get: (key) => sessionStorage.getItem(key),
+                set: (key, val) => sessionStorage.setItem(key, val),
+                remove: (key) => sessionStorage.removeItem(key),
+                clear: () => sessionStorage.clear()
+            };
+
+            let selectedGender = "male";
+            let selectedSpawnId = null;
+            let selectedNPCId = null; // when playing as existing NPC
+
+            /* ═══════════════════════════════════════
+               BACKGROUND
+            ═══════════════════════════════════════ */
+            function loadBackground() {
+                const raw = Storage.get(SETTINGS_KEY);
+                const url = raw
+                    ? JSON.parse(raw).backgroundUrl ||
+                      "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp"
+                    : "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
+                const el = document.getElementById("bg-layer");
+                el.style.backgroundImage = `url(${url})`;
+                el.style.backgroundSize = "cover";
+                el.style.backgroundPosition = "center";
+            }
+
+            /* ═══════════════════════════════════════
+               DATA HELPERS
+            ═══════════════════════════════════════ */
+            function getCards() {
+                return JSON.parse(Storage.get(CARDS_KEY) || "[]");
+            }
+
+            function getCharacters() {
+                return JSON.parse(Storage.get(CHARS_KEY) || "[]");
+            }
+
+            function saveCharacters(chars) {
+                Storage.set(CHARS_KEY, JSON.stringify(chars));
+            }
+
+            function generateId() {
+                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                let id = "";
+                for (let i = 0; i < 12; i++) {
+                    if (i > 0 && i % 4 === 0) id += "-";
+                    id += chars.charAt(
+                        Math.floor(Math.random() * chars.length),
+                    );
+                }
+                return id;
+            }
+
+            function escHtml(str) {
+                return (str || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;");
+            }
+
+            /* ─────────────────────────────────────────
+               RELATION STATE & SCENE MANAGEMENT
+            ───────────────────────────────────────── */
+            let relationSelections = [];
+            let relationPickerTemp = [];
+            let relationRowsFilter = "";
+
+            // Skills
+            let skillSelections = []; // array of skill IDs
+            let skillPickerTemp = [];
+
+            function relationRebuildSelect(filterText = "") {
+                const sel = document.getElementById("relation-add-select");
+                if (!sel) return;
+                const cards = getCards();
+                const locFilter = (document.getElementById("relation-location-filter") || {}).value || "";
+                const locResidents = new Set(
+                    locFilter
+                        ? ((cards.find(c => c.id === locFilter) || {}).residents || [])
+                        : []
+                );
+                const allChars = cards.filter((c) => c.genre === "character");
+                const excludeIds = new Set(
+                    [...relationSelections, ...relationPickerTemp]
+                        .map((r) => r.targetId)
+                        .filter(Boolean),
+                );
+                const q = (filterText || "").toLowerCase().trim();
+                sel.innerHTML = `<option value="">Select NPC to add relation...</option>`;
+                allChars.forEach((c) => {
+                    if (excludeIds.has(c.id)) return;
+                    if (locFilter && !locResidents.has(c.id)) return;
+                    if (q && !((c.title || "").toLowerCase().includes(q)))
+                        return;
+                    const opt = document.createElement("option");
+                    opt.value = c.id;
+                    opt.textContent = c.title;
+                    sel.appendChild(opt);
+                });
+            }
+
+            function showRelationsScene() {
+                relationPickerTemp = relationSelections.map((r) => ({ ...r }));
+                
+                relationRebuildSelect("");
+                const search = document.getElementById("relation-add-search");
+                if (search) {
+                    search.value = "";
+                    search.oninput = () => relationRebuildSelect(search.value);
+                }
+                const locSel = document.getElementById("relation-location-filter");
+                if (locSel) {
+                    buildRelationLocationFilter();
+                    locSel.onchange = () => relationRebuildSelect(search ? search.value : "");
+                }
+                const rowsSearch = document.getElementById("relation-rows-search");
+                if (rowsSearch) {
+                    rowsSearch.value = "";
+                    rowsSearch.oninput = () => {
+                        relationRowsFilter = (rowsSearch.value || "").toLowerCase().trim();
+                        renderRelationPickerRows();
+                    };
+                }
+
+                document.getElementById("relations-count").textContent = relationPickerTemp.length;
+                document.getElementById("main-view").style.display = "none";
+                document.getElementById("relations-view").style.display = "flex";
+                renderRelationPickerRows();
+            }
+
+            function showCharacterCreateScene() {
+                // Show main scene, hide relations scene
+                document.getElementById("relations-view").style.display = "none";
+                document.getElementById("main-view").style.display = "flex";
+                relationPickerTemp = [];
+            }
+
+            function confirmRelations() {
+                relationSelections = relationPickerTemp.map((r) => ({ ...r }));
+                renderRelationTags();
+                showCharacterCreateScene();
+            }
+
+            function relationAddRow() {
+                const sel = document.getElementById("relation-add-select");
+                const id = sel.value;
+                if (!id) return;
+                if (relationPickerTemp.find((r) => r.targetId === id)) {
+                    showToast("Relation already added.", "#c04040");
+                    return;
+                }
+                const card = getCards().find((c) => c.id === id);
+                if (!card) return;
+                relationPickerTemp.push({
+                    targetId: id,
+                    targetName: card.title,
+                    relation: "Unknown",
+                    familySub: "",
+                });
+                sel.value = "";
+                document.getElementById("relations-count").textContent = relationPickerTemp.length;
+                renderRelationPickerRows();
+                const search = document.getElementById("relation-add-search");
+                relationRebuildSelect(search ? search.value : "");
+            }
+            function buildRelationLocationFilter() {
+                const locSel = document.getElementById("relation-location-filter");
+                if (!locSel) return;
+                const cards = getCards();
+                const locs = cards
+                    .filter(c => 
+                        c.genre === "location" &&
+                        c.locationSub === "zivil" &&
+                        ["village","city"].includes(c.locationDetail) &&
+                        Array.isArray(c.residents) && c.residents.length > 0
+                    )
+                    .sort((a,b) => (a.title||"").localeCompare(b.title||""));
+                const prev = locSel.value;
+                locSel.innerHTML = `<option value="">All locations</option>`;
+                locs.forEach(l => {
+                    const opt = document.createElement("option");
+                    opt.value = l.id;
+                    opt.textContent = l.title;
+                    locSel.appendChild(opt);
+                });
+                if (prev && locs.some(l => l.id === prev)) locSel.value = prev;
+            }
+
+            function renderRelationPickerRows() {
+                const container = document.getElementById("relation-rows");
+                container.innerHTML = "";
+
+                const list = relationPickerTemp
+                    .filter(r => !relationRowsFilter || ((r.targetName || "").toLowerCase().includes(relationRowsFilter)))
+                    .sort((a,b) => (a.targetName || "").localeCompare(b.targetName || ""));
+                
+                list.forEach((row) => {
+                    const div = document.createElement("div");
+                    div.className = "relation-row";
+                    const isFamily = row.relation === "Family";
+                    const cardsAll = getCards();
+                    const target = cardsAll.find(c => c.id === row.targetId) || {};
+                    const origIndex = relationPickerTemp.findIndex(r => r.targetId === row.targetId);
+                    if (origIndex < 0) return;
+
+                    const tg = (target.gender || "").toLowerCase();
+                    const sa = parseInt(document.getElementById("c-age").value) || 0;
+                    const ta = typeof target.age === "number" ? target.age : 0;
+                    let familyOptions = tg === "female"
+                        ? ["Mother","Daughter","Sister","Half-Sister","Grandmother","Granddaughter","Aunt","Niece","Step-Mother","Step-Daughter","Step-Sister","Cousin"]
+                        : (tg === "male"
+                            ? ["Father","Son","Brother","Half-Brother","Grandfather","Grandson","Uncle","Nephew","Step-Father","Step-Son","Step-Brother","Cousin"]
+                            : ["Mother","Father","Son","Daughter","Brother","Sister","Half-Brother","Half-Sister","Grandfather","Grandmother","Grandson","Granddaughter","Uncle","Aunt","Nephew","Niece","Step-Father","Step-Mother","Step-Son","Step-Daughter","Step-Brother","Step-Sister","Cousin"]);
+                    if (sa > 0 && ta > 0 && ta !== sa) {
+                        const parentRoles = new Set(["Mother","Father","Step-Mother","Step-Father"]);
+                        const childRoles = new Set(["Daughter","Son","Step-Daughter","Step-Son"]);
+                        const grandparentRoles = new Set(["Grandmother","Grandfather"]);
+                        const grandchildRoles = new Set(["Granddaughter","Grandson"]);
+                        if (ta < sa) {
+                            familyOptions = familyOptions.filter(r => !parentRoles.has(r) && !grandparentRoles.has(r));
+                        } else if (ta > sa) {
+                            familyOptions = familyOptions.filter(r => !childRoles.has(r) && !grandchildRoles.has(r));
+                        }
+                    }
+                    const famOptsHtml = [`<option value="">Select family role...</option>`]
+                        .concat(familyOptions.map(opt => `<option value="${opt}" ${row.familySub === opt ? "selected" : ""}>${opt}</option>`))
+                        .join("");
+
+                    div.innerHTML = `
+                        <div class="relation-row-header">
+                            <span class="relation-target-name">${escHtml(row.targetName)}</span>
+                            <button class="relation-row-remove" onclick="relationRemoveRow(${origIndex})">Remove</button>
+                        </div>
+                        <div class="relation-controls">
+                            <div class="relation-pills">
+                                <button type="button" class="relation-pill ${row.relation === "Unknown" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Unknown')">Unknown</button>
+                                <button type="button" class="relation-pill ${row.relation === "Friends" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Friends')">Friends</button>
+                                <button type="button" class="relation-pill ${row.relation === "Lover" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Lover')">Lover</button>
+                                <button type="button" class="relation-pill ${row.relation === "Spouse" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Spouse')">Spouse</button>
+                                <button type="button" class="relation-pill ${row.relation === "Family" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Family')">Family</button>
+                            </div>
+                            <select class="relation-select" onchange="relationUpdateType(${origIndex}, this.value)">
+                                <option value="">More types…</option>
+                                <option value="Acquaintance" ${row.relation === "Acquaintance" ? "selected" : ""}>Acquaintance</option>
+                                <option value="Enemy" ${row.relation === "Enemy" ? "selected" : ""}>Enemy</option>
+                                <option value="Rival" ${row.relation === "Rival" ? "selected" : ""}>Rival</option>
+                                <option value="Ally" ${row.relation === "Ally" ? "selected" : ""}>Ally</option>
+                                <option value="Colleague" ${row.relation === "Colleague" ? "selected" : ""}>Colleague</option>
+                                <option value="Classmate" ${row.relation === "Classmate" ? "selected" : ""}>Classmate</option>
+                                <option value="Mentor" ${row.relation === "Mentor" ? "selected" : ""}>Mentor</option>
+                                <option value="Student" ${row.relation === "Student" ? "selected" : ""}>Student</option>
+                                <option value="Boss" ${row.relation === "Boss" ? "selected" : ""}>Boss</option>
+                                <option value="Employee" ${row.relation === "Employee" ? "selected" : ""}>Employee</option>
+                                <option value="Neighbor" ${row.relation === "Neighbor" ? "selected" : ""}>Neighbor</option>
+                                <option value="Ex-Lover" ${row.relation === "Ex-Lover" ? "selected" : ""}>Ex-Lover</option>
+                                <option value="Boyfriend" ${row.relation === "Boyfriend" ? "selected" : ""}>Boyfriend</option>
+                                <option value="Girlfriend" ${row.relation === "Girlfriend" ? "selected" : ""}>Girlfriend</option>
+                                <option value="Fiancé" ${row.relation === "Fiancé" ? "selected" : ""}>Fiancé</option>
+                                <option value="Fiancée" ${row.relation === "Fiancée" ? "selected" : ""}>Fiancée</option>
+                            </select>
+                            <select class="relation-select family-sub-select" 
+                                style="display: ${isFamily ? "block" : "none"}"
+                                onchange="relationUpdateFamilySub(${origIndex}, this.value)">
+                                ${famOptsHtml}
+                            </select>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            function relationUpdateType(idx, val) {
+                relationPickerTemp[idx].relation = val;
+                if (val !== "Family") {
+                    relationPickerTemp[idx].familySub = "";
+                }
+                renderRelationPickerRows();
+            }
+
+            function relationUpdateFamilySub(idx, val) {
+                relationPickerTemp[idx].familySub = val;
+            }
+
+            function relationRemoveRow(idx) {
+                relationPickerTemp.splice(idx, 1);
+                document.getElementById("relations-count").textContent = relationPickerTemp.length;
+                renderRelationPickerRows();
+                const search = document.getElementById("relation-add-search");
+                relationRebuildSelect(search ? search.value : "");
+            }
+
+            function renderRelationTags() {
+                const container = document.getElementById("char-relation-tags");
+                if (!container) return;
+                container.innerHTML = "";
+                relationSelections.forEach((rel) => {
+                    const tag = document.createElement("div");
+                    tag.className = "relation-tag";
+                    let label = rel.relation;
+                    if (rel.relation === "Family" && rel.familySub) {
+                        label = rel.familySub;
+                    }
+                    tag.innerHTML = `<span>${escHtml(rel.targetName)}: ${label}</span>`;
+                    container.appendChild(tag);
+                });
+            }
+
+            function renderSkillTags() {
+                const wrap = document.getElementById("char-skill-tags");
+                if (!wrap) return;
+                wrap.innerHTML = "";
+                if (!skillSelections.length) return;
+                const all = getCards();
+                skillSelections.forEach(id => {
+                    const sk = all.find(c => c.id === id);
+                    if (!sk) return;
+                    const tag = document.createElement("div");
+                    tag.className = "relation-tag";
+                    tag.innerHTML = `<span>${escHtml(sk.title)}</span>`;
+                    wrap.appendChild(tag);
+                });
+            }
+
+            function showSkillsScene() {
+                const skills = getCards().filter(c => c.genre === "skill");
+                document.getElementById("skills-count").textContent = skills.length;
+                skillPickerTemp = [...skillSelections];
+                const input = document.getElementById("skills-search");
+                if (input) input.value = "";
+                renderSkillsList("");
+                if (input) input.oninput = () => renderSkillsList(input.value.trim().toLowerCase());
+                document.getElementById("main-view").style.display = "none";
+                document.getElementById("skills-view").style.display = "flex";
+            }
+            function hideSkillsScene() {
+                document.getElementById("skills-view").style.display = "none";
+                document.getElementById("relations-view").style.display = "none";
+                document.getElementById("main-view").style.display = "flex";
+            }
+            function toggleSkill(id, checked) {
+                if (checked) {
+                    if (!skillPickerTemp.includes(id)) skillPickerTemp.push(id);
+                } else {
+                    skillPickerTemp = skillPickerTemp.filter(x => x !== id);
+                }
+            }
+            function confirmSkills() {
+                skillSelections = [...skillPickerTemp];
+                renderSkillTags();
+                hideSkillsScene();
+            }
+
+            function renderSkillsList(filter) {
+                const list = document.getElementById("skills-list");
+                if (!list) return;
+                const skills = getCards().filter(c => c.genre === "skill");
+                list.innerHTML = "";
+                skills
+                    .filter(sk => {
+                        if (!filter) return true;
+                        const t = (sk.title || "").toLowerCase();
+                        const d = (sk.description || "").toLowerCase();
+                        return t.includes(filter) || d.includes(filter);
+                    })
+                    .forEach((sk) => {
+                        const row = document.createElement("div");
+                        row.className = "relation-row";
+                        row.innerHTML = `
+                            <div class="relation-row-header">
+                                <span class="relation-target-name">${escHtml(sk.title)}</span>
+                                <input type="checkbox" ${skillPickerTemp.includes(sk.id) ? "checked" : ""} onchange="toggleSkill('${sk.id}', this.checked)" />
+                            </div>
+                            ${sk.description ? `<div style="opacity:.8; font-size:13px;">${escHtml(sk.description)}</div>` : ""}
+                        `;
+                        list.appendChild(row);
+                    });
+            }
+
+            /* Spawn buildings = location cards with canBeSpawn = true */
+            function getSpawnBuildings() {
+                return getCards().filter(
+                    (c) =>
+                        c.genre === "location" &&
+                        c.locationSub === "building" &&
+                        c.canBeSpawn === true,
+                );
+            }
+            let spawnFolderOpen = {};
+            function findParentLocation(id) {
+                const cards = getCards();
+                return cards.find(c => c.genre === "location" && c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(id))) || null;
+            }
+
+            /* Race cards */
+            function getRaceCards() {
+                return getCards().filter((c) => c.genre === "race");
+            }
+
+            function ccIsLeapYear(y) {
+                y = parseInt(y, 10) || 0;
+                return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+            }
+            function ccDaysInMonth(m, y) {
+                m = parseInt(m, 10) || 1;
+                if (!y) return m === 2 ? 29 : (m === 4 || m === 6 || m === 9 || m === 11 ? 30 : 31);
+                y = parseInt(y, 10) || 1983;
+                if (m === 2) return ccIsLeapYear(y) ? 29 : 28;
+                if (m === 4 || m === 6 || m === 9 || m === 11) return 30;
+                return 31;
+            }
+            function ccUpdateDayMax(dayId, monthId, yearId) {
+                const dayEl = document.getElementById(dayId);
+                const monthEl = document.getElementById(monthId);
+                if (!dayEl || !monthEl) return;
+                const m = parseInt(monthEl.value || "1", 10);
+                const y = yearId ? parseInt((document.getElementById(yearId)?.value || "1983"), 10) : undefined;
+                const max = ccDaysInMonth(m, y);
+                dayEl.max = String(max);
+                const cur = parseInt(dayEl.value || "1", 10);
+                if (cur > max) dayEl.value = String(max);
+                if (cur < 1) dayEl.value = "1";
+            }
+
+            /* ═══════════════════════════════════════
+               INIT FORM
+            ═══════════════════════════════════════ */
+            function initForm() {
+                // If there are playable NPCs, offer selection first
+                try {
+                    const playable = getCards().filter(c => c.genre === "character" && c.isPlayable);
+                    if (playable.length > 0) {
+                        openPlayableChoice(playable);
+                    }
+                } catch {}
+
+                // Populate race dropdown
+                const raceSelect = document.getElementById("c-race");
+                raceSelect.innerHTML = `<option value="">Select a race...</option>`;
+                getRaceCards().forEach((r) => {
+                    const opt = document.createElement("option");
+                    opt.value = r.id;
+                    opt.textContent = r.title;
+                    raceSelect.appendChild(opt);
+                });
+
+                setGender("male");
+                renderSpawnList(null);
+                updateSummary();
+
+                // Initialize introduction field
+                document.getElementById("c-introduction").value = "";
+                
+                // Enter in Vorname -> focus Nachname
+                const fnEl = document.getElementById("c-firstname");
+                const lnEl = document.getElementById("c-lastname");
+                const appEl = document.getElementById("c-appearance");
+                const ageEl = document.getElementById("c-age");
+                const birthDayEl = document.getElementById("c-birth-day");
+                if (fnEl && lnEl) {
+                    fnEl.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            lnEl.focus();
+                            try { lnEl.select(); } catch {}
+                        }
+                    });
+                }
+                if (lnEl && appEl) {
+                    lnEl.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            appEl.focus();
+                            try { appEl.select(); } catch {}
+                        }
+                    });
+                }
+                if (appEl && ageEl) {
+                    appEl.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            ageEl.focus();
+                            try { ageEl.select(); } catch {}
+                        }
+                    });
+                }
+                if (ageEl && birthDayEl) {
+                    ageEl.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            birthDayEl.focus();
+                            try { birthDayEl.select(); } catch {}
+                        }
+                    });
+                }
+
+                const birthMonthEl = document.getElementById("c-birth-month");
+                if (birthMonthEl && birthDayEl) {
+                    birthMonthEl.addEventListener("change", () => ccUpdateDayMax("c-birth-day", "c-birth-month", null));
+                    ccUpdateDayMax("c-birth-day", "c-birth-month", null);
+                }
+                const cMonthEl = document.getElementById("c-month");
+                const cYearEl = document.getElementById("c-year");
+                const cDayEl = document.getElementById("c-day");
+                if (cMonthEl && cDayEl) {
+                    cMonthEl.addEventListener("change", () => ccUpdateDayMax("c-day", "c-month", "c-year"));
+                }
+                if (cYearEl && cDayEl) {
+                    cYearEl.addEventListener("change", () => ccUpdateDayMax("c-day", "c-month", "c-year"));
+                }
+                if (cMonthEl && cDayEl) {
+                    ccUpdateDayMax("c-day", "c-month", "c-year");
+                }
+
+                document.getElementById("create-count").textContent =
+                    getCharacters().length;
+
+                // Show Skills button only if at least one Skill exists
+                const skills = getCards().filter(c => c.genre === "skill");
+                const skillBlock = document.getElementById("skills-block");
+                if (skillBlock) skillBlock.style.display = skills.length > 0 ? "block" : "none";
+            }
+
+            /* ─── Race Change ─── */
+            function onRaceChange() {
+                updateSummary();
+            }
+
+            /* ─── Gender ─── */
+            function setGender(g) {
+                selectedGender = g;
+                document.getElementById("btn-male").className =
+                    "gender-btn" + (g === "male" ? " active-male" : "");
+                document.getElementById("btn-female").className =
+                    "gender-btn" + (g === "female" ? " active-female" : "");
+                updateSummary();
+            }
+
+            /* Roll Name removed */
+
+            /* ─── Spawn List ─── */
+            function renderSpawnList(selectedId) {
+                return renderSpawnListInto("spawn-list", "spawn-empty", selectedId);
+            }
+
+            // Generic renderer to target different containers (used for NPC setup overlay)
+            function renderSpawnListInto(listId, emptyId, selectedId) {
+                const container = document.getElementById("spawn-list");
+                const emptyEl = document.getElementById("spawn-empty");
+                const listContainer = document.getElementById(listId) || container;
+                const emptyPlaceholder = document.getElementById(emptyId) || emptyEl;
+                const spawns = getSpawnBuildings();
+
+                // Remove old items (keep empty placeholder)
+                Array.from(listContainer.querySelectorAll(".spawn-item")).forEach(
+                    (el) => el.remove(),
+                );
+
+                if (spawns.length === 0) {
+                    if (emptyPlaceholder) emptyPlaceholder.style.display = "block";
+                    return;
+                }
+                if (emptyPlaceholder) emptyPlaceholder.style.display = "none";
+
+                const groupsByGP = new Map(); // gpId -> { gp, parents: Map(parentId -> { parent, buildings: [] }) }
+                spawns.forEach(b => {
+                    const parent = findParentLocation(b.id);
+                    const gp = parent ? findParentLocation(parent.id) : null;
+                    const gpId = gp ? gp.id : (parent ? parent.id : "__root__");
+                    if (!groupsByGP.has(gpId)) groupsByGP.set(gpId, { gp, parents: new Map() });
+                    const parentId = parent ? parent.id : "__root__";
+                    const entry = groupsByGP.get(gpId);
+                    if (!entry.parents.has(parentId)) entry.parents.set(parentId, { parent, buildings: [] });
+                    entry.parents.get(parentId).buildings.push(b);
+                });
+                const topGroups = Array.from(groupsByGP.values()).sort((a,b) => {
+                    const at = (a.gp ? a.gp.title : "(Ungrouped)") || "";
+                    const bt = (b.gp ? b.gp.title : "(Ungrouped)") || "";
+                    return at.localeCompare(bt);
+                });
+                topGroups.forEach(g => {
+                    const gpId = g.gp ? g.gp.id : "__root__";
+                    const gpTitle = g.gp ? (g.gp.title || "—") : "Ungrouped";
+                    const gpDetail = g.gp ? ((g.gp.locationDetail || g.gp.locationSub || "").toUpperCase()) : "";
+                    const gpFolder = document.createElement("div");
+                    gpFolder.className = "spawn-item";
+                    gpFolder.innerHTML = `
+                        <div class="spawn-radio"><div class="spawn-radio-dot" style="display:${spawnFolderOpen[gpId] ? 'block' : 'none'};"></div></div>
+                        <div class="spawn-item-info">
+                            <div class="spawn-item-name">📁 ${escHtml(gpTitle)}</div>
+                            <div class="spawn-item-detail">${escHtml(gpDetail)}</div>
+                        </div>
+                        <span class="spawn-item-badge">FOLDER</span>
+                    `;
+                    gpFolder.addEventListener("click", () => {
+                        spawnFolderOpen[gpId] = !spawnFolderOpen[gpId];
+                        renderSpawnListInto(listId, emptyId, selectedId);
+                    });
+                    listContainer.appendChild(gpFolder);
+                    if (spawnFolderOpen[gpId]) {
+                        const parentsArr = Array.from(g.parents.values()).sort((a,b) => {
+                            const at = (a.parent ? a.parent.title : "(Ungrouped)") || "";
+                            const bt = (b.parent ? b.parent.title : "(Ungrouped)") || "";
+                            return at.localeCompare(bt);
+                        });
+                        parentsArr.forEach(p => {
+                            if (p.parent) {
+                                const pid = p.parent.id;
+                                const pTitle = p.parent.title || "—";
+                                const pDetail = (p.parent.locationDetail || p.parent.locationSub || "").toUpperCase();
+                                const pFolder = document.createElement("div");
+                                pFolder.className = "spawn-item";
+                                pFolder.style.marginLeft = "24px";
+                                pFolder.innerHTML = `
+                                    <div class="spawn-radio"><div class="spawn-radio-dot" style="display:${spawnFolderOpen[pid] ? 'block' : 'none'};"></div></div>
+                                    <div class="spawn-item-info">
+                                        <div class="spawn-item-name">📁 ${escHtml(pTitle)}</div>
+                                        <div class="spawn-item-detail">${escHtml(pDetail)}</div>
+                                    </div>
+                                    <span class="spawn-item-badge">FOLDER</span>
+                                `;
+                                pFolder.addEventListener("click", () => {
+                                    spawnFolderOpen[pid] = !spawnFolderOpen[pid];
+                                    renderSpawnListInto(listId, emptyId, selectedId);
+                                });
+                                listContainer.appendChild(pFolder);
+                                if (spawnFolderOpen[pid]) {
+                                    p.buildings
+                                        .sort((a,b) => (a.title||"").localeCompare(b.title||""))
+                                        .forEach(b => {
+                                            const isSelected = selectedId === b.id;
+                                            const item = document.createElement("div");
+                                            item.className = "spawn-item" + (isSelected ? " selected" : "");
+                                            item.dataset.id = b.id;
+                                            const detail = b.locationDetail ? b.locationDetail.toUpperCase() : "BUILDING";
+                                            item.innerHTML = `
+                                                <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
+                                                <div class="spawn-item-info">
+                                                    <div class="spawn-item-name">${escHtml(b.title)}</div>
+                                                    <div class="spawn-item-detail">${detail}</div>
+                                                </div>
+                                                <span class="spawn-item-badge">SPAWN</span>
+                                            `;
+                                            item.style.marginLeft = "48px";
+                                            item.addEventListener("click", (e) => {
+                                                e.stopPropagation();
+                                                selectedSpawnId = b.id;
+                                                renderSpawnListInto(listId, emptyId, b.id);
+                                                updateSummary();
+                                            });
+                                            listContainer.appendChild(item);
+                                        });
+                                }
+                            } else {
+                                p.buildings
+                                    .sort((a,b) => (a.title||"").localeCompare(b.title||""))
+                                    .forEach(b => {
+                                        const isSelected = selectedId === b.id;
+                                        const item = document.createElement("div");
+                                        item.className = "spawn-item" + (isSelected ? " selected" : "");
+                                        item.dataset.id = b.id;
+                                        const detail = b.locationDetail ? b.locationDetail.toUpperCase() : "BUILDING";
+                                        item.innerHTML = `
+                                            <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
+                                            <div class="spawn-item-info">
+                                                <div class="spawn-item-name">${escHtml(b.title)}</div>
+                                                <div class="spawn-item-detail">${detail}</div>
+                                            </div>
+                                            <span class="spawn-item-badge">SPAWN</span>
+                                        `;
+                                        item.style.marginLeft = "24px";
+                                        item.addEventListener("click", (e) => {
+                                            e.stopPropagation();
+                                            selectedSpawnId = b.id;
+                                            renderSpawnListInto(listId, emptyId, b.id);
+                                            updateSummary();
+                                        });
+                                        listContainer.appendChild(item);
+                                    });
+                            }
+                        });
+                    }
+                });
+            }
+
+            /* ─── Summary ─── */
+            function updateSummary() {
+                const fn = document.getElementById("c-firstname").value.trim();
+                const ln = document.getElementById("c-lastname").value.trim();
+                const fullName = [fn, ln].filter(Boolean).join(" ") || "—";
+
+                const raceId = document.getElementById("c-race").value;
+                const raceCard = raceId
+                    ? getCards().find((c) => c.id === raceId)
+                    : null;
+                const raceName = raceCard ? raceCard.title : "—";
+
+                const spawnCard = selectedSpawnId
+                    ? getCards().find((c) => c.id === selectedSpawnId)
+                    : null;
+                const spawnName = spawnCard ? spawnCard.title : "—";
+
+                document.getElementById("sum-name").textContent = fullName;
+                document.getElementById("sum-race").textContent = raceName;
+
+                const genderEl = document.getElementById("sum-gender");
+                genderEl.textContent =
+                    selectedGender === "female" ? "♀ Female" : "♂ Male";
+                genderEl.className =
+                    "summary-val " +
+                    (selectedGender === "female" ? "pink" : "blue");
+
+                document.getElementById("sum-spawn").textContent = spawnName;
+                renderRelationTags();
+            }
+
+            /* ─── Save & Start Game ─── */
+            function startGame() {
+                const fn = document.getElementById("c-firstname").value.trim();
+                const ln = document.getElementById("c-lastname").value.trim();
+                const raceId = document.getElementById("c-race").value;
+                const appearance = document.getElementById("c-appearance").value.trim();
+                const age = parseInt(document.getElementById("c-age").value) || 0;
+                const birthDay = parseInt(document.getElementById("c-birth-day").value) || null;
+                const birthMonth = parseInt(document.getElementById("c-birth-month").value) || null;
+
+                const dayRaw = document.getElementById("c-day").value;
+                const monthRaw = document.getElementById("c-month").value;
+                const yearRaw = document.getElementById("c-year").value;
+                const day = parseInt(dayRaw);
+                const month = parseInt(monthRaw);
+                const year = parseInt(yearRaw);
+                const time = document.getElementById("c-time").value || "00:00";
+                const introduction = document.getElementById("c-introduction").value.trim();
+
+                if (!fn) {
+                    showToast("Please enter a first name.", "#c04040");
+                    return;
+                }
+                if (!ln) {
+                    showToast("Please enter a last name.", "#c04040");
+                    return;
+                }
+                if (!raceId) {
+                    showToast("Please select a race.", "#c04040");
+                    return;
+                }
+                if (!appearance) {
+                    showToast("Please enter an appearance.", "#c04040");
+                    return;
+                }
+                if (!age || age <= 0) {
+                    showToast("Please enter a valid age.", "#c04040");
+                    return;
+                }
+                if (!birthDay || !birthMonth) {
+                    showToast("Please set a birthdate (day and month).", "#c04040");
+                    return;
+                }
+                if (!selectedSpawnId) {
+                    showToast("Please choose a spawn location.", "#c04040");
+                    return;
+                }
+                if (!day || !month || !year) {
+                    showToast("Please set a starting date (day, month, year).", "#c04040");
+                    return;
+                }
+                if (!introduction) {
+                    showToast("Please enter a story introduction.", "#c04040");
+                    return;
+                }
+
+                const raceCard = getCards().find((c) => c.id === raceId);
+                const chars = getCharacters();
+                const newChar = {
+                    id: generateId(),
+                    genre: "character",
+                    title: [fn, ln].filter(Boolean).join(" "),
+                    firstName: fn,
+                    lastName: ln,
+                    raceId,
+                    raceName: raceCard ? raceCard.title : "",
+                    gender: selectedGender,
+                    spawnId: selectedSpawnId || null,
+                    appearance,
+                    age,
+                    birthdate: (birthDay && birthMonth) ? { day: birthDay, month: birthMonth } : null,
+                    relations: [...relationSelections],
+                    skills: [...skillSelections],
+                    startingDate: { day, month, year, time },
+                    introduction: introduction,
+                    isPlayable: true,
+                    status: "Alive",
+                    createdAt: new Date().toISOString(),
+                };
+                chars.push(newChar);
+                saveCharacters(chars);
+
+                // Navigate directly to game
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "StoryKI/Game.html";
+                }, 400);
+            }
+
+            /* ═══════════════════════════════════════
+               NAVIGATION
+            ═══════════════════════════════════════ */
+            function goBack() {
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "../index.html";
+                }, 400);
+            }
+
+            /* ═══════════════════════════════════════
+               TOAST
+            ═══════════════════════════════════════ */
+            function showToast(msg, bg = "rgba(40,140,80,0.95)") {
+                const t = document.getElementById("toast");
+                t.textContent = msg;
+                t.style.background = bg;
+                t.classList.add("show");
+                clearTimeout(t._timer);
+                t._timer = setTimeout(() => t.classList.remove("show"), 2500);
+            }
+
+            /* ═══════════════════════════════════════
+               INIT
+            ═══════════════════════════════════════ */
+            window.addEventListener("load", () => {
+                loadBackground();
+                setInterval(loadBackground, 2000);
+                initForm();
+                setTimeout(() => {
+                    document.body.style.opacity = "1";
+                }, 100);
+            });
+        </script>
+        
+        <!-- Overlay: Choose Playable NPC or New Character -->
+        <div id="playable-choice-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:4000;">
+            <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:20px; padding:24px; width:100%; max-width:520px; display:flex; flex-direction:column; gap:16px;">
+                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Choose Your Protagonist</div>
+                
+                <div id="playable-list" style="display:flex; flex-direction:column; gap:8px; max-height:40vh; overflow:auto;"></div>
+                
+                <div style="display:flex; gap:10px; margin-top:6px;">
+                    <button onclick="closePlayableChoice()" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">New Character</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ══════════════════════════════
+             NPC SETUP VIEW (Scene)
+        ══════════════════════════════ -->
+        <div id="npc-setup-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="goBack()" title="Back">
+                    &#8592;
+                </button>
+                <span class="nav-title">NPC SETUP</span>
+                <div class="nav-count" style="visibility:hidden;">0</div>
+            </nav>
+            <div class="page-scroll">
+                <div class="page-title-row">
+                    <h1>NPC Setup</h1>
+                    <span class="page-title-badge">PLAY AS NPC</span>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Spawn Location</div>
+                    <div class="spawn-list" id="npc-spawn-list">
+                        <div class="spawn-empty" id="npc-spawn-empty">
+                            No spawn locations available.<br />
+                            <span style="font-size: 11px; opacity: 0.6">Add Buildings with "Can be Spawn" checked in the World Creator.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Starting Date & Time</div>
+                    <div class="two-col">
+                        <div style="display:flex; gap:8px;">
+                            <input type="number" class="form-input" id="npc-day" placeholder="DD" min="1" max="31" style="width:70px; text-align:center;">
+                            <select class="form-input" id="npc-month" style="flex:1;">
+                                <option value="1">Jan</option>
+                                <option value="2">Feb</option>
+                                <option value="3">Mar</option>
+                                <option value="4">Apr</option>
+                                <option value="5">May</option>
+                                <option value="6">Jun</option>
+                                <option value="7">Jul</option>
+                                <option value="8">Aug</option>
+                                <option value="9">Sep</option>
+                                <option value="10">Oct</option>
+                                <option value="11">Nov</option>
+                                <option value="12">Dec</option>
+                            </select>
+                            <input type="number" class="form-input" id="npc-year" placeholder="YYYY" style="width:90px; text-align:center;">
+                        </div>
+                        <div>
+                            <input type="time" class="form-input" id="npc-time" value="00:00">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Story Introduction (Optional)</div>
+                    <textarea class="form-input" id="npc-introduction" rows="4" style="resize:vertical; min-height:100px;" placeholder="Enter an introduction for your story..."></textarea>
+                </div>
+
+                <div class="section">
+                    <div class="form-actions">
+                        <button class="btn-cancel" onclick="cancelNPCSetup()">← Back</button>
+                        <button class="btn-create" onclick="confirmNPCSetup()">Play ▶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            function openPlayableChoice(playable) {
+                const list = document.getElementById("playable-list");
+                list.innerHTML = "";
+                playable.forEach(npc => {
+                    const btn = document.createElement("button");
+                    btn.textContent = `Play as ${npc.title}`;
+                    btn.style.cssText = "padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;";
+                    btn.onclick = () => openNPCSetup(npc.id);
+                    list.appendChild(btn);
+                });
+                document.getElementById("playable-choice-overlay").style.display = "flex";
+            }
+            function closePlayableChoice() {
+                document.getElementById("playable-choice-overlay").style.display = "none";
+            }
+            function openNPCSetup(npcId) {
+                selectedNPCId = npcId;
+                closePlayableChoice();
+                // Reset selection and render spawn list into NPC overlay
+                selectedSpawnId = null;
+                renderSpawnListInto("npc-spawn-list", "npc-spawn-empty", null);
+                // Defaults for date/time
+                document.getElementById("npc-day").value = "1";
+                document.getElementById("npc-month").value = "1";
+                document.getElementById("npc-year").value = "1983";
+                document.getElementById("npc-time").value = "00:00";
+                document.getElementById("npc-introduction").value = "";
+                const nMonth = document.getElementById("npc-month");
+                const nYear = document.getElementById("npc-year");
+                if (nMonth) nMonth.onchange = () => ccUpdateDayMax("npc-day", "npc-month", "npc-year");
+                if (nYear) nYear.onchange = () => ccUpdateDayMax("npc-day", "npc-month", "npc-year");
+                ccUpdateDayMax("npc-day", "npc-month", "npc-year");
+                // Scene switch: hide main, show npc setup
+                document.getElementById("main-view").style.display = "none";
+                document.getElementById("relations-view").style.display = "none";
+                document.getElementById("npc-setup-view").style.display = "flex";
+            }
+            function cancelNPCSetup() {
+                document.getElementById("npc-setup-view").style.display = "none";
+                // Show playable choice again
+                // Back to playable choice list
+                try {
+                    const playable = getCards().filter(c => c.genre === "character" && c.isPlayable);
+                    if (playable.length > 0) openPlayableChoice(playable);
+                } catch {}
+            }
+            function confirmNPCSetup() {
+                if (!selectedNPCId) return;
+                const cards = getCards();
+                const npc = cards.find(c => c.id === selectedNPCId);
+                if (!npc) return;
+
+                if (!selectedSpawnId) {
+                    showToast("Please choose a spawn location.", "#c04040");
+                    return;
+                }
+                const day = parseInt(document.getElementById("npc-day").value) || 1;
+                const month = parseInt(document.getElementById("npc-month").value) || 1;
+                const year = parseInt(document.getElementById("npc-year").value) || 1983;
+                const time = document.getElementById("npc-time").value || "00:00";
+                const intro = document.getElementById("npc-introduction").value.trim();
+
+                const chars = getCharacters();
+                const nameParts = (npc.title || "").split(" ");
+                const firstName = nameParts.shift() || "Player";
+                const lastName = nameParts.join(" ");
+
+                const newChar = {
+                    id: generateId(),
+                    genre: "character",
+                    title: npc.title || `${firstName} ${lastName}`.trim(),
+                    firstName,
+                    lastName,
+                    raceId: npc.raceId || null,
+                    raceName: npc.raceName || "",
+                    gender: npc.gender || "male",
+                    appearance: npc.appearance || "",
+                    age: typeof npc.age === "number" ? npc.age : (parseInt(npc.age) || 0),
+                    birthdate: npc.birthdate ? { day: npc.birthdate.day || null, month: npc.birthdate.month || null } : null,
+                    spawnId: selectedSpawnId,
+                    relations: [...(npc.relations || [])],
+                    skills: [...(npc.skills || [])],
+                    startingDate: { day, month, year, time },
+                    introduction: intro,
+                    isPlayable: true,
+                    status: npc.status || "Alive",
+                    createdAt: new Date().toISOString(),
+                };
+                chars.push(newChar);
+                saveCharacters(chars);
+
+                // Remove NPC from cards (player takes over)
+                const filtered = cards.filter(c => c.id !== selectedNPCId);
+                Storage.set(CARDS_KEY, JSON.stringify(filtered));
+
+                document.getElementById("npc-setup-view").style.display = "none";
+                document.body.style.opacity = "0";
+                setTimeout(() => { window.location.href = "StoryKI/Game.html"; }, 400);
+            }
+        </script>
+    </body>
+</html>

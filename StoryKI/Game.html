@@ -1,0 +1,4007 @@
+<!doctype html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>StoryKI – Game</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+            }
+            *::-webkit-scrollbar {
+                width: 4px;
+            }
+            *::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            *::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.12);
+                border-radius: 2px;
+            }
+
+            
+
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                font-family: "Segoe UI", Arial, sans-serif;
+            }
+
+            body {
+                background: #0a0a0a;
+                color: #fff;
+                opacity: 0;
+                transition: opacity 0.4s ease-in-out;
+            }
+
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.68);
+                z-index: 0;
+                pointer-events: none;
+            }
+
+            /* ─── Background Layer ─── */
+            #bg-layer {
+                position: fixed;
+                inset: 0;
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+                z-index: -1;
+                filter: blur(3px) brightness(0.38);
+                transition: background-image 0.6s ease;
+            }
+
+            /* ─── App Shell ─── */
+            #app {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                max-width: 820px;
+                margin: 0 auto;
+            }
+
+            /* ════════════════════════════════════
+               HEADER / TOP NAV
+            ════════════════════════════════════ */
+            #header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 20px;
+                flex-shrink: 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+                background: rgba(8, 8, 8, 0.55);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+            }
+
+            .nav-back-btn {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.18);
+                background: rgba(28, 28, 28, 0.75);
+                color: #fff;
+                font-size: 15px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+                flex-shrink: 0;
+            }
+            .nav-back-btn:hover {
+                background: rgba(55, 55, 55, 0.95);
+                border-color: rgba(255, 255, 255, 0.4);
+            }
+
+            #header-title .story-label {
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.35);
+                margin-bottom: 2px;
+            }
+            #header-title .story-name {
+                font-size: 15px;
+                font-weight: 700;
+                color: #fff;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 260px;
+            }
+
+            /* Info Block (Time/Loc) */
+            #header-info {
+                flex: 1;
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                margin: 0 10px;
+                text-align: center;
+            }
+            #header-location {
+                font-size: 12px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.9);
+                letter-spacing: 0.05em;
+                text-transform: uppercase;
+            }
+            #header-time {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.5);
+                font-family: monospace;
+                margin-top: 2px;
+            }
+
+            /* Character badge in header */
+            #char-badge {
+                display: none;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 12px;
+                background: rgba(30, 30, 40, 0.8);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
+                flex-shrink: 0;
+            }
+            #char-badge.visible {
+                display: flex;
+            }
+            .char-avatar-sm {
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 13px;
+                flex-shrink: 0;
+            }
+            .char-avatar-sm.male {
+                background: rgba(30, 60, 110, 0.9);
+                border: 1.5px solid rgba(80, 140, 220, 0.4);
+            }
+            .char-avatar-sm.female {
+                background: rgba(110, 30, 60, 0.9);
+                border: 1.5px solid rgba(220, 80, 140, 0.4);
+            }
+            .char-name-sm {
+                font-size: 12px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.8);
+            }
+            .char-race-sm {
+                font-size: 10px;
+                color: rgba(200, 160, 60, 0.85);
+                font-weight: 600;
+            }
+
+            /* NPCs Present Bar */
+            #present-npcs-bar {
+                display: none;
+                background: rgba(12, 12, 12, 0.4);
+                backdrop-filter: blur(8px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                padding: 8px 20px;
+                overflow-x: auto;
+                white-space: nowrap;
+                gap: 12px;
+                align-items: center;
+                flex-shrink: 0;
+            }
+            #present-npcs-bar.visible {
+                display: flex;
+            }
+            .npc-item {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                background: rgba(40, 40, 50, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 4px 10px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .npc-item:hover {
+                background: rgba(60, 60, 80, 0.8);
+            }
+            .npc-avatar-xs {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                font-size: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+            }
+            .npc-avatar-xs.male { background: #1e3c6e; }
+            .npc-avatar-xs.female { background: #6e1e3c; }
+            .npc-name-xs {
+                font-size: 12px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.9);
+            }
+
+            /* ─── Status indicator ─── */
+            #status-dot-wrap {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                flex-shrink: 0;
+            }
+            .status-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: rgba(80, 200, 100, 0.9);
+                animation: pulse-dot 2.5s infinite;
+            }
+            .status-label {
+                font-size: 11px;
+                color: rgba(80, 200, 100, 0.85);
+                font-weight: 600;
+            }
+            @keyframes pulse-dot {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.35;
+                }
+            }
+
+            /* ════════════════════════════════════
+               MESSAGES
+            ════════════════════════════════════ */
+            #messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 24px 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+            }
+
+            .msg-row {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+            }
+            .msg-row.user {
+                align-items: flex-end;
+            }
+            .msg-row.ai {
+                align-items: flex-start;
+            }
+            .msg-row.follow-up {
+                margin-top: -8px;
+            }
+
+            .msg-sender {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                padding: 0 6px;
+            }
+            .msg-row.user .msg-sender {
+                color: rgba(255, 255, 255, 0.28);
+            }
+            .msg-row.ai .msg-sender {
+                color: rgba(255, 255, 255, 0.28);
+            }
+
+            .msg-bubble {
+                padding: 12px 17px;
+                border-radius: 16px;
+                max-width: 76%;
+                word-wrap: break-word;
+                line-height: 1.65;
+                font-size: 14px;
+                white-space: pre-wrap;
+            }
+            .msg-row.user .msg-bubble {
+                background: rgba(26, 26, 26, 0.92);
+                border: 1px solid rgba(255, 255, 255, 0.09);
+                border-bottom-right-radius: 4px;
+                color: rgba(255, 255, 255, 0.88);
+            }
+            .msg-row.ai .msg-bubble {
+                background: rgba(26, 26, 26, 0.92);
+                border: 1px solid rgba(255, 255, 255, 0.09);
+                border-bottom-left-radius: 4px;
+                color: rgba(255, 255, 255, 0.88);
+            }
+            .msg-bubble.thinking {
+                color: rgba(255, 255, 255, 0.35);
+                font-style: italic;
+                animation: blink 1.4s infinite;
+            }
+            @keyframes blink {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
+
+            /* Typing dots */
+            .typing-dots {
+                display: inline-flex;
+                gap: 4px;
+                align-items: center;
+                height: 18px;
+            }
+            .typing-dots span {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.4);
+                animation: typing-bounce 1.2s infinite ease-in-out;
+            }
+            .typing-dots span:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+            .typing-dots span:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+            @keyframes typing-bounce {
+                0%,
+                80%,
+                100% {
+                    transform: translateY(0);
+                    opacity: 0.4;
+                }
+                40% {
+                    transform: translateY(-5px);
+                    opacity: 1;
+                }
+            }
+
+            /* Divider */
+            .chat-divider {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin: 6px 0;
+            }
+            .chat-divider::before,
+            .chat-divider::after {
+                content: "";
+                flex: 1;
+                height: 1px;
+                background: rgba(255, 255, 255, 0.07);
+            }
+            .chat-divider-label {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.2);
+            }
+
+            /* ════════════════════════════════════
+               INPUT AREA
+            ════════════════════════════════════ */
+            #input-section {
+                flex-shrink: 0;
+                background: rgba(8, 8, 8, 0.55);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border-top: 1px solid rgba(255, 255, 255, 0.07);
+            }
+
+            #input-area {
+                display: flex;
+                gap: 10px;
+                align-items: flex-end;
+                padding: 12px 16px 10px 16px;
+            }
+
+            #user-input {
+                flex: 1;
+                padding: 11px 16px;
+                background: rgba(20, 20, 20, 0.95);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 22px;
+                color: #fff;
+                font-size: 14px;
+                outline: none;
+                font-family: inherit;
+                resize: none;
+                line-height: 1.5;
+                max-height: 140px;
+                overflow-y: auto;
+                transition: border-color 0.2s;
+            }
+            #user-input::placeholder {
+                color: rgba(255, 255, 255, 0.22);
+            }
+            #user-input:focus {
+                border-color: rgba(255, 255, 255, 0.25);
+            }
+
+            #send-btn {
+                width: 42px;
+                height: 42px;
+                border-radius: 50%;
+                border: none;
+                background: rgba(35, 85, 165, 0.9);
+                color: #fff;
+                font-size: 17px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    background 0.2s,
+                    transform 0.15s,
+                    opacity 0.2s;
+                flex-shrink: 0;
+                margin-bottom: 1px;
+            }
+            #send-btn:hover:not(:disabled) {
+                background: rgba(50, 110, 200, 0.99);
+                transform: scale(1.06);
+            }
+            #send-btn:disabled {
+                opacity: 0.35;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            /* ─── Action Bar ─── */
+            #action-bar {
+                display: flex;
+                gap: 7px;
+                padding: 0 16px 14px 16px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .act-btn {
+                padding: 7px 16px;
+                border-radius: 18px;
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                background: rgba(24, 24, 24, 0.9);
+                color: rgba(255, 255, 255, 0.65);
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                letter-spacing: 0.02em;
+                white-space: nowrap;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s,
+                    color 0.2s,
+                    transform 0.15s;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .act-btn:hover {
+                background: rgba(40, 40, 40, 0.98);
+                border-color: rgba(255, 255, 255, 0.22);
+                color: #fff;
+                transform: translateY(-1px);
+            }
+            .act-btn:active {
+                transform: translateY(0);
+            }
+
+            .act-btn.btn-retry {
+                border-color: rgba(150, 150, 150, 0.2);
+            }
+            .act-btn.btn-edit {
+                border-color: rgba(100, 170, 230, 0.25);
+                color: rgba(130, 185, 240, 0.85);
+            }
+            .act-btn.btn-edit:hover {
+                background: rgba(30, 60, 100, 0.6);
+                color: #a8d0f8;
+            }
+            .act-btn.btn-continue {
+                border-color: rgba(60, 180, 80, 0.3);
+                color: rgba(100, 210, 120, 0.9);
+            }
+            .act-btn.btn-continue:hover {
+                background: rgba(20, 65, 30, 0.8);
+                color: #90e8a0;
+            }
+            .act-btn.btn-erase {
+                border-color: rgba(180, 60, 60, 0.3);
+                color: rgba(220, 100, 100, 0.85);
+            }
+            .act-btn.btn-erase:hover {
+                background: rgba(70, 20, 20, 0.7);
+                color: #ff9090;
+            }
+            .act-btn.locked {
+                opacity: 0.5;
+                cursor: not-allowed !important;
+                pointer-events: none;
+            }
+
+            /* ─── Toast ─── */
+            #toast {
+                position: fixed;
+                bottom: 28px;
+                left: 50%;
+                transform: translateX(-50%) translateY(80px);
+                background: rgba(40, 140, 80, 0.95);
+                color: #fff;
+                padding: 12px 24px;
+                border-radius: 9px;
+                font-size: 13px;
+                font-weight: 600;
+                z-index: 2000;
+                opacity: 0;
+                transition:
+                    transform 0.3s ease,
+                    opacity 0.3s ease;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                white-space: nowrap;
+                pointer-events: none;
+            }
+            #toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+
+            /* ─── Welcome screen overlay ─── */
+            #welcome-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 100;
+                background: rgba(0, 0, 0, 0.82);
+                backdrop-filter: blur(6px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 1;
+                transition: opacity 0.5s ease;
+            }
+            #welcome-overlay.hidden {
+                opacity: 0;
+                pointer-events: none;
+            }
+            .welcome-card {
+                background: rgba(18, 18, 18, 0.95);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 36px 40px;
+                max-width: 420px;
+                width: 90%;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            }
+            .welcome-icon {
+                font-size: 40px;
+                margin-bottom: 16px;
+            }
+            .welcome-title {
+                font-size: 22px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 8px;
+            }
+            .welcome-sub {
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.4);
+                line-height: 1.6;
+                margin-bottom: 24px;
+            }
+            .welcome-char-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 16px;
+                background: rgba(30, 30, 40, 0.8);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                margin-bottom: 24px;
+                text-align: left;
+            }
+            .welcome-avatar {
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 22px;
+                flex-shrink: 0;
+            }
+            .welcome-avatar.male {
+                background: rgba(30, 60, 110, 0.9);
+                border: 2px solid rgba(80, 140, 220, 0.4);
+            }
+            .welcome-avatar.female {
+                background: rgba(110, 30, 60, 0.9);
+                border: 2px solid rgba(220, 80, 140, 0.4);
+            }
+            .welcome-char-name {
+                font-size: 16px;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 3px;
+            }
+            .welcome-char-meta {
+                font-size: 11px;
+                color: rgba(200, 160, 60, 0.85);
+                font-weight: 600;
+            }
+            .welcome-btn {
+                width: 100%;
+                padding: 14px 0;
+                border-radius: 10px;
+                border: none;
+                background: rgba(30, 80, 150, 0.9);
+                border: 1.5px solid rgba(70, 130, 220, 0.4);
+                color: #fff;
+                font-size: 15px;
+                font-weight: 700;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    transform 0.15s;
+                letter-spacing: 0.02em;
+            }
+            .welcome-btn:hover {
+                background: rgba(45, 105, 190, 0.99);
+                transform: translateY(-1px);
+            }
+            .welcome-btn:active {
+                transform: translateY(0);
+            }
+
+            @media (max-width: 600px) {
+                #app { max-width: 100%; }
+                #header { padding: 10px 12px; gap: 8px; }
+                #messages { padding: 14px 12px; gap: 10px; }
+                .msg-bubble { max-width: 90%; font-size: 13px; padding: 10px 14px; }
+                #present-npcs-bar { padding: 6px 12px; gap: 8px; }
+                .npc-item { padding: 4px 8px; border-radius: 12px; }
+                .npc-name-xs { font-size: 11px; }
+                #input-area { padding: 10px 12px; gap: 8px; }
+                #user-input { font-size: 13px; padding: 10px 14px; max-height: 120px; }
+                #send-btn { width: 44px; height: 44px; }
+                #action-bar { padding: 0 12px 12px 12px; gap: 6px; }
+                .act-btn { padding: 7px 12px; font-size: 12px; }
+                .welcome-card { padding: 24px 20px; width: 94%; }
+                #char-badge { display: none !important; }
+            }
+
+        </style>
+    </head>
+    <body>
+        <div id="bg-layer"></div>
+
+        <!-- ─── Welcome Overlay ─── -->
+        <div id="welcome-overlay">
+            <div class="welcome-card">
+                <div class="welcome-icon">📖</div>
+                <div class="welcome-title">Your Story Begins</div>
+                <div class="welcome-sub">
+                    Your character is ready. The world awaits your decisions.
+                </div>
+                <div
+                    class="welcome-char-row"
+                    id="welcome-char-row"
+                    style="display: none"
+                >
+                    <div class="welcome-avatar male" id="welcome-avatar">♂</div>
+                    <div>
+                        <div class="welcome-char-name" id="welcome-char-name">
+                            —
+                        </div>
+                        <div class="welcome-char-meta" id="welcome-char-meta">
+                            —
+                        </div>
+                    </div>
+                </div>
+                <button class="welcome-btn" onclick="dismissWelcome()">
+                    ▶&nbsp; Begin Adventure
+                </button>
+            </div>
+        </div>
+
+        <!-- ─── Main App ─── -->
+        <div id="app">
+            <!-- Header -->
+            <div id="header">
+                <button class="nav-back-btn" onclick="goBack()" title="Back">
+                    &#8592;
+                </button>
+
+                <div id="header-title">
+                    <div class="story-label">StoryKI</div>
+                    <div class="story-name" id="story-name">Adventure</div>
+                </div>
+
+                <div id="header-info">
+                    <div id="header-location">—</div>
+                    <div id="header-time">—</div>
+                </div>
+
+                <div id="char-badge">
+                    <div class="char-avatar-sm male" id="header-avatar">♂</div>
+                    <div>
+                        <div class="char-name-sm" id="header-char-name">—</div>
+                        <div class="char-race-sm" id="header-char-race">—</div>
+                    </div>
+                </div>
+
+                <div id="status-dot-wrap" style="display:none;">
+                    <div class="status-dot" id="status-dot"></div>
+                    <span class="status-label" id="status-label">Online</span>
+                </div>
+            </div>
+
+            <!-- Present NPCs -->
+            <div id="present-npcs-bar" style="display:none;"></div>
+
+            <!-- Messages -->
+            <div id="messages">
+                <div class="chat-divider">
+                    <span class="chat-divider-label">Story Start</span>
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div id="input-section">
+                <div id="input-area">
+                    <textarea
+                        id="user-input"
+                        rows="1"
+                        placeholder="Was tust du als nächstes…"
+                        autocomplete="off"
+                    ></textarea>
+                    <button id="send-btn" title="Senden">&#10148;</button>
+                </div>
+                <div id="action-bar">
+                    <button class="act-btn btn-retry" id="retry-btn">
+                        ↺ Retry
+                    </button>
+                    <button class="act-btn btn-edit" id="edit-btn">
+                        ✎ Edit
+                    </button>
+                    <button class="act-btn btn-continue" id="continue-btn">
+                        ▶ Continue
+                    </button>
+                    <button class="act-btn btn-erase" id="erase-btn">
+                        ✕ Erase
+                    </button>
+                <button class="act-btn btn-edit" id="edit-save-btn" style="display:none;">
+                    ✔ Save
+                </button>
+                <button class="act-btn btn-erase" id="edit-cancel-btn" style="display:none;">
+                    ✕ Cancel
+                </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast"></div>
+
+        <div id="back-popup-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000; backdrop-filter:blur(10px);">
+            <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:20px; width:100%; max-width:480px; display:flex; flex-direction:column; gap:14px;">
+                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Story verwalten</div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <label for="back-story-input" style="color:rgba(255,255,255,.75); font-size:13px;">Story-Name</label>
+                    <input id="back-story-input" type="text" style="padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,.15); background:rgba(20,20,25,.9); color:#fff; outline:none;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button id="back-popup-cancel" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">Back</button>
+                    <button id="back-popup-save" style="flex:1; padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;">Save</button>
+                    <button id="back-popup-delete" style="flex:1; padding:10px; border-radius:10px; background:#b04040; color:#fff; border:none; font-weight:700; cursor:pointer;">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            /* ═══════════════════════════════════════
+               CONSTANTS
+            ═══════════════════════════════════════ */
+            const SETTINGS_KEY = "storyki_settings";
+            const CHARS_KEY = "storyki_characters";
+            const CARDS_KEY = "storyki_storycards";
+            const LOG_KEY = "storyki_storylog";
+            const SCENARIOS_KEY = "storyki_scenarios";
+            const SELECTED_WORLD_ID_KEY = "storyki_selected_world_id";
+            const CURRENT_STORY_ID_KEY = "storyki_current_story_id";
+
+            // Storage Helper (Non-persistent session storage)
+            const Storage = {
+                get: (key) => sessionStorage.getItem(key),
+                set: (key, val) => sessionStorage.setItem(key, val),
+                remove: (key) => sessionStorage.removeItem(key),
+                clear: () => sessionStorage.clear()
+            };
+
+            /* ═══════════════════════════════════════
+               STATE
+            ═══════════════════════════════════════ */
+            let chatHistory = [];
+            let isBusy = false;
+            let activeChar = null;
+            let currentLocationId = null;
+            let isFirstMessageProtected = false;
+            let isEditing = false;
+            let _editRow = null;
+            let _editIndex = -1;
+            let currentNarrationTs = null;
+
+            /* ═══════════════════════════════════════
+               TIME & COMMAND SYSTEM
+            ═══════════════════════════════════════ */
+            function saveActiveCharacter() {
+                if (!activeChar) return;
+                try {
+                    const chars = JSON.parse(
+                        Storage.get(CHARS_KEY) || "[]",
+                    );
+                    const idx = chars.findIndex((c) => c.id === activeChar.id);
+                    if (idx !== -1) {
+                        chars[idx] = activeChar;
+                        Storage.set(CHARS_KEY, JSON.stringify(chars));
+                    }
+                    autoSaveStory();
+                } catch (e) {
+                    console.error("Failed to save character", e);
+                }
+            }
+
+            function saveStoryLog() {
+                try {
+                    Storage.set(LOG_KEY, JSON.stringify(chatHistory));
+                    autoSaveStory();
+                } catch (e) {
+                    console.error("Failed to save story log", e);
+                }
+            }
+
+            function rollbackToLastWorldState() {
+                if (!activeChar) return;
+                // Find last Narrator entry; fallback to any last entry
+                let entry = null;
+                for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    const e = chatHistory[i];
+                    if (typeof e !== "string" && e.sender === "Narrator") {
+                        entry = e;
+                        break;
+                    }
+                }
+                if (!entry) {
+                    for (let i = chatHistory.length - 1; i >= 0; i--) {
+                        const e = chatHistory[i];
+                        if (typeof e !== "string") {
+                            entry = e;
+                            break;
+                        }
+                    }
+                }
+                if (!entry) return;
+
+                if (!activeChar.startingDate) activeChar.startingDate = {};
+                const d = activeChar.startingDate;
+                if (entry.date) {
+                    const parts = entry.date.split(".");
+                    if (parts.length === 3) {
+                        d.day = parseInt(parts[0]) || d.day || 1;
+                        d.month = parseInt(parts[1]) || d.month || 1;
+                        d.year = parseInt(parts[2]) || d.year || 1983;
+                    }
+                }
+                if (entry.time) {
+                    d.time = entry.time;
+                }
+                updateHeaderTime();
+                if (entry.location) {
+                    updateLocation(entry.location);
+                }
+                saveActiveCharacter();
+            }
+
+            function loadStoryLog() {
+                try {
+                    const raw = Storage.get(LOG_KEY);
+                    if (raw) {
+                        chatHistory = JSON.parse(raw);
+                        if (!window._chatPageSize) window._chatPageSize = 12;
+                        if (!window._chatLoadedCount) window._chatLoadedCount = 0;
+                        window._chatLoadedCount = Math.min(window._chatPageSize, chatHistory.length);
+                        renderChatWindow(false, 0);
+                        const messagesEl = document.getElementById("messages");
+                        if (messagesEl && !window._chatScrollBound) {
+                            window._chatScrollBound = true;
+                            messagesEl.addEventListener("scroll", function () {
+                                if (messagesEl.scrollTop <= 5 && window._chatLoadedCount < chatHistory.length) {
+                                    const prevHeight = messagesEl.scrollHeight;
+                                    window._chatLoadedCount = Math.min(window._chatLoadedCount + window._chatPageSize, chatHistory.length);
+                                    renderChatWindow(true, prevHeight);
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load story log", e);
+                }
+            }
+
+            function renderChatWindow(preserve, prevHeight) {
+                const messagesEl = document.getElementById("messages");
+                if (!messagesEl) return;
+                messagesEl.innerHTML = "";
+                const total = chatHistory.length;
+                const start = Math.max(0, total - (window._chatLoadedCount || 0));
+                for (let i = start; i < total; i++) {
+                    const entry = chatHistory[i];
+                    if (typeof entry === "string") {
+                        addSystemDivider(entry, false);
+                    } else {
+                        const role = entry.sender === "Narrator" ? "ai" : "user";
+                        appendBubble(role, entry.text, "", false);
+                    }
+                }
+                if (preserve) {
+                    messagesEl.scrollTop = messagesEl.scrollHeight - prevHeight + 5;
+                } else {
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
+            }
+
+            function addToStoryLog(sender, text, tsOverride = null) {
+                const d = activeChar?.startingDate || {};
+                const day = String(d.day || 1).padStart(2, "0");
+                const mon = String(d.month || 1).padStart(2, "0");
+                const yr = d.year || 1983;
+                const tm = d.time || "00:00";
+                const loc = document.getElementById("header-location")?.textContent || "Unknown Location";
+
+                const entry = {
+                    sender: sender,
+                    text: text,
+                    date: `${day}.${mon}.${yr}`,
+                    time: tm,
+                    location: loc,
+                    timestamp: tsOverride || Date.now()
+                };
+
+                chatHistory.push(entry);
+                saveStoryLog();
+                return entry.timestamp;
+            }
+
+            function updateHeaderTime() {
+                if (!activeChar) return;
+                const d = activeChar.startingDate || {};
+                try { updateNPCBirthdays(d); updatePlayerBirthday(d); } catch {}
+                const day = String(d.day || 1).padStart(2, "0");
+                const mon = String(d.month || 1).padStart(2, "0");
+                const yr = d.year || 1983;
+                const tm = d.time || "00:00";
+                const el = document.getElementById("header-time");
+                const wdn = _weekdayNameEn(d.day || 1, d.month || 1, d.year || 1983);
+                if (el) el.textContent = `${wdn}, ${day}.${mon}.${yr} — ${tm}`;
+            }
+
+            function applyTextSizeLimit(text) {
+                try {
+                    const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                    const size = (settings.textSize || "normal").toLowerCase();
+                    let maxSentences = 0;
+                    let maxChars = 1000;
+                    if (size === "short") {
+                        maxSentences = 2;
+                        maxChars = 300;
+                    } else if (size === "tall") {
+                        maxSentences = 0;
+                        maxChars = 2400;
+                    } else {
+                        maxSentences = 6;
+                        maxChars = 1000;
+                    }
+                    if (!text) return text;
+                    let out = text.trim();
+                    if (maxSentences > 0) {
+                        const sentences = out.match(/[^.!?…]+[.!?…]+(?:\s+|$)|[^.!?…]+$/g) || [out];
+                        if (sentences.length > maxSentences) {
+                            out = sentences.slice(0, maxSentences).join(" ").trim();
+                        }
+                    }
+                    if (out.length > maxChars) {
+                        const cutoff = maxChars;
+                        const substr = out.substring(0, cutoff);
+                        const lastPunct = Math.max(substr.lastIndexOf("."), substr.lastIndexOf("!"), substr.lastIndexOf("?"), substr.lastIndexOf("…"), substr.lastIndexOf("\n"));
+                        const lastSpace = substr.lastIndexOf(" ");
+                        const idx = lastPunct > 120 ? lastPunct : (lastSpace > 120 ? lastSpace : cutoff);
+                        out = substr.substring(0, idx).trimEnd();
+                        // avoid artificial ellipsis; ensure sentence closure
+                        if (!/[.!?…]"?$/.test(out)) out += ".";
+                    }
+                    // Balance quotes (ASCII and curly)
+                    const asciiQuotes = (out.match(/"/g) || []).length;
+                    if (asciiQuotes % 2 === 1) out += '"';
+                    const leftCurly = (out.match(/“|„/g) || []).length;
+                    const rightCurly = (out.match(/”/g) || []).length;
+                    if (leftCurly > rightCurly) out += "”";
+                    return out;
+                } catch {
+                    return text;
+                }
+            }
+
+            // Calendar helpers: real month lengths incl. leap years
+            function isLeapYear(y) {
+                y = parseInt(y, 10) || 0;
+                return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+            }
+            function daysInMonth(m, y) {
+                m = parseInt(m, 10) || 1;
+                y = parseInt(y, 10) || 1983;
+                if (m === 2) return isLeapYear(y) ? 29 : 28;
+                if (m === 4 || m === 6 || m === 9 || m === 11) return 30;
+                return 31;
+            }
+            function normalizeYMD(d) {
+                d.day = parseInt(d.day || 1, 10);
+                d.month = parseInt(d.month || 1, 10);
+                d.year = parseInt(d.year || 1983, 10);
+                // normalize month to 1..12
+                while (d.month > 12) { d.month -= 12; d.year += 1; }
+                while (d.month < 1)  { d.month += 12; d.year -= 1; }
+                // carry overflow days forward
+                let dim = daysInMonth(d.month, d.year);
+                while (d.day > dim) {
+                    d.day -= dim;
+                    d.month += 1;
+                    if (d.month > 12) { d.month = 1; d.year += 1; }
+                    dim = daysInMonth(d.month, d.year);
+                }
+                // carry negative/underflow days backward
+                while (d.day < 1) {
+                    d.month -= 1;
+                    if (d.month < 1) { d.month = 12; d.year -= 1; }
+                    d.day += daysInMonth(d.month, d.year);
+                }
+                return d;
+            }
+
+            function addMinutes(mins) {
+                if (!activeChar) return;
+                if (!activeChar.startingDate) activeChar.startingDate = {};
+                const d = activeChar.startingDate;
+
+                let [h, m] = (d.time || "00:00").split(":").map(Number);
+                let totalMins = h * 60 + m + (mins || 0);
+                const dayLen = 24 * 60;
+                let daysDelta = Math.floor(totalMins / dayLen);
+                let rest = totalMins % dayLen;
+                if (rest < 0) { rest += dayLen; daysDelta -= 1; }
+                const nh = Math.floor(rest / 60);
+                const nm = rest % 60;
+                d.time = `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+                d.day = (d.day || 1) + daysDelta;
+                normalizeYMD(d);
+                updateNPCBirthdays(d);
+                updatePlayerBirthday(d);
+                updateHeaderTime();
+                saveActiveCharacter();
+                console.log(`[Time Update] New Time: ${d.day}.${d.month}.${d.year} ${d.time}`);
+            }
+
+            function processAICommands(text) {
+                if (!text) return "";
+                if (!activeChar) return text.replace(/\[\[.*?\]\]/g, "").trim();
+                if (!activeChar.startingDate) activeChar.startingDate = {};
+                const d = activeChar.startingDate;
+                if (!d.day) d.day = 1;
+                if (!d.month) d.month = 1;
+                if (!d.year) d.year = 1983;
+                if (!d.time) d.time = "00:00";
+
+                const tagPattern = /\[\[(.*?)\]\]/g;
+                let match;
+                let timeChanged = false;
+                let locationChanged = false;
+                // Reset pending memory targets for this response
+                window._pendingMemoryTargets = [];
+
+                while ((match = tagPattern.exec(text)) !== null) {
+                    const content = match[1].trim();
+                    // Handle NPC memory ID list tags: [[Memory:ID1:Common,ID2:Important]]
+                    const memIdList = content.match(/^Memory\s*:\s*(.+)$/i);
+                    if (memIdList) {
+                        try {
+                            const payload = memIdList[1].trim();
+                            const items = payload.split(/,\s*/).map(s => s.trim()).filter(Boolean);
+                            const targets = [];
+                            items.forEach(it => {
+                                const m = it.match(/^([A-Za-z0-9\-]+)\s*:\s*(Common|Important)$/i);
+                                if (m) {
+                                    const id = m[1].trim();
+                                    const level = (m[2] || "Common").toLowerCase() === "important" ? "Important" : "Common";
+                                    targets.push({ id, level });
+                                }
+                            });
+                            window._pendingMemoryTargets = targets;
+                        } catch (e) {
+                            console.warn("Memory tag parse failed", e);
+                        }
+                        continue;
+                    }
+                    const parts = content.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+
+                    for (const part of parts) {
+                        const addParty = part.match(/^AddToParty\s*:\s*(.+)$/i);
+                        if (addParty) {
+                            const payload = addParty[1].trim();
+                            addSpeciesToPartyByRef(payload);
+                            continue;
+                        }
+                        const locState = part.match(/^LocState\s*:\s*(.+)$/i);
+                        if (locState) {
+                            const payload = locState[1];
+                            const kvs = payload.split(/;\s*/).filter(Boolean);
+                            kvs.forEach(seg => {
+                                const m = seg.match(/^([^=]+)=([^;]+)$/);
+                                if (m) {
+                                    const key = m[1].trim();
+                                    const val = m[2].trim();
+                                    let ttlDays = null;
+                                    const ttlMatch = seg.match(/ttl\s*=\s*(\d+)\s*d/i);
+                                    if (ttlMatch) ttlDays = parseInt(ttlMatch[1], 10);
+                                    setLocationState(key, val, ttlDays, currentNarrationTs);
+                                } else {
+                                    const ttlOnly = seg.match(/^ttl\s*=\s*(\d+)\s*d/i);
+                                    if (ttlOnly) {
+                                        const ttlDays = parseInt(ttlOnly[1], 10);
+                                        setLocationState("state", "updated", ttlDays, currentNarrationTs);
+                                    }
+                                }
+                            });
+                            continue;
+                        }
+                        const absTime = part.match(/^(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d{2}:\d{2})$/)
+                            || part.match(/^(\d+),\s*(\d+),\s*(\d+),\s*(\d{2}:\d{2})$/);
+                        if (absTime) {
+                            const day = parseInt(absTime[1]);
+                            const month = parseInt(absTime[2]);
+                            const year = parseInt(absTime[3]);
+                            const timeStr = absTime[4];
+                            d.day = day;
+                            d.month = (month > 0 && month <= 12) ? month : d.month;
+                            d.year = year;
+                            d.time = timeStr;
+                            timeChanged = true;
+                            continue;
+                        }
+
+                        const relTime = part.match(/^(Year|Month|Week|Day|Time)\s*:\s*([+-]?\d+(?::\d{2})?)$/i);
+                        if (relTime) {
+                            const key = relTime[1].toLowerCase();
+                            const valueStr = relTime[2];
+
+                            const parseHM = (t) => {
+                                const ps = (t || "00:00").split(":").map(Number);
+                                return { h: ps[0] || 0, m: ps[1] || 0 };
+                            };
+                            const setHM = (h, m) => {
+                                d.time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+                            };
+                            const applyVal = (cur, valStr) => {
+                                if (valStr.startsWith("+")) return cur + parseInt(valStr.substring(1));
+                                if (valStr.startsWith("-")) return cur - parseInt(valStr.substring(1));
+                                return parseInt(valStr);
+                            };
+
+                            if (key === "year") {
+                                d.year = applyVal(d.year || 1983, valueStr);
+                            } else if (key === "month") {
+                                const isRel = valueStr.startsWith("+") || valueStr.startsWith("-");
+                                if (isRel) {
+                                    let m = (d.month || 1) + parseInt(valueStr);
+                                    let y = d.year || 1983;
+                                    while (m > 12) { m -= 12; y++; }
+                                    while (m < 1) { m += 12; y--; }
+                                    d.month = m;
+                                    d.year = y;
+                                } else {
+                                    let m = parseInt(valueStr);
+                                    d.month = (m > 0 && m <= 12) ? m : (d.month || 1);
+                                }
+                            } else if (key === "week") {
+                                d.day = (d.day || 1) + (parseInt(valueStr) * 7);
+                            } else if (key === "day") {
+                                const isRel = valueStr.startsWith("+") || valueStr.startsWith("-");
+                                if (isRel) {
+                                    d.day = (d.day || 1) + parseInt(valueStr);
+                                } else {
+                                    d.day = parseInt(valueStr);
+                                }
+                            } else if (key === "time") {
+                                if (valueStr.includes(":")) {
+                                    d.time = valueStr;
+                                } else {
+                                    const mins = parseInt(valueStr);
+                                    const cur = parseHM(d.time);
+                                    let total = cur.h * 60 + cur.m + mins;
+                                    while (total < 0) total += 24 * 60;
+                                    total = total % (24 * 60);
+                                    const nh = Math.floor(total / 60);
+                                    const nm = total % 60;
+                                    setHM(nh, nm);
+                                }
+                            }
+
+                    // Normalize minutes and Y/M/D with real month lengths
+                    (function norm() {
+                        let [hh, mm] = (d.time || "00:00").split(":").map(Number);
+                        let total = hh * 60 + mm;
+                        const dayLen = 24 * 60;
+                        let dd = Math.floor(total / dayLen);
+                        let rest = total % dayLen;
+                        if (rest < 0) { rest += dayLen; dd -= 1; }
+                        hh = Math.floor(rest / 60);
+                        mm = rest % 60;
+                        d.time = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+                        d.day = (d.day || 1) + dd;
+                        normalizeYMD(d);
+                    })();
+
+                            timeChanged = true;
+                            continue;
+                        }
+
+                        const locKV = part.match(/^(Location|Loc)\s*:\s*["']?(.+?)["']?$/i);
+                        if (locKV) {
+                            const locName = locKV[2].trim();
+                            updateLocation(locName);
+                            locationChanged = true;
+                            continue;
+                        }
+
+                        if (!part.includes(":")) {
+                            const num = parseInt(part);
+                            if (isNaN(num)) {
+                                updateLocation(part);
+                                locationChanged = true;
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                // Parse final metadata block [[TIME: HH:MM, LOCATION: "Exact Name"]]
+                const metaMatch = text.match(/\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})\s*,\s*LOCATION\s*:\s*["']?(.+?)["']?\s*\]\]\s*$/i);
+                if (metaMatch) {
+                    const tStr = metaMatch[1];
+                    const locStr = metaMatch[2];
+                    if (/^\d{1,2}:\d{2}$/.test(tStr)) {
+                        d.time = tStr;
+                        timeChanged = true;
+                    }
+                    if (locStr && locStr.trim()) {
+                        updateLocation(locStr.trim());
+                        locationChanged = true;
+                    }
+                }
+
+                if (!timeChanged) {
+                    addMinutes(1);
+                    clearExpiredNpcMemories();
+                } else {
+                    updateNPCBirthdays(d);
+                    updatePlayerBirthday(d);
+                    updateHeaderTime();
+                    try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
+                    saveActiveCharacter();
+                    clearExpiredNpcMemories();
+                }
+
+                return text.replace(/\[\[.*?\]\]/g, "").replace(/\s+/g, " ").trim();
+            }
+
+            function handleCommand(key, val) {
+                if (!activeChar) return;
+                if (!activeChar.startingDate) activeChar.startingDate = {};
+                const d = activeChar.startingDate;
+                key = key.toLowerCase();
+                console.log(`[AI Command] ${key} = ${val}`);
+
+                if (key === "time") {
+                    if (val.startsWith("+")) {
+                        addMinutes(parseInt(val.substring(1)) || 0);
+                    } else if (val.startsWith("-")) {
+                        addMinutes(-(parseInt(val.substring(1)) || 0));
+                    } else {
+                        d.time = val;
+                    }
+                } else if (key === "day") {
+                    d.day = parseInt(val) || d.day;
+                } else if (key === "month") {
+                    d.month = parseInt(val) || d.month;
+                } else if (key === "year") {
+                    d.year = parseInt(val) || d.year;
+                } else if (
+                    key === "add_m" ||
+                    key === "add_min" ||
+                    key === "add_minutes"
+                ) {
+                    addMinutes(parseInt(val) || 0);
+                } else if (
+                    key === "add_h" ||
+                    key === "add_hour" ||
+                    key === "add_hours"
+                ) {
+                    addMinutes((parseInt(val) || 0) * 60);
+                } else if (key === "location" || key === "loc") {
+                    updateLocation(val);
+                }
+                
+                updateNPCBirthdays(d);
+                updatePlayerBirthday(d);
+                updateHeaderTime();
+                saveActiveCharacter();
+            }
+
+            function _genId() { return Math.random().toString(36).slice(2, 10); }
+            function addSpeciesToPartyByRef(ref) {
+                try {
+                    const cards = getCards();
+                    let spec = null;
+                    const idMatch = ref.match(/speciesId\s*=\s*([a-z0-9_-]+)/i);
+                    if (idMatch) {
+                        const id = idMatch[1];
+                        spec = cards.find(c => c.genre === "species" && c.id === id) || null;
+                    }
+                    if (!spec) {
+                        const quoted = ref.match(/["'](.+?)["']/);
+                        const title = quoted ? quoted[1] : ref;
+                        const t = title.trim().toLowerCase();
+                        spec = cards.find(c => c.genre === "species" && (c.title || "").toLowerCase() === t) || null;
+                    }
+                    if (!spec) return;
+                    const raw = Storage.get(CHARS_KEY) || "[]";
+                    const chars = JSON.parse(raw);
+                    const exists = chars.some(ch => (ch._fromSpeciesId && ch._fromSpeciesId === spec.id) && (ch.title || "") === (spec.title || ""));
+                    if (exists) return;
+                    const ch = {
+                        id: _genId(),
+                        genre: "character",
+                        title: spec.title || "Creature",
+                        appearance: spec.appearance || "",
+                        personality: spec.personality || "",
+                        raceName: spec.title || "",
+                        status: "Alive",
+                        isPlayable: false,
+                        _fromSpeciesId: spec.id || "",
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                    };
+                    chars.push(ch);
+                    Storage.set(CHARS_KEY, JSON.stringify(chars));
+                } catch {}
+            }
+            function _cmpDate(a, b) {
+                if ((a.year || 0) !== (b.year || 0)) return (a.year || 0) - (b.year || 0);
+                if ((a.month || 0) !== (b.month || 0)) return (a.month || 0) - (b.month || 0);
+                return (a.day || 0) - (b.day || 0);
+            }
+            function _doy(day, month) { return ((month || 1) - 1) * 30 + (day || 1); }
+            function _birthsUpTo(date, bd) {
+                if (!date || !bd) return 0;
+                const y = date.year || 0;
+                const passed = _doy(date.day || 1, date.month || 1) >= _doy(bd.day || 1, bd.month || 1) ? 1 : 0;
+                return y + passed;
+            }
+            function _birthdaysDiff(a, b, bd) {
+                if (!bd) return 0;
+                return _birthsUpTo(b, bd) - _birthsUpTo(a, bd);
+            }
+            function updateNPCBirthdays(currentDate) {
+                try {
+                    const raw = Storage.get(CHARS_KEY) || "[]";
+                    const chars = JSON.parse(raw);
+                    let changed = false;
+                    for (let i = 0; i < chars.length; i++) {
+                        const c = chars[i];
+                        if (!c || c.status === "Dead") continue;
+                        const bd = c.birthdate;
+                        if (!bd || (!bd.day && !bd.month)) continue;
+                        if (typeof c.age !== "number") continue;
+                        if (!c._ageCheck || typeof c._ageCheck !== "object") {
+                            c._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
+                            changed = true;
+                            continue;
+                        }
+                        const diff = _birthdaysDiff(c._ageCheck, currentDate, bd);
+                        if (diff !== 0) {
+                            c.age = Math.max(0, (c.age || 0) + diff);
+                            c._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
+                            changed = true;
+                        }
+                    }
+                    if (changed) {
+                        Storage.set(CHARS_KEY, JSON.stringify(chars));
+                    }
+                } catch {}
+            }
+            function updatePlayerBirthday(currentDate) {
+                try {
+                    if (!activeChar) return;
+                    const bd = activeChar.birthdate;
+                    if (!bd || (!bd.day && !bd.month)) return;
+                    if (typeof activeChar.age !== "number") return;
+                    if (!activeChar._ageCheck || typeof activeChar._ageCheck !== "object") {
+                        activeChar._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
+                        return;
+                    }
+                    const diff = _birthdaysDiff(activeChar._ageCheck, currentDate, bd);
+                    if (diff !== 0) {
+                        activeChar.age = Math.max(0, (activeChar.age || 0) + diff);
+                        activeChar._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
+                    }
+                } catch {}
+            }
+
+            /* ═══════════════════════════════════════
+               BACKGROUND
+            ═══════════════════════════════════════ */
+            function loadBackground() {
+                const raw = Storage.get(SETTINGS_KEY);
+                const url = raw
+                    ? JSON.parse(raw).backgroundUrl ||
+                      "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp"
+                    : "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
+                const el = document.getElementById("bg-layer");
+                if (el.style.backgroundImage !== `url(${url})`) {
+                    el.style.backgroundImage = `url(${url})`;
+                }
+            }
+            function getScenariosLocal() {
+                try { return JSON.parse(localStorage.getItem(SCENARIOS_KEY) || "[]"); } catch { return []; }
+            }
+            function setScenariosLocal(list) {
+                localStorage.setItem(SCENARIOS_KEY, JSON.stringify(list));
+            }
+            function getCurrentStoryId() {
+                return Storage.get(CURRENT_STORY_ID_KEY);
+            }
+            function setCurrentStoryId(id) {
+                Storage.set(CURRENT_STORY_ID_KEY, id);
+            }
+            function computeSig(cards, chars, log, settings, worldId) {
+                return JSON.stringify({ w: worldId, c: cards.length, ch: chars.length, l: log.length, s: Object.keys(settings || {}).length });
+            }
+            function ensureStoryRecord() {
+                const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
+                if (!worldId) return null;
+                const cards = JSON.parse(Storage.get(CARDS_KEY) || "[]");
+                const chars = JSON.parse(Storage.get(CHARS_KEY) || "[]");
+                const log = JSON.parse(Storage.get(LOG_KEY) || "[]");
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                let scenarios = getScenariosLocal();
+                let storyId = getCurrentStoryId();
+                let story = storyId ? scenarios.find(x => x.id === storyId) : null;
+                if (!story) {
+                    const id = Math.random().toString(36).slice(2, 10);
+                    let name = "Story " + new Date().toLocaleString();
+                    if (chars.length > 0) {
+                        const mainChar = chars[0];
+                        const fullName = [mainChar.firstName, mainChar.lastName].filter(Boolean).join(" ").trim() || "Story";
+                        name = `${fullName} - ${new Date().toLocaleDateString()}`;
+                    }
+                    story = {
+                        id,
+                        worldId,
+                        name,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                        signature: computeSig(cards, chars, log, settings, worldId),
+                        official: false,
+                        data: { cards, characters: chars, log, settings }
+                    };
+                    scenarios.push(story);
+                    setScenariosLocal(scenarios);
+                    setCurrentStoryId(id);
+                }
+                return story;
+            }
+            function autoSaveStory() {
+                const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
+                if (!worldId) return;
+                const cards = JSON.parse(Storage.get(CARDS_KEY) || "[]");
+                const chars = JSON.parse(Storage.get(CHARS_KEY) || "[]");
+                const log = JSON.parse(Storage.get(LOG_KEY) || "[]");
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                let scenarios = getScenariosLocal();
+                let storyId = getCurrentStoryId();
+                let story = storyId ? scenarios.find(x => x.id === storyId) : null;
+                if (!story) {
+                    story = ensureStoryRecord();
+                    scenarios = getScenariosLocal();
+                }
+                if (!story) return;
+                const idx = scenarios.findIndex(x => x.id === story.id);
+                if (idx === -1) return;
+                scenarios[idx].updatedAt = Date.now();
+                scenarios[idx].data = { cards, characters: chars, log, settings };
+                scenarios[idx].signature = computeSig(cards, chars, log, settings, worldId);
+                if (!scenarios[idx].official) {
+                    if (chars.length > 0) {
+                        const mainChar = chars[0];
+                        const fullName = [mainChar.firstName, mainChar.lastName].filter(Boolean).join(" ").trim();
+                        if (fullName) {
+                            scenarios[idx].name = `${fullName} - ${new Date().toLocaleDateString()}`;
+                        }
+                    }
+                }
+                setScenariosLocal(scenarios);
+            }
+            function showBackPopup() {
+                const overlay = document.getElementById("back-popup-overlay");
+                const input = document.getElementById("back-story-input");
+                const storyId = getCurrentStoryId();
+                const scenarios = getScenariosLocal();
+                const story = scenarios.find(x => x.id === storyId);
+                input.value = story?.name || "";
+                overlay.style.display = "flex";
+            }
+            function hideBackPopup() {
+                const overlay = document.getElementById("back-popup-overlay");
+                overlay.style.display = "none";
+            }
+            function handleBackSave() {
+                const input = document.getElementById("back-story-input");
+                const name = input.value.trim();
+                const storyId = getCurrentStoryId();
+                if (!storyId) { hideBackPopup(); return; }
+                const scenarios = getScenariosLocal();
+                const idx = scenarios.findIndex(x => x.id === storyId);
+                if (idx >= 0) {
+                    if (name) scenarios[idx].name = name;
+                    scenarios[idx].official = true;
+                    scenarios[idx].updatedAt = Date.now();
+                    setScenariosLocal(scenarios);
+                }
+                hideBackPopup();
+            }
+            function handleBackDelete() {
+                const storyId = getCurrentStoryId();
+                let scenarios = getScenariosLocal();
+                if (storyId) {
+                    scenarios = scenarios.filter(x => x.id !== storyId);
+                    setScenariosLocal(scenarios);
+                }
+                Storage.remove(CURRENT_STORY_ID_KEY);
+                Storage.remove(SELECTED_WORLD_ID_KEY);
+                Storage.remove(CARDS_KEY);
+                Storage.remove(CHARS_KEY);
+                Storage.remove(LOG_KEY);
+                hideBackPopup();
+                document.body.style.opacity = "0";
+                setTimeout(() => { window.location.href = "../index.html"; }, 300);
+            }
+            document.getElementById("back-popup-cancel").onclick = hideBackPopup;
+            document.getElementById("back-popup-save").onclick = handleBackSave;
+            document.getElementById("back-popup-delete").onclick = handleBackDelete;
+
+            /* ═══════════════════════════════════════
+               CHARACTER LOAD
+            ═══════════════════════════════════════ */
+            function loadLatestCharacter() {
+                try {
+                    const chars = JSON.parse(Storage.get(CHARS_KEY) || "[]");
+                    if (!Array.isArray(chars) || chars.length === 0) return null;
+                    // Prefer playable characters
+                    const playable = chars.filter(c => c && c.isPlayable === true);
+                    if (playable.length > 0) return playable[playable.length - 1];
+                    // Otherwise take the last character
+                    return chars[chars.length - 1] || null;
+                } catch {
+                    return null;
+                }
+            }
+
+            function getCards() {
+                return JSON.parse(Storage.get(CARDS_KEY) || "[]");
+            }
+
+            function applyCharacter(ch) {
+                if (!ch) return;
+                activeChar = ch;
+
+                // Derive missing fields from title if necessary
+                try {
+                    if ((!ch.firstName || !ch.lastName) && (ch.title || "").trim()) {
+                        const parts = (ch.title || "").trim().split(/\s+/);
+                        if (!ch.firstName) ch.firstName = parts[0] || "Unknown";
+                        if (!ch.lastName) ch.lastName = parts.slice(1).join(" ");
+                    }
+                    if (!ch.raceName) {
+                        if (ch.raceId) {
+                            const raceCard = getCards().find(c => c.genre === "race" && c.id === ch.raceId);
+                            if (raceCard) ch.raceName = raceCard.title || "Unknown Race";
+                        }
+                        if (!ch.raceName) ch.raceName = "Unknown Race";
+                    }
+                    if (ch.isPlayable !== true) ch.isPlayable = true;
+                } catch {}
+
+                const fullName = [ch.firstName, ch.lastName].filter(Boolean).join(" ") || (ch.title || "Unknown");
+                const isF = ch.gender === "female";
+                const icon = isF ? "♀" : "♂";
+                const avatarClass = isF ? "female" : "male";
+
+
+                // Header badge
+                const badge = document.getElementById("char-badge");
+                badge.classList.add("visible");
+                const av = document.getElementById("header-avatar");
+                av.textContent = icon;
+                av.className = `char-avatar-sm ${avatarClass}`;
+                document.getElementById("header-char-name").textContent =
+                    fullName;
+                document.getElementById("header-char-race").textContent =
+                    ch.raceName || "Unknown Race";
+
+                // Ensure starting date/time defaults if missing (derive from earliest event if available)
+                try {
+                    if (!activeChar.startingDate || typeof activeChar.startingDate !== "object") {
+                        activeChar.startingDate = {};
+                    }
+                    const d = activeChar.startingDate;
+                    if (!d.day || !d.month || !d.year || !d.time) {
+                        const cards = getCards();
+                        // Find earliest public event date in world
+                        let earliest = null;
+                        cards.filter(c => c.genre === "location").forEach(loc => {
+                            const ev = loc.events || {};
+                            ["village-city","country-kingdom"].forEach(k => {
+                                (Array.isArray(ev[k]) ? ev[k] : []).forEach(e => {
+                                    if (!e || e.type === "secret") return;
+                                    const key = `${String(e.year||0).padStart(4,"0")}-${String(e.month||0).padStart(2,"0")}-${String(e.day||0).padStart(2,"0")} ${e.time||"00:00"}`;
+                                    if (!earliest || key < earliest.key) earliest = { key, day: e.day||1, month: e.month||1, year: e.year||1983, time: e.time||"00:00" };
+                                });
+                            });
+                        });
+                        if (earliest) {
+                            d.day = earliest.day;
+                            d.month = earliest.month;
+                            d.year = earliest.year;
+                            d.time = earliest.time;
+                        } else {
+                            d.day = d.day || 1;
+                            d.month = d.month || 1;
+                            d.year = d.year || 1983;
+                            d.time = d.time || "00:00";
+                        }
+                    }
+                } catch {}
+
+                // Time & Location
+                updateHeaderTime();
+
+                // Ensure a valid location (currentLocationId or spawnId or resident-derived)
+                try {
+                    if (activeChar.currentLocationId) {
+                        updateLocation(activeChar.currentLocationId);
+                    } else if (activeChar.spawnId) {
+                        updateLocation(activeChar.spawnId);
+                        activeChar.currentLocationId = activeChar.spawnId;
+                    } else {
+                        const cards = getCards();
+                        // Find location where this character is a resident
+                        let loc = cards.find(c => c.genre === "location" && Array.isArray(c.residents) && c.residents.includes(activeChar.id));
+                        // Else: choose any spawnable location
+                        if (!loc) loc = cards.find(c => c.genre === "location" && c.canBeSpawn);
+                        // Else: choose the first location
+                        if (!loc) loc = cards.find(c => c.genre === "location");
+                        if (loc) {
+                            updateLocation(loc.id);
+                            activeChar.currentLocationId = loc.id;
+                        } else {
+                            document.getElementById("header-location").textContent = "UNKNOWN LOCATION";
+                            updatePresentNPCs();
+                        }
+                    }
+                } catch {
+                    document.getElementById("header-location").textContent = "UNKNOWN LOCATION";
+                    updatePresentNPCs();
+                }
+                document.getElementById("header-info").style.display = "flex";
+
+                // Story name in header
+                document.getElementById("story-name").textContent =
+                    fullName + "'s Story";
+
+                // Welcome overlay
+                const wRow = document.getElementById("welcome-char-row");
+                wRow.style.display = "flex";
+                const wAv = document.getElementById("welcome-avatar");
+                wAv.textContent = icon;
+                wAv.className = `welcome-avatar ${avatarClass}`;
+                document.getElementById("welcome-char-name").textContent =
+                    fullName;
+
+                // Spawn name
+                let spawnName = "";
+                if (ch.spawnId) {
+                    try {
+                        const cards = JSON.parse(
+                            Storage.get(CARDS_KEY) || "[]",
+                        );
+                        const spawn = cards.find((c) => c.id === ch.spawnId);
+                        if (spawn) spawnName = spawn.title;
+                    } catch {}
+                }
+                document.getElementById("welcome-char-meta").textContent = [
+                    ch.raceName,
+                    spawnName ? "@ " + spawnName : "",
+                ]
+                    .filter(Boolean)
+                    .join("  ·  ");
+                try { saveActiveCharacter(); } catch {}
+            }
+
+            /* ═══════════════════════════════════════
+               WELCOME OVERLAY
+            ═══════════════════════════════════════ */
+            function dismissWelcome() {
+                const ov = document.getElementById("welcome-overlay");
+                ov.classList.add("hidden");
+                setTimeout(() => {
+                    ov.style.display = "none";
+                }, 600);
+
+                // Post opening narration
+                if (activeChar) {
+                    const fullName = [activeChar.firstName, activeChar.lastName]
+                        .filter(Boolean)
+                        .join(" ");
+                    
+                    // Check if user provided a custom introduction
+                    if (activeChar.introduction && activeChar.introduction.trim()) {
+                        // Use user's custom introduction as the first message
+                        isFirstMessageProtected = true;
+                        appendBubble("ai", activeChar.introduction.trim());
+                        addToStoryLog("Narrator", activeChar.introduction.trim());
+                    } else {
+                        // Fall back to AI-generated introduction
+                        isFirstMessageProtected = true;
+                        triggerNarration(
+                            `Begin an immersive fantasy story. The player character is ${fullName}` +
+                                (activeChar.raceName
+                                    ? `, a ${activeChar.raceName}`
+                                    : "") +
+                                (activeChar.gender
+                                    ? ` (${activeChar.gender})`
+                                    : "") +
+                                ". Open with a vivid scene introduction and end with a choice or prompt for the player.",
+                        );
+                    }
+                } else {
+                    const welcomeText = "Willkommen, Abenteurer! Deine Geschichte beginnt jetzt.\n\nWas möchtest du als erstes tun?";
+                    appendBubble("ai", welcomeText);
+                    addToStoryLog("Narrator", welcomeText);
+                }
+            }
+
+            /* ═══════════════════════════════════════
+               MESSAGE HELPERS
+            ═══════════════════════════════════════ */
+            function appendBubble(role, text, cssExtra = "", scroll = true) {
+                const messagesEl = document.getElementById("messages");
+                
+                // Determine sender label
+                const senderLabel = role === "user" ? "You" : "Narrator";
+
+                // Check if the previous message was from the same sender
+                const lastRow = messagesEl.lastElementChild;
+                const isSameSender = lastRow && lastRow.classList.contains("msg-row") && lastRow.classList.contains(role);
+
+                const row = document.createElement("div");
+                row.className = `msg-row ${role}`;
+
+                if (!isSameSender) {
+                    const senderEl = document.createElement("div");
+                    senderEl.className = "msg-sender";
+                    senderEl.textContent = senderLabel;
+                    row.appendChild(senderEl);
+                } else {
+                    // Optional: add a class to indicate it's a follow-up message for tighter spacing if needed
+                    row.classList.add("follow-up");
+                }
+
+                const bubble = document.createElement("div");
+                bubble.className = `msg-bubble ${cssExtra}`;
+                bubble.textContent = text;
+
+                row.appendChild(bubble);
+                messagesEl.appendChild(row);
+                if (scroll) messagesEl.scrollTop = messagesEl.scrollHeight;
+                return bubble;
+            }
+
+            function appendTypingIndicator() {
+                const messagesEl = document.getElementById("messages");
+                
+                // Check if the previous message was from Narrator
+                const lastRow = messagesEl.lastElementChild;
+                const isSameSender = lastRow && lastRow.classList.contains("msg-row") && lastRow.classList.contains("ai");
+
+                const row = document.createElement("div");
+                row.className = "msg-row ai";
+                row.id = "typing-row";
+
+                if (!isSameSender) {
+                    const senderEl = document.createElement("div");
+                    senderEl.className = "msg-sender";
+                    senderEl.textContent = "Narrator";
+                    row.appendChild(senderEl);
+                } else {
+                    row.classList.add("follow-up");
+                }
+
+                const bubble = document.createElement("div");
+                bubble.className = "msg-bubble";
+                bubble.innerHTML =
+                    '<div class="typing-dots"><span></span><span></span><span></span></div>';
+
+                row.appendChild(bubble);
+                messagesEl.appendChild(row);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+                return row;
+            }
+
+            function removeTypingIndicator() {
+                const el = document.getElementById("typing-row");
+                if (el) el.remove();
+            }
+
+            function addSystemDivider(label, updateLog = true) {
+                const messagesEl = document.getElementById("messages");
+                const div = document.createElement("div");
+                div.className = "chat-divider";
+                div.innerHTML = `<span class="chat-divider-label">${label}</span>`;
+                messagesEl.appendChild(div);
+                
+                if (updateLog) {
+                    chatHistory.push(label);
+                    saveStoryLog();
+                }
+            }
+
+            function setStatus(online) {
+                const dot = document.getElementById("status-dot");
+                const lbl = document.getElementById("status-label");
+                if (!dot || !lbl) return;
+                dot.style.background = online ? "rgba(80,200,100,0.9)" : "rgba(200,80,80,0.9)";
+                lbl.textContent = online ? "Online" : "Offline";
+                lbl.style.color = online ? "rgba(80,200,100,0.85)" : "rgba(200,80,80,0.85)";
+            }
+
+            /* ═══════════════════════════════════════
+               AI
+            ═══════════════════════════════════════ */
+            function buildLocationHierarchy() {
+                try {
+                    const cards = getCards();
+                    const locations = cards.filter((c) => c.genre === "location");
+                    const characters = cards.filter(
+                        (c) => c.genre === "character",
+                    );
+
+                    const childrenMap = new Map();
+                    const allSubIds = new Set();
+
+                    locations.forEach((loc) => {
+                        const subIds = [];
+                        if (loc.sublocations) {
+                            Object.values(loc.sublocations).forEach((arr) => {
+                                if (Array.isArray(arr)) {
+                                    arr.forEach((id) => {
+                                        subIds.push(id);
+                                        allSubIds.add(id);
+                                    });
+                                }
+                            });
+                        }
+                        childrenMap.set(loc.id, subIds);
+                    });
+
+                    const roots = locations.filter(
+                        (loc) => !allSubIds.has(loc.id),
+                    );
+
+                    function renderNode(id, depth = 0) {
+                        const loc = locations.find((l) => l.id === id);
+                        if (!loc) return "";
+
+                        let indent = "  ".repeat(depth);
+                        let type = (
+                            loc.locationDetail ||
+                            loc.locationSub ||
+                            "Location"
+                        ).toUpperCase();
+                        let str = `${indent}- ${loc.title} (${type})`;
+                        if (loc.description) str += `: ${loc.description}`;
+                        str += "\n";
+                        if (loc.lore) str += `${indent}  Lore: ${loc.lore}\n`;
+
+                        // Residents
+                        if (loc.residents && loc.residents.length > 0) {
+                            loc.residents.forEach((resId) => {
+                                const char = characters.find(
+                                    (c) => c.id === resId,
+                                );
+                                if (char) {
+                                    str += `${indent}  * Resident: ${char.title} (${char.raceName || "Character"})\n`;
+                                }
+                            });
+                        }
+                        
+                        // School-specific data
+                        if (
+                            (loc.locationSub === "building" ||
+                                loc.locationSub === "BUILDING") &&
+                            (loc.locationDetail === "school" ||
+                                loc.locationDetail === "SCHOOL")
+                        ) {
+                            if (loc.schoolSchedule) {
+                                const d = loc.schoolSchedule.days || [];
+                                const labels = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+                                const openDays = labels
+                                    .map((lbl, i) => (d[i] ? lbl : null))
+                                    .filter(Boolean)
+                                    .join(", ");
+                                const start = loc.schoolSchedule.start || "08:00";
+                                const end = loc.schoolSchedule.end || "16:00";
+                                str += `${indent}  School Schedule: ${openDays || "—"} | ${start} - ${end}\n`;
+                            }
+                            if (Array.isArray(loc.schoolClasses) && loc.schoolClasses.length > 0) {
+                                str += `${indent}  Classes:\n`;
+                                loc.schoolClasses.forEach((cls, idx) => {
+                                    const t = characters.find(c => c.id === cls.teacherId);
+                                    const tName = t ? t.title : (cls.teacherId ? "(Unknown)" : "—");
+                                    const studs = (cls.studentIds || [])
+                                        .map(id => {
+                                            const ch = characters.find(c => c.id === id);
+                                            return ch ? ch.title : "(Unknown)";
+                                        })
+                                        .join(", ");
+                                    str += `${indent}    - ${cls.name || "Class "+(idx+1)} | Teacher: ${tName} | Students: ${studs || "—"}\n`;
+                                });
+                            }
+                        }
+
+                        const children = childrenMap.get(id) || [];
+                        children.forEach((childId) => {
+                            str += renderNode(childId, depth + 1);
+                        });
+
+                        return str;
+                    }
+
+                    let result = "\nWORLD LOCATIONS HIERARCHY:\n";
+                    if (roots.length === 0 && locations.length > 0) {
+                        locations.forEach((l) => {
+                            result += renderNode(l.id);
+                        });
+                    } else {
+                        roots.forEach((root) => {
+                            result += renderNode(root.id);
+                        });
+                    }
+
+                    return result;
+                } catch (e) {
+                    console.error("Hierarchy error", e);
+                    return "\nWorld Hierarchy: (Error loading)";
+                }
+            }
+
+            function buildCharacterContext() {
+                try {
+                    const cards = getCards();
+                    if (!currentLocationId) return "";
+
+                    const currentLoc = cards.find((c) => c.id === currentLocationId);
+                    if (!currentLoc) return "";
+
+                    // Find all ancestors
+                    const ancestors = [];
+                    let current = currentLoc;
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+
+                    const ancestorIds = new Set(ancestors.map(a => a.id));
+
+                    const scheduleNow = computeSchoolPresenceNow();
+                    const scheduledByNpc = scheduleNow.byNpc || new Map();
+
+                    // Collect all resident IDs from this location and its ancestors
+                    const residentIds = new Set();
+                    ancestors.forEach((loc) => {
+                        if (loc.residents) {
+                            loc.residents.forEach((id) => residentIds.add(id));
+                        }
+                    });
+
+                    if (residentIds.size === 0) return "";
+
+                    const characters = cards.filter((c) => c.genre === "character" && residentIds.has(c.id));
+                    if (characters.length === 0) return "";
+
+                    let context = "\nPRESENT CHARACTERS (Residents of this location and its parent regions):\n";
+                    context += "NOTE: Presence does NOT mean friendship. Check 'Character Relationships' for status.\n";
+                    characters.forEach((c) => {
+                        if ((c.status || "Alive") === "Dead") return;
+                        // If NPC is scheduled in school now, show only when current location includes that school
+                        const sched = scheduledByNpc.get(c.id);
+                        if (sched && !ancestorIds.has(sched.schoolId)) {
+                            return; // not present here now
+                        }
+                        context += `- ${c.title} (${c.raceName || "Unknown Race"})\n`;
+                        if (c.description) context += `  Description: ${c.description}\n`;
+                        if (c.personality) context += `  Personality: ${c.personality}\n`;
+                        if (c.appearance) context += `  Appearance: ${c.appearance}\n`;
+                        if (c.lore) context += `  Lore/History: ${c.lore}\n`;
+                    });
+                    return context;
+                } catch (e) {
+                    console.error("Character context error", e);
+                    return "";
+                }
+            }
+
+            function buildRaceContext() {
+                try {
+                    const cards = getCards();
+                    const races = cards.filter((c) => c.genre === "race");
+                    if (races.length === 0) return "";
+
+                    let context = "\nWORLD RACES:\n";
+                    races.forEach((r) => {
+                        context += `- ${r.title}\n`;
+                        if (r.description) context += `  Description: ${r.description}\n`;
+                        if (r.tags && r.tags.length > 0) {
+                            context += `  Race Traits: ${r.tags.join(", ")}\n`;
+                        }
+                        if (r.lore) context += `  Lore: ${r.lore}\n`;
+                    });
+                    return context;
+                } catch (e) {
+                    console.error("Race context error", e);
+                    return "";
+                }
+            }
+
+            function buildItemContext() {
+                try {
+                    const cards = getCards();
+                    const items = cards.filter((c) => c.genre === "item");
+                    if (items.length === 0) return "";
+
+                    let context = "\nWORLD ITEMS:\n";
+                    items.forEach((item) => {
+                        context += `- ${item.title}\n`;
+                        if (item.description) context += `  Description: ${item.description}\n`;
+                        if (item.tags && item.tags.length > 0) {
+                            context += `  Properties (AI Knowledge): ${item.tags.join(", ")}\n`;
+                        }
+                    });
+                    return context;
+                } catch (e) {
+                    console.error("Item context error", e);
+                    return "";
+                }
+            }
+
+            function speciesKeyForLoc(loc) {
+                const sub = (loc.locationSub || "").toLowerCase();
+                const det = (loc.locationDetail || "").toLowerCase();
+                if (sub === "zivil") {
+                    if (det === "village" || det === "city") return "village-city";
+                    if (det === "country" || det === "kingdom") return "country-kingdom";
+                    return null;
+                }
+                if (sub === "forest") return "forest";
+                if (sub === "landmark") return "landmark";
+                if (sub === "ocean") return "ocean";
+                return null;
+            }
+
+            function getPresentSpeciesCards() {
+                try {
+                    if (!currentLocationId) return [];
+                    const cards = getCards();
+                    const currentLoc = cards.find((c) => c.id === currentLocationId);
+                    if (!currentLoc) return [];
+                    const ancestors = [];
+                    let cur = currentLoc;
+                    while (cur) {
+                        ancestors.push(cur);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(cur.id));
+                        });
+                        cur = parent;
+                    }
+                    const ids = new Set();
+                    ancestors.forEach((loc) => {
+                        const key = speciesKeyForLoc(loc);
+                        if (!key) return;
+                        const spec = loc.species || {};
+                        (spec[key] || []).forEach((id) => ids.add(id));
+                    });
+                    return cards.filter((c) => c.genre === "species" && ids.has(c.id));
+                } catch (e) {
+                    console.error("Species presence error", e);
+                    return [];
+                }
+            }
+
+            function buildSpeciesPresenceContext() {
+                try {
+                    const species = getPresentSpeciesCards();
+                    if (species.length === 0) return "";
+                    let context = "\nPRESENT SPECIES (Allowed to appear here):\n";
+                    species.forEach((s) => {
+                        context += `- ${s.title}\n`;
+                        if (s.generally) context += `  Generally: ${s.generally}\n`;
+                        if (s.appearance) context += `  Appearance: ${s.appearance}\n`;
+                        if (s.personality) context += `  Personality: ${s.personality}\n`;
+                        if (s.canBeCaught) context += `  Catchable: Yes\n`;
+                        if (s.canBeCaught && s.canBeCaughtHow) context += `  How: ${s.canBeCaughtHow}\n`;
+                    });
+                    return context;
+                } catch (e) {
+                    console.error("Species context error", e);
+                    return "";
+                }
+            }
+
+            function buildEventsContext() {
+                try {
+                    const cards = getCards();
+                    if (!currentLocationId) return "";
+                    const d = activeChar?.startingDate || {};
+                    const curDate = `${String(d.day || 1).padStart(2,"0")}.${String(d.month || 1).padStart(2,"0")}.${d.year || 1983}`;
+                    const curTime = d.time || "00:00";
+                    // Find ancestors of current location
+                    const ancestors = [];
+                    let current = cards.find(c => c.id === currentLocationId);
+                    if (!current) return "";
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const contextLines = [];
+                    contextLines.push("\nZIVIL EVENTS (Current area and parent regions):");
+                    const nowDay = _nowDayKey();
+                    ancestors.forEach(loc => {
+                        if (loc.genre !== "location" || loc.locationSub !== "zivil") return;
+                        const ev = loc.events || null;
+                        if (!ev) return;
+                        const lists = [];
+                        if (Array.isArray(ev["village-city"])) lists.push(...ev["village-city"].map(e => ({...e, _loc: loc.title})));
+                        if (Array.isArray(ev["country-kingdom"])) lists.push(...ev["country-kingdom"].map(e => ({...e, _loc: loc.title})));
+                        const visible = lists.filter(e => _eventDayKey(e) <= nowDay);
+                        if (lists.length === 0) return;
+                        if (visible.length === 0) return;
+                        contextLines.push(`- ${loc.title}:`);
+                        visible.forEach(e => {
+                            const type = (e.type === "secret") ? "SECRET EVENT" : "PUBLIC EVENT";
+                            const dateStr = `${String(e.day||0).toString().padStart(2,"0")}.${String(e.month||0).toString().padStart(2,"0")}.${e.year||0}`;
+                            const todayBadge = (_eventDayKey(e) === nowDay) ? " (TODAY)" : "";
+                            const desc = e.description || "";
+                            contextLines.push(`  * [${type}] ${dateStr}${todayBadge} — ${desc}`);
+                        });
+                    });
+                    if (contextLines.length <= 1) return "";
+                    contextLines.push(`Current date reference: ${curDate}`);
+                    contextLines.push("Secret events are unknown to NPCs; use them only as hidden world triggers.");
+                    return contextLines.join("\n") + "\n";
+                } catch (e) {
+                    console.error("Events context error", e);
+                    return "";
+                }
+            }
+
+            function buildLocationStateContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    clearExpiredLocationStates();
+                    const cards = getCards();
+                    const d = activeChar?.startingDate || {};
+                    const curDate = `${String(d.day || 1).padStart(2,"0")}.${String(d.month || 1).padStart(2,"0")}.${d.year || 1983}`;
+                    const curTime = d.time || "00:00";
+                    const ancestors = [];
+                    let current = cards.find(c => c.id === currentLocationId);
+                    if (!current) return "";
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const contextLines = [];
+                    contextLines.push("\nLOCATION STATES (Current area and parent regions):");
+                    ancestors.forEach(loc => {
+                        const st = loc.states || {};
+                        const keys = Object.keys(st);
+                        if (keys.length === 0) return;
+                        contextLines.push(`- ${loc.title}:`);
+                        keys.forEach(k => {
+                            const v = st[k];
+                            const until = v.untilDayCount != null ? ` (expires)` : "";
+                            contextLines.push(`  * ${k}: ${v.value}${until}`);
+                        });
+                    });
+                    if (contextLines.length <= 1) return "";
+                    contextLines.push(`Current time reference: ${curDate} ${curTime}`);
+                    return contextLines.join("\n") + "\n";
+                } catch (e) {
+                    console.error("Location state context error", e);
+                    return "";
+                }
+            }
+
+            function buildLocationCurseContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    const cards = getCards();
+                    const ancestors = [];
+                    let current = cards.find(c => c.id === currentLocationId);
+                    if (!current) return "";
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const curseList = [];
+                    ancestors.forEach(loc => {
+                        const curses = Array.isArray(loc.curseTags) ? loc.curseTags : [];
+                        if (curses.length === 0) return;
+                        const formatted = curses.map(c => {
+                            if (typeof c === "string") return c;
+                            return `${c.name}${c.description ? ` (${c.description})` : ""}`;
+                        }).join(", ");
+                        curseList.push(`[${loc.title}: ${formatted}]`);
+                    });
+                    if (curseList.length === 0) return "";
+                    return `- ACTIVE CURSES: ${curseList.join(" ")}\n`;
+                } catch (e) {
+                    console.error("Curse context error", e);
+                    return "";
+                }
+            }
+
+            function buildLocationDistanceContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    const cards = getCards();
+                    const cur = cards.find(c => c.id === currentLocationId);
+                    if (!cur || cur.genre !== "location") return "";
+                    const dist = cur.distances || {};
+                    const keys = Object.keys(dist);
+                    if (keys.length === 0) return "";
+                    let out = "\nLOCATION DISTANCES (From current location):\n";
+                    keys.forEach(id => {
+                        const other = cards.find(c => c.id === id);
+                        const name = other ? (other.title || id) : id;
+                        out += `- To ${name}: ${dist[id]} km\n`;
+                    });
+                    return out;
+                } catch (e) {
+                    console.error("Distance context error", e);
+                    return "";
+                }
+            }
+
+            function buildLocationMemoryContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    const cards = getCards();
+                    const d = activeChar?.startingDate || {};
+                    const curDate = `${String(d.day || 1).padStart(2,"0")}.${String(d.month || 1).padStart(2,"0")}.${d.year || 1983}`;
+                    const curTime = d.time || "00:00";
+                    const ancestors = [];
+                    let current = cards.find(c => c.id === currentLocationId);
+                    if (!current) return "";
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const contextLines = [];
+                    contextLines.push("\nLOCATION MEMORIES (Current area and parent regions):");
+                    ancestors.forEach(loc => {
+                        const mem = Array.isArray(loc.memories) ? loc.memories : [];
+                        if (mem.length === 0) return;
+                        contextLines.push(`- ${loc.title}:`);
+                        mem.slice(-8).forEach(m => {
+                            contextLines.push(`  * ${m.date} ${m.time} — ${m.text}`);
+                        });
+                    });
+                    if (contextLines.length <= 1) return "";
+                    contextLines.push(`Current time reference: ${curDate} ${curTime}`);
+                    return contextLines.join("\n") + "\n";
+                } catch (e) {
+                    console.error("Location memory context error", e);
+                    return "";
+                }
+            }
+
+            // Helpers for school schedules
+            function _timeToMinutes(t) {
+                if (!t || typeof t !== "string") return 0;
+                const parts = t.split(":").map((x) => parseInt(x, 10));
+                return (parts[0] || 0) * 60 + (parts[1] || 0);
+            }
+            function _eventTimeKey(e) {
+                const dd = _worldDayCount({ day: e.day || 1, month: e.month || 1, year: e.year || 1983 });
+                const mm = _timeToMinutes(e.time || "00:00");
+                return dd * 1440 + mm;
+            }
+            function _eventDayKey(e) {
+                return _worldDayCount({ day: e.day || 1, month: e.month || 1, year: e.year || 1983 });
+            }
+            function _nowTimeKey() {
+                const d = activeChar?.startingDate || {};
+                const dd = _worldDayCount(d);
+                const mm = _timeToMinutes(d.time || "00:00");
+                return dd * 1440 + mm;
+            }
+            function _nowDayKey() {
+                const d = activeChar?.startingDate || {};
+                return _worldDayCount(d);
+            }
+            function _getAncestorsForCurrent() {
+                const cards = getCards();
+                const ancestors = [];
+                if (!currentLocationId) return ancestors;
+                let current = cards.find(c => c.id === currentLocationId);
+                while (current) {
+                    ancestors.push(current);
+                    const parent = cards.find((c) => {
+                        if (c.genre !== "location" || !c.sublocations) return false;
+                        return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                    });
+                    current = parent;
+                }
+                return ancestors;
+            }
+            function _applyEventOverrideToCard(card, changes, snapshot) {
+                if (!card || !changes) return;
+                if (!snapshot[card.id]) snapshot[card.id] = {};
+                const snap = snapshot[card.id];
+                const setOnce = (key, val) => {
+                    if (!(key in snap)) snap[key] = (card[key] !== undefined ? JSON.parse(JSON.stringify(card[key])) : undefined);
+                    card[key] = val;
+                };
+                if (typeof changes.cardDescription === "string" && changes.cardDescription.trim()) {
+                    setOnce("description", changes.cardDescription.trim());
+                }
+                if (Array.isArray(changes.residents)) {
+                    setOnce("residents", changes.residents.slice());
+                }
+                // population removed
+                if (changes.sublocations && typeof changes.sublocations === "object") {
+                    const cur = Object.assign({}, card.sublocations || {});
+                    Object.keys(changes.sublocations).forEach(k => { cur[k] = changes.sublocations[k].slice(); });
+                    setOnce("sublocations", cur);
+                }
+                if (changes.species && typeof changes.species === "object") {
+                    const cur = Object.assign({}, card.species || {});
+                    Object.keys(changes.species).forEach(k => { cur[k] = changes.species[k].slice(); });
+                    setOnce("species", cur);
+                }
+                // racial civilization removed
+                if (Array.isArray(changes.curseTags)) {
+                    setOnce("curseTags", changes.curseTags.map(c => ({ ...c })));
+                }
+            }
+            function recalcEventOverrides() {
+                try {
+                    const cards = getCards();
+                    if (!Array.isArray(cards) || !activeChar) return;
+                    const nowDay = _nowDayKey();
+                    if (!window._eventOverrideSnapshot) window._eventOverrideSnapshot = {};
+                    if (!window._eventAppliedIds) window._eventAppliedIds = new Set();
+                    if (window._eventAppliedIds.size > 0) {
+                        let changed = false;
+                        window._eventAppliedIds.forEach(id => {
+                            const card = cards.find(c => c.id === id);
+                            const snapAll = window._eventOverrideSnapshot[id] || null;
+                            if (card && snapAll) {
+                                Object.keys(snapAll).forEach(k => { card[k] = snapAll[k]; });
+                                changed = true;
+                            }
+                        });
+                        if (changed) sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                        window._eventAppliedIds.clear();
+                        window._eventOverrideSnapshot = {};
+                    }
+                    const ancestors = _getAncestorsForCurrent().filter(c => c.genre === "location" && c.locationSub === "zivil");
+                    if (ancestors.length === 0) return;
+                    const applicable = [];
+                    ancestors.forEach(loc => {
+                        const ev = loc.events || {};
+                        const all = []
+                            .concat(Array.isArray(ev["village-city"]) ? ev["village-city"] : [])
+                            .concat(Array.isArray(ev["country-kingdom"]) ? ev["country-kingdom"] : []);
+                        const eligible = all.filter(e => e && e.day != null && e.month != null && e.year != null && e.changes);
+                        if (eligible.length === 0) return;
+                        const latest = eligible
+                            .filter(e => _eventDayKey(e) <= nowDay)
+                            .sort((a,b) => _eventDayKey(a) - _eventDayKey(b))
+                            .slice(-1)[0];
+                        if (latest && latest.changes) {
+                            applicable.push({ locId: loc.id, changes: latest.changes });
+                        }
+                    });
+                    if (applicable.length === 0) return;
+                    const snapshot = {};
+                    applicable.reverse().forEach(({ locId, changes }) => {
+                        const card = cards.find(c => c.id === locId);
+                        if (!card) return;
+                        _applyEventOverrideToCard(card, changes, snapshot);
+                        window._eventAppliedIds.add(locId);
+                    });
+                    Object.keys(snapshot).forEach(id => { window._eventOverrideSnapshot[id] = snapshot[id]; });
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                } catch (e) {
+                    console.error("recalcEventOverrides error", e);
+                }
+            }
+            function _weekdayMon0(day, month, year) {
+                // JS: 0=Sun..6=Sat -> convert to Mon=0..Sun=6
+                const js = new Date((year || 1983), (month || 1) - 1, (day || 1));
+                const dow = js.getDay(); // 0..6
+                return (dow + 6) % 7;
+            }
+            function _weekdayNameEn(day, month, year) {
+                const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+                const idx = _weekdayMon0(day, month, year);
+                return names[idx] || "Monday";
+            }
+            function computeSchoolPresenceNow() {
+                try {
+                    const cards = getCards();
+                    const d = activeChar?.startingDate || {};
+                    const wday = _weekdayMon0(d.day, d.month, d.year);
+                    const nowMin = _timeToMinutes(d.time || "00:00");
+                    const schools = cards.filter(
+                        (c) =>
+                            c.genre === "location" &&
+                            c.locationSub === "building" &&
+                            (c.locationDetail || "").toLowerCase() === "school",
+                    );
+                    const characters = cards.filter((c) => c.genre === "character");
+                    const byNpc = new Map(); // npcId -> { schoolId, schoolTitle, className }
+                    let context = "\nSCHEDULED NPC PRESENCE (Current time):\n";
+                    schools.forEach((school) => {
+                        const sched = school.schoolSchedule || null;
+                        let isOpen = false;
+                        if (sched && Array.isArray(sched.days)) {
+                            const startMin = _timeToMinutes(sched.start || "08:00");
+                            const endMin = _timeToMinutes(sched.end || "16:00");
+                            isOpen = !!sched.days[wday] && nowMin >= startMin && nowMin < endMin;
+                        }
+                        if (!isOpen) return;
+                        const classes = Array.isArray(school.schoolClasses)
+                            ? school.schoolClasses
+                            : [];
+                        if (classes.length === 0) return;
+                        context += `- ${school.title}: OPEN. Classes running now.\n`;
+                        classes.forEach((cls, idx) => {
+                            const t = characters.find((c) => c.id === cls.teacherId && (c.status || "Alive") !== "Dead");
+                            const tName = t ? t.title : (cls.teacherId ? "(Unknown)" : "—");
+                            const studs = (cls.studentIds || [])
+                                .map((id) => {
+                                    const ch = characters.find((c) => c.id === id && (c.status || "Alive") !== "Dead");
+                                    return ch ? ch.title : null;
+                                })
+                                .filter(Boolean)
+                                .join(", ");
+                            context += `  * ${cls.name || "Class " + (idx + 1)} | Teacher: ${tName} | Students: ${studs || "—"}\n`;
+                            // Fill lookup to constrain presence
+                            if (t && cls.teacherId) byNpc.set(cls.teacherId, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" });
+                            (cls.studentIds || []).forEach((sid) => {
+                                const ch = characters.find((c) => c.id === sid && (c.status || "Alive") !== "Dead");
+                                if (ch) byNpc.set(sid, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" });
+                            });
+                        });
+                    });
+                    if (byNpc.size === 0) context += "  (No classes in session)\n";
+                    return { byNpc, context };
+                } catch (e) {
+                    console.error("schedule compute error", e);
+                    return { byNpc: new Map(), context: "" };
+                }
+            }
+
+            function computeShopPresenceNow() {
+                try {
+                    const cards = getCards();
+                    const d = activeChar?.startingDate || {};
+                    const wday = _weekdayMon0(d.day, d.month, d.year);
+                    const nowMin = _timeToMinutes(d.time || "00:00");
+                    const shops = cards.filter(
+                        c => c.genre === "location" &&
+                             c.locationSub === "building" &&
+                             (c.locationDetail || "").toLowerCase() === "shop"
+                    );
+                    if (shops.length === 0) return "";
+                    const characters = cards.filter(c => c.genre === "character");
+                    let context = "\nSHOP WORK SHIFTS (Current time):\n";
+                    let any = false;
+                    shops.forEach(shop => {
+                        const workers = Array.isArray(shop.shopWorkers) ? shop.shopWorkers : [];
+                        const active = [];
+                        workers.forEach(w => {
+                            const days = Array.isArray(w.days) ? w.days : [];
+                            const st = _timeToMinutes(w.start || "09:00");
+                            const en = _timeToMinutes(w.end || "17:00");
+                            const on = !!days[wday] && nowMin >= st && nowMin < en;
+                            if (on) {
+                                const npc = characters.find(c => c.id === w.npcId);
+                                active.push(npc ? (npc.title || npc.id) : w.npcId);
+                            }
+                        });
+                        if (active.length > 0) {
+                            any = true;
+                            context += `- ${shop.title}: ${active.join(", ")}\n`;
+                        }
+                    });
+                    if (!any) context += "- No workers on duty right now.\n";
+                    return context;
+                } catch (e) {
+                    console.error("shop presence error", e);
+                    return "";
+                }
+            }
+            function getCurrentLocationPath() {
+                if (!currentLocationId) return "Unknown Location";
+                try {
+                    const cards = getCards();
+                    const currentLoc = cards.find((c) => c.id === currentLocationId);
+                    if (!currentLoc) return "Unknown Location";
+
+                    const path = [];
+                    let current = currentLoc;
+
+                    while (current) {
+                        path.unshift(current.title);
+                        // find parent
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations)
+                                return false;
+                            return Object.values(c.sublocations).some((arr) =>
+                                (arr || []).includes(current.id),
+                            );
+                        });
+                        current = parent;
+                    }
+
+                    return path.join(" > ");
+                } catch (e) {
+                    console.error("Path error", e);
+                    return "Unknown Location";
+                }
+            }
+
+            function buildSystemPrompt() {
+                const d = activeChar?.startingDate || {};
+                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const curTime = d.time || "00:00";
+                const curWeekday = _weekdayNameEn(d.day || 1, d.month || 1, d.year || 1983);
+                
+                const curLocPath = getCurrentLocationPath();
+                const curLocName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                
+                const worldHierarchy = buildLocationHierarchy();
+                const charContext = buildCharacterContext();
+                const raceContext = buildRaceContext();
+                const itemContext = buildItemContext();
+                const speciesContext = buildSpeciesPresenceContext();
+                const playerContext = buildPlayerContext();
+                const eventsContext = buildEventsContext();
+                const locationMemoryContext = buildLocationMemoryContext();
+                const locationStateContext = buildLocationStateContext();
+                const locationCurseContext = buildLocationCurseContext();
+                const locationDistanceContext = buildLocationDistanceContext();
+                const relationshipSummary = buildRelationshipSummary();
+                const scheduleInfo = computeSchoolPresenceNow();
+                const scheduleContext = scheduleInfo.context || "";
+                const shopContext = computeShopPresenceNow();
+                const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
+                const presentSpecies = getPresentSpeciesCards().map(s => s.title).join(", ");
+                
+                const cards = getCards();
+                const allLocNames = cards
+                    .filter(c => c.genre === "location")
+                    .map(c => c.title)
+                    .map(c => c.title)
+                    .join(", ");
+
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                const aiLangMap = {
+                    "de": "German",
+                    "en": "English",
+                    "ja": "Japanese",
+                    "fr": "French",
+                    "es": "Spanish",
+                    "it": "Italian",
+                    "ru": "Russian",
+                    "ko": "Korean",
+                    "zh": "Chinese"
+                };
+                const aiLang = aiLangMap[settings.aiLanguage] || "English";
+                const sizePref = (settings.textSize || "normal").toLowerCase();
+                const perspective = (settings.perspective || "narrator").toLowerCase();
+                let lengthInstruction = "";
+                if (sizePref === "short") {
+                    lengthInstruction = "WRITE 1–2 COMPLETE SENTENCES. Do NOT end with '...'. Close all quotes.";
+                } else if (sizePref === "tall") {
+                    lengthInstruction = "WRITE A LONG AND DETAILED RESPONSE. Aim for 8-12 sentences, very descriptive.";
+                } else {
+                    lengthInstruction = "Write a response of normal length. Aim for about 4-6 sentences, balanced detail.";
+                }
+                let perspectiveInstruction = "";
+                if (perspective === "player") {
+                    perspectiveInstruction = "Write in FIRST-PERSON from the PLAYER'S perspective.";
+                } else {
+                    perspectiveInstruction = "Write in SECOND-PERSON addressing the PLAYER.";
+                }
+
+                return `[SYSTEM INSTRUCTIONS]
+You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
+
+ ${lengthInstruction}
+ ${perspectiveInstruction}
+ 
+# CURRENT WORLD STATE
+- DATE: ${curDate}
+- TIME: ${curTime}
+- WEEKDAY: ${curWeekday}
+- CURRENT LOCATION: ${curLocName}
+- LOCATION PATH: ${curLocPath}
+${locationCurseContext}- PRESENT NPCs: ${presentNPCs || "None"}
+- PRESENT SPECIES: ${presentSpecies || "None"}
+
+# PLAYER CHARACTER
+${playerContext}
+
+# WORLD KNOWLEDGE
+${worldHierarchy}
+${charContext}
+${raceContext}
+${itemContext}
+${speciesContext}
+${eventsContext}
+${locationMemoryContext}
+${locationStateContext}
+${locationDistanceContext}
+${relationshipSummary}
+${scheduleContext}
+${shopContext}
+
+# ROLEPLAY RULES
+1. Write EXCLUSIVELY in ${aiLang}.
+2. Be descriptive, vivid, and maintain a consistent tone.
+3. Follow the 'IMPORTANT RELATIONSHIP RULES' strictly.
+4. Strangers (Unknown) have NO shared past. Do NOT invent friendship or shared memories for them.
+5. During SCHOOL OPEN HOURS, any NPC assigned to a School class is ONLY present at that School. Do NOT involve them elsewhere unless the player moves there or the time is outside school hours.
+6. Secret Events are UNKNOWN to NPCs. Do NOT reveal them in dialogue; use them only to drive hidden world changes or narrative tension.
+7. ALWAYS close quotation marks. If a character speaks, end the spoken line with a closing quote.
+8. Do NOT end your narration with "..." unless it's intentional and the sentence is complete; prefer complete sentences.
+9. Do NOT repeat exact sentences from the STORY LOG; continue with new developments.
+
+# KNOWLEDGE BOUNDARY (STRICT)
+- DO NOT HALLUCINATE. Only use facts present in the WORLD KNOWLEDGE, PLAYER CHARACTER, PRESENT NPCs, MEMORIES, EVENTS, and LOCATION STATES above.
+- If an NPC would not reasonably know something (not in their relations, memories, or current scene context), explicitly have them NOT know it; do NOT fill gaps with assumptions or "logical" guesses.
+- Do not attribute knowledge of SECRET EVENTS to NPCs; they remain unknown unless learned in-scene.
+
+# TIME & LOCATION MANAGEMENT (CRITICAL)
+1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
+2. You MUST track movement. If a player enters or leaves a building/area, you MUST update the location.
+3. Available Location Names: ${allLocNames}
+4. For outdoor areas within a region, use: "Region Name (Outside)"
+
+# TIME CHANGE TAGS (MANDATORY WHEN TIME ADVANCES)
+- When your narration implies time advance (e.g., next day, later that week, a month passes, a year later, minutes/hours later), append a single control tag reflecting the change BEFORE the metadata block.
+- Use relative deltas: [[Day:+1]], [[Week:+1]], [[Month:+1]], [[Year:+1]], [[Time:+30]] (minutes). For explicit times write [[Time:HH:MM]].
+- Choose minimal, consistent increments based on the narration; do not guess multiple jumps unless clearly stated.
+- Always include the final metadata block after applying these changes.
+
+# STATE CHANGE TAGS (MANDATORY WHEN WORLD STATE CHANGES)
+- When your narration changes a location’s persistent state, append a single control tag BEFORE the metadata block.
+- Syntax: [[LocState:key=value]] or with expiry [[LocState:key=value;ttl=19d]]. Multiple pairs may be separated by semicolons.
+- Examples: [[LocState:door=broken]] , [[LocState:gum_spot=present;ttl=30d]]
+
+# NPC MEMORY TAGS (MANDATORY WHEN PRESENT NPCs ACT)
+- Whenever any PRESENT NPC performs an explicit action in your narration:
+  - Append a single NPC memory tag BEFORE the final metadata block.
+  - Use 'Common' for everyday actions; use 'Important' for significant events (kissed, slept together, fought, confessed, etc.).
+- Syntax (IDs only; no extra text here — the full narration becomes the memory text):
+  [[Memory: ID1:Common,ID2:Important,ID3:Common]]
+  - IDs are character IDs of the NPCs that acted
+  - Level: Common or Important
+  - The entire narration text will be stored for each listed NPC as their memory
+
+# RESPONSE FORMAT (MANDATORY)
+Your response MUST consist of two parts:
+1. The narration text (storytelling).
+2. A single metadata block on a NEW line at the very end of your response.
+
+The metadata block MUST follow this EXACT format:
+[[TIME: HH:MM, LOCATION: "Exact Name"]]
+
+Example:
+"Your Story"
+[[TIME: 14:15, LOCATION: "Forest"]]
+
+[STRICT REQUIREMENT]: You MUST include this block in EVERY response. If you fail to include it, the world state will break. Use the CURRENT time and location if nothing changed.`;
+            }
+
+            function buildPlayerContext() {
+                if (!activeChar) return "";
+                const name = [activeChar.firstName, activeChar.lastName].filter(Boolean).join(" ") || "Unknown";
+                const race = activeChar.raceName || "Unknown Race";
+                const gender = activeChar.gender || "";
+                const age = activeChar.age ? `${activeChar.age}` : "";
+                const bd = activeChar.birthdate ? `${String(activeChar.birthdate.day || 1).padStart(2,"0")}.${String(activeChar.birthdate.month || 1).padStart(2,"0")}` : "";
+                const app = activeChar.appearance || "";
+                let lines = [];
+                lines.push(`- NAME: ${name}`);
+                if (race) lines.push(`- RACE: ${race}`);
+                if (gender) lines.push(`- GENDER: ${gender}`);
+                if (age) lines.push(`- AGE: ${age}`);
+                if (bd) lines.push(`- BIRTHDATE: ${bd}`);
+                if (app) lines.push(`- APPEARANCE: ${app}`);
+                const rels = Array.isArray(activeChar.relations) ? activeChar.relations : [];
+                if (rels.length > 0) {
+                    lines.push("- RELATIONS:");
+                    rels.forEach(r => {
+                        const n = r.targetName || r.targetId || "(Unknown)";
+                        const rel = r.relation === "Family" ? (r.familySub || "Family") : (r.relation || "Unknown");
+                        lines.push(`  * ${n}: ${rel}`);
+                    });
+                }
+                return lines.join("\n");
+            }
+
+            function buildRelationshipSummary() {
+                const relationshipRules = 
+                    "\nIMPORTANT RELATIONSHIP RULES:\n" +
+                    "1. If a relationship is 'Stranger (Unknown)', the characters are COMPLETE STRANGERS. They have never met before.\n" +
+                    "2. Strangers should act with caution, politeness, or distance, depending on their personality, but NEVER like friends, family, or lovers.\n" +
+                    "3. Do NOT mention any past shared experiences, shared celebrations, or close bonds if the relationship is 'Stranger (Unknown)'.\n" +
+                    "4. If an NPC is present but NOT mentioned in the relationship list, assume they are a Stranger (Unknown).\n";
+
+                try {
+                    const cards = getCards();
+                    const bar = document.getElementById("present-npcs-bar");
+                    if (!bar || !bar.classList.contains("visible")) return relationshipRules;
+
+                    // Get IDs of NPCs currently present
+                    const presentNpcIds = Array.from(
+                        bar.querySelectorAll(".npc-item"),
+                    )
+                        .map((item) => {
+                            // Find the original NPC card by name from the bar
+                            const name = item
+                                .querySelector(".npc-name-xs")
+                                .textContent.trim();
+                            const card = cards.find(
+                                (c) => c.genre === "character" && c.title === name,
+                            );
+                            return card ? card.id : null;
+                        })
+                        .filter(Boolean);
+
+                    if (presentNpcIds.length === 0) return relationshipRules;
+
+                    let summary = "\nCharacter Relationships:\n";
+                    const playerFullName = activeChar
+                        ? [activeChar.firstName, activeChar.lastName]
+                              .filter(Boolean)
+                              .join(" ")
+                        : "Player";
+
+                    presentNpcIds.forEach((npcId) => {
+                        const npc = cards.find((c) => c.id === npcId);
+                        if (!npc) return;
+
+                        // 1. Relation NPC to Player (Check NPC side and Player side)
+                        let playerRel = "Stranger (Unknown)";
+                        
+                        // Check NPC's side
+                        if (npc.relations) {
+                            const relObj = npc.relations.find(
+                                (r) =>
+                                    r.targetName.toLowerCase() ===
+                                    playerFullName.toLowerCase(),
+                            );
+                            if (relObj && relObj.relation !== "Unknown") {
+                                playerRel =
+                                    relObj.relation === "Family"
+                                        ? relObj.familySub
+                                        : relObj.relation;
+                            }
+                        }
+                        
+                        // Check Player's side if still unknown
+                        if (playerRel === "Stranger (Unknown)" && activeChar && activeChar.relations) {
+                            const relObj = activeChar.relations.find(
+                                (r) => r.targetId === npcId || r.targetName.toLowerCase() === npc.title.toLowerCase()
+                            );
+                            if (relObj && relObj.relation !== "Unknown") {
+                                playerRel =
+                                    relObj.relation === "Family"
+                                        ? relObj.familySub
+                                        : relObj.relation;
+                            }
+                        }
+                        
+                        summary += `- ${npc.title} to ${playerFullName}: ${playerRel}\n`;
+
+                        // 2. Relation NPC to other present NPCs
+                        presentNpcIds.forEach((otherId) => {
+                            if (npcId === otherId) return;
+                            const other = cards.find((c) => c.id === otherId);
+                            if (!other) return;
+
+                            let npcRel = "Stranger (Unknown)";
+                            if (npc.relations) {
+                                const relObj = npc.relations.find(
+                                    (r) => r.targetId === otherId,
+                                );
+                                if (relObj && relObj.relation !== "Unknown") {
+                                    npcRel =
+                                        relObj.relation === "Family"
+                                            ? relObj.familySub
+                                            : relObj.relation;
+                                }
+                            }
+                            summary += `  * ${npc.title} to ${other.title}: ${npcRel}\n`;
+                        });
+                    });
+
+                    summary += relationshipRules;
+                    return summary;
+                } catch (e) {
+                    console.error("Relationship summary error", e);
+                    return relationshipRules;
+                }
+            }
+
+            function updateLocation(nameOrId) {
+                if (!nameOrId) return;
+                // Strip surrounding quotes if present
+                nameOrId = nameOrId.replace(/^["']|["']$/g, "").trim();
+                const cards = getCards();
+                let card = null;
+
+                // 1. Try exact ID
+                card = cards.find((c) => c.genre === "location" && c.id === nameOrId);
+                
+                // 2. Try exact title
+                if (!card) {
+                    const search = nameOrId.toLowerCase().trim();
+                    card = cards.find((c) => c.genre === "location" && (c.title || "").toLowerCase() === search);
+                }
+
+                // 3. Try to handle "Region (Outside)" format
+                if (!card && nameOrId.includes("(")) {
+                    const regionName = nameOrId.split("(")[0].trim().toLowerCase();
+                    card = cards.find((c) => c.genre === "location" && (c.title || "").toLowerCase() === regionName);
+                }
+
+                const el = document.getElementById("header-location");
+                if (card) {
+                    currentLocationId = card.id;
+                    if (activeChar) activeChar.currentLocationId = card.id; // Save to activeChar
+                    if (el) el.textContent = card.title.toUpperCase(); // Fixed: Show TITLE, not ID
+                    try { recalcEventOverrides(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
+                } else {
+                    // Fallback: If no card found, keep the text but try to find a parent if possible
+                    // Or just keep the text and null the ID (AI will lose character context)
+                    currentLocationId = null;
+                    if (activeChar) activeChar.currentLocationId = null; // Save to activeChar
+                    if (el) el.textContent = nameOrId.toUpperCase();
+                    console.warn(`[Location] No card found for: ${nameOrId}`);
+                }
+                
+                updatePresentNPCs();
+                saveActiveCharacter(); // Save the location state
+            }
+
+            function updatePresentNPCs() {
+                const bar = document.getElementById("present-npcs-bar");
+                if (!bar) return;
+                if (!currentLocationId) {
+                    bar.classList.remove("visible");
+                    bar.innerHTML = "";
+                    return;
+                }
+
+                const cards = getCards();
+                const currentLoc = cards.find((c) => c.id === currentLocationId);
+                if (!currentLoc) {
+                    bar.classList.remove("visible");
+                    return;
+                }
+
+                // Find all ancestors
+                const ancestors = [];
+                let current = currentLoc;
+
+                while (current) {
+                    ancestors.push(current);
+                    // find parent
+                    const parent = cards.find((c) => {
+                        if (c.genre !== "location" || !c.sublocations)
+                            return false;
+                        return Object.values(c.sublocations).some((arr) =>
+                            (arr || []).includes(current.id),
+                        );
+                    });
+                    current = parent;
+                }
+
+                // Collect residents from current and all ancestors
+                const residentIds = new Set();
+                ancestors.forEach((loc) => {
+                    if (loc.residents) {
+                        loc.residents.forEach((id) => residentIds.add(id));
+                    }
+                });
+
+                const presentNPCs = [];
+                residentIds.forEach((id) => {
+                    const char = cards.find(
+                        (c) => c.genre === "character" && c.id === id,
+                    );
+                    if (char && (char.status || "Alive") !== "Dead") presentNPCs.push(char);
+                });
+
+                if (presentNPCs.length === 0) {
+                    bar.classList.remove("visible");
+                    bar.innerHTML = "";
+                    return;
+                }
+
+                bar.innerHTML = "";
+                presentNPCs.forEach((npc) => {
+                    const item = document.createElement("div");
+                    item.className = "npc-item";
+                    const isF = npc.gender === "female";
+                    const icon = isF ? "♀" : "♂";
+                    const avatarClass = isF ? "female" : "male";
+
+                    item.innerHTML = `
+                        <div class="npc-avatar-xs ${avatarClass}">${icon}</div>
+                        <div class="npc-name-xs">${npc.title}</div>
+                    `;
+                    item.onclick = () => showNPCInfo(npc.id);
+                    bar.appendChild(item);
+                });
+                bar.classList.add("visible");
+            }
+
+            function getPresentNpcIds() {
+                const bar = document.getElementById("present-npcs-bar");
+                if (!bar) return [];
+                const cards = getCards();
+                return Array.from(bar.querySelectorAll(".npc-item"))
+                    .map((item) => {
+                        const name = item.querySelector(".npc-name-xs")?.textContent?.trim() || "";
+                        const card = cards.find((c) => c.genre === "character" && c.title === name);
+                        return card ? card.id : null;
+                    })
+                    .filter(Boolean);
+            }
+
+            function addNpcMemoriesFromNarration(text, anchorTs = null) {
+                const ids = getPresentNpcIds();
+                if (ids.length === 0) return;
+                const cards = getCards();
+                const d = activeChar?.startingDate || {};
+                const dateStr = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const timeStr = d.time || "00:00";
+                const loc = document.getElementById("header-location")?.textContent || "Unknown Location";
+                const entry = {
+                    date: dateStr,
+                    time: timeStr,
+                    location: loc,
+                    level: "Common",
+                    dayCount: _worldDayCount(d),
+                    text: String(text || "").slice(0, 800),
+                    logTs: anchorTs || null
+                };
+                let changed = false;
+                ids.forEach((id) => {
+                    const npc = cards.find((c) => c.id === id);
+                    if (!npc) return;
+                    if (!Array.isArray(npc.memories)) npc.memories = [];
+                    npc.memories.push(entry);
+                    if (npc.memories.length > 100) npc.memories = npc.memories.slice(-100);
+                    changed = true;
+                });
+                if (changed) {
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                }
+            }
+            
+            function addNpcMemoriesFromPending(narrativeText, anchorTs = null) {
+                const targets = Array.isArray(window._pendingMemoryTargets) ? window._pendingMemoryTargets : [];
+                if (targets.length === 0) return;
+                const cards = getCards();
+                const d = activeChar?.startingDate || {};
+                const dateStr = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const timeStr = d.time || "00:00";
+                const locName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                let changed = false;
+                targets.forEach(({ id, level }) => {
+                    const npc = cards.find(c => c.genre === "character" && c.id === id);
+                    if (!npc) return;
+                    if (!Array.isArray(npc.memories)) npc.memories = [];
+                    npc.memories.push({
+                        date: dateStr,
+                        time: timeStr,
+                        location: locName,
+                        level: (level || "Common"),
+                        dayCount: _worldDayCount(d),
+                        text: String(narrativeText || "").slice(0, 800),
+                        logTs: anchorTs || null
+                    });
+                    if (npc.memories.length > 200) npc.memories = npc.memories.slice(-200);
+                    changed = true;
+                });
+                if (changed) {
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                }
+                window._pendingMemoryTargets = [];
+            }
+
+            function addLocationMemoryFromNarration(text, anchorTs = null) {
+                if (!currentLocationId) return;
+                const cards = getCards();
+                const locCard = cards.find((c) => c.id === currentLocationId);
+                if (!locCard) return;
+                const d = activeChar?.startingDate || {};
+                const dateStr = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const timeStr = d.time || "00:00";
+                const locName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                const entry = {
+                    date: dateStr,
+                    time: timeStr,
+                    location: locName,
+                    level: "Common",
+                    dayCount: _worldDayCount(d),
+                    text: String(text || "").slice(0, 800),
+                    logTs: anchorTs || null
+                };
+                if (!Array.isArray(locCard.memories)) locCard.memories = [];
+                locCard.memories.push(entry);
+                if (locCard.memories.length > 200) locCard.memories = locCard.memories.slice(-200);
+                sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+            }
+
+            function _worldDayCount(d) {
+                const day = parseInt(d.day || 1, 10);
+                const month = parseInt(d.month || 1, 10);
+                const year = parseInt(d.year || 1983, 10);
+                // Days until start of current year
+                const y = year - 1;
+                let days = y * 365 + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400);
+                // Days in months before current month
+                for (let m = 1; m < month; m++) days += daysInMonth(m, year);
+                // Current day
+                days += day;
+                return days;
+            }
+            function setLocationState(key, value, ttlDays = null, byTs = null) {
+                if (!currentLocationId) return;
+                const cards = getCards();
+                const locCard = cards.find((c) => c.id === currentLocationId);
+                if (!locCard) return;
+                const d = activeChar?.startingDate || {};
+                if (!locCard.states || typeof locCard.states !== "object") locCard.states = {};
+                const state = { value, updatedAt: Date.now(), untilDayCount: null, updatedByTs: byTs || null };
+                if (ttlDays != null && !isNaN(ttlDays)) {
+                    state.untilDayCount = _worldDayCount(d) + parseInt(ttlDays, 10);
+                }
+                locCard.states[key] = state;
+                sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+            }
+            function clearExpiredLocationStates() {
+                if (!currentLocationId) return;
+                const cards = getCards();
+                const locCard = cards.find((c) => c.id === currentLocationId);
+                if (!locCard || !locCard.states) return;
+                const d = activeChar?.startingDate || {};
+                const nowCount = _worldDayCount(d);
+                let changed = false;
+                Object.keys(locCard.states).forEach((k) => {
+                    const st = locCard.states[k];
+                    if (st && st.untilDayCount != null && nowCount > st.untilDayCount) {
+                        delete locCard.states[k];
+                        changed = true;
+                    }
+                });
+                if (changed) {
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                }
+            }
+            function clearExpiredNpcMemories() {
+                const cards = getCards();
+                const d = activeChar?.startingDate || {};
+                const nowCount = _worldDayCount(d);
+                let changed = false;
+                const parseCount = (m) => {
+                    if (m.dayCount != null) return m.dayCount;
+                    const parts = (m.date || "").split(".");
+                    if (parts.length === 3) {
+                        const dd = parseInt(parts[0]) || 1;
+                        const mm = parseInt(parts[1]) || 1;
+                        const yy = parseInt(parts[2]) || 1983;
+                        return _worldDayCount({ day: dd, month: mm, year: yy });
+                    }
+                    return null;
+                };
+                cards.forEach((c) => {
+                    if (c.genre !== "character" || !Array.isArray(c.memories)) return;
+                    const before = c.memories.length;
+                    c.memories = c.memories.filter((m) => {
+                        if ((m.level || "Common") !== "Common") return true;
+                        const mc = parseCount(m);
+                        if (mc == null) return true;
+                        return mc > (nowCount - 10);
+                    });
+                    if (c.memories.length !== before) changed = true;
+                });
+                if (changed) {
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                }
+            }
+            function rollbackAnchoredChangesByTs(ts) {
+                try {
+                    if (!ts) return;
+                    const cards = getCards();
+                    let changed = false;
+                    cards.forEach(c => {
+                        if (c.genre === "character") {
+                            if (Array.isArray(c.memories)) {
+                                const lenBefore = c.memories.length;
+                                c.memories = c.memories.filter(m => m.logTs !== ts);
+                                if (c.memories.length !== lenBefore) changed = true;
+                            }
+                        } else if (c.genre === "location") {
+                            if (Array.isArray(c.memories)) {
+                                const lenBefore = c.memories.length;
+                                c.memories = c.memories.filter(m => m.logTs !== ts);
+                                if (c.memories.length !== lenBefore) changed = true;
+                            }
+                            if (c.states && typeof c.states === "object") {
+                                const keys = Object.keys(c.states);
+                                keys.forEach(k => {
+                                    const st = c.states[k];
+                                    if (st && st.updatedByTs === ts) {
+                                        delete c.states[k];
+                                        changed = true;
+                                    }
+                                });
+                            }
+                        }
+                    });
+                    if (changed) {
+                        sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                    }
+                } catch (e) {
+                    console.error("Rollback anchored changes failed", e);
+                }
+            }
+            function updateMemoriesTextByTs(ts, newText) {
+                try {
+                    if (!ts) return;
+                    const maxLen = 800;
+                    const newT = String(newText || "").slice(0, maxLen);
+                    const cards = getCards();
+                    let changed = false;
+                    cards.forEach(c => {
+                        if (Array.isArray(c.memories)) {
+                            c.memories.forEach(m => {
+                                if (m && m.logTs === ts) {
+                                    m.text = newT;
+                                    changed = true;
+                                }
+                            });
+                        }
+                    });
+                    if (changed) {
+                        sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                    }
+                } catch (e) {
+                    console.warn("updateMemoriesTextByTs failed", e);
+                }
+            }
+            function showNPCInfo(id) {
+                const cards = getCards();
+                const npc = cards.find((c) => c.id === id);
+                if (!npc) return;
+
+                // Simple alert for now, could be a modal
+                let info = `${npc.title}\n`;
+                if (npc.raceName) info += `Race: ${npc.raceName}\n`;
+                if (npc.gender) info += `Gender: ${npc.gender}\n`;
+                if (npc.age) info += `Age: ${npc.age}\n`;
+                if (npc.status) info += `Status: ${npc.status}\n`;
+                if (npc.status === "Dead" && npc.deathCause) info += `Death: ${npc.deathCause}\n`;
+                if (npc.personality) info += `\nPersonality:\n${npc.personality}\n`;
+                if (npc.appearance) info += `\nAppearance:\n${npc.appearance}\n`;
+                const mem = Array.isArray(npc.memories) ? npc.memories.slice(-3) : [];
+                if (mem.length > 0) {
+                    info += `\nMemories (latest):\n`;
+                    mem.forEach((m) => {
+                        info += `- ${m.date} ${m.time} @ ${m.location}\n`;
+                    });
+                }
+                
+                alert(info);
+            }
+
+            function askAI(prompt) {
+                return new Promise((resolve, reject) => {
+                    const requestId = Math.random().toString(36).substring(7);
+                    const timeout = setTimeout(() => {
+                        window.removeEventListener("message", handler);
+                        reject("Die KI hat zu lange gebraucht.");
+                    }, 45000);
+
+                    const handler = (event) => {
+                        if (event.data.requestId === requestId) {
+                            clearTimeout(timeout);
+                            window.removeEventListener("message", handler);
+                            if (event.data.type === "AI_RESPONSE")
+                                resolve(event.data.text);
+                            else
+                                reject(
+                                    event.data.error || "Unbekannter Fehler",
+                                );
+                        }
+                    };
+
+                    window.addEventListener("message", handler);
+                    window.parent.postMessage(
+                        { type: "AI_REQUEST", instruction: prompt, requestId },
+                        "*",
+                    );
+                });
+            }
+
+            async function askAIWithRetry(prompt) {
+                while (true) {
+                    try {
+                        return await askAI(prompt);
+                    } catch (err) {
+                        console.warn("AI Request failed, retrying in 2 seconds...", err);
+                        await new Promise((resolve) => setTimeout(resolve, 2000));
+                    }
+                }
+            }
+
+            function buildHistoryLines(limitFirst = 15) {
+                const recentHistory = chatHistory.slice(0, Math.max(0, limitFirst));
+                return recentHistory
+                    .map((e) => {
+                        if (typeof e === "string") return `--- ${e} ---`;
+                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
+                    })
+                    .join("\n");
+            }
+
+            function _normalizeText(s) {
+                return String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+            }
+            function getLastNarratorText() {
+                for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    const e = chatHistory[i];
+                    if (typeof e !== "string" && e.sender === "Narrator") {
+                        return e.text || "";
+                    }
+                }
+                return "";
+            }
+            function buildHistoryLinesCombined(firstCount = 10, lastCount = 5) {
+                const first = chatHistory.slice(0, Math.max(0, firstCount));
+                const last = chatHistory.slice(-Math.max(0, lastCount));
+                const merged = first.concat(last);
+                return merged
+                    .map((e) => {
+                        if (typeof e === "string") return `--- ${e} ---`;
+                        return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
+                    })
+                    .join("\n");
+            }
+            function getLastNarratorTexts(count = 10) {
+                const texts = [];
+                for (let i = chatHistory.length - 1; i >= 0 && texts.length < count; i--) {
+                    const e = chatHistory[i];
+                    if (typeof e !== "string" && e.sender === "Narrator") {
+                        texts.push(e.text || "");
+                    }
+                }
+                return texts;
+            }
+            function isDuplicateText(t) {
+                const norm = _normalizeText(t);
+                const prev = getLastNarratorTexts(10).map(_normalizeText);
+                return prev.includes(norm);
+            }
+            function uniqueSentences(t) {
+                const txt = String(t || "");
+                const parts = txt.split(/(?<=[\.!\?])\s+/).filter(Boolean);
+                const seen = new Set();
+                const out = [];
+                for (const p of parts) {
+                    const n = _normalizeText(p);
+                    if (!seen.has(n)) {
+                        seen.add(n);
+                        out.push(p);
+                    }
+                }
+                return out.join(" ").trim();
+            }
+
+            async function triggerNarration(systemPrompt) {
+                if (isBusy) return;
+                isBusy = true;
+                setSendDisabled(true);
+                setStatus(false);
+                lockAllButtons(); // Lock all buttons during generation
+
+                const typing = appendTypingIndicator();
+
+                const systemInst = buildSystemPrompt();
+
+                try {
+                    currentNarrationTs = Date.now();
+                    const recentHistory = chatHistory;
+                    const historyLines = buildHistoryLinesCombined(10, 5);
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
+                    
+                    const response = await askAIWithRetry(finalPrompt);
+                    removeTypingIndicator();
+                    const cleanResponse = processAICommands(response);
+                    let finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
+                    const lastNarr = getLastNarratorText();
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
+                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                        const response2 = await askAIWithRetry(finalPrompt2);
+                        const clean2 = processAICommands(response2);
+                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
+                    }
+                    appendBubble("ai", finalText);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    addNpcMemoriesFromPending(finalText, ts);
+                    addLocationMemoryFromNarration(finalText, ts);
+                } catch (err) {
+                    removeTypingIndicator();
+                    // No error bubble displayed to user
+                    console.error("Narration failed even with retries (unexpected)", err);
+                } finally {
+                    isBusy = false;
+                    setSendDisabled(false);
+                    setStatus(true);
+                    unlockAllButtons(); // Unlock buttons when generation is complete
+                    currentNarrationTs = null;
+                }
+            }
+
+            let _pendingPreUserDividerLabel = null;
+            async function sendMessage() {
+                const inputEl = document.getElementById("user-input");
+                const text = inputEl.value.trim();
+                if (isEditing) { showToast("Finish editing with Save or Cancel.", "rgba(180,60,60,0.85)"); return; }
+                if (!text || isBusy) return;
+
+                // Time set command: any H:MM or HH:MM token without quotes triggers time change
+                const timeCmd = (text.includes('"') || text.includes("'")) ? null : (text.match(/\b([01]?\d|2[0-3]):([0-5]?\d)\b/));
+                if (timeCmd) {
+                    try {
+                        const hh = parseInt(timeCmd[1], 10);
+                        const mm = parseInt(timeCmd[2], 10);
+                        if (!activeChar) {
+                            showToast("Kein aktiver Charakter zum Zeitstellen.", "rgba(180,60,60,0.85)");
+                            return;
+                        }
+                        const sd = activeChar.startingDate || {};
+                        const curParts = (sd.time || "00:00").split(":");
+                        const curMin = (parseInt(curParts[0] || "0", 10) * 60) + (parseInt(curParts[1] || "0", 10));
+                        const newMin = hh * 60 + mm;
+                        const dt = new Date((sd.year || 1983), (sd.month || 1) - 1, (sd.day || 1));
+                        if (newMin < curMin) dt.setDate(dt.getDate() + 1); // don't go backwards; jump to next day
+                        activeChar.startingDate = {
+                            day: dt.getDate(),
+                            month: dt.getMonth() + 1,
+                            year: dt.getFullYear(),
+                            time: `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`
+                        };
+                        saveActiveCharacter();
+                        _pendingPreUserDividerLabel = `TIME SET: ${activeChar.startingDate.time} (${activeChar.startingDate.day}.${String(activeChar.startingDate.month).padStart(2,"0")}.${activeChar.startingDate.year})`;
+                        // do not consume the user's message; continue to send it for narration
+                    } catch (e) {
+                        console.error("Time slots failed", e);
+                        showToast("Time could not be set.", "rgba(180,60,60,0.85)");
+                        // continue with message to avoid blocking progression
+                    }
+                }
+
+                const bubble = appendBubble("user", text);
+                const senderName = activeChar
+                    ? [activeChar.firstName, activeChar.lastName]
+                          .filter(Boolean)
+                          .join(" ")
+                    : "Player";
+                const ts = addToStoryLog(senderName, text);
+                // Link bubble and potential pre-divider via timestamp
+                try {
+                    if (bubble && bubble.parentElement) {
+                        bubble.parentElement.dataset.ts = String(ts || "");
+                    }
+                    if (_pendingPreUserDividerLabel) {
+                        const messagesEl = document.getElementById("messages");
+                        if (messagesEl && bubble && bubble.parentElement) {
+                            const div = document.createElement("div");
+                            div.className = "chat-divider";
+                            div.dataset.linkedTs = String(ts || "");
+                            div.innerHTML = `<span class="chat-divider-label">${_pendingPreUserDividerLabel}</span>`;
+                            messagesEl.insertBefore(div, bubble.parentElement);
+                        }
+                    }
+                } catch {}
+                _pendingPreUserDividerLabel = null;
+                inputEl.value = "";
+                inputEl.style.height = "auto";
+
+                isBusy = true;
+                setSendDisabled(true);
+                setStatus(false);
+                lockAllButtons(); // Lock buttons during generation
+
+                const typing = appendTypingIndicator();
+
+                const systemInst = buildSystemPrompt();
+
+                try {
+                    currentNarrationTs = Date.now();
+                    const recentHistory = chatHistory;
+                    const historyLines = buildHistoryLinesCombined(10, 5);
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
+                    
+                    const response = await askAIWithRetry(finalPrompt);
+                    removeTypingIndicator();
+                    const cleanResponse = processAICommands(response);
+                    let finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
+                    const lastNarr = getLastNarratorText();
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
+                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                        const response2 = await askAIWithRetry(finalPrompt2);
+                        const clean2 = processAICommands(response2);
+                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
+                    }
+                    appendBubble("ai", finalText);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    addNpcMemoriesFromPending(finalText, ts);
+                    addLocationMemoryFromNarration(finalText, ts);
+                } catch (err) {
+                    removeTypingIndicator();
+                    // No error bubble displayed to user
+                    console.error("Message failed even with retries (unexpected)", err);
+                } finally {
+                    isBusy = false;
+                    setSendDisabled(false);
+                    setStatus(true);
+                    unlockAllButtons(); // Unlock buttons when generation is complete
+                    currentNarrationTs = null;
+                }
+            }
+
+            function setSendDisabled(v) {
+                document.getElementById("send-btn").disabled = v;
+            }
+
+            /* ═══════════════════════════════════════
+               ACTION BUTTONS
+            ═══════════════════════════════════════ */
+            document.getElementById("send-btn").onclick = sendMessage;
+
+            document
+                .getElementById("user-input")
+                .addEventListener("keydown", (e) => {
+                    if (isEditing) {
+                        // Block Enter send while editing; require Save or Cancel
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            showToast("Use Save or Cancel while editing.", "rgba(180,60,60,0.85)");
+                        }
+                        return;
+                    }
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                });
+
+            // Auto-resize textarea
+            document
+                .getElementById("user-input")
+                .addEventListener("input", function () {
+                    this.style.height = "auto";
+                    this.style.height = Math.min(this.scrollHeight, 140) + "px";
+                });
+
+            document.getElementById("retry-btn").onclick = async () => {
+                if (isBusy) return;
+                
+                // Check if we're trying to retry the first message
+                const messagesEl = document.getElementById("messages");
+                const aiRows = messagesEl.querySelectorAll(".msg-row.ai");
+                
+                if (!aiRows.length) return;
+                
+                // If this is the first AI message and it's protected, show lock icon
+                if (isFirstMessageProtected && aiRows.length === 1) {
+                    showToast("🔒 The first message is protected.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                
+                // Remove last AI message from DOM and history
+                aiRows[aiRows.length - 1].remove();
+                // Remove last narrator entry from history
+                let removedNarratorTs = null;
+                for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    const entry = chatHistory[i];
+                    const isNarrator = typeof entry === 'string' ? entry.startsWith("Narrator:") : entry.sender === "Narrator";
+                    if (isNarrator) {
+                        removedNarratorTs = typeof entry === 'string' ? null : entry.timestamp;
+                        chatHistory.splice(i, 1);
+                        break;
+                    }
+                }
+                saveStoryLog();
+                if (removedNarratorTs) rollbackAnchoredChangesByTs(removedNarratorTs);
+                // Roll back world state to last remaining entry
+                rollbackToLastWorldState();
+                isBusy = true;
+                setSendDisabled(true);
+                setStatus(false);
+                lockAllButtons(); // Lock buttons during retry
+                appendTypingIndicator();
+
+                const systemInst = buildSystemPrompt();
+
+                try {
+                    currentNarrationTs = Date.now();
+                    const recentHistory = chatHistory;
+                    const historyLines = buildHistoryLinesCombined(10, 5);
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
+                    
+                    const r = await askAIWithRetry(finalPrompt);
+                    removeTypingIndicator();
+                    const cleanR = processAICommands(r);
+                    let finalText = uniqueSentences(applyTextSizeLimit(cleanR));
+                    const lastNarr = getLastNarratorText();
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
+                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                        const r2 = await askAIWithRetry(finalPrompt2);
+                        const clean2 = processAICommands(r2);
+                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
+                    }
+                    appendBubble("ai", finalText);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    addNpcMemoriesFromPending(finalText, ts);
+                    addLocationMemoryFromNarration(finalText, ts);
+                } catch (e) {
+                    removeTypingIndicator();
+                    // No error bubble displayed to user
+                    console.error("Retry failed even with retries (unexpected)", e);
+                } finally {
+                    isBusy = false;
+                    setSendDisabled(false);
+                    setStatus(true);
+                    unlockAllButtons(); // Unlock buttons when retry is complete
+                    currentNarrationTs = null;
+                }
+            };
+
+            document.getElementById("continue-btn").onclick = async () => {
+                if (isBusy) return;
+                isBusy = true;
+                setSendDisabled(true);
+                setStatus(false);
+                lockAllButtons(); // Lock buttons during continue
+                appendTypingIndicator();
+
+                const systemInst = buildSystemPrompt();
+
+                try {
+                    currentNarrationTs = Date.now();
+                    const recentHistory = chatHistory.slice(-10);
+                    const historyLines = buildHistoryLinesCombined(10, 5);
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
+                    
+                    const r = await askAIWithRetry(finalPrompt);
+                    removeTypingIndicator();
+                    const cleanR = processAICommands(r);
+                    let finalText = uniqueSentences(applyTextSizeLimit(cleanR));
+                    const lastNarr = getLastNarratorText();
+                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
+                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                        const r2 = await askAIWithRetry(finalPrompt2);
+                        const clean2 = processAICommands(r2);
+                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
+                    }
+                    appendBubble("ai", finalText);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    addNpcMemoriesFromPending(finalText, ts);
+                    addLocationMemoryFromNarration(finalText, ts);
+                } catch (e) {
+                    removeTypingIndicator();
+                    // No error bubble displayed to user
+                    console.error("Continue failed even with retries (unexpected)", e);
+                } finally {
+                    isBusy = false;
+                    setSendDisabled(false);
+                    setStatus(true);
+                    unlockAllButtons(); // Unlock buttons when continue is complete
+                    currentNarrationTs = null;
+                }
+            };
+
+            document.getElementById("edit-btn").onclick = () => {
+                if (isBusy) return;
+                const messagesEl = document.getElementById("messages");
+                const rows = Array.from(messagesEl.querySelectorAll(".msg-row"));
+                if (!rows.length) return;
+                const lastRow = rows[rows.length - 1];
+                const bubble = lastRow.querySelector(".msg-bubble");
+                const text = bubble ? bubble.textContent : "";
+                const role = lastRow.classList.contains("ai") ? "ai" : "user";
+                const input = document.getElementById("user-input");
+                input.value = text;
+                input.focus();
+                // Find corresponding history entry index from end
+                const playerName = activeChar ? [activeChar.firstName, activeChar.lastName].filter(Boolean).join(" ") : "Player";
+                const targetSender = role === "ai" ? "Narrator" : playerName;
+                let idx = -1;
+                for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    const entry = chatHistory[i];
+                    if (entry && typeof entry === "object" && entry.sender === targetSender) { idx = i; break; }
+                }
+                if (idx === -1) return;
+                isEditing = true;
+                _editRow = lastRow;
+                _editIndex = idx;
+                // Show Save / Cancel controls
+                const saveBtn = document.getElementById("edit-save-btn");
+                const cancelBtn = document.getElementById("edit-cancel-btn");
+                if (saveBtn) saveBtn.style.display = "inline-flex";
+                if (cancelBtn) cancelBtn.style.display = "inline-flex";
+                // Lock other action buttons
+                ['retry-btn','continue-btn','erase-btn','edit-btn'].forEach(id => {
+                    const b = document.getElementById(id);
+                    if (b) { b.disabled = true; b.classList.add('locked'); }
+                });
+            };
+            document.getElementById("edit-save-btn").onclick = () => {
+                if (!isEditing || _editIndex < 0 || !_editRow) return;
+                const input = document.getElementById("user-input");
+                const newText = (input.value || "").trim();
+                if (!newText) { showToast("Text darf nicht leer sein.", "rgba(180,60,60,0.85)"); return; }
+                const bubble = _editRow.querySelector(".msg-bubble");
+                if (bubble) bubble.textContent = newText;
+                // Update history
+                const entry = chatHistory[_editIndex];
+                if (entry && typeof entry === "object") {
+                    entry.text = newText;
+                    if (entry.timestamp) {
+                        updateMemoriesTextByTs(entry.timestamp, newText);
+                    }
+                    saveStoryLog();
+                }
+                // Reset edit state
+                isEditing = false;
+                _editIndex = -1;
+                _editRow = null;
+                input.value = "";
+                input.style.height = "auto";
+                const saveBtn = document.getElementById("edit-save-btn");
+                const cancelBtn = document.getElementById("edit-cancel-btn");
+                if (saveBtn) saveBtn.style.display = "none";
+                if (cancelBtn) cancelBtn.style.display = "none";
+                ['retry-btn','continue-btn','erase-btn','edit-btn'].forEach(id => {
+                    const b = document.getElementById(id);
+                    if (b) { b.disabled = false; b.classList.remove('locked'); }
+                });
+                showToast("Message edited.");
+            };
+            document.getElementById("edit-cancel-btn").onclick = () => {
+                if (!isEditing) return;
+                isEditing = false;
+                _editIndex = -1;
+                _editRow = null;
+                const input = document.getElementById("user-input");
+                input.value = "";
+                input.style.height = "auto";
+                const saveBtn = document.getElementById("edit-save-btn");
+                const cancelBtn = document.getElementById("edit-cancel-btn");
+                if (saveBtn) saveBtn.style.display = "none";
+                if (cancelBtn) cancelBtn.style.display = "none";
+                ['retry-btn','continue-btn','erase-btn','edit-btn'].forEach(id => {
+                    const b = document.getElementById(id);
+                    if (b) { b.disabled = false; b.classList.remove('locked'); }
+                });
+            };
+
+            document.getElementById("erase-btn").onclick = () => {
+                const messagesEl = document.getElementById("messages");
+                const rows = Array.from(messagesEl.children).filter(c => c.classList.contains("msg-row") || c.classList.contains("chat-divider"));
+                if (!rows.length) return;
+
+                const lastRow = rows[rows.length - 1];
+                
+                // Check if this is the first AI message and it's protected
+                const aiRows = messagesEl.querySelectorAll(".msg-row.ai");
+                if (isFirstMessageProtected && aiRows.length === 1 && lastRow.classList.contains("ai")) {
+                    showToast("🔒 The first message is protected.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                
+                lastRow.remove();
+
+                if (chatHistory.length > 0) {
+                    const removed = chatHistory.pop();
+                    // Also remove any pre-divider linked to this user message
+                    try {
+                        if (removed && typeof removed === 'object' && removed.sender !== "Narrator") {
+                            const ts = removed.timestamp;
+                            const linked = document.querySelector(`.chat-divider[data-linked-ts="${ts}"]`);
+                            if (linked) linked.remove();
+                        }
+                    } catch {}
+                    saveStoryLog();
+                    // Roll back world state to last remaining entry after deletion
+                    if (removed && typeof removed !== 'string' && removed.sender === "Narrator") {
+                        rollbackAnchoredChangesByTs(removed.timestamp);
+                    }
+                    rollbackToLastWorldState();
+                    showToast("Message deleted.", "rgba(180, 60, 60, 0.85)");
+                }
+            };
+
+            /* ═══════════════════════════════════════
+               BUTTON LOCKING DURING GENERATION
+            ═══════════════════════════════════════ */
+            function lockAllButtons() {
+                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn'];
+                buttons.forEach(btnId => {
+                    const btn = document.getElementById(btnId);
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.classList.add('locked');
+                        // Store original text
+                        btn.dataset.originalText = btn.textContent.trim();
+                        btn.textContent = '🔒';
+                    }
+                });
+            }
+
+            function unlockAllButtons() {
+                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn'];
+                buttons.forEach(btnId => {
+                    const btn = document.getElementById(btnId);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('locked');
+                        // Restore original text
+                        if (btn.dataset.originalText) {
+                            btn.textContent = btn.dataset.originalText;
+                            delete btn.dataset.originalText;
+                        }
+                    }
+                });
+            }
+            function showToast(msg, bg = "rgba(40,140,80,0.95)") {
+                const t = document.getElementById("toast");
+                t.textContent = msg;
+                t.style.background = bg;
+                t.classList.add("show");
+                clearTimeout(t._timer);
+                t._timer = setTimeout(() => t.classList.remove("show"), 2800);
+            }
+
+            /* ═══════════════════════════════════════
+               NAVIGATION
+            ═══════════════════════════════════════ */
+
+            /* ═══════════════════════════════════════
+               NAVIGATION
+            ═══════════════════════════════════════ */
+            function goBack() {
+                const storyId = Storage.get(CURRENT_STORY_ID_KEY);
+                if (storyId) {
+                    const scenarios = getScenariosLocal();
+                    const story = scenarios.find(x => x.id === storyId);
+                    if (story && story.official === true) {
+                        document.body.style.opacity = "0";
+                        setTimeout(() => { window.location.href = "../index.html"; }, 400);
+                        return;
+                    }
+                }
+                ensureStoryRecord();
+                autoSaveStory();
+                showBackPopup();
+            }
+
+            /* ═══════════════════════════════════════
+               INIT
+            ═══════════════════════════════════════ */
+            window.addEventListener("load", () => {
+                loadBackground();
+                let _bgIntervalId = setInterval(loadBackground, 5000);
+                document.addEventListener("visibilitychange", () => {
+                    if (document.hidden) {
+                        if (_bgIntervalId) {
+                            clearInterval(_bgIntervalId);
+                            _bgIntervalId = null;
+                        }
+                    } else {
+                        loadBackground();
+                        if (!_bgIntervalId) {
+                            _bgIntervalId = setInterval(loadBackground, 5000);
+                        }
+                    }
+                });
+
+                const params = new URLSearchParams(window.location.search);
+                const isContinue = params.get("mode") === "continue";
+
+                const char = loadLatestCharacter();
+                if (char) {
+                    applyCharacter(char);
+                    loadStoryLog();
+                    // Ensure initial age baselines are set
+                    try {
+                        const d0 = (char && char.startingDate) ? char.startingDate : null;
+                        if (d0) updateNPCBirthdays(d0);
+                    } catch {}
+                    // Overlay ausblenden, wenn bereits Nachrichten existieren
+                    if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+                        const ov = document.getElementById("welcome-overlay");
+                        if (ov) ov.style.display = "none";
+                    }
+                    if (isContinue) {
+                        const ov = document.getElementById("welcome-overlay");
+                        ov.style.display = "none";
+                    }
+                } else {
+                    // Fallback: create a default playable character from world cards
+                    try {
+                        const cards = getCards();
+                        const playable = cards.find(c => c.genre === "character" && c.isPlayable === true) || cards.find(c => c.genre === "character");
+                        if (playable) {
+                            const title = (playable.title || "Unknown").trim();
+                            const parts = title.split(/\s+/);
+                            const firstName = parts[0] || "Unknown";
+                            const lastName = parts.slice(1).join(" ");
+                            // Determine initial location
+                            let spawnLoc = cards.find(c => c.genre === "location" && Array.isArray(c.residents) && c.residents.includes(playable.id) && c.canBeSpawn);
+                            if (!spawnLoc) spawnLoc = cards.find(c => c.genre === "location" && Array.isArray(c.residents) && c.residents.includes(playable.id));
+                            if (!spawnLoc) spawnLoc = cards.find(c => c.genre === "location" && c.canBeSpawn);
+                            if (!spawnLoc) spawnLoc = cards.find(c => c.genre === "location");
+                            const earliest = (() => {
+                                let e = null;
+                                cards.filter(c => c.genre === "location").forEach(loc => {
+                                    const ev = loc.events || {};
+                                    ["village-city","country-kingdom"].forEach(k => {
+                                        (Array.isArray(ev[k]) ? ev[k] : []).forEach(v => {
+                                            if (!v || v.type === "secret") return;
+                                            const key = `${String(v.year||0).padStart(4,"0")}-${String(v.month||0).padStart(2,"0")}-${String(v.day||0).padStart(2,"0")} ${v.time||"00:00"}`;
+                                            if (!e || key < e.key) e = { key, day: v.day||1, month: v.month||1, year: v.year||1983, time: v.time||"00:00" };
+                                        });
+                                    });
+                                });
+                                return e;
+                            })();
+                            const d = earliest ? { day: earliest.day, month: earliest.month, year: earliest.year, time: earliest.time } : { day: 1, month: 1, year: 1983, time: "00:00" };
+                            const chObj = {
+                                id: playable.id,
+                                genre: "character",
+                                firstName,
+                                lastName,
+                                title,
+                                raceName: playable.raceName || "Unknown Race",
+                                gender: playable.gender || "",
+                                age: playable.age || 0,
+                                birthdate: playable.birthdate || null,
+                                status: playable.status || "Alive",
+                                isPlayable: true,
+                                spawnId: spawnLoc ? spawnLoc.id : "",
+                                currentLocationId: spawnLoc ? spawnLoc.id : "",
+                                startingDate: d,
+                                createdAt: Date.now(),
+                                updatedAt: Date.now()
+                            };
+                            const arr = JSON.parse(Storage.get(CHARS_KEY) || "[]");
+                            arr.push(chObj);
+                            Storage.set(CHARS_KEY, JSON.stringify(arr));
+                            applyCharacter(chObj);
+                            loadStoryLog();
+                        }
+                    } catch (e) {
+                        console.error("Failed to create default character from world", e);
+                    }
+                }
+
+                ensureStoryRecord();
+                autoSaveStory();
+                setTimeout(() => {
+                    document.body.style.opacity = "1";
+                }, 100);
+            });
+            window.addEventListener("beforeunload", () => {
+                autoSaveStory();
+            });
+        </script>
+    </body>
+</html>
