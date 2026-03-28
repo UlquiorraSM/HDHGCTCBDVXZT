@@ -4,8 +4,8 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>StoryKI - Main Menu</title>
-        <link rel="prefetch" href="Game.html" />
-        <link rel="prefetch" href="settings.html" />
+        <link rel="prefetch" href="StoryKI/Game.html" />
+        <link rel="prefetch" href="StoryKI/settings.html" />
         <style>
             body {
                 margin: 0;
@@ -487,8 +487,11 @@
                 <button class="menu-button" onclick="openSettings()">
                     Settings
                 </button>
-                <button class="menu-button" onclick="navigateWithDissolve('universe.html')">
+                <button class="menu-button" onclick="navigateWithDissolve('StoryKI/universe.html')">
                     Search Worlds
+                </button>
+                <button class="menu-button" onclick="navigateWithDissolve('LifeSim/LifeSimIndex.html')">
+                    Play LifeSim!
                 </button>
             </div>
         </div>
@@ -561,7 +564,7 @@
                 <div class="conf-group">
                     <label class="conf-label">Background URL</label>
                     <input type="text" id="conf-world-bg" class="conf-input" placeholder="https://...">
-                    <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">This image is used as the background in Game.html.</div>
+                    <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">This image is used as the background ingame.</div>
                 </div>
                 
                 <div class="conf-group">
@@ -1652,7 +1655,7 @@
                 Storage.set(SELECTED_WORLD_ID_KEY, _selectedWorld.id);
                 Storage.remove(CURRENT_STORY_ID_KEY); // Neue Story, keine ID vorhanden
                 
-                navigateWithTransition("CharacterCreate.html");
+                navigateWithTransition("StoryKI/CharacterCreate.html");
             }
 
             function resumeStory(story) {
@@ -1688,7 +1691,7 @@
                 Storage.set(CURRENT_STORY_ID_KEY, story.id);
                 
                 // Direkt zum Spiel
-                navigateWithTransition("Game.html");
+                navigateWithTransition("StoryKI/Game.html");
             }
 
             function captureDraftFromSessionIfAny() {
@@ -1760,7 +1763,7 @@
                 // Logik für das Erstellen einer Story Card
                 console.log("Create Story");
                 Storage.remove(SELECTED_WORLD_ID_KEY); // Sicherstellen, dass keine Welt-ID geladen wird (für neue Welt)
-                navigateWithTransition("Create.html");
+                navigateWithTransition("StoryKI/Create.html");
             }
 
             function editWorld(worldId) {
@@ -1777,7 +1780,7 @@
                  // worldId merken, damit Create.html weiß, dass es eine Bearbeitung ist
                  Storage.set(SELECTED_WORLD_ID_KEY, worldId);
                  
-                 navigateWithTransition("Create.html");
+                 navigateWithTransition("StoryKI/Create.html");
              }
 
              let _confWorldId = null;
@@ -1954,7 +1957,7 @@
             function openSettings() {
                 // Logik zum Öffnen der Einstellungen
                 console.log("Open Settings");
-                navigateWithTransition("settings.html");
+                navigateWithTransition("StoryKI/settings.html");
             }
 
             function saveGame() {
