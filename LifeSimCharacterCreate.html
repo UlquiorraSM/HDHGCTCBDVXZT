@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LifeSim • Character Create</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            color: #fff;
+            background: #0e0f13 url("https://images.alphacoders.com/113/thumb-1920-1130469.png") center/cover fixed no-repeat;
+            background-attachment: fixed;
+            background-size: cover;
+            background-position: center;
+        }
+        .page {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 24px 16px 40px;
+            backdrop-filter: blur(2px);
+            background: linear-gradient(180deg, rgba(10,10,15,.78), rgba(10,10,15,.82));
+        }
+        h1 {
+            margin: 0;
+            font-size: 32px;
+            letter-spacing: .02em;
+            text-shadow: 0 2px 8px rgba(0,0,0,.6);
+        }
+        .form {
+            width: 92%;
+            max-width: 560px;
+            background: rgba(22,22,26,.92);
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 14px;
+            padding: 18px 20px;
+            box-shadow: 0 10px 28px rgba(0,0,0,.45);
+        }
+        .row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .row > .field { flex: 1; }
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .label {
+            font-size: 12px;
+            font-weight: 700;
+            opacity: .8;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .input, .select {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(18,18,18,.92);
+            border: 1.5px solid rgba(255,255,255,.12);
+            border-radius: 10px;
+            color: #fff;
+            outline: none;
+            font-size: 14px;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .btn {
+            padding: 12px 18px;
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.15);
+            color: #fff;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 15px;
+            min-width: 140px;
+            transition: background .2s, border-color .2s, transform .05s;
+        }
+        .btn:hover{ background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.25); }
+        .btn:active{ transform: translateY(1px); }
+        .btn-primary { background: rgba(60, 160, 80, .65); border-color: rgba(60,160,80,.8); }
+        .btn-primary:hover { background: rgba(60,160,80,.8); }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <h1>Create Your Life</h1>
+        <div class="form">
+            <div class="row">
+                <div class="field">
+                    <div class="label">First Name</div>
+                    <input id="first-name" class="input" type="text" placeholder="Enter first name..." />
+                </div>
+                <div class="field">
+                    <div class="label">Last Name</div>
+                    <input id="last-name" class="input" type="text" placeholder="Enter last name..." />
+                </div>
+            </div>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Skincolor</div>
+                    <select id="skincolor" class="select">
+                        <option value="light">Light</option>
+                        <option value="medium">Medium</option>
+                        <option value="olive">Olive</option>
+                        <option value="tan">Tan</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <div class="label">Haircolor</div>
+                    <select id="haircolor" class="select">
+                        <option value="black">Black</option>
+                        <option value="brown">Brown</option>
+                        <option value="blonde">Blonde</option>
+                        <option value="red">Red</option>
+                        <option value="gray">Gray</option>
+                        <option value="white">White</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="field">
+                    <div class="label">Eyecolor</div>
+                    <select id="eyecolor" class="select">
+                        <option value="brown">Brown</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="hazel">Hazel</option>
+                        <option value="gray">Gray</option>
+                    </select>
+                </div>
+            </div>
+            <div class="actions">
+                <button class="btn" onclick="navigateBack()">Back</button>
+                <button class="btn btn-primary" onclick="startLife()">Start Life</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function(){
+            function navigateWithDissolve(url){
+                try{
+                    const overlay = document.createElement("div");
+                    overlay.id = "page-fade";
+                    overlay.style.cssText = "position:fixed;inset:0;background:#000;opacity:0;transition:opacity .35s ease;pointer-events:none;z-index:5000;";
+                    document.body.appendChild(overlay);
+                    requestAnimationFrame(function(){
+                        overlay.style.opacity = "1";
+                        setTimeout(function(){ window.location.href = url; }, 380);
+                    });
+                }catch(_){
+                    window.location.href = url;
+                }
+            }
+            window.navigateBack = function(){
+                navigateWithDissolve('LifeSimIndex.html');
+            };
+            window.startLife = function(){
+                const first = (document.getElementById('first-name').value || '').trim();
+                const last = (document.getElementById('last-name').value || '').trim();
+                if (!first || !last) { alert('Please enter first and last name.'); return; }
+                const skin = document.getElementById('skincolor').value;
+                const hair = document.getElementById('haircolor').value;
+                const eye = document.getElementById('eyecolor').value;
+                const payload = { firstName: first, lastName: last, skincolor: skin, haircolor: hair, eyecolor: eye, createdAt: new Date().toISOString() };
+                try { sessionStorage.setItem('lifesim_character', JSON.stringify(payload)); } catch {}
+                navigateWithDissolve('LifeSimIndex.html');
+            };
+        })();
+    </script>
+</body>
+</html>
