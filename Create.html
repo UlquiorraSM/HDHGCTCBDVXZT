@@ -320,6 +320,10 @@
                 background: rgba(30, 65, 50, 0.9);
                 color: #80c8a0;
             }
+            .badge-species {
+                background: rgba(60, 40, 20, 0.9);
+                color: #d8b070;
+            }
             .badge-city {
                 background: rgba(40, 40, 65, 0.9);
                 color: #9090c8;
@@ -828,6 +832,56 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            /* ─── Variants Scene (same layout) ─── */
+            #variants-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #variants-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #variants-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
+            /* ─── Variants List Scene (same layout) ─── */
+            #variants-list-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+            }
+            #variants-list-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #variants-list-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
             #curse-view {
                 position: fixed;
                 inset: 0;
@@ -1009,7 +1063,7 @@
                 display: none;
                 position: fixed;
                 inset: 0;
-                z-index: 900;
+                z-index: 3100;
                 align-items: center;
                 justify-content: center;
                 background: rgba(0, 0, 0, 0.6);
@@ -1145,7 +1199,7 @@
                 display: none;
                 position: fixed;
                 inset: 0;
-                z-index: 950;
+                z-index: 3100;
                 align-items: center;
                 justify-content: center;
                 background: rgba(0, 0, 0, 0.65);
@@ -1640,7 +1694,7 @@
                 display: none;
                 position: fixed;
                 inset: 0;
-                z-index: 960;
+                z-index: 3100;
                 align-items: center;
                 justify-content: center;
                 background: rgba(0, 0, 0, 0.65);
@@ -2279,7 +2333,43 @@
                         <label class="form-label">Description</label>
                         <textarea class="form-textarea" id="ev-desc" placeholder="Describe what happens..."></textarea>
                     </div>
+                    <div id="ev-change-panel" style="display:none; margin-top:10px; background:rgba(20,20,20,0.92); border:1.5px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; position:relative; z-index:5; box-shadow:0 8px 30px rgba(0,0,0,0.6);">
+                        <label class="form-label">Change Card (optional)</label>
+                        <div class="form-group" id="ev-tools-wrap">
+                            <div class="tools-row" style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <!-- Racial civilization removed -->
+                                <button type="button" class="subloc-btn" onclick="evOpenTool('subloc')">
+                                    <span class="subloc-icon">&#43;</span> Sublocations
+                                </button>
+                                <button type="button" class="subloc-btn" onclick="evOpenTool('resident')">
+                                    <span class="subloc-icon">&#128100;</span> Resident
+                                </button>
+                                <button type="button" class="subloc-btn" onclick="evOpenTool('species')">
+                                    <span class="subloc-icon">🐾</span> Species
+                                </button>
+                                <button type="button" class="subloc-btn" onclick="evOpenTool('curse')">
+                                    <span class="subloc-icon">💀</span> Curse
+                                </button>
+                                <button type="button" class="subloc-btn" onclick="evOpenTool('description')">
+                                    <span class="subloc-icon">📝</span> Description
+                                </button>
+                            </div>
+                        </div>
+                        <div id="ev-vc-group" style="display:none; margin-top:12px;"></div>
+                        <div id="ev-ck-group" style="display:none; margin-top:12px;"></div>
+                        <div id="ev-desc-override-group" style="display:none; margin-top:12px;">
+                            <div class="form-group">
+                                <label class="form-label">Card Description (override)</label>
+                                <textarea class="form-textarea" id="ev-card-desc" placeholder="Enter a new description for the main card during this event..."></textarea>
+                            </div>
+                        </div>
+                        <div class="form-actions" id="ev-change-actions" style="display:none; margin-top:12px;">
+                            <button class="btn-cancel" onclick="evCancelChange()">Cancel</button>
+                            <button class="btn-save" onclick="evApplyToEvent()">Apply</button>
+                        </div>
+                    </div>
                     <div class="form-actions" style="margin-top: 8px;">
+                        <button class="btn-save" onclick="toggleEventChangePanel()">Change Card</button>
                         <button class="btn-save" onclick="eventsAdd()">+ Add Event</button>
                     </div>
                 </div>
@@ -2336,6 +2426,78 @@
                 <div class="form-actions">
                     <button class="btn-cancel" onclick="showFormView()">← Back</button>
                     <button class="btn-save" onclick="confirmCurses()">Done</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             VARIANTS SCENE (Species)
+        ══════════════════════════════ -->
+        <div id="variants-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">SPECIES VARIANTS</span>
+                <div class="nav-count" id="variants-count">0</div>
+            </nav>
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Manage Variants</h2>
+                    <span class="entry-badge badge-species">SPECIES</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Variant</label>
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-input" id="variant-name-input" placeholder="e.g. Arctic Wolf" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Generally</label>
+                        <textarea class="form-textarea" id="variant-generally-input" placeholder="General traits..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Appearance</label>
+                        <textarea class="form-textarea" id="variant-appearance-input" placeholder="How the variant looks..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Personality</label>
+                        <textarea class="form-textarea" id="variant-personality-input" placeholder="Typical personality..."></textarea>
+                    </div>
+                    <div class="form-actions" style="margin-top:8px;">
+                        <button class="btn-save" onclick="variantsAdd()">+ Add Variant</button>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-save" onclick="confirmVariants()">Done</button>
+                    <button class="btn-save" onclick="openVariantsListScene()">Variants List</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             VARIANTS LIST SCENE (Species)
+        ══════════════════════════════ -->
+        <div id="variants-list-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">SPECIES VARIANTS LIST</span>
+                <div class="nav-count" id="variants-list-count">0</div>
+            </nav>
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Variants</h2>
+                    <span class="entry-badge badge-species">SPECIES</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Current Variants</label>
+                    <div id="variants-list-rows"></div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
                 </div>
             </div>
         </div>
@@ -2585,6 +2747,20 @@
                             <input type="text" class="form-input" id="f-species-catch-how" placeholder="Describe how to catch it (text for AI)" />
                         </div>
                     </div>
+                    <div class="form-group" id="species-tools-group">
+                        <label class="form-label">Tools</label>
+                        <div class="tools-row">
+                            <button
+                                type="button"
+                                class="subloc-btn"
+                                id="species-variants-btn"
+                                onclick="openVariantsScene()"
+                            >
+                                <span class="subloc-icon">🧬</span>
+                                Variants
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="lore-block" style="display: none">
@@ -2700,14 +2876,6 @@
                                 <button
                                     type="button"
                                     class="subloc-btn"
-                                    onclick="openRacialPicker('village-city')"
-                                >
-                                    <span class="subloc-icon">&#9670;</span>
-                                    Racial civilization
-                                </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
                                     onclick="openSublocPicker('village-city')"
                                 >
                                     <span class="subloc-icon">&#43;</span>
@@ -2739,36 +2907,7 @@
                                     <span class="subloc-icon">🐾</span>
                                     Species
                                 </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="addCursePrompt('village-city')"
-                                >
-                                    <span class="subloc-icon">💀</span>
-                                    Curse
-                                </button>
-                            </div>
-                            <!-- RacialCivilization for Village / City -->
-                            <div
-                                class="form-group"
-                                id="racial-village-city-group"
-                            >
-                                <label class="form-label"
-                                    >Racial civilization</label
-                                >
-                                <div
-                                    class="racial-tags"
-                                    id="racial-village-city-tags"
-                                ></div>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="openRacialPicker('village-city')"
-                                    style="margin-top: 8px; display:none"
-                                >
-                                    <span class="subloc-icon">&#9670;</span>
-                                    Racial civilization
-                                </button>
+                                <button type="button" class="subloc-btn" onclick="addCursePrompt('village-city')"><span class="subloc-icon">💀</span> Curse</button>
                             </div>
 
                             <!-- Sublocations for Village / City -->
@@ -2808,30 +2947,7 @@
                             </div>
                         </div>
 
-                        <!-- RIGHT: Population -->
-                        <div class="population-col">
-                            <div class="population-box">
-                                <span class="population-box-label"
-                                    >Population</span
-                                >
-                                <div class="population-input-wrap">
-                                    <input
-                                        type="number"
-                                        class="population-input"
-                                        id="pop-village-city"
-                                        placeholder="0"
-                                        min="0"
-                                        oninput="
-                                            updatePopFormatted('village-city')
-                                        "
-                                    />
-                                </div>
-                                <div
-                                    class="population-formatted"
-                                    id="pop-village-city-fmt"
-                                ></div>
-                            </div>
-                        </div>
+                        <!-- RIGHT column removed: Population -->
                     </div>
                 </div>
 
@@ -2842,16 +2958,6 @@
                         <div class="zivil-main-col">
                             <label class="form-label">Tools</label>
                             <div class="tools-row" id="tools-section-ck" style="display:none">
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="
-                                        openRacialPicker('country-kingdom')
-                                    "
-                                >
-                                    <span class="subloc-icon">&#9670;</span>
-                                    Racial civilization
-                                </button>
                                 <button
                                     type="button"
                                     class="subloc-btn"
@@ -2888,38 +2994,7 @@
                                     <span class="subloc-icon">🐾</span>
                                     Species
                                 </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="addCursePrompt('country-kingdom')"
-                                >
-                                    <span class="subloc-icon">💀</span>
-                                    Curse
-                                </button>
-                            </div>
-                            <!-- RacialCivilization for Country / Kingdom -->
-                            <div
-                                class="form-group"
-                                id="racial-country-kingdom-group"
-                            >
-                                <label class="form-label"
-                                    >Racial civilization</label
-                                >
-                                <div
-                                    class="racial-tags"
-                                    id="racial-country-kingdom-tags"
-                                ></div>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="
-                                        openRacialPicker('country-kingdom')
-                                    "
-                                    style="margin-top: 8px; display:none"
-                                >
-                                    <span class="subloc-icon">&#9670;</span>
-                                    Racial civilization
-                                </button>
+                                <button type="button" class="subloc-btn" onclick="addCursePrompt('country-kingdom')"><span class="subloc-icon">💀</span> Curse</button>
                             </div>
 
                             <!-- Sublocations for Country / Kingdom -->
@@ -2959,32 +3034,7 @@
                             </div>
                         </div>
 
-                        <!-- RIGHT: Population -->
-                        <div class="population-col">
-                            <div class="population-box">
-                                <span class="population-box-label"
-                                    >Population</span
-                                >
-                                <div class="population-input-wrap">
-                                    <input
-                                        type="number"
-                                        class="population-input"
-                                        id="pop-country-kingdom"
-                                        placeholder="0"
-                                        min="0"
-                                        oninput="
-                                            updatePopFormatted(
-                                                'country-kingdom',
-                                            )
-                                        "
-                                    />
-                                </div>
-                                <div
-                                    class="population-formatted"
-                                    id="pop-country-kingdom-fmt"
-                                ></div>
-                            </div>
-                        </div>
+                        <!-- RIGHT column removed: Population -->
                     </div>
                 </div>
 
@@ -4119,6 +4169,8 @@
                 const wrk = document.getElementById("work-view");
                 const map = document.getElementById("map-view");
                 const cur = document.getElementById("curse-view");
+                const varv = document.getElementById("variants-view");
+                const varl = document.getElementById("variants-list-view");
                 if (rel) rel.style.display = "none";
                 if (sec) sec.style.display = "none";
                 if (cls) cls.style.display = "none";
@@ -4127,6 +4179,8 @@
                 if (wrk) wrk.style.display = "none";
                 if (map) map.style.display = "none";
                 if (cur) cur.style.display = "none";
+                if (varv) varv.style.display = "none";
+                if (varl) varl.style.display = "none";
                 document.getElementById("form-view").style.display = "flex";
                 relationPickerTemp = [];
                 secretTemp = [];
@@ -4388,6 +4442,10 @@
             };
             let eventsTemp = [];
             let eventsCtx = null; // 'village-city' | 'country-kingdom'
+            let _renderCtx = "main";
+            let evChangeActive = false;
+            let evBackup = null;
+            let evEditingIndex = -1; // index of event currently editing changes (in Current Events)
 
             function openEventsScene(ctx) {
                 eventsCtx = ctx;
@@ -4395,7 +4453,35 @@
                 document.getElementById("events-count").textContent = eventsTemp.length;
                 document.getElementById("form-view").style.display = "none";
                 document.getElementById("events-view").style.display = "flex";
+                _renderCtx = "event";
+                document.getElementById("ev-change-panel").style.display = "none";
+                evChangeActive = false;
+                evEditingIndex = -1;
                 renderEventRows();
+            }
+            function buildEventChangesFromCurrentCtx() {
+                const changes = {};
+                if (!eventsCtx) return changes;
+                if (eventsCtx === "village-city") {
+                    const sl = (sublocSelections["village-city"] || []).slice();
+                    const sp = (speciesSelections["village-city"] || []).slice();
+                    const res = (residentSelections || []).slice();
+                    if (sl.length) changes.sublocations = { "village-city": sl };
+                    if (sp.length) changes.species = { "village-city": sp };
+                    if (res.length) changes.residents = res;
+                } else if (eventsCtx === "country-kingdom") {
+                    const sl = (sublocSelections["country-kingdom"] || []).slice();
+                    const sp = (speciesSelections["country-kingdom"] || []).slice();
+                    const res = (residentSelections || []).slice();
+                    if (sl.length) changes.sublocations = { "country-kingdom": sl };
+                    if (sp.length) changes.species = { "country-kingdom": sp };
+                    if (res.length) changes.residents = res;
+                }
+                if ((curseTags || []).length) changes.curseTags = (curseTags || []).map(c => ({ ...c }));
+                const descEl = document.getElementById(arguments[0] != null ? `ev-card-desc-${arguments[0]}` : "ev-card-desc");
+                const descVal = descEl ? (descEl.value || "").trim() : "";
+                if (descVal) changes.cardDescription = descVal;
+                return changes;
             }
             function eventsAdd() {
                 const type = (document.getElementById("ev-type").value || "public").toLowerCase();
@@ -4404,7 +4490,15 @@
                 const year = parseInt(document.getElementById("ev-year").value) || 0;
                 const time = document.getElementById("ev-time").value || "12:00";
                 const desc = (document.getElementById("ev-desc").value || "").trim();
-                eventsTemp.push({ type, day, month, year, time, description: desc });
+                let payload = { type, day, month, year, time, description: desc };
+                if (evChangeActive && eventsCtx) {
+                    const changes = buildEventChangesFromCurrentCtx();
+                    if (Object.keys(changes).length) payload.changes = changes;
+                    if (evBackup) evRestoreBackup();
+                    document.getElementById("ev-change-panel").style.display = "none";
+                    evChangeActive = false;
+                }
+                eventsTemp.push(payload);
                 document.getElementById("events-count").textContent = eventsTemp.length;
                 document.getElementById("ev-desc").value = "";
                 renderEventRows();
@@ -4416,15 +4510,57 @@
                 eventsTemp.forEach((e, idx) => {
                     const row = document.createElement("div");
                     row.className = "relation-row";
-                    const dateStr = `${String(e.day||0).toString().padStart(2,"0")}.${String(e.month||0).toString().padStart(2,"0")}.${e.year||0} ${e.time || ""}`;
-                    const typeLabel = (e.type === "secret") ? "Secret Event" : "Public Event";
+                    const dateStr = `${String(e.day||0).toString().padStart(2,"0")}.${String(e.month||0).toString().padStart(2,"0")}.${e.year||0}`;
                     row.innerHTML = `
                         <div class="relation-row-header">
-                            <span class="relation-target-name">[${typeLabel}] ${dateStr}</span>
-                            <button class="relation-row-remove" onclick="eventRemove(${idx})">Remove</button>
+                            <span class="relation-target-name">Event ${idx+1}</span>
+                            <div>
+                                <button class="subloc-btn" onclick="eventOpenChange(${idx})" title="Change Card">Change Card</button>
+                                <button class="relation-row-remove" onclick="eventRemove(${idx})">Remove</button>
+                            </div>
                         </div>
                         <div class="relation-controls">
+                            <div class="form-two-col" style="gap:8px;">
+                                <div>
+                                    <label class="form-label">Type</label>
+                                    <select class="form-select" onchange="eventUpdateType(${idx}, this.value)">
+                                        <option value="public" ${e.type === "public" ? "selected" : ""}>Public Event</option>
+                                        <option value="secret" ${e.type === "secret" ? "selected" : ""}>Secret Event</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Time</label>
+                                    <input type="time" class="form-input" value="${e.time || "12:00"}" onchange="eventUpdateTime(${idx}, this.value)" />
+                                </div>
+                            </div>
+                            <div class="form-two-col" style="gap:8px; margin-top:8px;">
+                                <input type="number" class="form-input" placeholder="Day" min="1" max="31" value="${e.day || ""}" onchange="eventUpdateDay(${idx}, this.value)" />
+                                <input type="number" class="form-input" placeholder="Month" min="1" max="12" value="${e.month || ""}" onchange="eventUpdateMonth(${idx}, this.value)" />
+                                <input type="number" class="form-input" placeholder="Year" value="${e.year || ""}" onchange="eventUpdateYear(${idx}, this.value)" />
+                            </div>
+                            <label class="form-label" style="margin-top:8px;">Description</label>
                             <textarea class="form-textarea" onchange="eventUpdateDesc(${idx}, this.value)">${e.description || ""}</textarea>
+                        </div>
+                        <div id="ev-change-inline-${idx}" style="display:none; margin-top:10px; background:rgba(20,20,20,0.92); border:1.5px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px;">
+                            <label class="form-label">Change Card (optional)</label>
+                            <div class="tools-row" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                                <button type="button" class="subloc-btn" onclick="evOpenTool('subloc')"><span class="subloc-icon">&#43;</span> Sublocations</button>
+                                <button type="button" class="subloc-btn" onclick="evOpenTool('resident')"><span class="subloc-icon">&#128100;</span> Resident</button>
+                                <button type="button" class="subloc-btn" onclick="evOpenTool('species')"><span class="subloc-icon">🐾</span> Species</button>
+                                <button type="button" class="subloc-btn" onclick="evOpenTool('curse')"><span class="subloc-icon">💀</span> Curse</button>
+                                <button type="button" class="subloc-btn" onclick="(function(){ const g=document.getElementById('ev-desc-inline-${idx}'); if(g) g.style.display='block'; setTimeout(()=>{const t=document.getElementById('ev-card-desc-${idx}'); if(t) t.focus();}, 30); })()"><span class="subloc-icon">📝</span> Description</button>
+                            </div>
+                            <div id="ev-pop-inline-${idx}" style="display:none;"></div>
+                            <div id="ev-desc-inline-${idx}" style="display:none; margin-top:12px;">
+                                <div class="form-group">
+                                    <label class="form-label">Card Description (override)</label>
+                                    <textarea class="form-textarea" id="ev-card-desc-${idx}" placeholder="Enter a new description for the main card during this event..."></textarea>
+                                </div>
+                            </div>
+                            <div class="form-actions" style="margin-top:12px;">
+                                <button class="btn-cancel" onclick="evCancelChange()">Cancel</button>
+                                <button class="btn-save" onclick="evApplyToEvent()">Apply</button>
+                            </div>
                         </div>
                     `;
                     wrap.appendChild(row);
@@ -4432,6 +4568,24 @@
             }
             function eventUpdateDesc(idx, val) {
                 eventsTemp[idx].description = val;
+            }
+            function eventUpdateType(idx, val) {
+                eventsTemp[idx].type = (val || "public").toLowerCase();
+            }
+            function eventUpdateTime(idx, val) {
+                eventsTemp[idx].time = val || "12:00";
+            }
+            function eventUpdateDay(idx, val) {
+                const v = parseInt(val) || 0;
+                eventsTemp[idx].day = v;
+            }
+            function eventUpdateMonth(idx, val) {
+                const v = parseInt(val) || 0;
+                eventsTemp[idx].month = v;
+            }
+            function eventUpdateYear(idx, val) {
+                const v = parseInt(val) || 0;
+                eventsTemp[idx].year = v;
             }
             function eventRemove(idx) {
                 eventsTemp.splice(idx, 1);
@@ -4441,7 +4595,266 @@
             function confirmEvents() {
                 if (!eventsCtx) return showFormView();
                 eventsSelections[eventsCtx] = eventsTemp.map(e => ({ ...e }));
+                if (evBackup) evRestoreBackup();
+                _renderCtx = "main";
                 showFormView();
+            }
+
+            /* ─────────────────────────────────────────
+               SPECIES VARIANTS
+            ───────────────────────────────────────── */
+            let speciesVariants = []; // persisted per species: [{ id, name, generally, appearance, personality }]
+            let variantsTemp = []; // working edits while scene open
+            function openVariantsScene() {
+                variantsTemp = speciesVariants.map(v => ({ ...v }));
+                document.getElementById("variants-count").textContent = variantsTemp.length;
+                document.getElementById("form-view").style.display = "none";
+                const varList = document.getElementById("variants-list-view");
+                if (varList) varList.style.display = "none";
+                document.getElementById("variants-view").style.display = "flex";
+                renderVariantRows();
+            }
+            function variantsAdd() {
+                const name = (document.getElementById("variant-name-input").value || "").trim();
+                const generally = (document.getElementById("variant-generally-input").value || "").trim();
+                const appearance = (document.getElementById("variant-appearance-input").value || "").trim();
+                const personality = (document.getElementById("variant-personality-input").value || "").trim();
+                if (!name) { showToast("Variant needs a Name.", "#c04040"); return; }
+                const id = generateId();
+                variantsTemp.push({ id, name, generally, appearance, personality });
+                document.getElementById("variants-count").textContent = variantsTemp.length;
+                document.getElementById("variant-name-input").value = "";
+                document.getElementById("variant-generally-input").value = "";
+                document.getElementById("variant-appearance-input").value = "";
+                document.getElementById("variant-personality-input").value = "";
+                renderVariantRows();
+            }
+            function renderVariantRows() {
+                const wrap = document.getElementById("variant-rows");
+                if (!wrap) return;
+                wrap.innerHTML = "";
+                variantsTemp.forEach((v, idx) => {
+                    const row = document.createElement("div");
+                    row.className = "relation-row";
+                    row.innerHTML = `
+                        <div class="relation-row-header">
+                            <span class="relation-target-name">${escHtml(v.name || ("Variant " + (idx+1)))}</span>
+                            <div>
+                                <button class="relation-row-remove" onclick="variantRemove(${idx})">Remove</button>
+                            </div>
+                        </div>
+                        <div class="relation-controls">
+                            <div class="form-group">
+                                <label class="form-label">ID</label>
+                                <input type="text" class="form-input" value="${v.id}" readonly />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-input" value="${v.name || ""}" onchange="variantUpdate(${idx}, 'name', this.value)" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Generally</label>
+                                <textarea class="form-textarea" onchange="variantUpdate(${idx}, 'generally', this.value)">${v.generally || ""}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Appearance</label>
+                                <textarea class="form-textarea" onchange="variantUpdate(${idx}, 'appearance', this.value)">${v.appearance || ""}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Personality</label>
+                                <textarea class="form-textarea" onchange="variantUpdate(${idx}, 'personality', this.value)">${v.personality || ""}</textarea>
+                            </div>
+                        </div>
+                    `;
+                    wrap.appendChild(row);
+                });
+            }
+            function variantUpdate(idx, key, val) {
+                if (!variantsTemp[idx]) return;
+                variantsTemp[idx][key] = key === "name" ? (val || "").trim() : (val || "");
+                renderVariantRows();
+            }
+            function variantRemove(idx) {
+                variantsTemp.splice(idx, 1);
+                document.getElementById("variants-count").textContent = variantsTemp.length;
+                renderVariantRows();
+            }
+            function confirmVariants() {
+                speciesVariants = variantsTemp.map(v => ({ ...v }));
+                if (editingId) {
+                    const cards = getCards();
+                    const idx = cards.findIndex(c => c.id === editingId);
+                    if (idx !== -1) {
+                        const updated = { ...cards[idx], variants: speciesVariants.map(v => ({ ...v })) };
+                        cards[idx] = updated;
+                        saveCards(cards);
+                        showToast("Variants saved to card.");
+                    }
+                }
+                showFormView();
+            }
+
+            /* Variants List view */
+            function openVariantsListScene() {
+                const count = (variantsTemp && variantsTemp.length) ? variantsTemp.length : speciesVariants.length;
+                document.getElementById("variants-list-count").textContent = count;
+                document.getElementById("form-view").style.display = "none";
+                const varEdit = document.getElementById("variants-view");
+                if (varEdit) varEdit.style.display = "none";
+                document.getElementById("variants-list-view").style.display = "flex";
+                renderVariantsList();
+            }
+            function renderVariantsList() {
+                const wrap = document.getElementById("variants-list-rows");
+                if (!wrap) return;
+                const list = (variantsTemp && variantsTemp.length) ? variantsTemp : speciesVariants;
+                wrap.innerHTML = "";
+                list.forEach((v, idx) => {
+                    const row = document.createElement("div");
+                    row.className = "relation-row";
+                    row.innerHTML = `
+                        <div class="relation-row-header">
+                            <span class="relation-target-name">${escHtml(v.name || ("Variant " + (idx+1)))}</span>
+                        </div>
+                        <div class="relation-controls" style="flex-direction:column; gap:6px;">
+                            <div><strong>ID:</strong> ${escHtml(v.id || "")}</div>
+                            <div><strong>Generally:</strong> ${escHtml(v.generally || "")}</div>
+                            <div><strong>Appearance:</strong> ${escHtml(v.appearance || "")}</div>
+                            <div><strong>Personality:</strong> ${escHtml(v.personality || "")}</div>
+                        </div>
+                    `;
+                    wrap.appendChild(row);
+                });
+            }
+
+            function evOpenTool(kind) {
+                if (!eventsCtx) return;
+                if (kind === "subloc") openSublocPicker(eventsCtx);
+                else if (kind === "resident") openSublocPicker(eventsCtx + "-resident");
+                else if (kind === "species") openSublocPicker("species-" + eventsCtx);
+                else if (kind === "curse") addCursePrompt(eventsCtx);
+                else if (kind === "description") {
+                    const g = document.getElementById("ev-desc-override-group");
+                    if (g) {
+                        g.style.display = "block";
+                        const t = document.getElementById("ev-card-desc");
+                        if (t) setTimeout(() => t.focus(), 50);
+                    }
+                }
+            }
+            function evHideInlinePanel(i) {
+                const p = document.getElementById(`ev-change-inline-${i}`);
+                if (p) p.style.display = "none";
+            }
+            function eventOpenChange(idx) {
+                if (!eventsCtx) return;
+                if (evEditingIndex >= 0 && evEditingIndex !== idx) evHideInlinePanel(evEditingIndex);
+                evEditingIndex = idx;
+                const e = eventsTemp[idx] || {};
+                evCaptureBackup();
+                racialSelections["village-city"] = [];
+                racialSelections["country-kingdom"] = [];
+                sublocSelections["village-city"] = [];
+                sublocSelections["country-kingdom"] = [];
+                speciesSelections["village-city"] = [];
+                speciesSelections["country-kingdom"] = [];
+                residentSelections = [];
+                curseTags = [];
+                const ch = e.changes || {};
+                if (ch.racialCivilization) {
+                    if (ch.racialCivilization["village-city"]) racialSelections["village-city"] = ch.racialCivilization["village-city"].map(r => ({ ...r }));
+                    if (ch.racialCivilization["country-kingdom"]) racialSelections["country-kingdom"] = ch.racialCivilization["country-kingdom"].map(r => ({ ...r }));
+                }
+                if (ch.sublocations) {
+                    if (ch.sublocations["village-city"]) sublocSelections["village-city"] = ch.sublocations["village-city"].slice();
+                    if (ch.sublocations["country-kingdom"]) sublocSelections["country-kingdom"] = ch.sublocations["country-kingdom"].slice();
+                }
+                if (ch.species) {
+                    if (ch.species["village-city"]) speciesSelections["village-city"] = ch.species["village-city"].slice();
+                    if (ch.species["country-kingdom"]) speciesSelections["country-kingdom"] = ch.species["country-kingdom"].slice();
+                }
+                if (Array.isArray(ch.residents)) {
+                    residentSelections = ch.residents.slice();
+                }
+                if (Array.isArray(ch.curseTags)) {
+                    curseTags = ch.curseTags.map(c => ({ ...c }));
+                }
+                // population removed
+                const t = document.getElementById(`ev-card-desc-${idx}`);
+                if (t) t.value = ch.cardDescription || "";
+                const panel = document.getElementById(`ev-change-inline-${idx}`);
+                if (panel) {
+                    _renderCtx = "event";
+                    panel.style.display = "block";
+                    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                }
+            }
+            function evApplyToEvent() {
+                if (evEditingIndex < 0) return;
+                const changes = buildEventChangesFromCurrentCtx(evEditingIndex);
+                if (Object.keys(changes).length) eventsTemp[evEditingIndex].changes = changes;
+                else delete eventsTemp[evEditingIndex].changes;
+                const panel = document.getElementById(`ev-change-inline-${evEditingIndex}`);
+                if (panel) panel.style.display = "none";
+                if (evBackup) evRestoreBackup();
+                const t = document.getElementById(`ev-card-desc-${evEditingIndex}`);
+                if (t) t.value = "";
+                evEditingIndex = -1;
+                renderEventRows();
+            }
+            function evCancelChange() {
+                const panel = document.getElementById(`ev-change-inline-${evEditingIndex}`);
+                if (panel) panel.style.display = "none";
+                if (evBackup) evRestoreBackup();
+                const t = document.getElementById(`ev-card-desc-${evEditingIndex}`);
+                if (t) t.value = "";
+                evEditingIndex = -1;
+            }
+            function evCaptureBackup() {
+                evBackup = {
+                    racial: {
+                        "village-city": (racialSelections["village-city"] || []).map(r => ({ ...r })),
+                        "country-kingdom": (racialSelections["country-kingdom"] || []).map(r => ({ ...r }))
+                    },
+                    subloc: {
+                        "village-city": (sublocSelections["village-city"] || []).slice(),
+                        "country-kingdom": (sublocSelections["country-kingdom"] || []).slice()
+                    },
+                    species: {
+                        "village-city": (speciesSelections["village-city"] || []).slice(),
+                        "country-kingdom": (speciesSelections["country-kingdom"] || []).slice()
+                    },
+                    residents: (residentSelections || []).slice(),
+                    curses: (curseTags || []).map(c => ({ ...c }))
+                };
+            }
+            function evRestoreBackup() {
+                if (!evBackup) return;
+                racialSelections["village-city"] = evBackup.racial["village-city"].map(r => ({ ...r }));
+                racialSelections["country-kingdom"] = evBackup.racial["country-kingdom"].map(r => ({ ...r }));
+                sublocSelections["village-city"] = evBackup.subloc["village-city"].slice();
+                sublocSelections["country-kingdom"] = evBackup.subloc["country-kingdom"].slice();
+                speciesSelections["village-city"] = evBackup.species["village-city"].slice();
+                speciesSelections["country-kingdom"] = evBackup.species["country-kingdom"].slice();
+                residentSelections = evBackup.residents.slice();
+                curseTags = evBackup.curses.map(c => ({ ...c }));
+                evBackup = null;
+            }
+            function toggleEventChangePanel() {
+                const panel = document.getElementById("ev-change-panel");
+                if (panel.style.display === "none") {
+                    evCaptureBackup();
+                    _renderCtx = "event";
+                    panel.style.display = "block";
+                    document.getElementById("ev-vc-group").style.display = (eventsCtx === "village-city") ? "block" : "none";
+                    document.getElementById("ev-ck-group").style.display = (eventsCtx === "country-kingdom") ? "block" : "none";
+                    // population and racial civilization removed
+                    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                } else {
+                    panel.style.display = "none";
+                    if (evBackup) evRestoreBackup();
+                }
+                evChangeActive = panel.style.display !== "none";
             }
 
             let schoolSchedule = {
@@ -4919,8 +5332,10 @@
                         if (cb) cb.checked = !!card.canBeCaught;
                         if (how) how.value = card.canBeCaughtHow || "";
                         if (wrap) wrap.style.display = (cb && cb.checked) ? "block" : "none";
+                        speciesVariants = Array.isArray(card.variants) ? card.variants.map(v => ({ ...v })) : [];
                     } else {
                         resetSpeciesFields();
+                        speciesVariants = [];
                     }
 
                     // restore lore category data
@@ -5024,6 +5439,7 @@
                     updateLoreSummary();
                     skincolorData = [];
                     updateSkincolorSummary();
+                    speciesVariants = [];
 
                     document.getElementById("form-id-row").textContent = "";
                     document.getElementById("btn-save").textContent = "Create";
@@ -5466,17 +5882,7 @@
                     }
                     // restore curse tags
                     curseTags = card.curseTags || [];
-                    // restore population
-                    if (card.population) {
-                        setPopulation(
-                            "village-city",
-                            card.population["village-city"] || 0,
-                        );
-                        setPopulation(
-                            "country-kingdom",
-                            card.population["country-kingdom"] || 0,
-                        );
-                    }
+                    // population removed
                     // restore residents for village, city, kingdom
                     if (card.residents) {
                         residentSelections = [...(card.residents || [])];
@@ -6302,18 +6708,22 @@
                         renderSublocTags("village-city-resident");
                         renderSublocTags("country-kingdom-resident");
                     }
-                    document.getElementById("pop-village-city").value = "";
-                    document.getElementById(
-                        "pop-village-city-fmt",
-                    ).textContent = "";
+                    (function(){
+                        const pv = document.getElementById("pop-village-city");
+                        if (pv) pv.value = "";
+                        const pvf = document.getElementById("pop-village-city-fmt");
+                        if (pvf) pvf.textContent = "";
+                    })();
                 }
                 if (val !== "country" && val !== "county" && val !== "kingdom") {
                     sublocSelections["country-kingdom"] = [];
                     racialSelections["country-kingdom"] = [];
-                    document.getElementById("pop-country-kingdom").value = "";
-                    document.getElementById(
-                        "pop-country-kingdom-fmt",
-                    ).textContent = "";
+                    (function(){
+                        const pk = document.getElementById("pop-country-kingdom");
+                        if (pk) pk.value = "";
+                        const pkf = document.getElementById("pop-country-kingdom-fmt");
+                        if (pkf) pkf.textContent = "";
+                    })();
                 }
                 renderSublocTags("village-city");
                 renderSublocTags("country-kingdom");
@@ -6330,9 +6740,10 @@
                         ? "pop-village-city"
                         : "pop-country-kingdom";
                 const fmtId = inputId + "-fmt";
-                const val =
-                    parseInt(document.getElementById(inputId).value) || 0;
-                document.getElementById(fmtId).textContent =
+                const input = document.getElementById(inputId);
+                const fmt = document.getElementById(fmtId);
+                const val = input ? parseInt(input.value) || 0 : 0;
+                if (fmt) fmt.textContent =
                     val > 0 ? val.toLocaleString("de-DE") + " inhabitants" : "";
             }
 
@@ -6341,7 +6752,8 @@
                     ctx === "village-city"
                         ? "pop-village-city"
                         : "pop-country-kingdom";
-                return parseInt(document.getElementById(inputId).value) || 0;
+                const input = document.getElementById(inputId);
+                return input ? parseInt(input.value) || 0 : 0;
             }
 
             function setPopulation(ctx, val) {
@@ -6349,7 +6761,8 @@
                     ctx === "village-city"
                         ? "pop-village-city"
                         : "pop-country-kingdom";
-                document.getElementById(inputId).value = val || "";
+                const input = document.getElementById(inputId);
+                if (input) input.value = val || "";
                 updatePopFormatted(ctx);
             }
 
@@ -6478,11 +6891,16 @@
 
             /* Render racial tags in the form */
             function renderRacialTags(ctx) {
-                const tagMap = {
+                const tagMapMain = {
                     "village-city": "racial-village-city-tags",
                     "country-kingdom": "racial-country-kingdom-tags",
                 };
-                const container = document.getElementById(tagMap[ctx]);
+                const tagMapEvent = {
+                    "village-city": "racial-village-city-event-tags",
+                    "country-kingdom": "racial-country-kingdom-event-tags",
+                };
+                const mapUse = (typeof _renderCtx !== "undefined" && _renderCtx === "event") ? tagMapEvent : tagMapMain;
+                const container = document.getElementById(mapUse[ctx]);
                 if (!container) return;
                 const rows = racialSelections[ctx] || [];
                 container.innerHTML = "";
@@ -6521,7 +6939,7 @@
                RENDER TAGS
             ───────────────────────────────────────── */
             function renderSublocTags(ctx) {
-                const tagMap = {
+                const tagMapMain = {
                     "village-city": "subloc-village-city-tags",
                     "country-kingdom": "subloc-country-kingdom-tags",
                     building: "subloc-building-tags",
@@ -6529,7 +6947,14 @@
                     "village-city-resident": "resident-village-city-tags",
                     "country-kingdom-resident": "resident-country-kingdom-tags",
                 };
-                const container = document.getElementById(tagMap[ctx]);
+                const tagMapEvent = {
+                    "village-city": "subloc-village-city-event-tags",
+                    "country-kingdom": "subloc-country-kingdom-event-tags",
+                    "village-city-resident": "resident-village-city-event-tags",
+                    "country-kingdom-resident": "resident-country-kingdom-event-tags",
+                };
+                const mapUse = (typeof _renderCtx !== "undefined" && _renderCtx === "event") ? tagMapEvent : tagMapMain;
+                const container = document.getElementById(mapUse[ctx]);
                 if (!container) return;
 
                 const ids = ctx === "resident" ? residentSelections : (sublocSelections[ctx] || []);
@@ -6901,13 +7326,7 @@
                 renderRacialTags("country-kingdom");
                 // reset curses
                 curseTags = [];
-                // reset population
-                document.getElementById("pop-village-city").value = "";
-                document.getElementById("pop-village-city-fmt").textContent =
-                    "";
-                document.getElementById("pop-country-kingdom").value = "";
-                document.getElementById("pop-country-kingdom-fmt").textContent =
-                    "";
+                // population removed
                 // hide blocks
                 document.getElementById("village-city-block").style.display =
                     "none";
@@ -6962,26 +7381,9 @@
                             return out;
                         })()
                         : {};
-                const racialCivilization =
-                    type === "location"
-                        ? (() => {
-                            const out = {};
-                            const vc = (racialSelections["village-city"] || []).map(r => ({...r}));
-                            const ck = (racialSelections["country-kingdom"] || []).map(r => ({...r}));
-                            if (vc.length) out["village-city"] = vc;
-                            if (ck.length) out["country-kingdom"] = ck;
-                            return out;
-                        })()
-                        : {};
+                const racialCivilization = {};
 
-                const population =
-                    type === "location"
-                        ? {
-                              "village-city": getPopulation("village-city"),
-                              "country-kingdom":
-                                  getPopulation("country-kingdom"),
-                          }
-                        : {};
+                const population = {};
 
                 const schoolScheduleData =
                     type === "location" &&
@@ -7142,6 +7544,7 @@
                             ? [...raceTags]
                             : (type === "lore" ? [...loreTags] : []));
                 const currentCurseTags = type === "location" ? [...curseTags] : [];
+                const variantsData = type === "species" ? speciesVariants.map(v => ({ ...v })) : [];
 
                 let cards = getCards();
 
@@ -7284,6 +7687,7 @@
                             appearance,
                             personality,
                             generally,
+                            variants: variantsData,
                             canBeCaught: catchable,
                             canBeCaughtHow: catchHow,
                             age,
@@ -7336,6 +7740,7 @@
                         appearance,
                         personality,
                         generally,
+                        variants: variantsData,
                         canBeCaught: catchable,
                         canBeCaughtHow: catchHow,
                         age,
@@ -7517,6 +7922,7 @@
                         set("personality", card.personality);
                         if (card.canBeCaught === true) set("canBeCaught", true);
                         set("canBeCaughtHow", card.canBeCaughtHow);
+                        set("variants", card.variants);
                     } else if (g === "lore") {
                         set("loreText", card.loreText);
                         set("loreMode", card.loreMode);
@@ -7577,19 +7983,26 @@
                             if (!Array.isArray(imported))
                                 throw new Error("Invalid format");
                             const existing = getCards();
-                            const existingIds = new Set(
-                                existing.map((c) => c.id),
-                            );
                             let added = 0;
+                            let updated = 0;
                             imported.forEach((card) => {
-                                if (!existingIds.has(card.id)) {
+                                const idx = existing.findIndex(c => c.id === card.id);
+                                if (idx === -1) {
                                     existing.push(card);
                                     added++;
+                                } else {
+                                    const prev = existing[idx];
+                                    const merged = { ...prev, ...card };
+                                    if ((prev.genre || "").toLowerCase() === "location" && card.events) {
+                                        merged.events = card.events;
+                                    }
+                                    existing[idx] = merged;
+                                    updated++;
                                 }
                             });
                             saveCards(existing);
                             renderList();
-                            showToast(`Imported ${added} new entries.`);
+                            showToast(`Imported ${added} new, updated ${updated}.`);
                         } catch {
                             showToast(
                                 "Import failed: invalid file.",

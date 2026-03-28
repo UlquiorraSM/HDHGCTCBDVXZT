@@ -1319,6 +1319,7 @@
                     updateNPCBirthdays(d);
                     updatePlayerBirthday(d);
                     updateHeaderTime();
+                    try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                     saveActiveCharacter();
                     clearExpiredNpcMemories();
                 }
@@ -2214,6 +2215,7 @@
                     }
                     const contextLines = [];
                     contextLines.push("\nZIVIL EVENTS (Current area and parent regions):");
+                    const nowDay = _nowDayKey();
                     ancestors.forEach(loc => {
                         if (loc.genre !== "location" || loc.locationSub !== "zivil") return;
                         const ev = loc.events || null;
@@ -2221,17 +2223,20 @@
                         const lists = [];
                         if (Array.isArray(ev["village-city"])) lists.push(...ev["village-city"].map(e => ({...e, _loc: loc.title})));
                         if (Array.isArray(ev["country-kingdom"])) lists.push(...ev["country-kingdom"].map(e => ({...e, _loc: loc.title})));
+                        const visible = lists.filter(e => _eventDayKey(e) <= nowDay);
                         if (lists.length === 0) return;
+                        if (visible.length === 0) return;
                         contextLines.push(`- ${loc.title}:`);
-                        lists.forEach(e => {
+                        visible.forEach(e => {
                             const type = (e.type === "secret") ? "SECRET EVENT" : "PUBLIC EVENT";
-                            const dateStr = `${String(e.day||0).toString().padStart(2,"0")}.${String(e.month||0).toString().padStart(2,"0")}.${e.year||0} ${e.time || ""}`;
+                            const dateStr = `${String(e.day||0).toString().padStart(2,"0")}.${String(e.month||0).toString().padStart(2,"0")}.${e.year||0}`;
+                            const todayBadge = (_eventDayKey(e) === nowDay) ? " (TODAY)" : "";
                             const desc = e.description || "";
-                            contextLines.push(`  * [${type}] ${dateStr} — ${desc}`);
+                            contextLines.push(`  * [${type}] ${dateStr}${todayBadge} — ${desc}`);
                         });
                     });
                     if (contextLines.length <= 1) return "";
-                    contextLines.push(`Current time reference: ${curDate} ${curTime}`);
+                    contextLines.push(`Current date reference: ${curDate}`);
                     contextLines.push("Secret events are unknown to NPCs; use them only as hidden world triggers.");
                     return contextLines.join("\n") + "\n";
                 } catch (e) {
@@ -2378,6 +2383,122 @@
                 if (!t || typeof t !== "string") return 0;
                 const parts = t.split(":").map((x) => parseInt(x, 10));
                 return (parts[0] || 0) * 60 + (parts[1] || 0);
+            }
+            function _eventTimeKey(e) {
+                const dd = _worldDayCount({ day: e.day || 1, month: e.month || 1, year: e.year || 1983 });
+                const mm = _timeToMinutes(e.time || "00:00");
+                return dd * 1440 + mm;
+            }
+            function _eventDayKey(e) {
+                return _worldDayCount({ day: e.day || 1, month: e.month || 1, year: e.year || 1983 });
+            }
+            function _nowTimeKey() {
+                const d = activeChar?.startingDate || {};
+                const dd = _worldDayCount(d);
+                const mm = _timeToMinutes(d.time || "00:00");
+                return dd * 1440 + mm;
+            }
+            function _nowDayKey() {
+                const d = activeChar?.startingDate || {};
+                return _worldDayCount(d);
+            }
+            function _getAncestorsForCurrent() {
+                const cards = getCards();
+                const ancestors = [];
+                if (!currentLocationId) return ancestors;
+                let current = cards.find(c => c.id === currentLocationId);
+                while (current) {
+                    ancestors.push(current);
+                    const parent = cards.find((c) => {
+                        if (c.genre !== "location" || !c.sublocations) return false;
+                        return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                    });
+                    current = parent;
+                }
+                return ancestors;
+            }
+            function _applyEventOverrideToCard(card, changes, snapshot) {
+                if (!card || !changes) return;
+                if (!snapshot[card.id]) snapshot[card.id] = {};
+                const snap = snapshot[card.id];
+                const setOnce = (key, val) => {
+                    if (!(key in snap)) snap[key] = (card[key] !== undefined ? JSON.parse(JSON.stringify(card[key])) : undefined);
+                    card[key] = val;
+                };
+                if (typeof changes.cardDescription === "string" && changes.cardDescription.trim()) {
+                    setOnce("description", changes.cardDescription.trim());
+                }
+                if (Array.isArray(changes.residents)) {
+                    setOnce("residents", changes.residents.slice());
+                }
+                // population removed
+                if (changes.sublocations && typeof changes.sublocations === "object") {
+                    const cur = Object.assign({}, card.sublocations || {});
+                    Object.keys(changes.sublocations).forEach(k => { cur[k] = changes.sublocations[k].slice(); });
+                    setOnce("sublocations", cur);
+                }
+                if (changes.species && typeof changes.species === "object") {
+                    const cur = Object.assign({}, card.species || {});
+                    Object.keys(changes.species).forEach(k => { cur[k] = changes.species[k].slice(); });
+                    setOnce("species", cur);
+                }
+                // racial civilization removed
+                if (Array.isArray(changes.curseTags)) {
+                    setOnce("curseTags", changes.curseTags.map(c => ({ ...c })));
+                }
+            }
+            function recalcEventOverrides() {
+                try {
+                    const cards = getCards();
+                    if (!Array.isArray(cards) || !activeChar) return;
+                    const nowDay = _nowDayKey();
+                    if (!window._eventOverrideSnapshot) window._eventOverrideSnapshot = {};
+                    if (!window._eventAppliedIds) window._eventAppliedIds = new Set();
+                    if (window._eventAppliedIds.size > 0) {
+                        let changed = false;
+                        window._eventAppliedIds.forEach(id => {
+                            const card = cards.find(c => c.id === id);
+                            const snapAll = window._eventOverrideSnapshot[id] || null;
+                            if (card && snapAll) {
+                                Object.keys(snapAll).forEach(k => { card[k] = snapAll[k]; });
+                                changed = true;
+                            }
+                        });
+                        if (changed) sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                        window._eventAppliedIds.clear();
+                        window._eventOverrideSnapshot = {};
+                    }
+                    const ancestors = _getAncestorsForCurrent().filter(c => c.genre === "location" && c.locationSub === "zivil");
+                    if (ancestors.length === 0) return;
+                    const applicable = [];
+                    ancestors.forEach(loc => {
+                        const ev = loc.events || {};
+                        const all = []
+                            .concat(Array.isArray(ev["village-city"]) ? ev["village-city"] : [])
+                            .concat(Array.isArray(ev["country-kingdom"]) ? ev["country-kingdom"] : []);
+                        const eligible = all.filter(e => e && e.day != null && e.month != null && e.year != null && e.changes);
+                        if (eligible.length === 0) return;
+                        const latest = eligible
+                            .filter(e => _eventDayKey(e) <= nowDay)
+                            .sort((a,b) => _eventDayKey(a) - _eventDayKey(b))
+                            .slice(-1)[0];
+                        if (latest && latest.changes) {
+                            applicable.push({ locId: loc.id, changes: latest.changes });
+                        }
+                    });
+                    if (applicable.length === 0) return;
+                    const snapshot = {};
+                    applicable.reverse().forEach(({ locId, changes }) => {
+                        const card = cards.find(c => c.id === locId);
+                        if (!card) return;
+                        _applyEventOverrideToCard(card, changes, snapshot);
+                        window._eventAppliedIds.add(locId);
+                    });
+                    Object.keys(snapshot).forEach(id => { window._eventOverrideSnapshot[id] = snapshot[id]; });
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                } catch (e) {
+                    console.error("recalcEventOverrides error", e);
+                }
             }
             function _weekdayMon0(day, month, year) {
                 // JS: 0=Sun..6=Sat -> convert to Mon=0..Sun=6
@@ -2829,6 +2950,7 @@ Example:
                     currentLocationId = card.id;
                     if (activeChar) activeChar.currentLocationId = card.id; // Save to activeChar
                     if (el) el.textContent = card.title.toUpperCase(); // Fixed: Show TITLE, not ID
+                    try { recalcEventOverrides(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                 } else {
                     // Fallback: If no card found, keep the text but try to find a parent if possible
                     // Or just keep the text and null the ID (AI will lose character context)
