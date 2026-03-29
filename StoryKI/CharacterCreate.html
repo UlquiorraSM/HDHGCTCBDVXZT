@@ -1039,11 +1039,12 @@
                 <!-- ── SPAWN LOCATION ── -->
                 <div class="section">
                     <div class="section-title">Spawn Location</div>
+                    <div style="text-align:center; font-size:12px; opacity:.7; margin:4px 0 10px 0;">Double-click to set the spawn point.</div>
                     <div class="spawn-list" id="spawn-list">
                         <div class="spawn-empty" id="spawn-empty">
                             No spawn locations available.<br />
                             <span style="font-size: 11px; opacity: 0.6"
-                                >Add Buildings with "Can be Spawn" checked in
+                                >Add Locations with "Can be Spawn" checked in
                                 the World Creator.</span
                             >
                         </div>
@@ -1498,13 +1499,12 @@
                     });
             }
 
-            /* Spawn buildings = location cards with canBeSpawn = true */
+            /* Spawn locations = location cards with canBeSpawn = true (building or zivil) */
             function getSpawnBuildings() {
-                return getCards().filter(
-                    (c) =>
-                        c.genre === "location" &&
-                        c.locationSub === "building" &&
-                        c.canBeSpawn === true,
+                return getCards().filter((c) =>
+                    c.genre === "location" &&
+                    (c.locationSub === "building" || c.locationSub === "zivil") &&
+                    c.canBeSpawn === true
                 );
             }
             let spawnFolderOpen = {};
@@ -1672,10 +1672,7 @@
                 const emptyPlaceholder = document.getElementById(emptyId) || emptyEl;
                 const spawns = getSpawnBuildings();
 
-                // Remove old items (keep empty placeholder)
-                Array.from(listContainer.querySelectorAll(".spawn-item")).forEach(
-                    (el) => el.remove(),
-                );
+                Array.from(listContainer.querySelectorAll(".spawn-item")).forEach(el => el.remove());
 
                 if (spawns.length === 0) {
                     if (emptyPlaceholder) emptyPlaceholder.style.display = "block";
@@ -1683,122 +1680,78 @@
                 }
                 if (emptyPlaceholder) emptyPlaceholder.style.display = "none";
 
-                const groupsByGP = new Map(); // gpId -> { gp, parents: Map(parentId -> { parent, buildings: [] }) }
-                spawns.forEach(b => {
-                    const parent = findParentLocation(b.id);
-                    const gp = parent ? findParentLocation(parent.id) : null;
-                    const gpId = gp ? gp.id : (parent ? parent.id : "__root__");
-                    if (!groupsByGP.has(gpId)) groupsByGP.set(gpId, { gp, parents: new Map() });
-                    const parentId = parent ? parent.id : "__root__";
-                    const entry = groupsByGP.get(gpId);
-                    if (!entry.parents.has(parentId)) entry.parents.set(parentId, { parent, buildings: [] });
-                    entry.parents.get(parentId).buildings.push(b);
+                const folders = new Map(); // folderId -> { card, children: [] }
+                spawns.forEach(s => {
+                    if (s.locationSub === "building") {
+                        const parent = findParentLocation(s.id);
+                        const folderCard = parent || s;
+                        const folderId = folderCard.id;
+                        if (!folders.has(folderId)) folders.set(folderId, { card: folderCard, children: [] });
+                        folders.get(folderId).children.push(s);
+                    } else {
+                        const folderId = s.id;
+                        if (!folders.has(folderId)) folders.set(folderId, { card: s, children: [] });
+                    }
                 });
-                const topGroups = Array.from(groupsByGP.values()).sort((a,b) => {
-                    const at = (a.gp ? a.gp.title : "(Ungrouped)") || "";
-                    const bt = (b.gp ? b.gp.title : "(Ungrouped)") || "";
+
+                const folderArr = Array.from(folders.values()).sort((a,b) => {
+                    const at = (a.card.title || "").toLowerCase();
+                    const bt = (b.card.title || "").toLowerCase();
                     return at.localeCompare(bt);
                 });
-                topGroups.forEach(g => {
-                    const gpId = g.gp ? g.gp.id : "__root__";
-                    const gpTitle = g.gp ? (g.gp.title || "—") : "Ungrouped";
-                    const gpDetail = g.gp ? ((g.gp.locationDetail || g.gp.locationSub || "").toUpperCase()) : "";
-                    const gpFolder = document.createElement("div");
-                    gpFolder.className = "spawn-item";
-                    gpFolder.innerHTML = `
-                        <div class="spawn-radio"><div class="spawn-radio-dot" style="display:${spawnFolderOpen[gpId] ? 'block' : 'none'};"></div></div>
+
+                folderArr.forEach(({ card: fcard, children }) => {
+                    const fid = fcard.id;
+                    const isFolderSelected = selectedId === fid;
+                    const fRow = document.createElement("div");
+                    fRow.className = "spawn-item" + (isFolderSelected ? " selected" : "");
+                    fRow.innerHTML = `
+                        <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
                         <div class="spawn-item-info">
-                            <div class="spawn-item-name">📁 ${escHtml(gpTitle)}</div>
-                            <div class="spawn-item-detail">${escHtml(gpDetail)}</div>
+                            <div class="spawn-item-name">📁 ${escHtml(fcard.title || "—")}</div>
+                            <div class="spawn-item-detail">${escHtml((fcard.locationDetail || fcard.locationSub || "").toUpperCase())}</div>
                         </div>
                         <span class="spawn-item-badge">FOLDER</span>
                     `;
-                    gpFolder.addEventListener("click", () => {
-                        spawnFolderOpen[gpId] = !spawnFolderOpen[gpId];
+                    fRow.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        spawnFolderOpen[fid] = !spawnFolderOpen[fid];
                         renderSpawnListInto(listId, emptyId, selectedId);
                     });
-                    listContainer.appendChild(gpFolder);
-                    if (spawnFolderOpen[gpId]) {
-                        const parentsArr = Array.from(g.parents.values()).sort((a,b) => {
-                            const at = (a.parent ? a.parent.title : "(Ungrouped)") || "";
-                            const bt = (b.parent ? b.parent.title : "(Ungrouped)") || "";
-                            return at.localeCompare(bt);
-                        });
-                        parentsArr.forEach(p => {
-                            if (p.parent) {
-                                const pid = p.parent.id;
-                                const pTitle = p.parent.title || "—";
-                                const pDetail = (p.parent.locationDetail || p.parent.locationSub || "").toUpperCase();
-                                const pFolder = document.createElement("div");
-                                pFolder.className = "spawn-item";
-                                pFolder.style.marginLeft = "24px";
-                                pFolder.innerHTML = `
-                                    <div class="spawn-radio"><div class="spawn-radio-dot" style="display:${spawnFolderOpen[pid] ? 'block' : 'none'};"></div></div>
-                                    <div class="spawn-item-info">
-                                        <div class="spawn-item-name">📁 ${escHtml(pTitle)}</div>
-                                        <div class="spawn-item-detail">${escHtml(pDetail)}</div>
-                                    </div>
-                                    <span class="spawn-item-badge">FOLDER</span>
-                                `;
-                                pFolder.addEventListener("click", () => {
-                                    spawnFolderOpen[pid] = !spawnFolderOpen[pid];
-                                    renderSpawnListInto(listId, emptyId, selectedId);
-                                });
-                                listContainer.appendChild(pFolder);
-                                if (spawnFolderOpen[pid]) {
-                                    p.buildings
-                                        .sort((a,b) => (a.title||"").localeCompare(b.title||""))
-                                        .forEach(b => {
-                                            const isSelected = selectedId === b.id;
-                                            const item = document.createElement("div");
-                                            item.className = "spawn-item" + (isSelected ? " selected" : "");
-                                            item.dataset.id = b.id;
-                                            const detail = b.locationDetail ? b.locationDetail.toUpperCase() : "BUILDING";
-                                            item.innerHTML = `
-                                                <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
-                                                <div class="spawn-item-info">
-                                                    <div class="spawn-item-name">${escHtml(b.title)}</div>
-                                                    <div class="spawn-item-detail">${detail}</div>
-                                                </div>
-                                                <span class="spawn-item-badge">SPAWN</span>
-                                            `;
-                                            item.style.marginLeft = "48px";
-                                            item.addEventListener("click", (e) => {
-                                                e.stopPropagation();
-                                                selectedSpawnId = b.id;
-                                                renderSpawnListInto(listId, emptyId, b.id);
-                                                updateSummary();
-                                            });
-                                            listContainer.appendChild(item);
-                                        });
-                                }
-                            } else {
-                                p.buildings
-                                    .sort((a,b) => (a.title||"").localeCompare(b.title||""))
-                                    .forEach(b => {
-                                        const isSelected = selectedId === b.id;
-                                        const item = document.createElement("div");
-                                        item.className = "spawn-item" + (isSelected ? " selected" : "");
-                                        item.dataset.id = b.id;
-                                        const detail = b.locationDetail ? b.locationDetail.toUpperCase() : "BUILDING";
-                                        item.innerHTML = `
-                                            <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
-                                            <div class="spawn-item-info">
-                                                <div class="spawn-item-name">${escHtml(b.title)}</div>
-                                                <div class="spawn-item-detail">${detail}</div>
-                                            </div>
-                                            <span class="spawn-item-badge">SPAWN</span>
-                                        `;
-                                        item.style.marginLeft = "24px";
-                                        item.addEventListener("click", (e) => {
-                                            e.stopPropagation();
-                                            selectedSpawnId = b.id;
-                                            renderSpawnListInto(listId, emptyId, b.id);
-                                            updateSummary();
-                                        });
-                                        listContainer.appendChild(item);
-                                    });
-                            }
+                    fRow.addEventListener("dblclick", (e) => {
+                        e.stopPropagation();
+                        if (selectedSpawnId === fid) selectedSpawnId = null;
+                        else selectedSpawnId = fid;
+                        renderSpawnListInto(listId, emptyId, selectedSpawnId);
+                        updateSummary();
+                    });
+                    listContainer.appendChild(fRow);
+
+                    if (spawnFolderOpen[fid]) {
+                        const childArr = children.slice().sort((a,b) => (a.title||"").localeCompare(b.title||""));
+                        childArr.forEach(b => {
+                            const selected = selectedId === b.id;
+                            const item = document.createElement("div");
+                            item.className = "spawn-item" + (selected ? " selected" : "");
+                            item.dataset.id = b.id;
+                            const detail = (b.locationDetail || b.locationSub || "").toUpperCase() || "LOCATION";
+                            item.innerHTML = `
+                                <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
+                                <div class="spawn-item-info">
+                                    <div class="spawn-item-name">${escHtml(b.title || "—")}</div>
+                                    <div class="spawn-item-detail">${detail}</div>
+                                </div>
+                                <span class="spawn-item-badge">SPAWN</span>
+                            `;
+                            item.style.marginLeft = "24px";
+                            item.addEventListener("dblclick", (e) => {
+                                e.stopPropagation();
+                                if (selectedSpawnId === b.id) selectedSpawnId = null;
+                                else selectedSpawnId = b.id;
+                                renderSpawnListInto(listId, emptyId, selectedSpawnId);
+                                updateSummary();
+                            });
+                            listContainer.appendChild(item);
                         });
                     }
                 });
@@ -1991,10 +1944,11 @@
 
                 <div class="section">
                     <div class="section-title">Spawn Location</div>
+                    <div style="text-align:center; font-size:12px; opacity:.7; margin:4px 0 10px 0;">Double-click to set the spawn point.</div>
                     <div class="spawn-list" id="npc-spawn-list">
                         <div class="spawn-empty" id="npc-spawn-empty">
                             No spawn locations available.<br />
-                            <span style="font-size: 11px; opacity: 0.6">Add Buildings with "Can be Spawn" checked in the World Creator.</span>
+                            <span style="font-size: 11px; opacity: 0.6">Add Locations with "Can be Spawn" checked in the World Creator.</span>
                         </div>
                     </div>
                 </div>

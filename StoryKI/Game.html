@@ -1475,10 +1475,19 @@
             ═══════════════════════════════════════ */
             function loadBackground() {
                 const raw = Storage.get(SETTINGS_KEY);
-                const url = raw
+                let url = raw
                     ? JSON.parse(raw).backgroundUrl ||
                       "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp"
                     : "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
+                try {
+                    if (currentLocationId) {
+                        const cards = getCards();
+                        const loc = cards.find(c => c.id === currentLocationId);
+                        if (loc && typeof loc.backgroundUrl === "string" && loc.backgroundUrl.trim()) {
+                            url = loc.backgroundUrl.trim();
+                        }
+                    }
+                } catch {}
                 const el = document.getElementById("bg-layer");
                 if (el.style.backgroundImage !== `url(${url})`) {
                     el.style.backgroundImage = `url(${url})`;
@@ -2962,6 +2971,7 @@ Example:
                 
                 updatePresentNPCs();
                 saveActiveCharacter(); // Save the location state
+                try { loadBackground(); } catch {}
             }
 
             function updatePresentNPCs() {

@@ -2863,6 +2863,14 @@
                             <span class="subloc-icon">🐾</span>
                             Species
                         </button>
+                        <button
+                            type="button"
+                            class="subloc-btn"
+                            onclick="setLocationBackground()"
+                        >
+                            <span class="subloc-icon">🖼️</span>
+                            Background
+                        </button>
                     </div>
                 </div>
 
@@ -2907,7 +2915,23 @@
                                     <span class="subloc-icon">🐾</span>
                                     Species
                                 </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="setLocationBackground()"
+                                >
+                                    <span class="subloc-icon">🖼️</span>
+                                    Background
+                                </button>
                                 <button type="button" class="subloc-btn" onclick="addCursePrompt('village-city')"><span class="subloc-icon">💀</span> Curse</button>
+                            </div>
+
+                            <div class="spawn-check-group" id="spawn-check-group-vc" onclick="toggleSpawnCheckZivil('spawn-check-group-vc')" style="margin-top:14px; display:none;">
+                                <div class="spawn-checkbox">
+                                    <span class="spawn-checkbox-tick">&#10003;</span>
+                                </div>
+                                <span class="spawn-check-label">Can be Spawn</span>
+                                <span class="spawn-check-badge">SPAWN</span>
                             </div>
 
                             <!-- Sublocations for Village / City -->
@@ -2994,7 +3018,23 @@
                                     <span class="subloc-icon">🐾</span>
                                     Species
                                 </button>
+                                <button
+                                    type="button"
+                                    class="subloc-btn"
+                                    onclick="setLocationBackground()"
+                                >
+                                    <span class="subloc-icon">🖼️</span>
+                                    Background
+                                </button>
                                 <button type="button" class="subloc-btn" onclick="addCursePrompt('country-kingdom')"><span class="subloc-icon">💀</span> Curse</button>
+                            </div>
+
+                            <div class="spawn-check-group" id="spawn-check-group-ck" onclick="toggleSpawnCheckZivil('spawn-check-group-ck')" style="margin-top:14px; display:none;">
+                                <div class="spawn-checkbox">
+                                    <span class="spawn-checkbox-tick">&#10003;</span>
+                                </div>
+                                <span class="spawn-check-label">Can be Spawn</span>
+                                <span class="spawn-check-badge">SPAWN</span>
                             </div>
 
                             <!-- Sublocations for Country / Kingdom -->
@@ -3051,6 +3091,14 @@
                         <option value="shop">Shop</option>
                         <option value="school">School</option>
                     </select>
+                    <div class="form-group" style="margin-top:14px;">
+                        <label class="form-label">Tools</label>
+                        <div class="tools-row" id="tools-section-building" style="display:none">
+                            <button type="button" class="subloc-btn" onclick="setLocationBackground()">
+                                <span class="subloc-icon">🖼️</span> Background
+                            </button>
+                        </div>
+                    </div>
 
                     <!-- Residents for House -->
                     <div id="house-residents-group" style="display: none; margin-top: 14px;">
@@ -5586,6 +5634,24 @@
                 }
             }
 
+            function setLocationBackground() {
+                try {
+                    if (!editingId) return;
+                    const cards = getCards();
+                    const idx = cards.findIndex(c => c.id === editingId && c.genre === "location");
+                    if (idx === -1) return;
+                    const current = { ...cards[idx] };
+                    const prev = (current.backgroundUrl || "").trim();
+                    const input = prompt("Hintergrund-URL für diese Location eingeben:", prev);
+                    if (input === null) return;
+                    const val = (input || "").trim();
+                    if (val) current.backgroundUrl = val; else delete current.backgroundUrl;
+                    cards[idx] = current;
+                    saveCards(cards);
+                    showToast(val ? "Background gespeichert." : "Background entfernt.");
+                } catch (e) {}
+            }
+
             function closeForm() {
                 document
                     .getElementById("form-view")
@@ -5734,6 +5800,7 @@
                     const otherToolsRow = document.getElementById("tools-section-other");
                     const toolsVc = document.getElementById("tools-section-vc");
                     const toolsCk = document.getElementById("tools-section-ck");
+                    const toolsBd = document.getElementById("tools-section-building");
                     const resVcGrp = document.getElementById("resident-village-city-group");
                     const resCkGrp = document.getElementById("resident-country-kingdom-group");
                     const sublocBuildGrp = document.getElementById("subloc-building-group");
@@ -5744,6 +5811,7 @@
                     if (otherToolsRow) otherToolsRow.style.display = "none";
                     if (toolsVc) toolsVc.style.display = "none";
                     if (toolsCk) toolsCk.style.display = "none";
+                    if (toolsBd) toolsBd.style.display = "none";
                     if (resVcGrp) resVcGrp.style.display = "none";
                     if (resCkGrp) resCkGrp.style.display = "none";
                     if (sublocBuildGrp) sublocBuildGrp.style.display = "none";
@@ -5781,6 +5849,12 @@
                     otherToolsRow.style.display = showOther ? "flex" : "none";
                     speciesBtn.onclick = () => openSublocPicker("species-" + sub);
                 }
+                const toolsBd = document.getElementById("tools-section-building");
+                if (toolsBd) toolsBd.style.display = (sub === "building" ? "flex" : "none");
+                const spawnVc = document.getElementById("spawn-check-group-vc");
+                const spawnCk = document.getElementById("spawn-check-group-ck");
+                if (spawnVc) spawnVc.style.display = (sub === "zivil" ? "flex" : "none");
+                if (spawnCk) spawnCk.style.display = (sub === "zivil" ? "flex" : "none");
 
                 if (sub !== "zivil") {
                     document.getElementById("f-zivil-sub").value = "";
@@ -5791,6 +5865,9 @@
                     document.getElementById(
                         "subloc-country-kingdom-group",
                     ).style.display = "none";
+                    // reset zivil spawn toggles visibility (state kept)
+                    if (spawnVc) spawnVc.style.display = "none";
+                    if (spawnCk) spawnCk.style.display = "none";
                     sublocSelections["village-city"] = [];
                     sublocSelections["country-kingdom"] = [];
                     renderSublocTags("village-city");
@@ -5909,6 +5986,16 @@
                         renderSublocTags("village-city-resident");
                         renderSublocTags("country-kingdom-resident");
                     }
+                    // restore canBeSpawn for zivil
+                    (function(){
+                        const vc = document.getElementById("spawn-check-group-vc");
+                        const ck = document.getElementById("spawn-check-group-ck");
+                        if (vc) { if (card.canBeSpawn) vc.classList.add("active"); else vc.classList.remove("active"); }
+                        if (ck) { if (card.canBeSpawn) ck.classList.add("active"); else ck.classList.remove("active"); }
+                        // ensure visibility if sub is zivil
+                        if (vc) vc.style.display = "flex";
+                        if (ck) ck.style.display = "flex";
+                    })();
                 }
                 if (card.locationSub === "building") {
                     document.getElementById("f-building-sub").value =
@@ -7288,10 +7375,18 @@
                     .classList.toggle("active");
             }
 
+            function toggleSpawnCheckZivil(id) {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle("active");
+            }
+
             function resetSpawnCheck() {
-                document
-                    .getElementById("spawn-check-group")
-                    .classList.remove("active");
+                const b = document.getElementById("spawn-check-group");
+                if (b) b.classList.remove("active");
+                const v = document.getElementById("spawn-check-group-vc");
+                if (v) v.classList.remove("active");
+                const k = document.getElementById("spawn-check-group-ck");
+                if (k) k.classList.remove("active");
             }
 
             /* ─── Is Playable (same visual style) ─── */
@@ -7481,10 +7576,11 @@
                     type === "race" ? [...skincolorData] : [];
 
                 const canBeSpawn =
-                    type === "location" &&
-                    document
-                        .getElementById("spawn-check-group")
-                        .classList.contains("active");
+                    type === "location" && (
+                        (document.getElementById("spawn-check-group") && document.getElementById("spawn-check-group").classList.contains("active")) ||
+                        (document.getElementById("spawn-check-group-vc") && document.getElementById("spawn-check-group-vc").classList.contains("active")) ||
+                        (document.getElementById("spawn-check-group-ck") && document.getElementById("spawn-check-group-ck").classList.contains("active"))
+                    );
 
                 // Character fields
                 const appearance =
