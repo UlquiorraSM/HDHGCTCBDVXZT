@@ -1147,26 +1147,20 @@
                 
                 hintEl.style.display = "none";
                 
-                // Desktop/Mobile alignment:
-                // - Mobile or many cards: align left for scrolling
-                // - Few cards on desktop: center
+                // Desktop/Mobile alignment robust:
+                // - Mobile: align left for horizontal scrolling
+                // - Desktop: if up to 3 visible cards, center; otherwise align left
                 const isMobile = window.innerWidth <= 700;
+                const visibleCount = Math.min(scenarios.length, 5);
+                listEl.style.margin = "0 auto";
+                listEl.style.maxWidth = "100%";
+                listEl.style.width = "auto";
                 if (isMobile) {
                     listEl.style.justifyContent = "flex-start";
-                    listEl.style.maxWidth = "100%";
                     listEl.scrollLeft = 0;
                 } else {
-                    if (scenarios.length > 3) {
-                        listEl.style.justifyContent = "flex-start";
-                        listEl.style.width = "620px"; // 3 cards (3*180) + 2 gaps (2*20) + 2 paddings (2*20)
-                        listEl.style.margin = "0 auto";
-                        listEl.scrollLeft = 0;
-                    } else {
-                        listEl.style.justifyContent = "center";
-                        listEl.style.maxWidth = "100%";
-                        listEl.style.width = "auto";
-                        listEl.style.margin = "0 auto";
-                    }
+                    listEl.style.justifyContent = (visibleCount <= 3) ? "center" : "flex-start";
+                    listEl.scrollLeft = 0;
                 }
 
                 scenarios.slice(0, 5).forEach(s => {
@@ -2010,6 +2004,7 @@
                         if (g === "location") {
                             set("locationSub", card.locationSub);
                             set("locationDetail", card.locationDetail);
+                            set("backgroundUrl", card.backgroundUrl);
                             if (card.canBeSpawn === true) set("canBeSpawn", true);
                             set("sublocations", card.sublocations || {});
                             set("species", card.species || {});
@@ -2205,6 +2200,7 @@
                     if (g === "location") {
                         set("locationSub", card.locationSub);
                         set("locationDetail", card.locationDetail);
+                        set("backgroundUrl", card.backgroundUrl);
                         if (card.canBeSpawn === true) set("canBeSpawn", true);
                         set("sublocations", card.sublocations || {});
                         set("species", card.species || {});
