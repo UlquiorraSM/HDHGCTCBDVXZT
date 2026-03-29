@@ -2148,6 +2148,7 @@
                     return null;
                 }
                 if (sub === "forest") return "forest";
+                if (sub === "land" && det === "forest") return "forest";
                 if (sub === "landmark") return "landmark";
                 if (sub === "ocean") return "ocean";
                 return null;
@@ -2341,11 +2342,55 @@
                     keys.forEach(id => {
                         const other = cards.find(c => c.id === id);
                         const name = other ? (other.title || id) : id;
-                        out += `- To ${name}: ${dist[id]} km\n`;
+                        const entry = dist[id];
+                        let valueStr = "";
+                        if (typeof entry === "number") valueStr = `${entry} km`;
+                        else if (entry && typeof entry === "object") {
+                            const v = entry.value != null ? entry.value : "";
+                            const u = entry.unit === "m" ? "m" : "km";
+                            valueStr = `${v} ${u}`;
+                        } else valueStr = "";
+                        out += `- To ${name}: ${valueStr}\n`;
                     });
                     return out;
                 } catch (e) {
                     console.error("Distance context error", e);
+                    return "";
+                }
+            }
+
+            function buildNearbyForestsContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    const cards = getCards();
+                    const cur = cards.find(c => c.id === currentLocationId);
+                    if (!cur || cur.genre !== "location") return "";
+                    const dist = cur.distances || {};
+                    const ids = Object.keys(dist);
+                    const forests = [];
+                    ids.forEach(id => {
+                        const other = cards.find(c => c.id === id && c.genre === "location");
+                        if (!other) return;
+                        const sub = (other.locationSub || "").toLowerCase();
+                        const det = (other.locationDetail || "").toLowerCase();
+                        const isForest = (sub === "forest") || (sub === "land" && det === "forest");
+                        if (!isForest) return;
+                        const entry = dist[id];
+                        let valueStr = "";
+                        if (typeof entry === "number") valueStr = `${entry} km`;
+                        else if (entry && typeof entry === "object") {
+                            const v = entry.value != null ? entry.value : "";
+                            const u = entry.unit === "m" ? "m" : "km";
+                            valueStr = `${v} ${u}`;
+                        }
+                        forests.push({ name: other.title || id, dist: valueStr });
+                    });
+                    if (forests.length === 0) return "";
+                    let out = "\nNEARBY FORESTS:\n";
+                    forests.forEach(f => { out += `- ${f.name} (${f.dist})\n`; });
+                    return out;
+                } catch (e) {
+                    console.error("Nearby forests context error", e);
                     return "";
                 }
             }
@@ -2666,6 +2711,7 @@
                 const locationStateContext = buildLocationStateContext();
                 const locationCurseContext = buildLocationCurseContext();
                 const locationDistanceContext = buildLocationDistanceContext();
+                const nearbyForestsContext = buildNearbyForestsContext();
                 const relationshipSummary = buildRelationshipSummary();
                 const scheduleInfo = computeSchoolPresenceNow();
                 const scheduleContext = scheduleInfo.context || "";
@@ -2738,6 +2784,7 @@ ${eventsContext}
 ${locationMemoryContext}
 ${locationStateContext}
 ${locationDistanceContext}
+${nearbyForestsContext}
 ${relationshipSummary}
 ${scheduleContext}
 ${shopContext}

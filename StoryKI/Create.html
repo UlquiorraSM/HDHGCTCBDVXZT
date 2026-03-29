@@ -2811,6 +2811,7 @@
                         <option value="">Select a location type...</option>
                         <option value="building">Building</option>
                         <option value="zivil">Zivil</option>
+                        <option value="land">Land</option>
                     </select>
                 </div>
 
@@ -2872,6 +2873,14 @@
                             Background
                         </button>
                     </div>
+                </div>
+
+                <div class="form-group" id="land-sub-group" style="display:none">
+                    <label class="form-label">Land Type</label>
+                    <select class="form-select" id="f-land-sub" onchange="onLocationSubChange()">
+                        <option value="">Select a land type...</option>
+                        <option value="forest">Forest</option>
+                    </select>
                 </div>
 
                 <!-- ══ Village / City block ══ -->
@@ -3075,6 +3084,48 @@
                         </div>
 
                         <!-- RIGHT column removed: Population -->
+                    </div>
+                </div>
+
+                <!-- ══ Land (Forest) block ══ -->
+                <div id="land-block" style="display: none">
+                    <div class="zivil-side-layout">
+                        <div class="zivil-main-col">
+                            <label class="form-label">Tools</label>
+                            <div class="tools-row" id="tools-section-land" style="display:none">
+                                <button type="button" class="subloc-btn" onclick="openSublocPicker('land')">
+                                    <span class="subloc-icon">&#43;</span>
+                                    Sublocations
+                                </button>
+                                <button type="button" class="subloc-btn" onclick="openEventsScene('forest')">
+                                    <span class="subloc-icon">🎉</span>
+                                    Events
+                                </button>
+                                <button type="button" class="subloc-btn" onclick="openSublocPicker('land-resident')">
+                                    <span class="subloc-icon">&#128100;</span>
+                                    Resident
+                                </button>
+                                <button type="button" class="subloc-btn" onclick="openSublocPicker('species-forest')">
+                                    <span class="subloc-icon">🐾</span>
+                                    Species
+                                </button>
+                                <button type="button" class="subloc-btn" onclick="setLocationBackground()">
+                                    <span class="subloc-icon">🖼️</span>
+                                    Background
+                                </button>
+                                <button type="button" class="subloc-btn" onclick="addCursePrompt('forest')">
+                                    <span class="subloc-icon">💀</span>
+                                    Curse
+                                </button>
+                            </div>
+                            <div class="spawn-check-group" id="spawn-check-group-land" onclick="toggleSpawnCheckZivil('spawn-check-group-land')" style="margin-top:14px; display:none;">
+                                <div class="spawn-checkbox">
+                                    <span class="spawn-checkbox-tick">&#10003;</span>
+                                </div>
+                                <span class="spawn-check-label">Can be Spawn</span>
+                                <span class="spawn-check-badge">SPAWN</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -5774,6 +5825,7 @@
                 const zivilGroup = document.getElementById("zivil-sub-group");
                 const buildingGroup =
                     document.getElementById("building-sub-group");
+                const landGroup = document.getElementById("land-sub-group");
                 const mapGroup = document.getElementById("location-map-group");
 
                 if (type === "location") {
@@ -5794,6 +5846,7 @@
                     locGroup.style.display = "none";
                     zivilGroup.style.display = "none";
                     buildingGroup.style.display = "none";
+                    if (landGroup) landGroup.style.display = "none";
                     if (mapGroup) mapGroup.style.display = "none";
                     // Hide any location-specific tool sections that may still be visible
                     const otherTools = document.getElementById("other-tools-group");
@@ -5801,6 +5854,9 @@
                     const toolsVc = document.getElementById("tools-section-vc");
                     const toolsCk = document.getElementById("tools-section-ck");
                     const toolsBd = document.getElementById("tools-section-building");
+                    const toolsLand = document.getElementById("tools-section-land");
+                    const landBlock = document.getElementById("land-block");
+                    const spawnLand = document.getElementById("spawn-check-group-land");
                     const resVcGrp = document.getElementById("resident-village-city-group");
                     const resCkGrp = document.getElementById("resident-country-kingdom-group");
                     const sublocBuildGrp = document.getElementById("subloc-building-group");
@@ -5812,6 +5868,9 @@
                     if (toolsVc) toolsVc.style.display = "none";
                     if (toolsCk) toolsCk.style.display = "none";
                     if (toolsBd) toolsBd.style.display = "none";
+                    if (toolsLand) toolsLand.style.display = "none";
+                    if (landBlock) landBlock.style.display = "none";
+                    if (spawnLand) spawnLand.style.display = "none";
                     if (resVcGrp) resVcGrp.style.display = "none";
                     if (resCkGrp) resCkGrp.style.display = "none";
                     if (sublocBuildGrp) sublocBuildGrp.style.display = "none";
@@ -5820,6 +5879,8 @@
                     if (shopWorkGrp) shopWorkGrp.style.display = "none";
                     document.getElementById("f-location-sub").value = "";
                     document.getElementById("f-zivil-sub").value = "";
+                    const landSel = document.getElementById("f-land-sub");
+                    if (landSel) landSel.value = "";
                     document.getElementById("f-building-sub").value = "";
                 }
             }
@@ -5829,6 +5890,7 @@
                 const zivilGroup = document.getElementById("zivil-sub-group");
                 const buildingGroup =
                     document.getElementById("building-sub-group");
+                const landGroup = document.getElementById("land-sub-group");
                 const sublocBuildingGroup = document.getElementById(
                     "subloc-building-group",
                 );
@@ -5836,6 +5898,7 @@
                 zivilGroup.style.display = sub === "zivil" ? "block" : "none";
                 buildingGroup.style.display =
                     sub === "building" ? "block" : "none";
+                if (landGroup) landGroup.style.display = sub === "land" ? "block" : "none";
                 sublocBuildingGroup.style.display =
                     sub === "building" ? "block" : "none";
 
@@ -5845,9 +5908,11 @@
                 if (otherTools && otherToolsRow && speciesBtn) {
                     const showOther =
                         sub === "forest" || sub === "landmark" || sub === "ocean";
-                    otherTools.style.display = showOther ? "block" : "none";
-                    otherToolsRow.style.display = showOther ? "flex" : "none";
-                    speciesBtn.onclick = () => openSublocPicker("species-" + sub);
+                    // Land hat eigenen Tools-Block; niemals das generische Other-Tools zeigen
+                    const useOther = showOther && sub !== "land";
+                    otherTools.style.display = useOther ? "block" : "none";
+                    otherToolsRow.style.display = useOther ? "flex" : "none";
+                    if (useOther) speciesBtn.onclick = () => openSublocPicker("species-" + sub);
                 }
                 const toolsBd = document.getElementById("tools-section-building");
                 if (toolsBd) toolsBd.style.display = (sub === "building" ? "flex" : "none");
@@ -5855,6 +5920,30 @@
                 const spawnCk = document.getElementById("spawn-check-group-ck");
                 if (spawnVc) spawnVc.style.display = (sub === "zivil" ? "flex" : "none");
                 if (spawnCk) spawnCk.style.display = (sub === "zivil" ? "flex" : "none");
+                const landBlock = document.getElementById("land-block");
+                const toolsLand = document.getElementById("tools-section-land");
+                const spawnLand = document.getElementById("spawn-check-group-land");
+                // Land-Detail steuert Sichtbarkeit: nur bei Forest zeigen
+                const landDetail = (document.getElementById("f-land-sub")?.value || "");
+                const showLandTools = (sub === "land" && landDetail === "forest");
+                if (landBlock) landBlock.style.display = showLandTools ? "block" : "none";
+                if (toolsLand) toolsLand.style.display = showLandTools ? "flex" : "none";
+                if (spawnLand) spawnLand.style.display = showLandTools ? "flex" : "none";
+                // Zivil-Blöcke und -Tools auf jeden Fall ausblenden, wenn nicht zivil
+                if (sub !== "zivil") {
+                    const vcBlock = document.getElementById("village-city-block");
+                    const ckBlock = document.getElementById("country-kingdom-block");
+                    const toolsVc = document.getElementById("tools-section-vc");
+                    const toolsCk = document.getElementById("tools-section-ck");
+                    const resVcGrp = document.getElementById("resident-village-city-group");
+                    const resCkGrp = document.getElementById("resident-country-kingdom-group");
+                    if (vcBlock) vcBlock.style.display = "none";
+                    if (ckBlock) ckBlock.style.display = "none";
+                    if (toolsVc) toolsVc.style.display = "none";
+                    if (toolsCk) toolsCk.style.display = "none";
+                    if (resVcGrp) resVcGrp.style.display = "none";
+                    if (resCkGrp) resCkGrp.style.display = "none";
+                }
 
                 if (sub !== "zivil") {
                     document.getElementById("f-zivil-sub").value = "";
@@ -5872,6 +5961,13 @@
                     sublocSelections["country-kingdom"] = [];
                     renderSublocTags("village-city");
                     renderSublocTags("country-kingdom");
+                }
+                if (sub !== "land") {
+                    const landSel = document.getElementById("f-land-sub");
+                    if (landSel) landSel.value = "";
+                    if (landBlock) landBlock.style.display = "none";
+                    if (toolsLand) toolsLand.style.display = "none";
+                    if (spawnLand) spawnLand.style.display = "none";
                 }
                 if (sub !== "building") {
                     document.getElementById("f-building-sub").value = "";
@@ -5931,6 +6027,12 @@
                         locationSub: sub,
                         locationDetail:
                             document.getElementById("f-zivil-sub").value,
+                    };
+                if (sub === "land")
+                    return {
+                        locationSub: sub,
+                        locationDetail:
+                            document.getElementById("f-land-sub").value,
                     };
                 if (sub === "building")
                     return {
@@ -6055,11 +6157,27 @@
                     if (card.canBeSpawn) grp.classList.add("active");
                     else grp.classList.remove("active");
                 }
+                if (card.locationSub === "land") {
+                    const sel = document.getElementById("f-land-sub");
+                    if (sel) sel.value = card.locationDetail || "";
+                    const landBlock = document.getElementById("land-block");
+                    const toolsLand = document.getElementById("tools-section-land");
+                    const spawnLand = document.getElementById("spawn-check-group-land");
+                    if (landBlock) landBlock.style.display = "block";
+                    if (toolsLand) toolsLand.style.display = "flex";
+                    if (spawnLand) {
+                        if (card.canBeSpawn) spawnLand.classList.add("active");
+                        else spawnLand.classList.remove("active");
+                        spawnLand.style.display = "flex";
+                    }
+                }
             }
 
             function resetLocationSubtype() {
                 document.getElementById("f-location-sub").value = "";
                 document.getElementById("f-zivil-sub").value = "";
+                const landSel = document.getElementById("f-land-sub");
+                if (landSel) landSel.value = "";
                 document.getElementById("f-building-sub").value = "";
                 curseTags = [];
                 onBuildingSubChange();
@@ -6068,6 +6186,8 @@
                     "none";
                 document.getElementById("zivil-sub-group").style.display =
                     "none";
+                const landGroup = document.getElementById("land-sub-group");
+                if (landGroup) landGroup.style.display = "none";
                 document.getElementById("building-sub-group").style.display =
                     "none";
                 resetSublocSelections();
@@ -7387,6 +7507,8 @@
                 if (v) v.classList.remove("active");
                 const k = document.getElementById("spawn-check-group-ck");
                 if (k) k.classList.remove("active");
+                const l = document.getElementById("spawn-check-group-land");
+                if (l) l.classList.remove("active");
             }
 
             /* ─── Is Playable (same visual style) ─── */
@@ -7579,7 +7701,8 @@
                     type === "location" && (
                         (document.getElementById("spawn-check-group") && document.getElementById("spawn-check-group").classList.contains("active")) ||
                         (document.getElementById("spawn-check-group-vc") && document.getElementById("spawn-check-group-vc").classList.contains("active")) ||
-                        (document.getElementById("spawn-check-group-ck") && document.getElementById("spawn-check-group-ck").classList.contains("active"))
+                        (document.getElementById("spawn-check-group-ck") && document.getElementById("spawn-check-group-ck").classList.contains("active")) ||
+                        (document.getElementById("spawn-check-group-land") && document.getElementById("spawn-check-group-land").classList.contains("active"))
                     );
 
                 // Character fields
