@@ -834,6 +834,7 @@
             const SCENARIOS_KEY = "storyki_scenarios";
             const SELECTED_WORLD_ID_KEY = "storyki_selected_world_id";
             const CURRENT_STORY_ID_KEY = "storyki_current_story_id";
+            const ANCHORED_WORLD_CHANGES_KEY = "storyki_anchored_world_changes";
 
             // Storage Helper (Non-persistent session storage)
             const Storage = {
@@ -883,6 +884,83 @@
                 } catch (e) {
                     console.error("Failed to save story log", e);
                 }
+            }
+
+            function getAnchoredWorldChanges() {
+                try {
+                    const storyId = getCurrentStoryId() || "_default";
+                    const raw = Storage.get(ANCHORED_WORLD_CHANGES_KEY);
+                    const root = raw ? JSON.parse(raw) : {};
+                    return root && typeof root === "object" ? (root[storyId] || {}) : {};
+                } catch {
+                    return {};
+                }
+            }
+
+            function saveAnchoredWorldChanges(changes) {
+                try {
+                    const storyId = getCurrentStoryId() || "_default";
+                    const raw = Storage.get(ANCHORED_WORLD_CHANGES_KEY);
+                    const root = raw ? JSON.parse(raw) : {};
+                    root[storyId] = changes || {};
+                    Storage.set(ANCHORED_WORLD_CHANGES_KEY, JSON.stringify(root));
+                } catch (e) {
+                    console.warn("Failed to save anchored world changes", e);
+                }
+            }
+
+            function rememberAnchoredWorldChange(ts, change) {
+                if (!ts || !change || !change.type) return;
+                const changes = getAnchoredWorldChanges();
+                const key = String(ts);
+                if (!Array.isArray(changes[key])) changes[key] = [];
+                const exists = changes[key].some((entry) => {
+                    if (!entry || entry.type !== change.type) return false;
+                    if (change.type === "npcDeath") return entry.npcId === change.npcId;
+                    return false;
+                });
+                if (!exists) {
+                    changes[key].push(change);
+                    saveAnchoredWorldChanges(changes);
+                }
+            }
+
+            function buildCurrentWorldStamp(anchorTs = null) {
+                const d = activeChar?.startingDate || {};
+                return {
+                    date: `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`,
+                    time: d.time || "00:00",
+                    location: document.getElementById("header-location")?.textContent || "Unknown Location",
+                    logTs: anchorTs || null
+                };
+            }
+
+            function applyNpcDeath(npcId, cause, anchorTs = null) {
+                const id = String(npcId || "").trim();
+                const deathCause = String(cause || "").trim();
+                if (!id || !deathCause) return false;
+                if (activeChar && activeChar.id === id) return false;
+                const cards = getCards();
+                const npc = cards.find((c) => c.genre === "character" && c.id === id);
+                if (!npc) return false;
+
+                rememberAnchoredWorldChange(anchorTs, {
+                    type: "npcDeath",
+                    npcId: npc.id,
+                    previousStatus: npc.status || "Alive",
+                    previousDeathCause: npc.deathCause || "",
+                    previousDeathInfo: npc.deathInfo ? { ...npc.deathInfo } : null
+                });
+
+                npc.status = "Dead";
+                npc.deathCause = deathCause;
+                npc.deathInfo = {
+                    ...buildCurrentWorldStamp(anchorTs),
+                    id: npc.id,
+                    cause: deathCause
+                };
+                sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                return true;
             }
 
             function rollbackToLastWorldState() {
@@ -1129,6 +1207,7 @@
                 let match;
                 let timeChanged = false;
                 let locationChanged = false;
+                let npcDeathsChanged = false;
                 // Reset pending memory targets for this response
                 window._pendingMemoryTargets = [];
 
@@ -1152,6 +1231,15 @@
                             window._pendingMemoryTargets = targets;
                         } catch (e) {
                             console.warn("Memory tag parse failed", e);
+                        }
+                        continue;
+                    }
+                    const deathTag = content.match(/^(?:Death|Dead)\s*:\s*([A-Za-z0-9\-_]+)\s*\|\s*(.+)$/i);
+                    if (deathTag) {
+                        const npcId = deathTag[1].trim();
+                        const deathCause = deathTag[2].trim();
+                        if (applyNpcDeath(npcId, deathCause, currentNarrationTs)) {
+                            npcDeathsChanged = true;
                         }
                         continue;
                     }
@@ -1322,6 +1410,9 @@
                     try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                     saveActiveCharacter();
                     clearExpiredNpcMemories();
+                }
+                if (npcDeathsChanged) {
+                    updatePresentNPCs();
                 }
 
                 return text.replace(/\[\[.*?\]\]/g, "").replace(/\s+/g, " ").trim();
@@ -1613,6 +1704,7 @@
                 Storage.remove(CARDS_KEY);
                 Storage.remove(CHARS_KEY);
                 Storage.remove(LOG_KEY);
+                Storage.remove(ANCHORED_WORLD_CHANGES_KEY);
                 hideBackPopup();
                 document.body.style.opacity = "0";
                 setTimeout(() => { window.location.href = "../index.html"; }, 300);
@@ -2044,7 +2136,6 @@
                     const currentLoc = cards.find((c) => c.id === currentLocationId);
                     if (!currentLoc) return "";
 
-                    // Find all ancestors
                     const ancestors = [];
                     let current = currentLoc;
                     while (current) {
@@ -2074,21 +2165,37 @@
                     const characters = cards.filter((c) => c.genre === "character" && residentIds.has(c.id));
                     if (characters.length === 0) return "";
 
+                    const livingCharacters = [];
+                    const deadCharacters = [];
+                    characters.forEach((c) => {
+                        if ((c.status || "Alive") === "Dead") deadCharacters.push(c);
+                        else livingCharacters.push(c);
+                    });
+
                     let context = "\nPRESENT CHARACTERS (Residents of this location and its parent regions):\n";
                     context += "NOTE: Presence does NOT mean friendship. Check 'Character Relationships' for status.\n";
-                    characters.forEach((c) => {
-                        if ((c.status || "Alive") === "Dead") return;
+                    livingCharacters.forEach((c) => {
                         // If NPC is scheduled in school now, show only when current location includes that school
                         const sched = scheduledByNpc.get(c.id);
                         if (sched && !ancestorIds.has(sched.schoolId)) {
                             return; // not present here now
                         }
-                        context += `- ${c.title} (${c.raceName || "Unknown Race"})\n`;
+                        context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
                         if (c.description) context += `  Description: ${c.description}\n`;
                         if (c.personality) context += `  Personality: ${c.personality}\n`;
                         if (c.appearance) context += `  Appearance: ${c.appearance}\n`;
                         if (c.lore) context += `  Lore/History: ${c.lore}\n`;
                     });
+                    if (deadCharacters.length > 0) {
+                        context += "\nDEAD RESIDENTS (Known dead NPCs tied to this location and its parent regions. They are not physically present, but the area can reflect their deaths):\n";
+                        deadCharacters.forEach((c) => {
+                            context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
+                            context += `  Status: Dead\n`;
+                            context += `  Cause of Death: ${c.deathCause || "Unknown"}\n`;
+                            if (c.description) context += `  Description: ${c.description}\n`;
+                            if (c.lore) context += `  Lore/History: ${c.lore}\n`;
+                        });
+                    }
                     return context;
                 } catch (e) {
                     console.error("Character context error", e);
@@ -2832,6 +2939,14 @@ ${shopContext}
   - Level: Common or Important
   - The entire narration text will be stored for each listed NPC as their memory
 
+# NPC DEATH TAGS (MANDATORY WHEN A RESIDENT NPC DIES)
+- If a resident NPC truly dies in the scene, append a death tag BEFORE the final metadata block.
+- Syntax:
+  [[Death:NPC_ID|Cause of death]]
+- Use the exact NPC ID shown in the PRESENT CHARACTERS or DEAD RESIDENTS lists.
+- Use one death tag per dead NPC.
+- Only use this for NPCs, never for the player.
+
 # RESPONSE FORMAT (MANDATORY)
 Your response MUST consist of two parts:
 1. The narration text (storytelling).
@@ -3080,6 +3195,7 @@ Example:
                 presentNPCs.forEach((npc) => {
                     const item = document.createElement("div");
                     item.className = "npc-item";
+                    item.dataset.npcId = npc.id;
                     const isF = npc.gender === "female";
                     const icon = isF ? "♀" : "♂";
                     const avatarClass = isF ? "female" : "male";
@@ -3097,13 +3213,8 @@ Example:
             function getPresentNpcIds() {
                 const bar = document.getElementById("present-npcs-bar");
                 if (!bar) return [];
-                const cards = getCards();
                 return Array.from(bar.querySelectorAll(".npc-item"))
-                    .map((item) => {
-                        const name = item.querySelector(".npc-name-xs")?.textContent?.trim() || "";
-                        const card = cards.find((c) => c.genre === "character" && c.title === name);
-                        return card ? card.id : null;
-                    })
+                    .map((item) => item.dataset.npcId || null)
                     .filter(Boolean);
             }
 
@@ -3274,6 +3385,8 @@ Example:
                 try {
                     if (!ts) return;
                     const cards = getCards();
+                    const anchoredChanges = getAnchoredWorldChanges();
+                    const pendingChanges = Array.isArray(anchoredChanges[String(ts)]) ? anchoredChanges[String(ts)] : [];
                     let changed = false;
                     cards.forEach(c => {
                         if (c.genre === "character") {
@@ -3300,6 +3413,23 @@ Example:
                             }
                         }
                     });
+                    pendingChanges.forEach((change) => {
+                        if (!change || change.type !== "npcDeath" || !change.npcId) return;
+                        const npc = cards.find((c) => c.genre === "character" && c.id === change.npcId);
+                        if (!npc) return;
+                        npc.status = change.previousStatus || "Alive";
+                        npc.deathCause = change.previousDeathCause || "";
+                        if (change.previousDeathInfo) {
+                            npc.deathInfo = { ...change.previousDeathInfo };
+                        } else {
+                            delete npc.deathInfo;
+                        }
+                        changed = true;
+                    });
+                    if (pendingChanges.length > 0) {
+                        delete anchoredChanges[String(ts)];
+                        saveAnchoredWorldChanges(anchoredChanges);
+                    }
                     if (changed) {
                         sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
                     }
