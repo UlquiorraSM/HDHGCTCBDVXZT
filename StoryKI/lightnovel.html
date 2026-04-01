@@ -6,35 +6,306 @@
         <title>StoryKI - Light Novel</title>
         <style>
             * { margin:0; padding:0; box-sizing:border-box; }
-            html, body { width:100%; height:100%; background:#0a0a0a; color:#fff; font-family:"Segoe UI", Arial, sans-serif; }
+            html, body { width:100%; min-height:100%; background:#0a0a0a; color:#fff; font-family:"Segoe UI", Arial, sans-serif; }
             body { opacity:0; transition:opacity .4s ease-in-out; }
-            .container { max-width:900px; margin:0 auto; padding:24px; }
-            .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
-            .title { font-size:20px; font-weight:700; color:#fff; }
-            .count { font-size:12px; color:rgba(255,255,255,.7); }
-            .actions { display:flex; gap:8px; }
-            .btn { padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,.2); background:rgba(30,30,30,.8); color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
-            .btn:hover { background:rgba(50,50,50,.9); }
-            .content { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:24px; line-height:1.7; font-size:15px; }
-            .content p { margin:0 0 16px 0; color:rgba(255,255,255,.92); }
+            .container { max-width:1500px; margin:0 auto; padding:24px; }
+            .topbar { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+            .title-wrap { display:flex; flex-direction:column; gap:8px; }
+            .title { font-size:24px; font-weight:700; color:#fff; }
+            .count { font-size:13px; color:rgba(255,255,255,.72); }
+            .actions, .control-row, .editor-actions { display:flex; gap:8px; flex-wrap:wrap; }
+            .btn, .input, .select {
+                padding:10px 14px;
+                border-radius:10px;
+                border:1px solid rgba(255,255,255,.16);
+                background:rgba(24,24,24,.88);
+                color:#fff;
+                font-size:13px;
+            }
+            .btn { font-weight:600; cursor:pointer; }
+            .btn:hover { background:rgba(50,50,50,.95); }
+            .btn.primary { background:rgba(72,110,210,.72); }
+            .btn.primary:hover { background:rgba(85,125,225,.88); }
+            .btn.danger { background:rgba(140,45,45,.75); }
+            .btn.danger:hover { background:rgba(170,50,50,.88); }
+            .btn.ghost { background:rgba(255,255,255,.06); }
+            .input, .select { outline:none; }
+            .input:focus, .select:focus { border-color:rgba(112,150,255,.8); }
+            .panel {
+                background:rgba(255,255,255,.045);
+                border:1px solid rgba(255,255,255,.12);
+                border-radius:18px;
+                padding:18px;
+                box-shadow:0 18px 50px rgba(0,0,0,.28);
+            }
+            .controls {
+                display:grid;
+                grid-template-columns:minmax(280px, 1.2fr) minmax(320px, 1fr);
+                gap:16px;
+                margin-bottom:16px;
+            }
+            .label { font-size:12px; color:rgba(255,255,255,.65); margin-bottom:8px; display:block; }
+            .layout {
+                display:grid;
+                grid-template-columns:minmax(240px, .8fr) minmax(360px, 1.1fr) minmax(360px, 1.1fr);
+                gap:16px;
+                align-items:start;
+            }
+            .panel-title { font-size:15px; font-weight:700; margin-bottom:14px; color:#fff; }
+            .panel-sub { font-size:12px; color:rgba(255,255,255,.65); margin-top:-8px; margin-bottom:12px; }
+            .chapter-list, .entry-list {
+                display:flex;
+                flex-direction:column;
+                gap:10px;
+                max-height:68vh;
+                overflow:auto;
+                padding-right:4px;
+                scrollbar-width:none;
+                -ms-overflow-style:none;
+            }
+            .chapter-list::-webkit-scrollbar, .entry-list::-webkit-scrollbar, .preview::-webkit-scrollbar { width:0; height:0; }
+            .chapter-card, .entry-card {
+                border:1px solid rgba(255,255,255,.1);
+                background:rgba(255,255,255,.035);
+                border-radius:14px;
+                padding:12px;
+                transition:all .18s ease;
+            }
+            .chapter-card.active, .entry-card.active {
+                border-color:rgba(110,150,255,.85);
+                background:rgba(75,105,190,.18);
+            }
+            .entry-card {
+                cursor:pointer;
+                user-select:none;
+            }
+            .entry-card:hover, .chapter-card:hover {
+                border-color:rgba(255,255,255,.18);
+                background:rgba(255,255,255,.07);
+            }
+            .entry-card.dragging { opacity:.35; }
+            .entry-card.drop-target { border-color:rgba(255,220,120,.8); background:rgba(255,210,110,.12); }
+            .mini { font-size:11px; color:rgba(255,255,255,.6); }
+            .entry-head, .chapter-head {
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                gap:10px;
+                margin-bottom:8px;
+            }
+            .sender-badge {
+                display:inline-flex;
+                align-items:center;
+                gap:6px;
+                font-size:11px;
+                padding:5px 8px;
+                border-radius:999px;
+                background:rgba(255,255,255,.09);
+                color:rgba(255,255,255,.9);
+            }
+            .entry-text, .chapter-title {
+                color:rgba(255,255,255,.92);
+                line-height:1.55;
+                word-break:break-word;
+            }
+            .entry-text.clamp {
+                display:-webkit-box;
+                line-clamp:3;
+                -webkit-line-clamp:3;
+                -webkit-box-orient:vertical;
+                overflow:hidden;
+            }
+            .editor-grid {
+                display:grid;
+                grid-template-rows:auto auto 1fr;
+                gap:12px;
+            }
+            .textarea {
+                width:100%;
+                min-height:180px;
+                resize:vertical;
+                padding:14px;
+                border-radius:14px;
+                border:1px solid rgba(255,255,255,.16);
+                background:rgba(8,8,8,.55);
+                color:#fff;
+                line-height:1.6;
+                font-size:14px;
+                outline:none;
+            }
+            .textarea:focus { border-color:rgba(112,150,255,.8); }
+            .preview {
+                min-height:320px;
+                max-height:68vh;
+                overflow:auto;
+                line-height:1.8;
+                font-size:15px;
+                scrollbar-width:none;
+                -ms-overflow-style:none;
+            }
+            .preview p {
+                margin:0 0 18px 0;
+                color:rgba(255,255,255,.93);
+            }
+            .empty {
+                color:rgba(255,255,255,.56);
+                font-size:13px;
+                padding:12px 0;
+            }
+            .chapter-actions {
+                display:flex;
+                gap:8px;
+                margin-top:10px;
+            }
+            .chapter-footer {
+                display:flex;
+                margin-top:12px;
+            }
+            .scene { display:none; }
+            .scene.active { display:block; }
+            .all-chapters-panel {
+                display:flex;
+                flex-direction:column;
+                gap:14px;
+            }
+            .chapter-grid {
+                display:grid;
+                grid-template-columns:repeat(6, minmax(0, 1fr));
+                gap:12px;
+                align-items:stretch;
+            }
+            .chapter-card {
+                display:flex;
+                flex-direction:column;
+            }
+            .chapter-body {
+                flex:1;
+                color:rgba(255,255,255,.72);
+                line-height:1.55;
+                font-size:12px;
+                word-break:break-word;
+            }
+            .chapter-search-row {
+                display:flex;
+                gap:10px;
+                flex-wrap:wrap;
+                align-items:center;
+            }
+            @media (max-width: 1200px) {
+                .layout { grid-template-columns:1fr; }
+                .chapter-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+            }
+            @media (max-width: 860px) {
+                .controls { grid-template-columns:1fr; }
+                .topbar { flex-direction:column; align-items:stretch; }
+                .actions { justify-content:flex-start; }
+                .chapter-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+            }
+            @media (max-width: 580px) {
+                .chapter-grid { grid-template-columns:1fr; }
+            }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="topbar">
-                <div class="title" id="story-title">Light Novel</div>
+                <div class="title-wrap">
+                    <div class="title" id="story-title">Light Novel</div>
+                    <div class="count" id="story-count"></div>
+                </div>
                 <div class="actions">
-                    <button class="btn" onclick="back()">← Back</button>
-                    <button class="btn" onclick="copyText()">📋 Copy</button>
+                    <button class="btn" id="back-btn">← Back</button>
+                    <button class="btn" id="copy-btn">📋 Copy Preview</button>
                 </div>
             </div>
-            <div class="count" id="story-count"></div>
-            <div class="content" id="novel-content"></div>
+
+            <div class="scene active" id="editor-scene">
+                <div class="controls">
+                    <div class="panel">
+                        <div class="panel-title">Chapter source</div>
+                        <div class="panel-sub">Load the last messages from the StoryLog into the editor.</div>
+                        <div class="control-row">
+                            <input class="input" id="message-count-input" type="number" min="1" step="1" value="15" />
+                            <button class="btn primary" id="load-last-btn">Load last messages</button>
+                            <button class="btn ghost" id="new-chapter-btn">New chapter</button>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">Save chapter</div>
+                        <div class="panel-sub">You can create unlimited chapters per story.</div>
+                        <div class="control-row">
+                            <input class="input" id="chapter-title-input" type="text" placeholder="Chapter name" style="flex:1;" />
+                            <button class="btn primary" id="save-chapter-btn">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="layout">
+                    <div class="panel">
+                        <div class="panel-title">Saved chapters</div>
+                        <div class="chapter-list" id="chapter-list"></div>
+                        <div class="chapter-footer" id="chapter-list-footer"></div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">Messages Editor</div>
+                        <div class="panel-sub">Each message is clickable. You can select, edit, move, or delete it.</div>
+                        <div class="editor-grid">
+                            <div class="editor-actions">
+                                <button class="btn" id="move-up-btn">↑ Up</button>
+                                <button class="btn" id="move-down-btn">↓ Down</button>
+                                <button class="btn danger" id="delete-entry-btn">Delete</button>
+                            </div>
+                            <textarea class="textarea" id="entry-editor" placeholder="Select a message to edit."></textarea>
+                            <div class="editor-actions">
+                                <button class="btn primary" id="save-entry-btn">Save</button>
+                                <button class="btn ghost" id="reset-entry-btn">Reset Selection</button>
+                            <button class="btn ghost" id="reset-messages-btn">Reset Messages</button>
+                            <button class="btn ghost" id="write-message-btn">Write Message</button>
+                            </div>
+                        </div>
+                        <div style="height:14px;"></div>
+                        <div class="entry-list" id="entry-list"></div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">Preview</div>
+                        <div class="panel-sub">This is the current Light Novel page of your chapter.</div>
+                        <div class="preview" id="novel-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scene" id="all-chapters-scene">
+                <div class="panel all-chapters-panel">
+                    <div>
+                        <div class="panel-title">All Chapters</div>
+                        <div class="panel-sub" id="all-chapters-summary">Browse all saved chapters.</div>
+                    </div>
+                    <div class="chapter-search-row">
+                        <input class="input" id="chapter-search-input" type="text" placeholder="Search chapters" style="flex:1;" />
+                    </div>
+                    <div class="chapter-grid" id="all-chapters-grid"></div>
+                </div>
+            </div>
         </div>
 
         <script>
             const SCENARIOS_KEY = "storyki_scenarios";
+            let currentStoryId = null;
+            let currentStory = null;
+            let workingEntries = [];
+            let baselineEntries = [];
+            let selectedEntryIndex = -1;
+            let currentChapterId = null;
+            let currentChapterTitle = "";
+            let dragEntryIndex = -1;
+            let currentView = "editor";
+            let chapterSearchQuery = "";
+
             function getScenarios() { try { return JSON.parse(localStorage.getItem(SCENARIOS_KEY) || "[]"); } catch { return []; } }
+            function setScenarios(list) { localStorage.setItem(SCENARIOS_KEY, JSON.stringify(list)); }
             function navigateWithTransition(url) { document.body.style.transition = "opacity .4s ease-in-out"; document.body.style.opacity = "0"; setTimeout(() => { window.location.href = url; }, 400); }
             function back() { navigateWithTransition("../index.html"); }
             function escHtml(s) { return String(s || "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
@@ -49,25 +320,453 @@
                 try { return JSON.stringify(e); } catch { return ""; }
             }
             function getParam(name) { const u = new URL(window.location.href); return u.searchParams.get(name); }
-            function render() {
-                const id = getParam("story");
+
+            function getStoryById(id) {
                 const scenarios = getScenarios();
-                const story = scenarios.find(x => x.id === id);
+                return scenarios.find(x => x.id === id) || null;
+            }
+
+            function getStoryLog(story) {
+                return Array.isArray(story?.data?.log) ? story.data.log : [];
+            }
+
+            function getStoryChapters(story) {
+                if (Array.isArray(story?.data?.chapters)) return story.data.chapters;
+                if (Array.isArray(story?.data?.lightNovelChapters)) return story.data.lightNovelChapters;
+                return [];
+            }
+
+            function getNormalizedStoryChapters(story) {
+                return getStoryChapters(story)
+                    .map((chapter, index) => normalizeChapter(chapter, index))
+                    .sort((a, b) => {
+                        const updatedDiff = Number(b.updatedAt || 0) - Number(a.updatedAt || 0);
+                        if (updatedDiff !== 0) return updatedDiff;
+                        return String(a.title || "").localeCompare(String(b.title || ""), "de");
+                    });
+            }
+
+            function makeEntryId() {
+                return Math.random().toString(36).slice(2, 10);
+            }
+
+            function getEntrySender(entry) {
+                if (entry && typeof entry === "object" && typeof entry.sender === "string" && entry.sender.trim()) return entry.sender.trim();
+                return "Entry";
+            }
+
+            function createWorkingEntry(source, fallbackIndex = 0) {
+                return {
+                    id: makeEntryId() + "_" + fallbackIndex,
+                    sender: getEntrySender(source),
+                    text: String(entryToText(source) || "").trim()
+                };
+            }
+
+            function cloneWorkingEntries(entries) {
+                return (Array.isArray(entries) ? entries : []).map((entry, index) => ({
+                    id: entry?.id || (makeEntryId() + "_" + index),
+                    sender: String(entry?.sender || "Entry"),
+                    text: String(entry?.text || "")
+                }));
+            }
+
+            function normalizeChapter(chapter, index = 0) {
+                const entries = Array.isArray(chapter?.entries) ? chapter.entries : [];
+                return {
+                    id: chapter?.id || ("chapter_" + index + "_" + makeEntryId()),
+                    title: String(chapter?.title || `Kapitel ${index + 1}`),
+                    createdAt: chapter?.createdAt || Date.now(),
+                    updatedAt: chapter?.updatedAt || Date.now(),
+                    sourceCount: Number(chapter?.sourceCount || entries.length || 0),
+                    entries: entries.map((entry, entryIndex) => ({
+                        id: entry?.id || (makeEntryId() + "_" + entryIndex),
+                        sender: String(entry?.sender || "Entry"),
+                        text: String(entry?.text || "")
+                    }))
+                };
+            }
+
+            function saveCurrentStory(mutator) {
+                const scenarios = getScenarios();
+                const idx = scenarios.findIndex(x => x.id === currentStoryId);
+                if (idx === -1) return false;
+                const story = scenarios[idx];
+                if (!story.data || typeof story.data !== "object") story.data = {};
+                mutator(story);
+                scenarios[idx] = story;
+                setScenarios(scenarios);
+                currentStory = story;
+                return true;
+            }
+
+            function getSelectedCountValue() {
+                const input = document.getElementById("message-count-input");
+                const raw = parseInt(input.value, 10);
+                return Math.max(1, isNaN(raw) ? 15 : raw);
+            }
+
+            function renderHeader() {
                 const titleEl = document.getElementById("story-title");
                 const countEl = document.getElementById("story-count");
-                const contentEl = document.getElementById("novel-content");
-                if (!story) { titleEl.textContent = "Story not found"; countEl.textContent = ""; contentEl.textContent = ""; return; }
-                titleEl.textContent = story.name || "Light Novel";
-                const log = Array.isArray(story?.data?.log) ? story.data.log : [];
-                countEl.textContent = "Entries: " + log.length;
-                const out = [];
-                log.forEach(e => {
-                    const txt = entryToText(e).trim();
-                    if (!txt) return;
-                    out.push("<p>" + escHtml(txt) + "</p>");
-                });
-                contentEl.innerHTML = out.join("");
+                if (!currentStory) {
+                    titleEl.textContent = "Story not found";
+                    countEl.textContent = "";
+                    return;
+                }
+                const logCount = getStoryLog(currentStory).length;
+                const chapterCount = getStoryChapters(currentStory).length;
+                titleEl.textContent = currentStory.name || "Light Novel";
+                countEl.textContent = `StoryLog: ${logCount} messages · Editor: ${workingEntries.length} messages · Chapters: ${chapterCount}`;
             }
+
+            function renderPreview() {
+                const contentEl = document.getElementById("novel-content");
+                if (!workingEntries.length) {
+                    contentEl.innerHTML = `<div class="empty">No messages in the chapter editor.</div>`;
+                    return;
+                }
+                contentEl.innerHTML = workingEntries
+                    .map(entry => `<p>${escHtml(entry.text || "")}</p>`)
+                    .join("");
+            }
+
+            function renderEntryEditor() {
+                const textarea = document.getElementById("entry-editor");
+                if (selectedEntryIndex < 0 || selectedEntryIndex >= workingEntries.length) {
+                    textarea.value = "";
+                    textarea.placeholder = "Wähle links eine Nachricht aus, um sie zu bearbeiten.";
+                    return;
+                }
+                textarea.value = workingEntries[selectedEntryIndex].text || "";
+            }
+
+            function selectEntry(index) {
+                selectedEntryIndex = index;
+                renderEntryEditor();
+                renderEntries();
+            }
+
+            function moveEntry(from, to) {
+                if (from < 0 || from >= workingEntries.length) return;
+                if (to < 0 || to >= workingEntries.length) return;
+                const [item] = workingEntries.splice(from, 1);
+                workingEntries.splice(to, 0, item);
+                selectedEntryIndex = to;
+                renderAll();
+            }
+
+            function renderEntries() {
+                const listEl = document.getElementById("entry-list");
+                if (!workingEntries.length) {
+                    listEl.innerHTML = `<div class="empty">Keine Nachrichten geladen. Nutze oben „Letzte Nachrichten laden“ oder lade ein Kapitel.</div>`;
+                    return;
+                }
+                listEl.innerHTML = "";
+                workingEntries.forEach((entry, index) => {
+                    const card = document.createElement("div");
+                    card.className = "entry-card" + (index === selectedEntryIndex ? " active" : "");
+                    card.draggable = true;
+                    card.dataset.index = String(index);
+                    card.innerHTML = `
+                        <div class="entry-head">
+                            <span class="sender-badge">${escHtml(entry.sender || "Entry")}</span>
+                            <span class="mini">#${index + 1}</span>
+                        </div>
+                        <div class="entry-text clamp">${escHtml(entry.text || "")}</div>
+                    `;
+                    card.addEventListener("click", () => selectEntry(index));
+                    card.addEventListener("dragstart", () => {
+                        dragEntryIndex = index;
+                        card.classList.add("dragging");
+                    });
+                    card.addEventListener("dragend", () => {
+                        dragEntryIndex = -1;
+                        card.classList.remove("dragging");
+                        Array.from(listEl.children).forEach(node => node.classList.remove("drop-target"));
+                    });
+                    card.addEventListener("dragover", (event) => {
+                        event.preventDefault();
+                        card.classList.add("drop-target");
+                    });
+                    card.addEventListener("dragleave", () => {
+                        card.classList.remove("drop-target");
+                    });
+                    card.addEventListener("drop", (event) => {
+                        event.preventDefault();
+                        card.classList.remove("drop-target");
+                        if (dragEntryIndex === -1 || dragEntryIndex === index) return;
+                        moveEntry(dragEntryIndex, index);
+                    });
+                    listEl.appendChild(card);
+                });
+            }
+
+            function getChapterSnippet(chapter) {
+                const combined = chapter.entries
+                    .map(entry => String(entry?.text || "").trim())
+                    .filter(Boolean)
+                    .join(" ");
+                if (!combined) return "No text preview available.";
+                return combined.length > 180 ? combined.slice(0, 180).trim() + "…" : combined;
+            }
+
+            function createChapterCard(chapter, { loadToEditor = false } = {}) {
+                const card = document.createElement("div");
+                card.className = "chapter-card" + (chapter.id === currentChapterId ? " active" : "");
+                const updated = new Date(chapter.updatedAt || Date.now()).toLocaleString();
+                card.innerHTML = `
+                    <div class="chapter-head">
+                        <div class="chapter-title">${escHtml(chapter.title)}</div>
+                        <div class="mini">${chapter.entries.length} Msg</div>
+                    </div>
+                    <div class="mini">Saved: ${escHtml(updated)}</div>
+                    <div class="chapter-body">${escHtml(getChapterSnippet(chapter))}</div>
+                `;
+                const actions = document.createElement("div");
+                actions.className = "chapter-actions";
+                const loadBtn = document.createElement("button");
+                loadBtn.className = "btn";
+                loadBtn.textContent = "Load";
+                loadBtn.addEventListener("click", () => loadChapter(chapter.id, { openEditor: loadToEditor }));
+                const deleteBtn = document.createElement("button");
+                deleteBtn.className = "btn danger";
+                deleteBtn.textContent = "Delete";
+                deleteBtn.addEventListener("click", () => deleteChapter(chapter.id));
+                actions.appendChild(loadBtn);
+                actions.appendChild(deleteBtn);
+                card.appendChild(actions);
+                return card;
+            }
+
+            function renderChapters() {
+                const listEl = document.getElementById("chapter-list");
+                const footerEl = document.getElementById("chapter-list-footer");
+                if (!currentStory) {
+                    listEl.innerHTML = `<div class="empty">Story not found.</div>`;
+                    footerEl.innerHTML = "";
+                    return;
+                }
+                const chapters = getNormalizedStoryChapters(currentStory);
+                if (!chapters.length) {
+                    listEl.innerHTML = `<div class="empty">No chapters saved.</div>`;
+                    footerEl.innerHTML = "";
+                    return;
+                }
+                listEl.innerHTML = "";
+                chapters.slice(0, 3).forEach((chapter) => {
+                    listEl.appendChild(createChapterCard(chapter));
+                });
+                footerEl.innerHTML = "";
+                if (chapters.length > 3) {
+                    const viewAllBtn = document.createElement("button");
+                    viewAllBtn.className = "btn ghost";
+                    viewAllBtn.textContent = "View all Chapters";
+                    viewAllBtn.addEventListener("click", showAllChaptersScene);
+                    footerEl.appendChild(viewAllBtn);
+                }
+            }
+
+            function renderAllChaptersScene() {
+                const summaryEl = document.getElementById("all-chapters-summary");
+                const gridEl = document.getElementById("all-chapters-grid");
+                const searchInput = document.getElementById("chapter-search-input");
+                if (searchInput.value !== chapterSearchQuery) {
+                    searchInput.value = chapterSearchQuery;
+                }
+                if (!currentStory) {
+                    summaryEl.textContent = "Story not found.";
+                    gridEl.innerHTML = `<div class="empty">Story not found.</div>`;
+                    return;
+                }
+                const chapters = getNormalizedStoryChapters(currentStory);
+                const query = chapterSearchQuery.trim().toLowerCase();
+                const filtered = chapters.filter((chapter) => {
+                    if (!query) return true;
+                    const haystack = [
+                        chapter.title,
+                        ...chapter.entries.map(entry => entry.text || "")
+                    ].join(" ").toLowerCase();
+                    return haystack.includes(query);
+                });
+                summaryEl.textContent = query
+                    ? `${filtered.length} of ${chapters.length} Chapters found.`
+                    : `${chapters.length} saved chapters.`;
+                if (!filtered.length) {
+                    gridEl.innerHTML = `<div class="empty">No chapters found.</div>`;
+                    return;
+                }
+                gridEl.innerHTML = "";
+                filtered.forEach((chapter) => {
+                    gridEl.appendChild(createChapterCard(chapter, { loadToEditor: true }));
+                });
+            }
+
+            function updateSceneVisibility() {
+                const isAllChapters = currentView === "allChapters";
+                document.getElementById("editor-scene").classList.toggle("active", !isAllChapters);
+                document.getElementById("all-chapters-scene").classList.toggle("active", isAllChapters);
+                document.getElementById("copy-btn").style.display = isAllChapters ? "none" : "";
+                document.getElementById("back-btn").textContent = isAllChapters ? "← Back to Editor" : "← Back";
+            }
+
+            function showAllChaptersScene() {
+                currentView = "allChapters";
+                renderAll();
+            }
+
+            function showEditorScene() {
+                currentView = "editor";
+                renderAll();
+            }
+
+            function handleBack() {
+                if (currentView === "allChapters") {
+                    showEditorScene();
+                    return;
+                }
+                back();
+            }
+
+            function renderAll() {
+                renderHeader();
+                renderEntryEditor();
+                renderEntries();
+                renderPreview();
+                renderChapters();
+                renderAllChaptersScene();
+                updateSceneVisibility();
+            }
+
+            function loadLastMessages() {
+                if (!currentStory) return;
+                const count = getSelectedCountValue();
+                const log = getStoryLog(currentStory);
+                const subset = log.slice(-count);
+                workingEntries = subset
+                    .map((entry, index) => createWorkingEntry(entry, index))
+                    .filter(entry => entry.text);
+                baselineEntries = cloneWorkingEntries(workingEntries);
+                selectedEntryIndex = workingEntries.length ? 0 : -1;
+                currentChapterId = null;
+                currentChapterTitle = "";
+                document.getElementById("chapter-title-input").value = "";
+                renderAll();
+            }
+
+            function loadChapter(chapterId, { openEditor = true } = {}) {
+                if (!currentStory) return;
+                const chapters = getNormalizedStoryChapters(currentStory);
+                const chapter = chapters.find(item => item.id === chapterId);
+                if (!chapter) return;
+                currentChapterId = chapter.id;
+                workingEntries = chapter.entries.map((entry, index) => ({
+                    id: entry.id || (makeEntryId() + "_" + index),
+                    sender: entry.sender || "Entry",
+                    text: entry.text || ""
+                }));
+                baselineEntries = cloneWorkingEntries(workingEntries);
+                selectedEntryIndex = workingEntries.length ? 0 : -1;
+                document.getElementById("chapter-title-input").value = chapter.title || "";
+                currentChapterTitle = chapter.title || "";
+                if (openEditor) currentView = "editor";
+                renderAll();
+            }
+
+            function saveChapter() {
+                if (!currentStory) return;
+                if (!workingEntries.length) {
+                    alert("Es gibt keine Nachrichten zum Speichern.");
+                    return;
+                }
+                const titleInput = document.getElementById("chapter-title-input");
+                const title = String(titleInput.value || "").trim() || `Kapitel ${getStoryChapters(currentStory).length + 1}`;
+                const sourceCount = getSelectedCountValue();
+                const existingChapters = getStoryChapters(currentStory).map((chapter, index) => normalizeChapter(chapter, index));
+                const existingChapter = currentChapterId ? existingChapters.find(item => item.id === currentChapterId) : null;
+                const shouldUpdateExisting = Boolean(existingChapter && title === currentChapterTitle);
+                const payload = {
+                    id: shouldUpdateExisting ? currentChapterId : ("chapter_" + makeEntryId()),
+                    title,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    sourceCount,
+                    entries: workingEntries.map((entry, index) => ({
+                        id: entry.id || (makeEntryId() + "_" + index),
+                        sender: entry.sender || "Entry",
+                        text: entry.text || ""
+                    }))
+                };
+                saveCurrentStory((story) => {
+                    const list = getStoryChapters(story).map((chapter, index) => normalizeChapter(chapter, index));
+                    const existingIndex = list.findIndex(item => item.id === payload.id);
+                    if (existingIndex >= 0) {
+                        payload.createdAt = list[existingIndex].createdAt || payload.createdAt;
+                        list[existingIndex] = payload;
+                    } else {
+                        list.push(payload);
+                    }
+                    story.data.chapters = list;
+                    delete story.data.lightNovelChapters;
+                });
+                currentChapterId = payload.id;
+                currentChapterTitle = payload.title;
+                baselineEntries = cloneWorkingEntries(workingEntries);
+                renderAll();
+                alert("Chapter saved.");
+            }
+
+            function deleteChapter(chapterId) {
+                if (!currentStory) return;
+                saveCurrentStory((story) => {
+                    const list = getStoryChapters(story);
+                    story.data.chapters = list.filter(chapter => chapter && chapter.id !== chapterId);
+                    delete story.data.lightNovelChapters;
+                });
+                if (currentChapterId === chapterId) {
+                    currentChapterId = null;
+                    currentChapterTitle = "";
+                    document.getElementById("chapter-title-input").value = "";
+                }
+                renderAll();
+            }
+
+            function saveSelectedEntry() {
+                if (selectedEntryIndex < 0 || selectedEntryIndex >= workingEntries.length) return;
+                const textarea = document.getElementById("entry-editor");
+                workingEntries[selectedEntryIndex].text = String(textarea.value || "").trim();
+                renderAll();
+            }
+
+            function deleteSelectedEntry() {
+                if (selectedEntryIndex < 0 || selectedEntryIndex >= workingEntries.length) return;
+                workingEntries.splice(selectedEntryIndex, 1);
+                if (!workingEntries.length) selectedEntryIndex = -1;
+                else if (selectedEntryIndex >= workingEntries.length) selectedEntryIndex = workingEntries.length - 1;
+                renderAll();
+            }
+
+            function resetMessages() {
+                workingEntries = cloneWorkingEntries(baselineEntries);
+                selectedEntryIndex = workingEntries.length ? 0 : -1;
+                renderAll();
+            }
+
+            function writeMessage() {
+                const sender = selectedEntryIndex >= 0 && selectedEntryIndex < workingEntries.length
+                    ? workingEntries[selectedEntryIndex].sender || "Entry"
+                    : "Entry";
+                workingEntries.push({
+                    id: makeEntryId() + "_" + workingEntries.length,
+                    sender,
+                    text: ""
+                });
+                selectedEntryIndex = workingEntries.length - 1;
+                renderAll();
+                const textarea = document.getElementById("entry-editor");
+                if (textarea) textarea.focus();
+            }
+
             function copyText() {
                 const el = document.getElementById("novel-content");
                 const tmp = document.createElement("textarea");
@@ -79,7 +778,53 @@
                 try { document.execCommand("copy"); } catch {}
                 document.body.removeChild(tmp);
             }
-            window.addEventListener("load", () => { document.body.style.opacity = "1"; render(); });
+
+            function initStory() {
+                currentStoryId = getParam("story");
+                currentStory = getStoryById(currentStoryId);
+                if (!currentStory) {
+                    renderAll();
+                    return;
+                }
+                const savedChapters = getNormalizedStoryChapters(currentStory);
+                if (savedChapters.length > 0) {
+                    loadChapter(savedChapters[0].id);
+                } else {
+                    loadLastMessages();
+                }
+            }
+
+            window.addEventListener("load", () => {
+                document.getElementById("back-btn").addEventListener("click", handleBack);
+                document.getElementById("copy-btn").addEventListener("click", copyText);
+                document.getElementById("chapter-search-input").addEventListener("input", (event) => {
+                    chapterSearchQuery = String(event.target.value || "");
+                    renderAllChaptersScene();
+                });
+                document.getElementById("load-last-btn").addEventListener("click", loadLastMessages);
+                document.getElementById("save-chapter-btn").addEventListener("click", saveChapter);
+                document.getElementById("new-chapter-btn").addEventListener("click", () => {
+                    currentChapterId = null;
+                    currentChapterTitle = "";
+                    document.getElementById("chapter-title-input").value = "";
+                    loadLastMessages();
+                });
+                document.getElementById("save-entry-btn").addEventListener("click", saveSelectedEntry);
+                document.getElementById("reset-entry-btn").addEventListener("click", () => {
+                    renderEntryEditor();
+                });
+                document.getElementById("reset-messages-btn").addEventListener("click", resetMessages);
+                document.getElementById("write-message-btn").addEventListener("click", writeMessage);
+                document.getElementById("delete-entry-btn").addEventListener("click", deleteSelectedEntry);
+                document.getElementById("move-up-btn").addEventListener("click", () => {
+                    if (selectedEntryIndex > 0) moveEntry(selectedEntryIndex, selectedEntryIndex - 1);
+                });
+                document.getElementById("move-down-btn").addEventListener("click", () => {
+                    if (selectedEntryIndex >= 0 && selectedEntryIndex < workingEntries.length - 1) moveEntry(selectedEntryIndex, selectedEntryIndex + 1);
+                });
+                initStory();
+                document.body.style.opacity = "1";
+            });
         </script>
     </body>
 </html>

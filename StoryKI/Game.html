@@ -1606,6 +1606,7 @@
                 const chars = JSON.parse(Storage.get(CHARS_KEY) || "[]");
                 const log = JSON.parse(Storage.get(LOG_KEY) || "[]");
                 const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                const anchoredWorldChanges = getAnchoredWorldChanges();
                 let scenarios = getScenariosLocal();
                 let storyId = getCurrentStoryId();
                 let story = storyId ? scenarios.find(x => x.id === storyId) : null;
@@ -1625,7 +1626,7 @@
                         updatedAt: Date.now(),
                         signature: computeSig(cards, chars, log, settings, worldId),
                         official: false,
-                        data: { cards, characters: chars, log, settings }
+                        data: { cards, characters: chars, log, settings, anchoredWorldChanges }
                     };
                     scenarios.push(story);
                     setScenariosLocal(scenarios);
@@ -1640,6 +1641,7 @@
                 const chars = JSON.parse(Storage.get(CHARS_KEY) || "[]");
                 const log = JSON.parse(Storage.get(LOG_KEY) || "[]");
                 const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                const anchoredWorldChanges = getAnchoredWorldChanges();
                 let scenarios = getScenariosLocal();
                 let storyId = getCurrentStoryId();
                 let story = storyId ? scenarios.find(x => x.id === storyId) : null;
@@ -1651,7 +1653,7 @@
                 const idx = scenarios.findIndex(x => x.id === story.id);
                 if (idx === -1) return;
                 scenarios[idx].updatedAt = Date.now();
-                scenarios[idx].data = { cards, characters: chars, log, settings };
+                scenarios[idx].data = { cards, characters: chars, log, settings, anchoredWorldChanges };
                 scenarios[idx].signature = computeSig(cards, chars, log, settings, worldId);
                 if (!scenarios[idx].official) {
                     if (chars.length > 0) {
