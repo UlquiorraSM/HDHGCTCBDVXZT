@@ -648,6 +648,7 @@
             const SELECTED_SCENARIO_KEY = "storyki_selected_scenario";
             const SELECTED_WORLD_ID_KEY = "storyki_selected_world_id"; // for session
             const CURRENT_STORY_ID_KEY = "storyki_current_story_id"; // for session
+            const ANCHORED_WORLD_CHANGES_KEY = "storyki_anchored_world_changes"; // for session
             let _selectedWorld = null;
 
             // Hintergrund aus Settings laden
@@ -1509,7 +1510,7 @@
                         novelBtn.className = "menu-button";
                         novelBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90, 110, 180, 0.6); border-radius:0;";
                         novelBtn.title = "Light Novel";
-                        novelBtn.onclick = () => { navigateWithTransition(`lightnovel.html?story=${encodeURIComponent(s.id)}`); };
+                        novelBtn.onclick = () => { navigateWithTransition(`StoryKI/lightnovel.html?story=${encodeURIComponent(s.id)}`); };
                     }
 
                     const deleteBtn = document.createElement("button");
@@ -1636,6 +1637,7 @@
                 Storage.set("storyki_storycards", JSON.stringify(_selectedWorld.data.cards || []));
                 Storage.set("storyki_storylog", JSON.stringify([]));
                 Storage.set("storyki_characters", JSON.stringify([]));
+                Storage.set(ANCHORED_WORLD_CHANGES_KEY, JSON.stringify({}));
                 // Globale Settings sichern und für das Spiel welt-spezifische Settings setzen
                 const globalSettingsRaw = Storage.get("storyki_settings");
                 if (globalSettingsRaw) Storage.set("storyki_settings_backup", globalSettingsRaw);
@@ -1661,6 +1663,7 @@
                 Storage.set("storyki_storycards", JSON.stringify(story.data.cards || []));
                 Storage.set("storyki_storylog", JSON.stringify(story.data.log || []));
                 Storage.set("storyki_characters", JSON.stringify(story.data.characters || []));
+                Storage.set(ANCHORED_WORLD_CHANGES_KEY, JSON.stringify(story.data.anchoredWorldChanges || {}));
                 // Nutzung der zugehörigen Welt vermerken
                 if (story.worldId) markWorldUsed(story.worldId);
                 // Globale Settings sichern und für das Spiel passende Settings setzen
@@ -1700,6 +1703,7 @@
                     const chars = JSON.parse(Storage.get("storyki_characters") || "[]");
                     const log = JSON.parse(Storage.get("storyki_storylog") || "[]");
                     const settings = JSON.parse(Storage.get("storyki_settings") || "{}");
+                    const anchoredWorldChanges = JSON.parse(Storage.get(ANCHORED_WORLD_CHANGES_KEY) || "{}");
                     const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
                     const currentStoryId = Storage.get(CURRENT_STORY_ID_KEY);
                     
@@ -1721,7 +1725,7 @@
                         // Vorhandene Story aktualisieren
                         targetStory.updatedAt = Date.now();
                         targetStory.signature = sig;
-                        targetStory.data = { cards, characters: chars, log, settings };
+                        targetStory.data = { cards, characters: chars, log, settings, anchoredWorldChanges };
                         
                         // Wenn der Charakter-Name im Story-Titel sein soll:
                         if (chars.length > 0 && targetStory.name.startsWith("Story ")) {
@@ -1744,7 +1748,7 @@
                             createdAt: Date.now(), 
                             updatedAt: Date.now(),
                             signature: sig,
-                            data: { cards, characters: chars, log, settings }
+                            data: { cards, characters: chars, log, settings, anchoredWorldChanges }
                         });
                     }
                     
@@ -1761,6 +1765,7 @@
                 // Logik für das Erstellen einer Story Card
                 console.log("Create Story");
                 Storage.remove(SELECTED_WORLD_ID_KEY); // Sicherstellen, dass keine Welt-ID geladen wird (für neue Welt)
+                Storage.remove(ANCHORED_WORLD_CHANGES_KEY);
                 navigateWithTransition("StoryKI/Create.html");
             }
 
@@ -1774,6 +1779,7 @@
                  
                  // Welt-Daten in Session laden für Create.html
                  Storage.set("storyki_storycards", JSON.stringify(world.data.cards || []));
+                 Storage.remove(ANCHORED_WORLD_CHANGES_KEY);
                  
                  // worldId merken, damit Create.html weiß, dass es eine Bearbeitung ist
                  Storage.set(SELECTED_WORLD_ID_KEY, worldId);
@@ -1878,7 +1884,9 @@
                                             cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
                                             characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
                                             log: Array.isArray(st.data?.log) ? st.data.log : [],
-                                            settings: st.data?.settings || {}
+                                            settings: st.data?.settings || {},
+                                            anchoredWorldChanges: st.data?.anchoredWorldChanges || {},
+                                            chapters: Array.isArray(st.data?.chapters) ? st.data.chapters : (Array.isArray(st.data?.lightNovelChapters) ? st.data.lightNovelChapters : [])
                                         }
                                     });
                                 });
@@ -1921,7 +1929,9 @@
                                         cards: st.data?.cards || [],
                                         characters: st.data?.characters || [],
                                         log: st.data?.log || [],
-                                        settings: st.data?.settings || {}
+                                        settings: st.data?.settings || {},
+                                        anchoredWorldChanges: st.data?.anchoredWorldChanges || {},
+                                        chapters: Array.isArray(st.data?.chapters) ? st.data.chapters : (Array.isArray(st.data?.lightNovelChapters) ? st.data.lightNovelChapters : [])
                                     }
                                 });
                             });
@@ -1940,6 +1950,7 @@
                             if (data.story.storyLog) Storage.set("storyki_storylog", JSON.stringify(data.story.storyLog));
                             if (data.story.characters) Storage.set("storyki_characters", JSON.stringify(data.story.characters));
                             if (data.story.settings) Storage.set("storyki_settings", JSON.stringify(data.story.settings));
+                            Storage.set(ANCHORED_WORLD_CHANGES_KEY, JSON.stringify(data.story.anchoredWorldChanges || {}));
                         }
                         
                         alert("Spielstand erfolgreich geladen!");
@@ -2052,6 +2063,7 @@
                             set("raceName", card.raceName);
                             if (card.status === "Dead") set("status", "Dead");
                             set("deathCause", card.deathCause);
+                            set("deathInfo", card.deathInfo);
                             if (card.isPlayable === true) set("isPlayable", true);
                             if (card.birthdate && (card.birthdate.day || card.birthdate.month)) set("birthdate", card.birthdate);
                             set("startingDate", card.startingDate);
@@ -2103,7 +2115,9 @@
                                         cards: (s.data?.cards || []).map(sanitizeCard),
                                         characters: (s.data?.characters || []).map(sanitizeCard),
                                         log: s.data?.log || [],
-                                        settings: s.data?.settings || {}
+                                        settings: s.data?.settings || {},
+                                        anchoredWorldChanges: s.data?.anchoredWorldChanges || {},
+                                        chapters: Array.isArray(s.data?.chapters) ? s.data.chapters : (Array.isArray(s.data?.lightNovelChapters) ? s.data.lightNovelChapters : [])
                                     }
                                 }))
                         }))
@@ -2247,6 +2261,7 @@
                         set("raceName", card.raceName);
                         if (card.status === "Dead") set("status", "Dead");
                         set("deathCause", card.deathCause);
+                        set("deathInfo", card.deathInfo);
                         if (card.isPlayable === true) set("isPlayable", true);
                         if (card.birthdate && (card.birthdate.day || card.birthdate.month)) set("birthdate", card.birthdate);
                         set("startingDate", card.startingDate);
@@ -2291,7 +2306,9 @@
                             cards: (s.data?.cards || []).map(sanitizeCard),
                             characters: (s.data?.characters || []).map(sanitizeCard),
                             log: s.data?.log || [],
-                            settings: s.data?.settings || {}
+                            settings: s.data?.settings || {},
+                            anchoredWorldChanges: s.data?.anchoredWorldChanges || {},
+                            chapters: Array.isArray(s.data?.chapters) ? s.data.chapters : (Array.isArray(s.data?.lightNovelChapters) ? s.data.lightNovelChapters : [])
                         }
                     }))
                 };
