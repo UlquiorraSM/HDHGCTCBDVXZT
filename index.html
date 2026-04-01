@@ -1198,7 +1198,7 @@
                     selectBtn.textContent = "Select";
                     selectBtn.className = "menu-button";
                     selectBtn.style.cssText = "padding:8px 6px; font-size:12px; width:72px; min-width:0; flex:none;";
-                    selectBtn.onclick = () => { openWorldStories(s.id); };
+                    selectBtn.onclick = () => { tryOpenWorld(s.id); };
 
                     const confBtn = document.createElement("button");
                     confBtn.textContent = "Conf";
@@ -1331,7 +1331,7 @@
                     selectBtn.textContent = "Select";
                     selectBtn.className = "menu-button";
                     selectBtn.style.cssText = "padding:8px 6px; font-size:12px; min-width:0;";
-                    selectBtn.onclick = () => { openWorldStories(s.id); };
+                    selectBtn.onclick = () => { tryOpenWorld(s.id); };
                     const confBtn = document.createElement("button");
                     confBtn.textContent = "Conf";
                     confBtn.className = "menu-button";
@@ -1382,6 +1382,23 @@
                     card.appendChild(btnRow2);
                     grid.appendChild(card);
                 });
+            }
+
+            function hasSpawnAndRace(world) {
+                const cards = world?.data?.cards || [];
+                const hasSpawn = cards.some(c => ((c?.genre || "").toLowerCase() === "location") && c?.canBeSpawn === true);
+                const hasRace = cards.some(c => ((c?.genre || "").toLowerCase() === "race"));
+                return { hasSpawn, hasRace };
+            }
+            function tryOpenWorld(worldId) {
+                const scenarios = getScenarios();
+                const world = scenarios.find(x => x.id === worldId);
+                if (!world) return;
+                const r = hasSpawnAndRace(world);
+                if (!r.hasSpawn) alert("This world has no spawn location");
+                if (!r.hasRace) alert("This world has no race");
+                if (!r.hasSpawn || !r.hasRace) return;
+                openWorldStories(worldId);
             }
 
             function openWorldStories(worldId) {
@@ -1632,6 +1649,10 @@
 
             function startNewStory() {
                 if (!_selectedWorld) return;
+                const r = hasSpawnAndRace(_selectedWorld);
+                if (!r.hasSpawn) alert("This world has no spawn location");
+                if (!r.hasRace) alert("This world has no race");
+                if (!r.hasSpawn || !r.hasRace) return;
                 
                 // Welt-Daten in Session laden
                 Storage.set("storyki_storycards", JSON.stringify(_selectedWorld.data.cards || []));
@@ -2217,6 +2238,7 @@
                         set("backgroundUrl", card.backgroundUrl);
                         if (card.canBeSpawn === true) set("canBeSpawn", true);
                         set("sublocations", card.sublocations || {});
+                        set("distances", card.distances || {});
                         set("species", card.species || {});
                         set("racialCivilization", card.racialCivilization || {});
                         const pop = card.population || {};
