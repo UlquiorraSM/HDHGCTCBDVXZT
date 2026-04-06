@@ -2274,6 +2274,15 @@
 
             <!-- ── SEARCH ROW ── -->
             <div class="search-row">
+                <button class="action-btn" onclick="importCards()">
+                    <span class="btn-icon">&#128193;</span> Import
+                </button>
+                <button class="action-btn" onclick="showAiHelperScene()">
+                    🤖 AI Helper
+                </button>
+                <button class="action-btn" onclick="exportCards()">
+                    <span class="btn-icon">&#128190;</span> Export
+                </button>
                 <div class="search-wrap">
                     <span class="search-icon">&#128269;</span>
                     <input
@@ -2284,12 +2293,6 @@
                         oninput="renderList()"
                     />
                 </div>
-                <button class="action-btn" onclick="importCards()">
-                    <span class="btn-icon">&#128193;</span> Import
-                </button>
-                <button class="action-btn" onclick="exportCards()">
-                    <span class="btn-icon">&#128190;</span> Export
-                </button>
             </div>
 
             <!-- ── ADD BANNER ── -->
@@ -2307,6 +2310,35 @@
                 <div class="empty-state" id="empty-state" style="display: none">
                     No entries yet. Click the button above to add one.
                 </div>
+            </div>
+        </div>
+
+        <div id="ai-helper-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" id="ai-helper-back" onclick="hideAiHelperScene()" title="Back">←</button>
+                <span class="nav-title">AI Helper</span>
+                <div class="nav-count" id="ai-helper-count">0</div>
+            </nav>
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>World Assistant</h2>
+                    <span class="entry-badge badge-location">WORLD</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mode</label>
+                    <select class="form-select" id="ai-helper-mode">
+                        <option value="create">Create new World</option>
+                        <option value="edit">Edit existing World</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Prompt</label>
+                    <textarea class="form-input" id="ai-helper-prompt" style="min-height:160px; resize:vertical;" placeholder="Describe the world, locations, characters, species, items, and relationships to generate or edit."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-save" id="ai-helper-run" onclick="runAiHelper()">Create</button>
+                </div>
+                <div class="empty-state" id="ai-helper-status" style="display:none; margin-top:10px;"></div>
             </div>
         </div>
 
@@ -5623,6 +5655,100 @@
                         const el = document.getElementById("f-name");
                         if (el) el.focus();
                     }, 80);
+                }
+            }
+
+            let _aiBusy = false;
+            function showAiHelperScene() {
+                document.getElementById("app").style.display = "none";
+                const v = document.getElementById("ai-helper-view");
+                if (v) v.style.display = "flex";
+                document.getElementById("ai-helper-count").textContent = String(getCards().length || 0);
+                _aiBusy = false;
+                const back = document.getElementById("ai-helper-back");
+                if (back) { back.disabled = false; back.classList.remove("locked"); }
+                const status = document.getElementById("ai-helper-status");
+                if (status) { status.style.display = "none"; status.textContent = ""; }
+            }
+            function hideAiHelperScene() {
+                if (_aiBusy) { showToast("AI is generating. Please wait.", "#c04040"); return; }
+                const v = document.getElementById("ai-helper-view");
+                if (v) v.style.display = "none";
+                document.getElementById("app").style.display = "flex";
+                renderList();
+            }
+            function askAI(prompt) {
+                return new Promise((resolve, reject) => {
+                    const requestId = Math.random().toString(36).substring(7);
+                    const timeout = setTimeout(() => {
+                        window.removeEventListener("message", handler);
+                        reject("KI Timeout");
+                    }, 45000);
+                    const handler = (event) => {
+                        if (event.data.requestId === requestId) {
+                            clearTimeout(timeout);
+                            window.removeEventListener("message", handler);
+                            if (event.data.type === "AI_RESPONSE") resolve(event.data.text);
+                            else reject(event.data.error || "Fehler");
+                        }
+                    };
+                    window.addEventListener("message", handler);
+                    window.parent.postMessage({ type: "AI_REQUEST", instruction: prompt, requestId }, "*");
+                });
+            }
+            async function askAIWithRetry(prompt) {
+                while (true) {
+                    try { return await askAI(prompt); }
+                    catch (err) { await new Promise((r) => setTimeout(r, 2000)); }
+                }
+            }
+            function _extractJson(s) {
+                try { return JSON.parse(s); } catch {}
+                try {
+                    const start = s.indexOf("{");
+                    const arrStart = s.indexOf("[");
+                    const i = (start >= 0 && arrStart >= 0) ? Math.min(start, arrStart) : Math.max(start, arrStart);
+                    const end = s.lastIndexOf("}");
+                    const arrEnd = s.lastIndexOf("]");
+                    const j = Math.max(end, arrEnd);
+                    if (i >= 0 && j > i) {
+                        const sub = s.slice(i, j + 1);
+                        return JSON.parse(sub);
+                    }
+                } catch {}
+                return null;
+            }
+            async function runAiHelper() {
+                try {
+                    const mode = (document.getElementById("ai-helper-mode")?.value || "create");
+                    const prompt = (document.getElementById("ai-helper-prompt")?.value || "").trim();
+                    if (!prompt) { showToast("Bitte Prompt ausfüllen.", "#c04040"); return; }
+                    _aiBusy = true;
+                    const back = document.getElementById("ai-helper-back");
+                    if (back) { back.disabled = true; back.classList.add("locked"); }
+                    const status = document.getElementById("ai-helper-status");
+                    if (status) { status.style.display = "block"; status.textContent = "AI arbeitet..."; }
+                    const existing = JSON.stringify(getCards());
+                    const sys = [
+                        "You generate StoryKI world cards as strict JSON.",
+                        "Output ONLY JSON, no prose.",
+                        "Schema: array of objects with fields: id,title,genre,description,locationSub,locationDetail,sublocations,species,events,residents,skillId,skillName,relations,secrets,nameGenerator,lore,loreText,loreMode,skincolorAllowed,appearance,personality,generally,variants,canBeCaught,canBeCaughtHow,age,gender,raceId,raceName,status,deathCause,isPlayable,birthdate,tags,curseTags,distances,updatedAt,createdAt,backgroundUrl,shopSchedule,shopWorkers,schoolSchedule,schoolClasses,canBeSpawn.",
+                        mode === "create" ? ("Task: Create a new coherent world JSON matching the prompt: " + prompt)
+                                          : ("Task: Edit the existing world JSON based on the prompt. Return the FULL updated JSON array. Prompt: " + prompt + " Existing JSON: " + existing)
+                    ].join("\n");
+                    const resp = await askAIWithRetry(sys);
+                    const json = _extractJson(resp);
+                    if (!json || !Array.isArray(json)) { showToast("KI lieferte kein gültiges JSON.", "#c04040"); _aiBusy = false; if (back) { back.disabled = false; back.classList.remove("locked"); } return; }
+                    saveCards(json);
+                    if (status) { status.textContent = "Fertig. Welt gespeichert."; }
+                    _aiBusy = false;
+                    hideAiHelperScene();
+                    showToast("World gespeichert.");
+                } catch (e) {
+                    _aiBusy = false;
+                    const back = document.getElementById("ai-helper-back");
+                    if (back) { back.disabled = false; back.classList.remove("locked"); }
+                    showToast("AI Fehler.", "#c04040");
                 }
             }
 
