@@ -132,6 +132,25 @@
                 color: #111;
             }
 
+            .nav-pills.scroll {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+            .nav-pills.scroll .nav-pill {
+                flex: 0 0 auto;
+            }
+            @media (max-width: 600px) {
+                #nav-pills {
+                    gap: 3px;
+                }
+                #nav-pills .nav-pill {
+                    padding: 5px 10px;
+                    font-size: 12px;
+                }
+            }
             .nav-count {
                 width: 38px;
                 height: 38px;
@@ -4082,6 +4101,12 @@
                     pills.appendChild(btn);
                 });
 
+                const total = 1 + usedGenres.length;
+                const isMobile = window.matchMedia && window.matchMedia("(max-width: 600px)").matches;
+                const threshold = isMobile ? 3 : 8;
+                pills.classList.remove("scroll");
+                if (total >= threshold) pills.classList.add("scroll");
+
                 // If the currently active filter no longer exists, reset to 'all'
                 if (
                     activeFilter !== "all" &&
@@ -7804,7 +7829,7 @@
                         if (f === "Mother" || f === "Father") {
                             if (tg === "female") return { relation: "Family", familySub: "Daughter" };
                             if (tg === "male") return { relation: "Family", familySub: "Son" };
-                            return null;
+                            return { relation: "Family", familySub: "Son" };
                         }
                         if (f === "Son" || f === "Daughter") {
                             const parent = sg === "female" ? "Mother" : "Father";
@@ -7821,7 +7846,7 @@
                         if (f === "Grandmother" || f === "Grandfather") {
                             if (tg === "female") return { relation: "Family", familySub: "Granddaughter" };
                             if (tg === "male") return { relation: "Family", familySub: "Grandson" };
-                            return null;
+                            return { relation: "Family", familySub: "Grandson" };
                         }
                         if (f === "Granddaughter" || f === "Grandson") {
                             const gp = sg === "female" ? "Grandmother" : "Grandfather";
@@ -7830,7 +7855,7 @@
                         if (f === "Aunt" || f === "Uncle") {
                             if (tg === "female") return { relation: "Family", familySub: "Niece" };
                             if (tg === "male") return { relation: "Family", familySub: "Nephew" };
-                            return null;
+                            return { relation: "Family", familySub: "Nephew" };
                         }
                         if (f === "Niece" || f === "Nephew") {
                             const au = sg === "female" ? "Aunt" : "Uncle";
@@ -7839,7 +7864,7 @@
                         if (f === "Step-Mother" || f === "Step-Father") {
                             if (tg === "female") return { relation: "Family", familySub: "Step-Daughter" };
                             if (tg === "male") return { relation: "Family", familySub: "Step-Son" };
-                            return null;
+                            return { relation: "Family", familySub: "Step-Son" };
                         }
                         if (f === "Step-Daughter" || f === "Step-Son") {
                             const sp = sg === "female" ? "Step-Mother" : "Step-Father";
@@ -7909,6 +7934,7 @@
                             shopWorkers: shopWorkersData,
                             canBeSpawn,
                             ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
+                            ...(type === "location" && prev.distances && Object.keys(prev.distances).length ? { distances: prev.distances } : {}),
                             ...(species && Object.keys(species).length ? { species } : {}),
                             ...(racialCivilization && Object.keys(racialCivilization).length ? { racialCivilization } : {}),
                             population,
