@@ -5688,6 +5688,504 @@
             }
 
             let _aiBusy = false;
+            const AI_HELPER_GENRES = new Set(["location", "race", "species", "lore", "character", "item", "skill"]);
+            function aiHelperText(v) {
+                if (v === null || v === undefined) return "";
+                return String(v).replace(/[`"]/g, "").trim();
+            }
+            function aiHelperKey(v) {
+                return aiHelperText(v).toLowerCase();
+            }
+            function aiHelperUnique(arr) {
+                return [...new Set((arr || []).filter(Boolean))];
+            }
+            function aiHelperList(v) {
+                if (Array.isArray(v)) {
+                    return aiHelperUnique(v.map((x) => aiHelperText(x)).filter(Boolean));
+                }
+                const text = aiHelperText(v);
+                if (!text) return [];
+                return aiHelperUnique(
+                    text
+                        .split(/\r?\n|,|;/)
+                        .map((x) => x.trim())
+                        .filter(Boolean),
+                );
+            }
+            function aiHelperValidGenre(v) {
+                return AI_HELPER_GENRES.has(aiHelperKey(v));
+            }
+            function aiHelperGuessGenre(card) {
+                const explicit = aiHelperKey(card?.genre);
+                if (aiHelperValidGenre(explicit)) return explicit;
+                if (card && (card.locationSub !== undefined || card.locationDetail !== undefined || card.sublocations !== undefined || card.residents !== undefined || card.events !== undefined || card.distances !== undefined)) {
+                    return "location";
+                }
+                if (card && (card.age !== undefined || card.gender !== undefined || card.raceName !== undefined || card.appearance !== undefined || card.personality !== undefined || card.birthdate !== undefined || card.isPlayable !== undefined)) {
+                    return "character";
+                }
+                if (card && (card.loreText !== undefined || card.lore !== undefined || card.loreMode !== undefined)) {
+                    return "lore";
+                }
+                if (card && (card.canBeCaught !== undefined || card.canBeCaughtHow !== undefined || card.generally !== undefined || card.variantOf !== undefined)) {
+                    return "species";
+                }
+                if (card && (card.nameGenerator !== undefined || card.skincolorAllowed !== undefined)) {
+                    return "race";
+                }
+                if (card && (card.skillId !== undefined || card.skillName !== undefined)) {
+                    return "skill";
+                }
+                return "location";
+            }
+            function aiHelperSelectLocationTitle(card) {
+                const title = aiHelperText(card?.title);
+                const locationText = aiHelperText(card?.locationSub);
+                if (
+                    locationText &&
+                    !["building", "zivil", "land"].includes(aiHelperKey(locationText)) &&
+                    /(village|town|city|kingdom|country|forest|school|house|shop|store|clinic|hospital|shrine|temple|station|home|dam|site)/i.test(locationText)
+                ) {
+                    return locationText;
+                }
+                return title || locationText || "Generated Location";
+            }
+            function aiHelperLocationShape(card, titleText) {
+                const explicitSub = aiHelperKey(card?.locationSub);
+                const explicitDetail = aiHelperKey(card?.locationDetail);
+                if (["building", "zivil", "land"].includes(explicitSub)) {
+                    if (explicitSub === "zivil") {
+                        const detail = ["village", "city", "country", "kingdom"].includes(explicitDetail) ? explicitDetail : "village";
+                        return { locationSub: "zivil", locationDetail: detail };
+                    }
+                    if (explicitSub === "land") return { locationSub: "land", locationDetail: "forest" };
+                    const detail = ["house", "shop", "school", "custom"].includes(explicitDetail) ? explicitDetail : "custom";
+                    return { locationSub: "building", locationDetail: detail };
+                }
+                const hay = [titleText, card?.locationSub, card?.locationDetail, card?.description].map(aiHelperText).join(" ").toLowerCase();
+                if (/(country)/.test(hay)) return { locationSub: "zivil", locationDetail: "country" };
+                if (/(kingdom)/.test(hay)) return { locationSub: "zivil", locationDetail: "kingdom" };
+                if (/(village)/.test(hay)) return { locationSub: "zivil", locationDetail: "village" };
+                if (/(city|town)/.test(hay)) return { locationSub: "zivil", locationDetail: "city" };
+                if (/(forest|woods|woodland)/.test(hay)) return { locationSub: "land", locationDetail: "forest" };
+                if (/(school|academy|classroom)/.test(hay)) return { locationSub: "building", locationDetail: "school" };
+                if (/(shop|store|market)/.test(hay)) return { locationSub: "building", locationDetail: "shop" };
+                if (/(house|home|residence|manor|estate|apartment)/.test(hay)) return { locationSub: "building", locationDetail: "house" };
+                return { locationSub: "building", locationDetail: "custom" };
+            }
+            function aiHelperLocationBucket(card) {
+                if (card.locationSub === "zivil" && ["village", "city"].includes(card.locationDetail)) return "village-city";
+                if (card.locationSub === "zivil" && ["country", "kingdom"].includes(card.locationDetail)) return "country-kingdom";
+                return "land";
+            }
+            function aiHelperNormalizeBirthdate(v) {
+                if (!v || typeof v !== "object") return null;
+                const day = parseInt(v.day, 10);
+                const month = parseInt(v.month, 10);
+                if (!day || !month) return null;
+                return { day, month };
+            }
+            function aiHelperNormalizeUrl(v) {
+                const url = aiHelperText(v);
+                if (!/^https?:\/\//i.test(url)) return "";
+                return url;
+            }
+            function aiHelperNormalizeStatus(v) {
+                return aiHelperKey(v) === "dead" ? "Dead" : "";
+            }
+            function aiHelperNormalizeGender(v) {
+                const g = aiHelperKey(v);
+                if (["male", "female"].includes(g)) return g;
+                return "";
+            }
+            function aiHelperBuildEventBucket(events, locationCard) {
+                const key = aiHelperLocationBucket(locationCard);
+                const arr = Array.isArray(events) ? events : aiHelperList(events);
+                const normalized = arr
+                    .map((entry) => {
+                        if (entry && typeof entry === "object") {
+                            const description = aiHelperText(entry.description || entry.title || entry.name);
+                            if (!description) return null;
+                            return {
+                                type: aiHelperKey(entry.type) === "secret" ? "secret" : "public",
+                                day: parseInt(entry.day, 10) || 1,
+                                month: parseInt(entry.month, 10) || 1,
+                                year: parseInt(entry.year, 10) || 1983,
+                                time: aiHelperText(entry.time) || "12:00",
+                                description,
+                            };
+                        }
+                        const description = aiHelperText(entry);
+                        if (!description) return null;
+                        return {
+                            type: "public",
+                            day: 1,
+                            month: 1,
+                            year: 1983,
+                            time: "12:00",
+                            description,
+                        };
+                    })
+                    .filter(Boolean);
+                return normalized.length ? { [key]: normalized } : null;
+            }
+            function aiHelperPushCard(cards, seen, card) {
+                const title = aiHelperText(card?.title);
+                const genre = aiHelperGuessGenre(card);
+                if (!title || !aiHelperValidGenre(genre)) return null;
+                const key = `${genre}:${aiHelperKey(title)}`;
+                if (seen.has(key)) {
+                    const existing = seen.get(key);
+                    Object.assign(existing, {
+                        ...existing,
+                        ...card,
+                        id: existing.id,
+                        title: existing.title,
+                        genre: existing.genre,
+                    });
+                    return existing;
+                }
+                const now = new Date().toISOString();
+                const id = aiHelperText(card.id) || generateId();
+                const next = {
+                    id,
+                    title,
+                    genre,
+                    createdAt: aiHelperText(card.createdAt) || now,
+                    updatedAt: aiHelperText(card.updatedAt) || now,
+                    version: aiHelperText(card.version) || "1.0",
+                    ...card,
+                    id,
+                    title,
+                    genre,
+                };
+                cards.push(next);
+                seen.set(key, next);
+                return next;
+            }
+            function aiHelperBuildFromSummary(source) {
+                const cards = [];
+                const seen = new Map();
+                const ensureRace = (name) => {
+                    const title = aiHelperText(name);
+                    if (!title) return null;
+                    return aiHelperPushCard(cards, seen, { title, genre: "race" });
+                };
+                const ensureSkill = (name, description) => {
+                    const title = aiHelperText(name);
+                    if (!title) return null;
+                    return aiHelperPushCard(cards, seen, { title, genre: "skill", description: aiHelperText(description) });
+                };
+                const ensureCharacter = (name, template = {}) => {
+                    const title = aiHelperText(name);
+                    if (!title) return null;
+                    const raceTitle = aiHelperText(template.raceName || template.raceId || "");
+                    const race = raceTitle ? ensureRace(raceTitle) : null;
+                    const skill = aiHelperText(template.skillName) ? ensureSkill(template.skillName, template.skillName) : null;
+                    return aiHelperPushCard(cards, seen, {
+                        title,
+                        genre: "character",
+                        description: aiHelperText(template.description),
+                        appearance: aiHelperText(template.appearance),
+                        personality: aiHelperText(template.personality),
+                        age: parseInt(template.age, 10) || 0,
+                        gender: aiHelperNormalizeGender(template.gender),
+                        raceId: race?.id || "",
+                        raceName: race?.title || "",
+                        status: aiHelperNormalizeStatus(template.status),
+                        deathCause: aiHelperText(template.deathCause),
+                        isPlayable: template.isPlayable === true,
+                        birthdate: aiHelperNormalizeBirthdate(template.birthdate),
+                        relations: Array.isArray(template.relations) ? template.relations.filter((x) => x && typeof x === "object") : [],
+                        secrets: aiHelperList(template.secrets),
+                        skillId: skill?.id || "",
+                        skillName: skill?.title || "",
+                    });
+                };
+                (source || []).forEach((entry) => {
+                    const genre = aiHelperGuessGenre(entry);
+                    if (genre === "location") {
+                        const rawTitle = aiHelperText(entry?.title) || aiHelperText(entry?.locationSub) || "Generated Location";
+                        const locationTitle = aiHelperSelectLocationTitle(entry);
+                        const shape = aiHelperLocationShape(entry, locationTitle);
+                        const locationCard = aiHelperPushCard(cards, seen, {
+                            title: locationTitle,
+                            genre: "location",
+                            description: aiHelperText(entry?.description) || (shape.locationDetail === "custom" ? aiHelperText(entry?.locationDetail) : ""),
+                            locationSub: shape.locationSub,
+                            locationDetail: shape.locationDetail,
+                            canBeSpawn: entry?.canBeSpawn === true,
+                            backgroundUrl: aiHelperNormalizeUrl(entry?.backgroundUrl),
+                        });
+                        aiHelperList(entry?.species).forEach((name) => ensureRace(name));
+                        const residentRace = aiHelperText(entry?.raceName) || aiHelperList(entry?.species)[0] || "Human";
+                        const residentSkill = aiHelperText(entry?.skillName);
+                        const residentIds = aiHelperList(entry?.residents)
+                            .map((name) => ensureCharacter(name, { raceName: residentRace, skillName: residentSkill }))
+                            .filter(Boolean)
+                            .map((card) => card.id);
+                        if (locationCard && residentIds.length) locationCard.residents = aiHelperUnique(residentIds);
+                        const sublocations = aiHelperList(entry?.sublocations)
+                            .map((name) => {
+                                const childShape = aiHelperLocationShape({ title: name }, name);
+                                return aiHelperPushCard(cards, seen, {
+                                    title: name,
+                                    genre: "location",
+                                    locationSub: childShape.locationSub,
+                                    locationDetail: childShape.locationDetail,
+                                });
+                            })
+                            .filter(Boolean)
+                            .map((card) => card.id);
+                        if (locationCard && sublocations.length) {
+                            locationCard.sublocations = { [aiHelperLocationBucket(locationCard)]: aiHelperUnique(sublocations) };
+                        }
+                        const eventBucket = aiHelperBuildEventBucket(entry?.events, locationCard || shape);
+                        if (locationCard && eventBucket) locationCard.events = eventBucket;
+                        const loreText = aiHelperText(entry?.loreText) || aiHelperText(entry?.lore) || aiHelperList(entry?.secrets).join(", ");
+                        const loreTitle = rawTitle && aiHelperKey(rawTitle) !== aiHelperKey(locationTitle) ? rawTitle : (loreText ? `${locationTitle} Lore` : "");
+                        if (loreTitle && loreText) {
+                            aiHelperPushCard(cards, seen, {
+                                title: loreTitle,
+                                genre: "lore",
+                                description: aiHelperText(entry?.description),
+                                loreText,
+                                loreMode: "always",
+                                tags: aiHelperList(entry?.tags),
+                            });
+                        }
+                        if (residentSkill) ensureSkill(residentSkill, residentSkill);
+                        return;
+                    }
+                    if (genre === "character") {
+                        ensureCharacter(aiHelperText(entry?.title) || "Generated Character", entry);
+                        return;
+                    }
+                    if (genre === "race") {
+                        aiHelperPushCard(cards, seen, {
+                            title: aiHelperText(entry?.title) || aiHelperText(entry?.raceName) || "Generated Race",
+                            genre: "race",
+                            description: aiHelperText(entry?.description),
+                            lore: aiHelperText(entry?.lore),
+                            tags: aiHelperList(entry?.tags),
+                        });
+                        return;
+                    }
+                    if (genre === "species") {
+                        aiHelperPushCard(cards, seen, {
+                            title: aiHelperText(entry?.title) || "Generated Species",
+                            genre: "species",
+                            description: aiHelperText(entry?.description),
+                            generally: aiHelperText(entry?.generally),
+                            appearance: aiHelperText(entry?.appearance),
+                            personality: aiHelperText(entry?.personality),
+                            canBeCaught: entry?.canBeCaught === true,
+                            canBeCaughtHow: aiHelperText(entry?.canBeCaughtHow),
+                        });
+                        return;
+                    }
+                    if (genre === "skill") {
+                        ensureSkill(aiHelperText(entry?.title) || aiHelperText(entry?.skillName) || aiHelperText(entry?.skillId) || "Generated Skill", aiHelperText(entry?.description) || aiHelperText(entry?.skillName));
+                        return;
+                    }
+                    if (genre === "item") {
+                        aiHelperPushCard(cards, seen, {
+                            title: aiHelperText(entry?.title) || "Generated Item",
+                            genre: "item",
+                            description: aiHelperText(entry?.description),
+                            tags: aiHelperList(entry?.tags),
+                        });
+                        return;
+                    }
+                    aiHelperPushCard(cards, seen, {
+                        title: aiHelperText(entry?.title) || "Generated Lore",
+                        genre: "lore",
+                        description: aiHelperText(entry?.description),
+                        loreText: aiHelperText(entry?.loreText) || aiHelperText(entry?.lore) || aiHelperText(entry?.description),
+                        loreMode: "always",
+                        tags: aiHelperList(entry?.tags),
+                    });
+                });
+                return cards;
+            }
+            function aiHelperFinalizeCards(source) {
+                const cards = (source || [])
+                    .map((card) => {
+                        const genre = aiHelperGuessGenre(card);
+                        if (!aiHelperValidGenre(genre)) return null;
+                        const now = new Date().toISOString();
+                        const next = {
+                            ...card,
+                            id: aiHelperText(card.id) || generateId(),
+                            title: aiHelperText(card.title) || "Untitled",
+                            genre,
+                            createdAt: aiHelperText(card.createdAt) || now,
+                            updatedAt: aiHelperText(card.updatedAt) || now,
+                            version: aiHelperText(card.version) || "1.0",
+                        };
+                        if (genre === "location") {
+                            const shape = aiHelperLocationShape(next, next.title);
+                            next.locationSub = shape.locationSub;
+                            next.locationDetail = shape.locationDetail;
+                            if (next.backgroundUrl) {
+                                const bg = aiHelperNormalizeUrl(next.backgroundUrl);
+                                if (bg) next.backgroundUrl = bg;
+                                else delete next.backgroundUrl;
+                            }
+                            if (Array.isArray(next.events)) {
+                                const bucketed = aiHelperBuildEventBucket(next.events, next);
+                                if (bucketed) next.events = bucketed;
+                                else delete next.events;
+                            }
+                        }
+                        if (genre === "character") {
+                            next.age = parseInt(next.age, 10) || 0;
+                            next.gender = aiHelperNormalizeGender(next.gender);
+                            next.status = aiHelperNormalizeStatus(next.status);
+                            const birthdate = aiHelperNormalizeBirthdate(next.birthdate);
+                            if (birthdate) next.birthdate = birthdate; else delete next.birthdate;
+                            next.secrets = aiHelperList(next.secrets);
+                        }
+                        if (genre === "lore") {
+                            next.loreMode = aiHelperKey(next.loreMode) === "tags" ? "tags" : "always";
+                            next.tags = aiHelperList(next.tags);
+                        }
+                        if (genre === "item" || genre === "race") {
+                            next.tags = aiHelperList(next.tags);
+                        }
+                        return next;
+                    })
+                    .filter(Boolean);
+                const raceTitleToCard = new Map(
+                    cards
+                        .filter((card) => card.genre === "race")
+                        .map((card) => [aiHelperKey(card.title), card]),
+                );
+                const raceNames = aiHelperUnique(
+                    cards
+                        .filter((card) => card.genre === "character")
+                        .map((card) => aiHelperText(card.raceName))
+                        .filter(Boolean),
+                );
+                raceNames.forEach((name) => {
+                    if (!raceTitleToCard.has(aiHelperKey(name))) {
+                        const race = {
+                            id: generateId(),
+                            title: name,
+                            genre: "race",
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
+                            version: "1.0",
+                        };
+                        cards.push(race);
+                        raceTitleToCard.set(aiHelperKey(name), race);
+                    }
+                });
+                const skillNames = aiHelperUnique(
+                    cards
+                        .filter((card) => card.genre === "character")
+                        .map((card) => aiHelperText(card.skillName))
+                        .filter(Boolean),
+                );
+                skillNames.forEach((name) => {
+                    const key = aiHelperKey(name);
+                    const exists = cards.find((card) => card.genre === "skill" && aiHelperKey(card.title) === key);
+                    if (!exists) {
+                        cards.push({
+                            id: generateId(),
+                            title: name,
+                            genre: "skill",
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
+                            version: "1.0",
+                        });
+                    }
+                });
+                const byId = new Map(cards.map((card) => [String(card.id), card]));
+                const byTitle = new Map(cards.map((card) => [aiHelperKey(card.title), card]));
+                cards.forEach((card) => {
+                    if (card.genre === "location") {
+                        if (Array.isArray(card.residents)) {
+                            const residentIds = card.residents
+                                .map((entry) => {
+                                    const raw = aiHelperText(entry);
+                                    return byId.get(raw)?.genre === "character" ? raw : (byTitle.get(aiHelperKey(raw))?.genre === "character" ? byTitle.get(aiHelperKey(raw)).id : "");
+                                })
+                                .filter(Boolean);
+                            if (residentIds.length) card.residents = aiHelperUnique(residentIds);
+                            else delete card.residents;
+                        }
+                        if (Array.isArray(card.sublocations)) {
+                            const childIds = card.sublocations
+                                .map((entry) => {
+                                    const raw = aiHelperText(entry);
+                                    return byId.get(raw)?.genre === "location" ? raw : (byTitle.get(aiHelperKey(raw))?.genre === "location" ? byTitle.get(aiHelperKey(raw)).id : "");
+                                })
+                                .filter(Boolean);
+                            if (childIds.length) card.sublocations = { [aiHelperLocationBucket(card)]: aiHelperUnique(childIds) };
+                            else delete card.sublocations;
+                        } else if (card.sublocations && typeof card.sublocations === "object") {
+                            const out = {};
+                            Object.keys(card.sublocations).forEach((bucket) => {
+                                const childIds = (card.sublocations[bucket] || [])
+                                    .map((entry) => {
+                                        const raw = aiHelperText(entry);
+                                        return byId.get(raw)?.genre === "location" ? raw : (byTitle.get(aiHelperKey(raw))?.genre === "location" ? byTitle.get(aiHelperKey(raw)).id : "");
+                                    })
+                                    .filter(Boolean);
+                                if (childIds.length) out[bucket] = aiHelperUnique(childIds);
+                            });
+                            if (Object.keys(out).length) card.sublocations = out;
+                            else delete card.sublocations;
+                        }
+                    }
+                    if (card.genre === "character") {
+                        if (card.raceName && !card.raceId) {
+                            const race = byTitle.get(aiHelperKey(card.raceName));
+                            if (race && race.genre === "race") card.raceId = race.id;
+                        }
+                        if (card.raceId && !card.raceName) {
+                            const race = byId.get(String(card.raceId));
+                            if (race && race.genre === "race") card.raceName = race.title;
+                        }
+                        if (card.skillName && !card.skillId) {
+                            const skill = cards.find((entry) => entry.genre === "skill" && aiHelperKey(entry.title) === aiHelperKey(card.skillName));
+                            if (skill) card.skillId = skill.id;
+                        }
+                        if (Array.isArray(card.relations)) {
+                            card.relations = card.relations
+                                .map((rel) => {
+                                    if (!rel || typeof rel !== "object") return null;
+                                    const targetName = aiHelperText(rel.targetName);
+                                    const targetId = aiHelperText(rel.targetId) || byTitle.get(aiHelperKey(targetName))?.id || "";
+                                    if (!targetId) return null;
+                                    return {
+                                        targetId,
+                                        targetName: targetName || byId.get(targetId)?.title || "",
+                                        relation: aiHelperText(rel.relation) || "Unknown",
+                                        familySub: aiHelperText(rel.familySub),
+                                    };
+                                })
+                                .filter(Boolean);
+                        } else {
+                            delete card.relations;
+                        }
+                    }
+                });
+                return cards.filter((card) => aiHelperText(card.title));
+            }
+            function aiHelperNormalizePayload(payload) {
+                let source = payload;
+                if (!Array.isArray(source)) {
+                    if (Array.isArray(payload?.cards)) source = payload.cards;
+                    else if (Array.isArray(payload?.world?.data?.cards)) source = payload.world.data.cards;
+                    else source = [];
+                }
+                if (!Array.isArray(source) || source.length === 0) return [];
+                const validGenreCount = source.filter((card) => aiHelperValidGenre(card?.genre)).length;
+                const base = validGenreCount >= Math.ceil(source.length / 2) ? source : aiHelperBuildFromSummary(source);
+                return aiHelperFinalizeCards(base);
+            }
             function showAiHelperScene() {
                 document.getElementById("app").style.display = "none";
                 const v = document.getElementById("ai-helper-view");
@@ -5760,19 +6258,31 @@
                     const existing = JSON.stringify(getCards());
                     const sys = [
                         "You generate StoryKI world cards as strict JSON.",
-                        "Output ONLY JSON, no prose.",
-                        "Schema: array of objects with fields: id,title,genre,description,locationSub,locationDetail,sublocations,species,events,residents,skillId,skillName,relations,secrets,nameGenerator,lore,loreText,loreMode,skincolorAllowed,appearance,personality,generally,variants,canBeCaught,canBeCaughtHow,age,gender,raceId,raceName,status,deathCause,isPlayable,birthdate,tags,curseTags,distances,updatedAt,createdAt,backgroundUrl,shopSchedule,shopWorkers,schoolSchedule,schoolClasses,canBeSpawn.",
-                        mode === "create" ? ("Task: Create a new coherent world JSON matching the prompt: " + prompt)
-                                          : ("Task: Edit the existing world JSON based on the prompt. Return the FULL updated JSON array. Prompt: " + prompt + " Existing JSON: " + existing)
+                        "Output ONLY JSON. No prose. No markdown. No code fences.",
+                        "Return a JSON array.",
+                        "Allowed genre values ONLY: location, race, species, lore, character, item, skill.",
+                        "Every card must have: id, title, genre.",
+                        "Locations must use locationSub only as: building, zivil, land.",
+                        "If locationSub is zivil, locationDetail must be one of: village, city, country, kingdom.",
+                        "If locationSub is land, locationDetail must be: forest.",
+                        "If locationSub is building, locationDetail should be one of: custom, house, shop, school.",
+                        "Use separate cards for residents, sublocations, races, skills and lore.",
+                        "For residents, sublocations and relations use card ids, not plain names, whenever possible.",
+                        "Create a usable StoryKI world structure, not a franchise summary.",
+                        mode === "create"
+                            ? ("Task: Create a new coherent StoryKI world from this prompt: " + prompt)
+                            : ("Task: Edit the existing StoryKI world based on this prompt. Return the FULL updated JSON array only. Prompt: " + prompt + " Existing JSON: " + existing)
                     ].join("\n");
                     const resp = await askAIWithRetry(sys);
                     const json = _extractJson(resp);
                     if (!json || !Array.isArray(json)) { showToast("KI lieferte kein gültiges JSON.", "#c04040"); _aiBusy = false; if (back) { back.disabled = false; back.classList.remove("locked"); } return; }
-                    saveCards(json);
-                    if (status) { status.textContent = "Fertig. Welt gespeichert."; }
+                    const normalized = aiHelperNormalizePayload(json);
+                    if (!normalized.length) { showToast("KI lieferte kein verwendbares StoryKI-Format.", "#c04040"); _aiBusy = false; if (back) { back.disabled = false; back.classList.remove("locked"); } return; }
+                    saveCards(normalized);
+                    if (status) { status.textContent = `Fertig. ${normalized.length} Karten gespeichert.`; }
                     _aiBusy = false;
                     hideAiHelperScene();
-                    showToast("World gespeichert.");
+                    showToast(`World gespeichert (${normalized.length} Karten).`);
                 } catch (e) {
                     _aiBusy = false;
                     const back = document.getElementById("ai-helper-back");
