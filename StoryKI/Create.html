@@ -5617,8 +5617,13 @@
                 document.getElementById("app").style.display = "none";
                 document.getElementById("form-view").classList.add("visible");
 
-                // Focus name field
-                setTimeout(() => document.getElementById("f-name").focus(), 80);
+                const isMobile = (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) || (navigator.maxTouchPoints > 0);
+                if (!isMobile) {
+                    setTimeout(() => {
+                        const el = document.getElementById("f-name");
+                        if (el) el.focus();
+                    }, 80);
+                }
             }
 
             // Map distances scene
