@@ -1259,11 +1259,11 @@
                     const uploadBtn = document.createElement("button");
                     uploadBtn.textContent = "☁️";
                     uploadBtn.className = "menu-button";
-                    uploadBtn.title = "Upload world to Universe";
+                    uploadBtn.title = "Upload world as URL";
                     uploadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(120,110,200,0.75); border-radius:0;";
                     uploadBtn.onclick = () => { uploadWorldToUniverse(s.id); };
 
-                    const isDefaultWorld = ((s.name || "").toLowerCase() === "defaultworld") || ((s.name || "").toLowerCase() === "world");
+                    const isDefaultWorld = ((s.name || "").trim().toLowerCase() === "world");
                     let deleteBtn = null;
                     if (!isDefaultWorld) {
                         deleteBtn = document.createElement("button");
@@ -1279,13 +1279,15 @@
                         deleteBtn.style.borderTopRightRadius = "8px";
                         deleteBtn.style.borderBottomRightRadius = "8px";
                     } else {
-                        uploadBtn.style.borderTopRightRadius = "8px";
-                        uploadBtn.style.borderBottomRightRadius = "8px";
+                        editBtn.style.borderTopRightRadius = "8px";
+                        editBtn.style.borderBottomRightRadius = "8px";
                     }
 
                     row2.appendChild(editBtn);
-                    row2.appendChild(downloadBtn);
-                    row2.appendChild(uploadBtn);
+                    if (!isDefaultWorld) {
+                        row2.appendChild(downloadBtn);
+                        row2.appendChild(uploadBtn);
+                    }
                     if (deleteBtn) row2.appendChild(deleteBtn);
                     
                     actions.appendChild(row1);
@@ -1393,10 +1395,10 @@
                     const uploadBtn = document.createElement("button");
                     uploadBtn.textContent = "☁️";
                     uploadBtn.className = "menu-button";
-                    uploadBtn.title = "Upload world to Universe";
+                    uploadBtn.title = "Upload world as URL";
                     uploadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(120,110,200,0.75); border-radius:0;";
                     uploadBtn.onclick = () => { uploadWorldToUniverse(s.id); };
-                    const isDefaultWorld = ((s.name || "").toLowerCase() === "defaultworld") || ((s.name || "").toLowerCase() === "world");
+                    const isDefaultWorld = ((s.name || "").trim().toLowerCase() === "world");
                     let deleteBtn = null;
                     if (!isDefaultWorld) {
                         deleteBtn = document.createElement("button");
@@ -1413,12 +1415,14 @@
                         deleteBtn.style.borderTopRightRadius = "8px";
                         deleteBtn.style.borderBottomRightRadius = "8px";
                     } else {
-                        uploadBtn.style.borderTopRightRadius = "8px";
-                        uploadBtn.style.borderBottomRightRadius = "8px";
+                        editBtn.style.borderTopRightRadius = "8px";
+                        editBtn.style.borderBottomRightRadius = "8px";
                     }
                     btnRow2.appendChild(editBtn);
-                    btnRow2.appendChild(downloadBtn);
-                    btnRow2.appendChild(uploadBtn);
+                    if (!isDefaultWorld) {
+                        btnRow2.appendChild(downloadBtn);
+                        btnRow2.appendChild(uploadBtn);
+                    }
                     if (deleteBtn) btnRow2.appendChild(deleteBtn);
                     card.appendChild(name);
                     card.appendChild(btnRow);
@@ -2536,7 +2540,7 @@
                 if (!entries.length) {
                     const empty = document.createElement("div");
                     empty.style.cssText = "color:rgba(255,255,255,.75); text-align:center;";
-                    empty.textContent = "Keine offenen URLs.";
+                    empty.textContent = "No open URLs.";
                     listEl.appendChild(empty);
                     return;
                 }
@@ -2650,9 +2654,9 @@
                         size: res.size || 0,
                     });
                     const msg = [
-                        "Welt erfolgreich hochgeladen.",
+                        "World successfully uploaded.",
                         `URL: ${res.url}`,
-                        "Sie erscheint jetzt unter See URLs."
+                        "See 'See URLs.'"
                     ].join("\n");
                     alert(msg);
                 } catch (e) {
