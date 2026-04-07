@@ -283,6 +283,17 @@
             return null;
         }
         const UNIVERSE_UPLOADS_KEY = "storyki_universe_uploaded_worlds";
+        function _saveUploadedWorldEntries(entries) {
+            const safe = Array.isArray(entries) ? entries : [];
+            localStorage.setItem(UNIVERSE_UPLOADS_KEY, JSON.stringify(safe));
+        }
+        function _removeUploadedWorldEntryByUrl(url) {
+            const key = String(url || "").trim();
+            if (!key) return;
+            const entries = _getUploadedWorldEntries();
+            const next = entries.filter((x) => String(x.url || "").trim() !== key);
+            _saveUploadedWorldEntries(next);
+        }
         function _getUploadedWorldEntries() {
             try {
                 const raw = localStorage.getItem(UNIVERSE_UPLOADS_KEY);
@@ -296,6 +307,7 @@
                         uploadedAt: parseInt(x.uploadedAt, 10) || 0,
                         cardsCount: parseInt(x.cardsCount, 10) || 0,
                         worldId: String(x.worldId || "").trim(),
+                        deletionUrl: String(x.deletionUrl || "").trim(),
                     }))
                     .filter((x) => /^https?:\/\//i.test(x.url));
             } catch {
@@ -348,7 +360,9 @@
                         name: w.name || entry.name || "Uploaded World",
                         settings: w.data?.settings || {},
                         cardsCount: Array.isArray(w.data?.cards) ? w.data.cards.length : entry.cardsCount || 0,
-                        source: "uploaded"
+                        source: "uploaded",
+                        deletionUrl: entry.deletionUrl || "",
+                        canDelete: !!entry.deletionUrl
                     });
                 } else {
                     seenUrls.add(entry.url);
@@ -358,11 +372,36 @@
                         name: entry.name || "Uploaded World",
                         settings: {},
                         cardsCount: entry.cardsCount || 0,
-                        source: "uploaded"
+                        source: "uploaded",
+                        deletionUrl: entry.deletionUrl || "",
+                        canDelete: !!entry.deletionUrl
                     });
                 }
             }
             return results;
+        }
+        async function deleteUploadedWorld(worldEntry) {
+            const entry = worldEntry || {};
+            const deletionUrl = String(entry.deletionUrl || "").trim();
+            if (!deletionUrl) {
+                alert("Du kannst nur deine eigenen Uploads löschen.");
+                return;
+            }
+            const ok = confirm(`Welt wirklich aus Universe entfernen?\n\n${entry.name || "Uploaded World"}`);
+            if (!ok) return;
+            try {
+                const response = await fetch(deletionUrl, { method: "GET" });
+                const result = await response.json();
+                if (!result || result.success !== true) {
+                    alert("Löschen fehlgeschlagen. Deletion-Link ist evtl. abgelaufen (nur bis 3 Tage nach Upload).");
+                    return;
+                }
+                _removeUploadedWorldEntryByUrl(entry.url);
+                await renderUniverse();
+                alert("Welt wurde gelöscht.");
+            } catch (err) {
+                alert("Löschen fehlgeschlagen.");
+            }
         }
         async function chooseUniverseWorld(url) {
             try {
@@ -448,6 +487,14 @@
                     choose.textContent = "Choose";
                     choose.onclick = async () => { await chooseUniverseWorld(w.url); };
                     btns.appendChild(choose);
+                    if (w.source === "uploaded" && w.canDelete) {
+                        const removeBtn = document.createElement("button");
+                        removeBtn.className = "menu-button";
+                        removeBtn.textContent = "Delete";
+                        removeBtn.style.cssText = "margin-top:8px; background: rgba(165,45,45,.75); border-color: rgba(255,255,255,.2);";
+                        removeBtn.onclick = async () => { await deleteUploadedWorld(w); };
+                        btns.appendChild(removeBtn);
+                    }
                     row.appendChild(info);
                     row.appendChild(btns);
                     listEl.appendChild(row);
