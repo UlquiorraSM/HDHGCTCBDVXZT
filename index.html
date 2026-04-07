@@ -479,6 +479,14 @@
                     Create World
                 </button>
                 <div class="menu-row">
+                    <button class="menu-button" onclick="openSettings()">
+                        Settings
+                    </button>
+                    <button class="menu-button" onclick="openAddUrlOverlay()">
+                        Add URL
+                    </button>
+                </div>
+                <div class="menu-row">
                     <button class="menu-button" onclick="document.getElementById('file-input').click()">
                         Load
                     </button>
@@ -491,11 +499,8 @@
                     />
                     <button class="menu-button" onclick="saveGame()">Save</button>
                 </div>
-                <button class="menu-button" onclick="openSettings()">
-                    Settings
-                </button>
-                <button class="menu-button" onclick="navigateWithDissolve('StoryKI/universe.html')">
-                    Search Worlds
+                <button id="see-urls-btn" class="menu-button" onclick="openSeeUrlsOverlay()" style="display:none;">
+                    See URLs
                 </button>
             </div>
         </div>
@@ -580,6 +585,30 @@
                 <div class="conf-actions">
                     <button class="conf-btn conf-btn-cancel" onclick="closeWorldConf()">Cancel</button>
                     <button class="conf-btn conf-btn-save" onclick="saveWorldConf()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="add-url-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:2100; backdrop-filter:blur(10px);">
+            <div class="conf-panel">
+                <h2>Add World URL</h2>
+                <div class="conf-group">
+                    <label class="conf-label">World URL</label>
+                    <input type="text" id="add-world-url-input" class="conf-input" placeholder="https://upload.perchance.org/...">
+                </div>
+                <div class="conf-actions">
+                    <button class="conf-btn conf-btn-cancel" onclick="closeAddUrlOverlay()">Cancel</button>
+                    <button class="conf-btn conf-btn-save" onclick="confirmAddWorldUrl()">Add</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="see-urls-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:2100; backdrop-filter:blur(10px);">
+            <div class="conf-panel" style="max-width:700px;">
+                <h2>Open URLs</h2>
+                <div id="see-urls-list" style="max-height:50vh; overflow:auto; display:flex; flex-direction:column; gap:10px;"></div>
+                <div class="conf-actions">
+                    <button class="conf-btn conf-btn-cancel" onclick="closeSeeUrlsOverlay()">Close</button>
                 </div>
             </div>
         </div>
@@ -1832,7 +1861,7 @@
                  document.getElementById("conf-world-name").value = world.name || "";
                  document.getElementById("conf-world-bg").value = world.data?.settings?.backgroundUrl || "";
                  document.getElementById("conf-world-cover").value = world.data?.settings?.coverUrl || "";
-                 document.getElementById("conf-world-name-title").textContent = `„${world.name}“ konfigurieren`;
+                 document.getElementById("conf-world-name-title").textContent = `Configure „${world.name}“`;
                  
                  document.getElementById("world-conf-overlay").style.display = "flex";
              }
@@ -2194,6 +2223,7 @@
                 await ensureDefaultWorlds();
                 captureDraftFromSessionIfAny();
                 renderScenarios();
+                refreshSeeUrlsButton();
                 const listEl = document.getElementById("scenarios-list");
                 if (listEl) {
                     listEl.addEventListener("wheel", (e) => {
@@ -2366,6 +2396,177 @@
                 localStorage.setItem(UNIVERSE_UPLOADS_KEY, JSON.stringify(entries));
             }
 
+            function getOwnOpenUrls() {
+                return getUniverseUploads()
+                    .filter(x => x && typeof x === "object")
+                    .map(x => ({
+                        url: String(x.url || "").trim(),
+                        name: String(x.name || "").trim(),
+                        uploadedAt: parseInt(x.uploadedAt, 10) || 0,
+                        deletionUrl: String(x.deletionUrl || "").trim()
+                    }))
+                    .filter(x => /^https?:\/\//i.test(x.url) && /^https?:\/\//i.test(x.deletionUrl));
+            }
+
+            function refreshSeeUrlsButton() {
+                const btn = document.getElementById("see-urls-btn");
+                if (!btn) return;
+                btn.style.display = getOwnOpenUrls().length > 0 ? "block" : "none";
+            }
+
+            function openAddUrlOverlay() {
+                const overlay = document.getElementById("add-url-overlay");
+                const input = document.getElementById("add-world-url-input");
+                if (input) input.value = "";
+                if (overlay) overlay.style.display = "flex";
+                if (input) setTimeout(() => input.focus(), 30);
+            }
+
+            function closeAddUrlOverlay() {
+                const overlay = document.getElementById("add-url-overlay");
+                if (overlay) overlay.style.display = "none";
+            }
+
+            async function addWorldFromUrl(url) {
+                const cleanUrl = String(url || "").trim();
+                if (!/^https?:\/\//i.test(cleanUrl)) {
+                    alert("Ungültige URL.");
+                    return false;
+                }
+                const data = await _loadJsonLocal(cleanUrl);
+                const w = data ? _extractWorld(data) : null;
+                if (!w) {
+                    alert("Unter dieser URL wurde keine gültige Welt gefunden.");
+                    return false;
+                }
+                const scenarios = getScenarios();
+                const exists = scenarios.some(s => !s.worldId && (s.name === w.name || s.id === (w.id || w.name)));
+                if (exists) {
+                    alert("World already added.");
+                    return false;
+                }
+                const now = Date.now();
+                const worldId = (w.id && !scenarios.some(s => s.id === w.id)) ? w.id : Math.random().toString(36).slice(2, 10);
+                scenarios.push({
+                    id: worldId,
+                    name: w.name || "World",
+                    createdAt: now,
+                    updatedAt: now,
+                    data: {
+                        cards: Array.isArray(w.data?.cards) ? w.data.cards : [],
+                        settings: w.data?.settings || {}
+                    }
+                });
+                const stories = Array.isArray(w.stories) ? w.stories : [];
+                stories.forEach(st => {
+                    let sid = st.id || Math.random().toString(36).slice(2, 10);
+                    if (scenarios.some(x => x.id === sid)) sid = Math.random().toString(36).slice(2, 10);
+                    scenarios.push({
+                        id: sid,
+                        worldId,
+                        name: st.name || "Story",
+                        createdAt: now,
+                        updatedAt: now,
+                        signature: st.signature || "",
+                        data: {
+                            cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
+                            characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
+                            log: Array.isArray(st.data?.log) ? st.data.log : [],
+                            settings: st.data?.settings || {}
+                        }
+                    });
+                });
+                setScenarios(scenarios);
+                renderScenarios();
+                return true;
+            }
+
+            async function confirmAddWorldUrl() {
+                const input = document.getElementById("add-world-url-input");
+                const url = input ? input.value : "";
+                try {
+                    const ok = await addWorldFromUrl(url);
+                    if (ok) {
+                        closeAddUrlOverlay();
+                        alert("Welt hinzugefügt.");
+                    }
+                } catch {
+                    alert("Welt konnte nicht geladen werden.");
+                }
+            }
+
+            function openSeeUrlsOverlay() {
+                renderSeeUrlsList();
+                const overlay = document.getElementById("see-urls-overlay");
+                if (overlay) overlay.style.display = "flex";
+            }
+
+            function closeSeeUrlsOverlay() {
+                const overlay = document.getElementById("see-urls-overlay");
+                if (overlay) overlay.style.display = "none";
+            }
+
+            async function deleteOwnUrl(url) {
+                const entries = getOwnOpenUrls();
+                const entry = entries.find(x => x.url === String(url || "").trim());
+                if (!entry) return;
+                const ok = confirm(`URL wirklich schließen?\n\n${entry.url}`);
+                if (!ok) return;
+                try {
+                    const response = await fetch(entry.deletionUrl, { method: "GET" });
+                    const result = await response.json();
+                    if (!result || result.success !== true) {
+                        alert("Schließen fehlgeschlagen. Deletion-Link evtl. abgelaufen.");
+                        return;
+                    }
+                    const remaining = getUniverseUploads().filter(x => String(x?.url || "").trim() !== entry.url);
+                    saveUniverseUploads(remaining);
+                    refreshSeeUrlsButton();
+                    renderSeeUrlsList();
+                } catch {
+                    alert("Schließen fehlgeschlagen.");
+                }
+            }
+
+            function renderSeeUrlsList() {
+                const listEl = document.getElementById("see-urls-list");
+                if (!listEl) return;
+                listEl.innerHTML = "";
+                const entries = getOwnOpenUrls().sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+                if (!entries.length) {
+                    const empty = document.createElement("div");
+                    empty.style.cssText = "color:rgba(255,255,255,.75); text-align:center;";
+                    empty.textContent = "Keine offenen URLs.";
+                    listEl.appendChild(empty);
+                    return;
+                }
+                entries.forEach(entry => {
+                    const row = document.createElement("div");
+                    row.style.cssText = "display:flex; align-items:center; gap:10px; background:rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px;";
+                    const left = document.createElement("div");
+                    left.style.cssText = "flex:1; min-width:0;";
+                    const name = document.createElement("div");
+                    name.style.cssText = "color:#fff; font-weight:700; font-size:13px; margin-bottom:4px;";
+                    name.textContent = entry.name || "World URL";
+                    const link = document.createElement("a");
+                    link.href = entry.url;
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    link.style.cssText = "color:rgba(170,200,255,.95); font-size:12px; text-decoration:none; overflow-wrap:anywhere;";
+                    link.textContent = entry.url;
+                    left.appendChild(name);
+                    left.appendChild(link);
+                    const remove = document.createElement("button");
+                    remove.className = "menu-button";
+                    remove.textContent = "Delete";
+                    remove.style.cssText = "min-width:88px; padding:9px 10px; font-size:12px; background:rgba(165,45,45,.75);";
+                    remove.onclick = async () => { await deleteOwnUrl(entry.url); };
+                    row.appendChild(left);
+                    row.appendChild(remove);
+                    listEl.appendChild(row);
+                });
+            }
+
             function rememberUniverseUpload(meta) {
                 const list = getUniverseUploads();
                 const key = (meta.url || "").trim();
@@ -2384,6 +2585,7 @@
                 else list.push(next);
                 list.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
                 saveUniverseUploads(list.slice(0, 120));
+                refreshSeeUrlsButton();
             }
 
             function uploadViaBridge(content, options) {
@@ -2450,7 +2652,7 @@
                     const msg = [
                         "Welt erfolgreich hochgeladen.",
                         `URL: ${res.url}`,
-                        "Sie erscheint jetzt in Search Worlds unter Uploaded Worlds."
+                        "Sie erscheint jetzt unter See URLs."
                     ].join("\n");
                     alert(msg);
                 } catch (e) {
