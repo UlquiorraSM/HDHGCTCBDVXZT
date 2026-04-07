@@ -865,7 +865,7 @@
                             id="c-race"
                             onchange="onRaceChange()"
                         >
-                            <option value="">Select a race...</option>
+                            <option value="">Human (Default)</option>
                         </select>
                     </div>
 
@@ -1557,7 +1557,7 @@
 
                 // Populate race dropdown
                 const raceSelect = document.getElementById("c-race");
-                raceSelect.innerHTML = `<option value="">Select a race...</option>`;
+                raceSelect.innerHTML = `<option value="">Human (Default)</option>`;
                 getRaceCards().forEach((r) => {
                     const opt = document.createElement("option");
                     opt.value = r.id;
@@ -1767,7 +1767,7 @@
                 const raceCard = raceId
                     ? getCards().find((c) => c.id === raceId)
                     : null;
-                const raceName = raceCard ? raceCard.title : "—";
+                const raceName = raceCard ? raceCard.title : "Human";
 
                 const spawnCard = selectedSpawnId
                     ? getCards().find((c) => c.id === selectedSpawnId)
@@ -1815,10 +1815,6 @@
                     showToast("Please enter a last name.", "#c04040");
                     return;
                 }
-                if (!raceId) {
-                    showToast("Please select a race.", "#c04040");
-                    return;
-                }
                 if (!appearance) {
                     showToast("Please enter an appearance.", "#c04040");
                     return;
@@ -1844,7 +1840,7 @@
                     return;
                 }
 
-                const raceCard = getCards().find((c) => c.id === raceId);
+                const raceCard = raceId ? getCards().find((c) => c.id === raceId) : null;
                 const chars = getCharacters();
                 const newChar = {
                     id: generateId(),
@@ -1852,8 +1848,8 @@
                     title: [fn, ln].filter(Boolean).join(" "),
                     firstName: fn,
                     lastName: ln,
-                    raceId,
-                    raceName: raceCard ? raceCard.title : "",
+                    raceId: raceId || null,
+                    raceName: raceCard ? raceCard.title : "Human",
                     gender: selectedGender,
                     spawnId: selectedSpawnId || null,
                     appearance,

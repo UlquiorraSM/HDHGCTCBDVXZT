@@ -445,12 +445,12 @@
             document.head.appendChild(link);
         }
         
-        // Storage Helper (Non-persistent session storage)
+        // Storage Helper (Persistent localStorage instead of sessionStorage)
         const Storage = {
-            get: (key) => sessionStorage.getItem(key),
-            set: (key, val) => sessionStorage.setItem(key, val),
-            remove: (key) => sessionStorage.removeItem(key),
-            clear: () => sessionStorage.clear()
+            get: (key) => localStorage.getItem(key),
+            set: (key, val) => localStorage.setItem(key, val),
+            remove: (key) => localStorage.removeItem(key),
+            clear: () => localStorage.clear()
         };
 
         // Preload

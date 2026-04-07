@@ -44,7 +44,7 @@
                 content: "";
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.68);
+                background: rgba(0, 0, 0, 0.52);
                 z-index: 0;
                 pointer-events: none;
             }
@@ -57,7 +57,7 @@
                 background-position: center;
                 background-attachment: fixed;
                 z-index: -1;
-                filter: blur(3px) brightness(0.38);
+                filter: blur(3px) brightness(0.5);
                 transition: background-image 0.6s ease;
             }
 
@@ -1186,6 +1186,7 @@
                 d.time = `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
                 d.day = (d.day || 1) + daysDelta;
                 normalizeYMD(d);
+                syncNpcInactivityCounters();
                 updateNPCBirthdays(d);
                 updatePlayerBirthday(d);
                 updateHeaderTime();
@@ -1404,6 +1405,7 @@
                     addMinutes(1);
                     clearExpiredNpcMemories();
                 } else {
+                    syncNpcInactivityCounters();
                     updateNPCBirthdays(d);
                     updatePlayerBirthday(d);
                     updateHeaderTime();
@@ -1455,6 +1457,7 @@
                     updateLocation(val);
                 }
                 
+                syncNpcInactivityCounters();
                 updateNPCBirthdays(d);
                 updatePlayerBirthday(d);
                 updateHeaderTime();
@@ -1840,9 +1843,11 @@
                 }
                 document.getElementById("header-info").style.display = "flex";
 
-                // Story name in header
+                const storyId = getCurrentStoryId();
+                const scenarios = getScenariosLocal();
+                const story = storyId ? scenarios.find(x => x.id === storyId) : null;
                 document.getElementById("story-name").textContent =
-                    fullName + "'s Story";
+                    (story && story.name) ? story.name : (fullName + "'s Story");
 
                 // Welcome overlay
                 const wRow = document.getElementById("welcome-char-row");
@@ -1870,6 +1875,7 @@
                 ]
                     .filter(Boolean)
                     .join("  ·  ");
+                try { syncNpcInactivityCounters(); } catch {}
                 try { saveActiveCharacter(); } catch {}
             }
 
@@ -2182,6 +2188,7 @@
                                 return;
                             }
                             context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
+                            context += `  Unused Days Counter: ${Math.max(0, parseInt(c.unusedDaysCounter, 10) || 0)}\n`;
                             if (c.description) context += `  Description: ${c.description}\n`;
                             if (c.personality) context += `  Personality: ${c.personality}\n`;
                             if (c.appearance) context += `  Appearance: ${c.appearance}\n`;
@@ -3295,6 +3302,7 @@ Example:
                 if (changed) {
                     sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
                 }
+                syncNpcInactivityCounters(targets.map(t => t.id));
                 window._pendingMemoryTargets = [];
             }
 
@@ -3334,6 +3342,68 @@ Example:
                 // Current day
                 days += day;
                 return days;
+            }
+            function syncNpcInactivityCounters(resetNpcIds = []) {
+                try {
+                    if (!activeChar || !activeChar.startingDate) return;
+                    const cards = getCards();
+                    const nowDayCount = _worldDayCount(activeChar.startingDate);
+                    const resetSet = new Set((Array.isArray(resetNpcIds) ? resetNpcIds : []).filter(Boolean));
+                    let changed = false;
+                    const readMemoryDayCount = (m) => {
+                        const direct = parseInt(m?.dayCount, 10);
+                        if (Number.isFinite(direct)) return direct;
+                        const parts = String(m?.date || "").split(".");
+                        if (parts.length === 3) {
+                            const dd = parseInt(parts[0], 10) || 1;
+                            const mm = parseInt(parts[1], 10) || 1;
+                            const yy = parseInt(parts[2], 10) || 1983;
+                            return _worldDayCount({ day: dd, month: mm, year: yy });
+                        }
+                        return null;
+                    };
+                    cards.forEach((c) => {
+                        if (!c || c.genre !== "character") return;
+                        if (activeChar && c.id === activeChar.id) return;
+                        let startDay = parseInt(c.unusedDaysCounterStartDayCount, 10);
+                        if (!Number.isFinite(startDay)) {
+                            startDay = nowDayCount;
+                            changed = true;
+                        }
+                        let latestUsageDay = null;
+                        if (Array.isArray(c.memories) && c.memories.length > 0) {
+                            c.memories.forEach((m) => {
+                                const mc = readMemoryDayCount(m);
+                                if (!Number.isFinite(mc)) return;
+                                if (latestUsageDay == null || mc > latestUsageDay) latestUsageDay = mc;
+                            });
+                        }
+                        if (resetSet.has(c.id)) {
+                            latestUsageDay = nowDayCount;
+                        }
+                        let refDay = latestUsageDay == null ? startDay : latestUsageDay;
+                        if (refDay > nowDayCount) refDay = nowDayCount;
+                        const counter = Math.max(0, nowDayCount - refDay);
+                        const lastSync = nowDayCount;
+                        if (c.unusedDaysCounter !== counter) {
+                            c.unusedDaysCounter = counter;
+                            changed = true;
+                        }
+                        if (c.unusedDaysCounterLastSyncDayCount !== lastSync) {
+                            c.unusedDaysCounterLastSyncDayCount = lastSync;
+                            changed = true;
+                        }
+                        if (c.unusedDaysCounterStartDayCount !== startDay) {
+                            c.unusedDaysCounterStartDayCount = startDay;
+                            changed = true;
+                        }
+                    });
+                    if (changed) {
+                        sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                    }
+                } catch (e) {
+                    console.warn("syncNpcInactivityCounters failed", e);
+                }
             }
             function setLocationState(key, value, ttlDays = null, byTs = null) {
                 if (!currentLocationId) return;
@@ -3450,6 +3520,7 @@ Example:
                     }
                     if (changed) {
                         sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                        try { syncNpcInactivityCounters(); } catch {}
                     }
                 } catch (e) {
                     console.error("Rollback anchored changes failed", e);
@@ -3490,6 +3561,7 @@ Example:
                 if (npc.gender) info += `Gender: ${npc.gender}\n`;
                 if (npc.age) info += `Age: ${npc.age}\n`;
                 if (npc.status) info += `Status: ${npc.status}\n`;
+                info += `Unused Days Counter: ${Math.max(0, parseInt(npc.unusedDaysCounter, 10) || 0)}\n`;
                 if (npc.status === "Dead" && npc.deathCause) info += `Death: ${npc.deathCause}\n`;
                 if (npc.personality) info += `\nPersonality:\n${npc.personality}\n`;
                 if (npc.appearance) info += `\nAppearance:\n${npc.appearance}\n`;
@@ -4087,7 +4159,7 @@ Example:
                 if (storyId) {
                     const scenarios = getScenariosLocal();
                     const story = scenarios.find(x => x.id === storyId);
-                    if (story && story.official === true) {
+                    if (story && story.official !== false) {
                         document.body.style.opacity = "0";
                         setTimeout(() => { window.location.href = "../index.html"; }, 400);
                         return;
