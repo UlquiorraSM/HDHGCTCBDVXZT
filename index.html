@@ -812,14 +812,17 @@
                                 id: st.id || Math.random().toString(36).slice(2, 10),
                                 worldId,
                                 name: st.name || "Story",
-                                createdAt: now,
-                                updatedAt: now,
+                                createdAt: st.createdAt || now,
+                                updatedAt: st.updatedAt || now,
                                 signature: st.signature || "",
+                                official: st.official !== false,
                                 data: {
                                     cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
                                     characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
                                     log: Array.isArray(st.data?.log) ? st.data.log : [],
-                                    settings: st.data?.settings || {}
+                                    settings: st.data?.settings || {},
+                                    anchoredWorldChanges: st.data?.anchoredWorldChanges || {},
+                                    chapters: Array.isArray(st.data?.chapters) ? st.data.chapters : (Array.isArray(st.data?.lightNovelChapters) ? st.data.lightNovelChapters : [])
                                 }
                             });
                         });
@@ -1063,14 +1066,17 @@
                                 id: st.id || Math.random().toString(36).slice(2, 10),
                                 worldId,
                                 name: st.name || "Story",
-                                createdAt: now,
-                                updatedAt: now,
+                                createdAt: st.createdAt || now,
+                                updatedAt: st.updatedAt || now,
                                 signature: st.signature || "",
+                                official: st.official !== false,
                                 data: {
                                     cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
                                     characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
                                     log: Array.isArray(st.data?.log) ? st.data.log : [],
-                                    settings: st.data?.settings || {}
+                                    settings: st.data?.settings || {},
+                                    anchoredWorldChanges: st.data?.anchoredWorldChanges || {},
+                                    chapters: Array.isArray(st.data?.chapters) ? st.data.chapters : (Array.isArray(st.data?.lightNovelChapters) ? st.data.lightNovelChapters : [])
                                 }
                             });
                         });
@@ -1433,20 +1439,18 @@
                 });
             }
 
-            function hasSpawnAndRace(world) {
+            function hasSpawnRequirement(world) {
                 const cards = world?.data?.cards || [];
                 const hasSpawn = cards.some(c => ((c?.genre || "").toLowerCase() === "location") && c?.canBeSpawn === true);
-                const hasRace = cards.some(c => ((c?.genre || "").toLowerCase() === "race"));
-                return { hasSpawn, hasRace };
+                return { hasSpawn };
             }
             function tryOpenWorld(worldId) {
                 const scenarios = getScenarios();
                 const world = scenarios.find(x => x.id === worldId);
                 if (!world) return;
-                const r = hasSpawnAndRace(world);
+                const r = hasSpawnRequirement(world);
                 if (!r.hasSpawn) alert("This world has no spawn location");
-                if (!r.hasRace) alert("This world has no race");
-                if (!r.hasSpawn || !r.hasRace) return;
+                if (!r.hasSpawn) return;
                 openWorldStories(worldId);
             }
 
@@ -1698,10 +1702,9 @@
 
             function startNewStory() {
                 if (!_selectedWorld) return;
-                const r = hasSpawnAndRace(_selectedWorld);
+                const r = hasSpawnRequirement(_selectedWorld);
                 if (!r.hasSpawn) alert("This world has no spawn location");
-                if (!r.hasRace) alert("This world has no race");
-                if (!r.hasSpawn || !r.hasRace) return;
+                if (!r.hasSpawn) return;
                 
                 // Welt-Daten in Session laden
                 Storage.set("storyki_storycards", JSON.stringify(_selectedWorld.data.cards || []));
@@ -1950,6 +1953,7 @@
                                         createdAt: st.createdAt || now,
                                         updatedAt: now,
                                         signature: st.signature || "",
+                                        official: st.official !== false,
                                         data: {
                                             cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
                                             characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
@@ -1992,9 +1996,10 @@
                                     id: sid,
                                     worldId: newWorldId,
                                     name: st.name || "Imported Story",
-                                    createdAt: Date.now(),
-                                    updatedAt: Date.now(),
+                                    createdAt: st.createdAt || Date.now(),
+                                    updatedAt: st.updatedAt || Date.now(),
                                     signature: st.signature || "",
+                                    official: st.official !== false,
                                     data: {
                                         cards: st.data?.cards || [],
                                         characters: st.data?.characters || [],
@@ -2144,6 +2149,9 @@
                             set("skillName", card.skillName);
                             set("spawnId", card.spawnId);
                             set("currentLocationId", card.currentLocationId);
+                            if (card.unusedDaysCounter !== undefined && card.unusedDaysCounter !== null) out.unusedDaysCounter = Math.max(0, parseInt(card.unusedDaysCounter, 10) || 0);
+                            if (card.unusedDaysCounterLastSyncDayCount !== undefined && card.unusedDaysCounterLastSyncDayCount !== null) out.unusedDaysCounterLastSyncDayCount = parseInt(card.unusedDaysCounterLastSyncDayCount, 10) || 0;
+                            if (card.unusedDaysCounterStartDayCount !== undefined && card.unusedDaysCounterStartDayCount !== null) out.unusedDaysCounterStartDayCount = parseInt(card.unusedDaysCounterStartDayCount, 10) || 0;
                             // Ensure each character memory contains a 'level' (default to 'Common' for legacy entries)
                             if (Array.isArray(card.memories)) {
                                 const mems = card.memories.map(m => {
@@ -2181,6 +2189,7 @@
                                     createdAt: s.createdAt,
                                     updatedAt: s.updatedAt,
                                     signature: s.signature || "",
+                                    official: s.official !== false,
                                     data: {
                                         cards: (s.data?.cards || []).map(sanitizeCard),
                                         characters: (s.data?.characters || []).map(sanitizeCard),
@@ -2344,6 +2353,9 @@
                         set("skillName", card.skillName);
                         set("spawnId", card.spawnId);
                         set("currentLocationId", card.currentLocationId);
+                        if (card.unusedDaysCounter !== undefined && card.unusedDaysCounter !== null) out.unusedDaysCounter = Math.max(0, parseInt(card.unusedDaysCounter, 10) || 0);
+                        if (card.unusedDaysCounterLastSyncDayCount !== undefined && card.unusedDaysCounterLastSyncDayCount !== null) out.unusedDaysCounterLastSyncDayCount = parseInt(card.unusedDaysCounterLastSyncDayCount, 10) || 0;
+                        if (card.unusedDaysCounterStartDayCount !== undefined && card.unusedDaysCounterStartDayCount !== null) out.unusedDaysCounterStartDayCount = parseInt(card.unusedDaysCounterStartDayCount, 10) || 0;
                         if (Array.isArray(card.memories)) {
                             const mems = card.memories.map(m => {
                                 const lvl = (typeof m?.level === "string" && m.level.toLowerCase() === "important") ? "Important" : "Common";
@@ -2373,7 +2385,10 @@
                     stories: stories.map(s => ({
                         id: s.id,
                         name: s.name,
+                        createdAt: s.createdAt,
+                        updatedAt: s.updatedAt,
                         signature: s.signature || "",
+                        official: s.official !== false,
                         data: {
                             cards: (s.data?.cards || []).map(sanitizeCard),
                             characters: (s.data?.characters || []).map(sanitizeCard),
@@ -2471,14 +2486,17 @@
                         id: sid,
                         worldId,
                         name: st.name || "Story",
-                        createdAt: now,
-                        updatedAt: now,
+                        createdAt: st.createdAt || now,
+                        updatedAt: st.updatedAt || now,
                         signature: st.signature || "",
+                        official: st.official !== false,
                         data: {
                             cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
                             characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
                             log: Array.isArray(st.data?.log) ? st.data.log : [],
-                            settings: st.data?.settings || {}
+                            settings: st.data?.settings || {},
+                            anchoredWorldChanges: st.data?.anchoredWorldChanges || {},
+                            chapters: Array.isArray(st.data?.chapters) ? st.data.chapters : (Array.isArray(st.data?.lightNovelChapters) ? st.data.lightNovelChapters : [])
                         }
                     });
                 });
