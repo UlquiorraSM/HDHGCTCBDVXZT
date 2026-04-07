@@ -6204,30 +6204,45 @@
                 document.getElementById("app").style.display = "flex";
                 renderList();
             }
-            function askAI(prompt) {
+            function askAI(prompt, options = {}) {
                 return new Promise((resolve, reject) => {
                     const requestId = Math.random().toString(36).substring(7);
+                    const timeoutMs = Math.max(1000, parseInt(options.timeoutMs, 10) || 120000);
+                    const stopSequences = Array.isArray(options.stopSequences) && options.stopSequences.length
+                        ? options.stopSequences
+                        : ["Player:", "User:"];
                     const timeout = setTimeout(() => {
                         window.removeEventListener("message", handler);
                         reject("KI Timeout");
-                    }, 45000);
+                    }, timeoutMs);
                     const handler = (event) => {
-                        if (event.data.requestId === requestId) {
-                            clearTimeout(timeout);
-                            window.removeEventListener("message", handler);
-                            if (event.data.type === "AI_RESPONSE") resolve(event.data.text);
-                            else reject(event.data.error || "Fehler");
-                        }
+                        if (!event || !event.data || event.data.requestId !== requestId) return;
+                        if (event.data.type !== "AI_RESPONSE" && event.data.type !== "AI_ERROR") return;
+                        clearTimeout(timeout);
+                        window.removeEventListener("message", handler);
+                        if (event.data.type === "AI_RESPONSE") resolve(event.data.text);
+                        else reject(event.data.error || "Fehler");
                     };
                     window.addEventListener("message", handler);
-                    window.parent.postMessage({ type: "AI_REQUEST", instruction: prompt, requestId }, "*");
+                    window.parent.postMessage({ type: "AI_REQUEST", instruction: prompt, requestId, stopSequences }, "*");
                 });
             }
-            async function askAIWithRetry(prompt) {
-                while (true) {
-                    try { return await askAI(prompt); }
-                    catch (err) { await new Promise((r) => setTimeout(r, 2000)); }
+            async function askAIWithRetry(prompt, options = {}) {
+                const maxAttempts = Math.max(1, parseInt(options.maxAttempts, 10) || 2);
+                const timeoutMs = Math.max(1000, parseInt(options.timeoutMs, 10) || 120000);
+                const stopSequences = Array.isArray(options.stopSequences) && options.stopSequences.length
+                    ? options.stopSequences
+                    : ["Player:", "User:"];
+                let lastError = "Fehler";
+                for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    try {
+                        return await askAI(prompt, { timeoutMs, stopSequences });
+                    } catch (err) {
+                        lastError = err;
+                        if (attempt < maxAttempts) await new Promise((r) => setTimeout(r, 1200));
+                    }
                 }
+                throw lastError;
             }
             function _extractJson(s) {
                 try { return JSON.parse(s); } catch {}
@@ -6273,7 +6288,7 @@
                             ? ("Task: Create a new coherent StoryKI world from this prompt: " + prompt)
                             : ("Task: Edit the existing StoryKI world based on this prompt. Return the FULL updated JSON array only. Prompt: " + prompt + " Existing JSON: " + existing)
                     ].join("\n");
-                    const resp = await askAIWithRetry(sys);
+                    const resp = await askAIWithRetry(sys, { timeoutMs: 150000, maxAttempts: 2 });
                     const json = _extractJson(resp);
                     if (!json || !Array.isArray(json)) { showToast("KI lieferte kein gültiges JSON.", "#c04040"); _aiBusy = false; if (back) { back.disabled = false; back.classList.remove("locked"); } return; }
                     const normalized = aiHelperNormalizePayload(json);
@@ -6287,7 +6302,8 @@
                     _aiBusy = false;
                     const back = document.getElementById("ai-helper-back");
                     if (back) { back.disabled = false; back.classList.remove("locked"); }
-                    showToast("AI Fehler.", "#c04040");
+                    const msg = (e && String(e).toLowerCase().includes("timeout")) ? "AI Timeout. Bitte Prompt kürzen oder erneut versuchen." : "AI Fehler.";
+                    showToast(msg, "#c04040");
                 }
             }
 
