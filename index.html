@@ -2386,18 +2386,53 @@
                 saveUniverseUploads(list.slice(0, 120));
             }
 
+            function uploadViaBridge(content, options) {
+                return new Promise((resolve, reject) => {
+                    const requestId = Math.random().toString(36).slice(2, 12);
+                    const timeout = setTimeout(() => {
+                        window.removeEventListener("message", onMessage);
+                        reject(new Error("bridge_timeout"));
+                    }, 45000);
+                    const onMessage = (event) => {
+                        const data = event && event.data ? event.data : null;
+                        if (!data || data.requestId !== requestId) return;
+                        if (data.type !== "UPLOAD_RESPONSE" && data.type !== "UPLOAD_ERROR") return;
+                        clearTimeout(timeout);
+                        window.removeEventListener("message", onMessage);
+                        if (data.type === "UPLOAD_RESPONSE") {
+                            resolve(data.result || null);
+                        } else {
+                            reject(new Error(data.error || "upload_failed"));
+                        }
+                    };
+                    window.addEventListener("message", onMessage);
+                    try {
+                        window.parent.postMessage({
+                            type: "UPLOAD_REQUEST",
+                            requestId,
+                            payload: content,
+                            options: (options && typeof options === "object") ? options : {}
+                        }, "*");
+                    } catch (err) {
+                        clearTimeout(timeout);
+                        window.removeEventListener("message", onMessage);
+                        reject(err);
+                    }
+                });
+            }
+
             async function uploadWorldToUniverse(worldId) {
                 const built = buildWorldExportPayload(worldId);
                 if (!built) { alert("Welt nicht gefunden."); return; }
-                const uploader = (typeof upload === "function") ? upload : null;
-                if (!uploader) {
-                    alert("Upload-Plugin nicht verfügbar. In Perchance bitte in den Lists importieren: upload = {import:upload-plugin}");
-                    return;
-                }
                 try {
                     const jsonText = JSON.stringify(built.payload);
                     const expires = Date.now() + 1000 * 60 * 60 * 24 * 365;
-                    const res = await uploader(jsonText, { expires });
+                    let res = null;
+                    if (typeof upload === "function") {
+                        res = await upload(jsonText, { expires });
+                    } else {
+                        res = await uploadViaBridge(jsonText, { expires });
+                    }
                     if (!res || res.error || !res.url) {
                         const err = res && res.error ? String(res.error) : "upload_failed";
                         alert(`Upload fehlgeschlagen: ${err}`);
@@ -2419,7 +2454,12 @@
                     ].join("\n");
                     alert(msg);
                 } catch (e) {
-                    alert("Upload fehlgeschlagen.");
+                    const reason = (e && e.message) ? String(e.message) : "upload_failed";
+                    if (reason === "bridge_timeout") {
+                        alert("Upload fehlgeschlagen: Bridge Timeout. Prüfe, ob in Perchance das Upload-Plugin importiert ist.");
+                    } else {
+                        alert(`Upload fehlgeschlagen: ${reason}`);
+                    }
                 }
             }
 
