@@ -171,7 +171,7 @@
         <div class="help-box">
             <h3>Info</h3>
             <div>
-                Here you can find created worlds; you can upload your own world by contacting me on Discord (ulquiorrasm), sending me your world as a .json file, and I will add your world.
+                You can browse default worlds and worlds uploaded from your StoryKI main menu. Upload from a world card via the cloud button.
             </div>
             <div class="help-actions">
                 <button class="menu-button" onclick="closeHelp()">Close</button>
@@ -282,18 +282,43 @@
             } catch {}
             return null;
         }
+        const UNIVERSE_UPLOADS_KEY = "storyki_universe_uploaded_worlds";
+        function _getUploadedWorldEntries() {
+            try {
+                const raw = localStorage.getItem(UNIVERSE_UPLOADS_KEY);
+                const arr = JSON.parse(raw || "[]");
+                if (!Array.isArray(arr)) return [];
+                return arr
+                    .filter((x) => x && typeof x === "object" && typeof x.url === "string")
+                    .map((x) => ({
+                        url: String(x.url || "").trim(),
+                        name: String(x.name || "").trim(),
+                        uploadedAt: parseInt(x.uploadedAt, 10) || 0,
+                        cardsCount: parseInt(x.cardsCount, 10) || 0,
+                        worldId: String(x.worldId || "").trim(),
+                    }))
+                    .filter((x) => /^https?:\/\//i.test(x.url));
+            } catch {
+                return [];
+            }
+        }
         async function listUniverseWorlds() {
             const results = [];
+            const seenUrls = new Set();
             async function pushFromUrl(url, preferredName = "") {
+                const key = String(url || "").trim();
+                if (!key || seenUrls.has(key)) return;
                 const data = await _loadJsonLocal(url);
                 const w = data ? _extractWorld(data) : null;
                 if (!w) return;
+                seenUrls.add(key);
                 results.push({
                     url,
                     id: w.id || "",
                     name: w.name || preferredName || (url.split("/").pop().replace(/\.json$/i, "")) || "World",
                     settings: w.data?.settings || {},
-                    cardsCount: Array.isArray(w.data?.cards) ? w.data.cards.length : 0
+                    cardsCount: Array.isArray(w.data?.cards) ? w.data.cards.length : 0,
+                    source: "built-in"
                 });
             }
             try {
@@ -308,6 +333,33 @@
                 const FALLBACKS = ["worlds/DefaultWorld.json", "worlds/Higurashi.json"];
                 for (const url of FALLBACKS) {
                     try { await pushFromUrl(url); } catch {}
+                }
+            }
+            const uploaded = _getUploadedWorldEntries().sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+            for (const entry of uploaded) {
+                if (seenUrls.has(entry.url)) continue;
+                const data = await _loadJsonLocal(entry.url);
+                const w = data ? _extractWorld(data) : null;
+                if (w) {
+                    seenUrls.add(entry.url);
+                    results.push({
+                        url: entry.url,
+                        id: w.id || entry.worldId || "",
+                        name: w.name || entry.name || "Uploaded World",
+                        settings: w.data?.settings || {},
+                        cardsCount: Array.isArray(w.data?.cards) ? w.data.cards.length : entry.cardsCount || 0,
+                        source: "uploaded"
+                    });
+                } else {
+                    seenUrls.add(entry.url);
+                    results.push({
+                        url: entry.url,
+                        id: entry.worldId || "",
+                        name: entry.name || "Uploaded World",
+                        settings: {},
+                        cardsCount: entry.cardsCount || 0,
+                        source: "uploaded"
+                    });
                 }
             }
             return results;
@@ -387,7 +439,7 @@
                     nameEl.textContent = w.name;
                     const countEl = document.createElement("div");
                     countEl.className = "count";
-                    countEl.textContent = `${w.cardsCount} cards`;
+                    countEl.textContent = w.source === "uploaded" ? `${w.cardsCount} cards • uploaded` : `${w.cardsCount} cards`;
                     info.appendChild(nameEl);
                     info.appendChild(countEl);
                     const btns = document.createElement("div");
