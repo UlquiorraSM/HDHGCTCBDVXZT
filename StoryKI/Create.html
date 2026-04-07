@@ -6008,6 +6008,46 @@
                 });
                 return cards;
             }
+            function aiHelperEnsureRequiredFields(cards) {
+                const list = Array.isArray(cards) ? cards : [];
+                list.forEach((card) => {
+                    if (!card || typeof card !== "object") return;
+                    if (card.genre === "character") {
+                        card.description = aiHelperText(card.description) || `${aiHelperText(card.title) || "Character"} description`;
+                        card.appearance = aiHelperText(card.appearance) || `${aiHelperText(card.title) || "Character"} appearance`;
+                        card.personality = aiHelperText(card.personality) || `${aiHelperText(card.title) || "Character"} personality`;
+                        card.age = parseInt(card.age, 10) || 18;
+                        card.gender = aiHelperNormalizeGender(card.gender) || "male";
+                        const birthdate = aiHelperNormalizeBirthdate(card.birthdate) || { day: 1, month: 1 };
+                        card.birthdate = birthdate;
+                        card.raceName = aiHelperText(card.raceName) || "Human";
+                    }
+                    if (card.genre === "location") {
+                        card.description = aiHelperText(card.description) || `${aiHelperText(card.title) || "Location"} description`;
+                    }
+                    if (card.genre === "lore") {
+                        const loreText = aiHelperText(card.loreText) || aiHelperText(card.lore) || aiHelperText(card.description);
+                        card.loreText = loreText || `${aiHelperText(card.title) || "Lore"} details`;
+                        card.description = aiHelperText(card.description) || card.loreText;
+                    }
+                });
+                const hasLore = list.some((card) => card && card.genre === "lore" && aiHelperText(card.loreText));
+                if (!hasLore) {
+                    list.push({
+                        id: generateId(),
+                        title: "World Lore",
+                        genre: "lore",
+                        description: "General lore overview.",
+                        loreText: "General lore overview.",
+                        loreMode: "always",
+                        tags: [],
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        version: "1.0",
+                    });
+                }
+                return list;
+            }
             function aiHelperFinalizeCards(source) {
                 const cards = (source || [])
                     .map((card) => {
@@ -6172,7 +6212,7 @@
                         }
                     }
                 });
-                return cards.filter((card) => aiHelperText(card.title));
+                return aiHelperEnsureRequiredFields(cards.filter((card) => aiHelperText(card.title)));
             }
             function aiHelperNormalizePayload(payload) {
                 let source = payload;
@@ -6277,6 +6317,10 @@
                         "Return a JSON array.",
                         "Allowed genre values ONLY: location, race, species, lore, character, item, skill.",
                         "Every card must have: id, title, genre.",
+                        "For each character ALWAYS fill: description, appearance, personality, age, gender (male/female), birthdate {day,month}, raceName.",
+                        "For each location ALWAYS fill description.",
+                        "For each lore card ALWAYS fill loreText and description.",
+                        "Include at least one lore card with important world lore.",
                         "Locations must use locationSub only as: building, zivil, land.",
                         "If locationSub is zivil, locationDetail must be one of: village, city, country, kingdom.",
                         "If locationSub is land, locationDetail must be: forest.",
