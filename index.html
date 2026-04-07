@@ -649,6 +649,7 @@
             const SELECTED_WORLD_ID_KEY = "storyki_selected_world_id"; // for session
             const CURRENT_STORY_ID_KEY = "storyki_current_story_id"; // for session
             const ANCHORED_WORLD_CHANGES_KEY = "storyki_anchored_world_changes"; // for session
+            const UNIVERSE_UPLOADS_KEY = "storyki_universe_uploaded_worlds";
             let _selectedWorld = null;
 
             // Hintergrund aus Settings laden
@@ -1226,6 +1227,12 @@
                     downloadBtn.title = "Download world (.json)";
                     downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
                     downloadBtn.onclick = () => { exportWorld(s.id); };
+                    const uploadBtn = document.createElement("button");
+                    uploadBtn.textContent = "☁️";
+                    uploadBtn.className = "menu-button";
+                    uploadBtn.title = "Upload world to Universe";
+                    uploadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(120,110,200,0.75); border-radius:0;";
+                    uploadBtn.onclick = () => { uploadWorldToUniverse(s.id); };
 
                     const isDefaultWorld = ((s.name || "").toLowerCase() === "defaultworld") || ((s.name || "").toLowerCase() === "world");
                     let deleteBtn = null;
@@ -1243,13 +1250,13 @@
                         deleteBtn.style.borderTopRightRadius = "8px";
                         deleteBtn.style.borderBottomRightRadius = "8px";
                     } else {
-                        // Rundung für Download-Button, wenn Delete fehlt
-                        downloadBtn.style.borderTopRightRadius = "8px";
-                        downloadBtn.style.borderBottomRightRadius = "8px";
+                        uploadBtn.style.borderTopRightRadius = "8px";
+                        uploadBtn.style.borderBottomRightRadius = "8px";
                     }
 
                     row2.appendChild(editBtn);
                     row2.appendChild(downloadBtn);
+                    row2.appendChild(uploadBtn);
                     if (deleteBtn) row2.appendChild(deleteBtn);
                     
                     actions.appendChild(row1);
@@ -1354,6 +1361,12 @@
                     downloadBtn.title = "Download world (.json)";
                     downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
                     downloadBtn.onclick = () => { exportWorld(s.id); };
+                    const uploadBtn = document.createElement("button");
+                    uploadBtn.textContent = "☁️";
+                    uploadBtn.className = "menu-button";
+                    uploadBtn.title = "Upload world to Universe";
+                    uploadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(120,110,200,0.75); border-radius:0;";
+                    uploadBtn.onclick = () => { uploadWorldToUniverse(s.id); };
                     const isDefaultWorld = ((s.name || "").toLowerCase() === "defaultworld") || ((s.name || "").toLowerCase() === "world");
                     let deleteBtn = null;
                     if (!isDefaultWorld) {
@@ -1371,11 +1384,12 @@
                         deleteBtn.style.borderTopRightRadius = "8px";
                         deleteBtn.style.borderBottomRightRadius = "8px";
                     } else {
-                        downloadBtn.style.borderTopRightRadius = "8px";
-                        downloadBtn.style.borderBottomRightRadius = "8px";
+                        uploadBtn.style.borderTopRightRadius = "8px";
+                        uploadBtn.style.borderBottomRightRadius = "8px";
                     }
                     btnRow2.appendChild(editBtn);
                     btnRow2.appendChild(downloadBtn);
+                    btnRow2.appendChild(uploadBtn);
                     if (deleteBtn) btnRow2.appendChild(deleteBtn);
                     card.appendChild(name);
                     card.appendChild(btnRow);
@@ -2192,10 +2206,10 @@
                 preloadWorldBackgrounds();
             });
 
-            function exportWorld(worldId) {
+            function buildWorldExportPayload(worldId) {
                 const scenarios = getScenarios();
                 const world = scenarios.find(x => x.id === worldId && !x.worldId);
-                if (!world) { alert("Welt nicht gefunden."); return; }
+                if (!world) return null;
                 const stories = scenarios.filter(x => x.worldId === worldId);
                 function pruneEmptyDeep(v) {
                     if (Array.isArray(v)) {
@@ -2335,6 +2349,85 @@
                     }))
                 };
                 payload = pruneEmptyDeep(payload);
+                return { payload, world };
+            }
+
+            function getUniverseUploads() {
+                try {
+                    const raw = localStorage.getItem(UNIVERSE_UPLOADS_KEY);
+                    const arr = JSON.parse(raw || "[]");
+                    return Array.isArray(arr) ? arr : [];
+                } catch {
+                    return [];
+                }
+            }
+
+            function saveUniverseUploads(entries) {
+                localStorage.setItem(UNIVERSE_UPLOADS_KEY, JSON.stringify(entries));
+            }
+
+            function rememberUniverseUpload(meta) {
+                const list = getUniverseUploads();
+                const key = (meta.url || "").trim();
+                const now = Date.now();
+                const next = {
+                    url: key,
+                    name: meta.name || "World",
+                    worldId: meta.worldId || "",
+                    cardsCount: parseInt(meta.cardsCount, 10) || 0,
+                    uploadedAt: meta.uploadedAt || now,
+                    deletionUrl: meta.deletionUrl || "",
+                    size: parseInt(meta.size, 10) || 0,
+                };
+                const idx = list.findIndex(x => (x.url || "").trim() === key);
+                if (idx >= 0) list[idx] = { ...list[idx], ...next };
+                else list.push(next);
+                list.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+                saveUniverseUploads(list.slice(0, 120));
+            }
+
+            async function uploadWorldToUniverse(worldId) {
+                const built = buildWorldExportPayload(worldId);
+                if (!built) { alert("Welt nicht gefunden."); return; }
+                const uploader = (typeof upload === "function") ? upload : null;
+                if (!uploader) {
+                    alert("Upload-Plugin nicht verfügbar. In Perchance bitte in den Lists importieren: upload = {import:upload-plugin}");
+                    return;
+                }
+                try {
+                    const jsonText = JSON.stringify(built.payload);
+                    const expires = Date.now() + 1000 * 60 * 60 * 24 * 365;
+                    const res = await uploader(jsonText, { expires });
+                    if (!res || res.error || !res.url) {
+                        const err = res && res.error ? String(res.error) : "upload_failed";
+                        alert(`Upload fehlgeschlagen: ${err}`);
+                        return;
+                    }
+                    rememberUniverseUpload({
+                        url: res.url,
+                        name: built.world.name || "World",
+                        worldId: built.world.id || "",
+                        cardsCount: Array.isArray(built.world.data?.cards) ? built.world.data.cards.length : 0,
+                        uploadedAt: Date.now(),
+                        deletionUrl: res.deletionUrl || "",
+                        size: res.size || 0,
+                    });
+                    const msg = [
+                        "Welt erfolgreich hochgeladen.",
+                        `URL: ${res.url}`,
+                        "Sie erscheint jetzt in Search Worlds unter Uploaded Worlds."
+                    ].join("\n");
+                    alert(msg);
+                } catch (e) {
+                    alert("Upload fehlgeschlagen.");
+                }
+            }
+
+            function exportWorld(worldId) {
+                const built = buildWorldExportPayload(worldId);
+                if (!built) { alert("Welt nicht gefunden."); return; }
+                const payload = built.payload;
+                const world = built.world;
                 const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
