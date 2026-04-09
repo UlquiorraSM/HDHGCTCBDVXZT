@@ -836,9 +836,14 @@
             const CURRENT_STORY_ID_KEY = "storyki_current_story_id";
             const ANCHORED_WORLD_CHANGES_KEY = "storyki_anchored_world_changes";
 
-            // Storage Helper (Non-persistent session storage)
+            // Storage Helper (Session storage + persistent settings fallback)
             const Storage = {
-                get: (key) => sessionStorage.getItem(key),
+                get: (key) => {
+                    if (key === SETTINGS_KEY) {
+                        return localStorage.getItem(key) || sessionStorage.getItem(key);
+                    }
+                    return sessionStorage.getItem(key);
+                },
                 set: (key, val) => sessionStorage.setItem(key, val),
                 remove: (key) => sessionStorage.removeItem(key),
                 clear: () => sessionStorage.clear()
