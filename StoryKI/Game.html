@@ -835,6 +835,8 @@
             const SELECTED_WORLD_ID_KEY = "storyki_selected_world_id";
             const CURRENT_STORY_ID_KEY = "storyki_current_story_id";
             const ANCHORED_WORLD_CHANGES_KEY = "storyki_anchored_world_changes";
+            const NSFW_BLOCKED_TOKEN = "__NSFW_BLOCKED__";
+            const NSFW_BLOCKED_TEXT = "The generated message contained offensive content which has been blocked due to your NSWF block.";
 
             // Storage Helper (Session storage + persistent settings fallback)
             const Storage = {
@@ -1204,9 +1206,19 @@
                 console.log(`[Time Update] New Time: ${d.day}.${d.month}.${d.year} ${d.time}`);
             }
 
+            function isNsfwBlockEnabled() {
+                try {
+                    const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                    return String(settings.nsfwBlock || "off").toLowerCase() === "on";
+                } catch {
+                    return false;
+                }
+            }
+
             function processAICommands(text) {
                 if (!text) return "";
                 if (!activeChar) return text.replace(/\[\[.*?\]\]/g, "").trim();
+                if (isNsfwBlockEnabled() && /\[\[\s*NSFW\s*\]\]/i.test(text)) return NSFW_BLOCKED_TOKEN;
                 if (!activeChar.startingDate) activeChar.startingDate = {};
                 const d = activeChar.startingDate;
                 if (!d.day) d.day = 1;
@@ -2899,6 +2911,7 @@
                 const aiLang = aiLangMap[settings.aiLanguage] || "English";
                 const sizePref = (settings.textSize || "normal").toLowerCase();
                 const perspective = (settings.perspective || "narrator").toLowerCase();
+                const nsfwBlockOn = String(settings.nsfwBlock || "off").toLowerCase() === "on";
                 let lengthInstruction = "";
                 if (sizePref === "short") {
                     lengthInstruction = "WRITE 1–2 COMPLETE SENTENCES. Do NOT end with '...'. Close all quotes.";
@@ -2913,6 +2926,10 @@
                 } else {
                     perspectiveInstruction = "Write in SECOND-PERSON addressing the PLAYER.";
                 }
+                const nsfwInstruction = nsfwBlockOn
+                    ? `# NSFW BLOCK TAG (ONLY WHEN NEEDED)
+- If your generated response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY [[NSFW]] and nothing else.`
+                    : "";
 
                 return `[SYSTEM INSTRUCTIONS]
 You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
@@ -2998,6 +3015,8 @@ ${shopContext}
 - Use the exact NPC ID shown in the PRESENT CHARACTERS or DEAD RESIDENTS lists.
 - Use one death tag per dead NPC.
 - Only use this for NPCs, never for the player.
+
+${nsfwInstruction}
 
 # RESPONSE FORMAT (MANDATORY)
 Your response MUST consist of two parts:
@@ -3792,18 +3811,25 @@ Example:
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
-                    let finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
-                    const lastNarr = getLastNarratorText();
-                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
-                        const response2 = await askAIWithRetry(finalPrompt2);
-                        const clean2 = processAICommands(response2);
-                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
+                    let finalText = "";
+                    if (cleanResponse === NSFW_BLOCKED_TOKEN) {
+                        finalText = NSFW_BLOCKED_TEXT;
+                    } else {
+                        finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
+                        const lastNarr = getLastNarratorText();
+                        if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
+                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                            const response2 = await askAIWithRetry(finalPrompt2);
+                            const clean2 = processAICommands(response2);
+                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(applyTextSizeLimit(clean2));
+                        }
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
-                    addNpcMemoriesFromPending(finalText, ts);
-                    addLocationMemoryFromNarration(finalText, ts);
+                    if (finalText !== NSFW_BLOCKED_TEXT) {
+                        addNpcMemoriesFromPending(finalText, ts);
+                        addLocationMemoryFromNarration(finalText, ts);
+                    }
                 } catch (err) {
                     removeTypingIndicator();
                     // No error bubble displayed to user
@@ -3901,18 +3927,25 @@ Example:
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanResponse = processAICommands(response);
-                    let finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
-                    const lastNarr = getLastNarratorText();
-                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
-                        const response2 = await askAIWithRetry(finalPrompt2);
-                        const clean2 = processAICommands(response2);
-                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
+                    let finalText = "";
+                    if (cleanResponse === NSFW_BLOCKED_TOKEN) {
+                        finalText = NSFW_BLOCKED_TEXT;
+                    } else {
+                        finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
+                        const lastNarr = getLastNarratorText();
+                        if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
+                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                            const response2 = await askAIWithRetry(finalPrompt2);
+                            const clean2 = processAICommands(response2);
+                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(applyTextSizeLimit(clean2));
+                        }
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
-                    addNpcMemoriesFromPending(finalText, ts);
-                    addLocationMemoryFromNarration(finalText, ts);
+                    if (finalText !== NSFW_BLOCKED_TEXT) {
+                        addNpcMemoriesFromPending(finalText, ts);
+                        addLocationMemoryFromNarration(finalText, ts);
+                    }
                 } catch (err) {
                     removeTypingIndicator();
                     // No error bubble displayed to user
@@ -4009,18 +4042,25 @@ Example:
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
-                    let finalText = uniqueSentences(applyTextSizeLimit(cleanR));
-                    const lastNarr = getLastNarratorText();
-                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
-                        const r2 = await askAIWithRetry(finalPrompt2);
-                        const clean2 = processAICommands(r2);
-                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
+                    let finalText = "";
+                    if (cleanR === NSFW_BLOCKED_TOKEN) {
+                        finalText = NSFW_BLOCKED_TEXT;
+                    } else {
+                        finalText = uniqueSentences(applyTextSizeLimit(cleanR));
+                        const lastNarr = getLastNarratorText();
+                        if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
+                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                            const r2 = await askAIWithRetry(finalPrompt2);
+                            const clean2 = processAICommands(r2);
+                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(applyTextSizeLimit(clean2));
+                        }
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
-                    addNpcMemoriesFromPending(finalText, ts);
-                    addLocationMemoryFromNarration(finalText, ts);
+                    if (finalText !== NSFW_BLOCKED_TEXT) {
+                        addNpcMemoriesFromPending(finalText, ts);
+                        addLocationMemoryFromNarration(finalText, ts);
+                    }
                 } catch (e) {
                     removeTypingIndicator();
                     // No error bubble displayed to user
@@ -4053,18 +4093,25 @@ Example:
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
                     const cleanR = processAICommands(r);
-                    let finalText = uniqueSentences(applyTextSizeLimit(cleanR));
-                    const lastNarr = getLastNarratorText();
-                    if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                        const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
-                        const r2 = await askAIWithRetry(finalPrompt2);
-                        const clean2 = processAICommands(r2);
-                        finalText = uniqueSentences(applyTextSizeLimit(clean2));
+                    let finalText = "";
+                    if (cleanR === NSFW_BLOCKED_TOKEN) {
+                        finalText = NSFW_BLOCKED_TEXT;
+                    } else {
+                        finalText = uniqueSentences(applyTextSizeLimit(cleanR));
+                        const lastNarr = getLastNarratorText();
+                        if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
+                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                            const r2 = await askAIWithRetry(finalPrompt2);
+                            const clean2 = processAICommands(r2);
+                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(applyTextSizeLimit(clean2));
+                        }
                     }
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
-                    addNpcMemoriesFromPending(finalText, ts);
-                    addLocationMemoryFromNarration(finalText, ts);
+                    if (finalText !== NSFW_BLOCKED_TEXT) {
+                        addNpcMemoriesFromPending(finalText, ts);
+                        addLocationMemoryFromNarration(finalText, ts);
+                    }
                 } catch (e) {
                     removeTypingIndicator();
                     // No error bubble displayed to user

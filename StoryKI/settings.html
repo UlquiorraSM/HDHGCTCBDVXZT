@@ -419,6 +419,18 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">NSFW Block</div>
+                                    <div class="setting-help">Blocks generated messages when the AI returns an NSFW marker.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="nsfw-block">
+                                        <option value="off" selected>OFF</option>
+                                        <option value="on">ON</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -470,11 +482,13 @@
                 document.getElementById('text-size').value = data.textSize || 'normal';
                 document.getElementById('ai-language').value = data.aiLanguage || 'en';
                 document.getElementById('ai-perspective').value = data.perspective || 'narrator';
+                document.getElementById('nsfw-block').value = data.nsfwBlock || 'off';
                 
                 applyBackground(true);
             } else {
                 // Standard-Hintergrund anwenden
                 document.getElementById('background-url').value = 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp';
+                document.getElementById('nsfw-block').value = 'off';
                 applyBackground(true);
             }
             
@@ -513,7 +527,8 @@
                 // KI-Einstellungen
                 textSize: document.getElementById('text-size').value,
                 aiLanguage: document.getElementById('ai-language').value,
-                perspective: document.getElementById('ai-perspective').value
+                perspective: document.getElementById('ai-perspective').value,
+                nsfwBlock: document.getElementById('nsfw-block').value
             };
             
             Storage.set('storyki_settings', JSON.stringify(settings));
@@ -598,7 +613,8 @@
                 backgroundUrl: document.getElementById('background-url').value,
                 textSize: document.getElementById('text-size').value,
                 aiLanguage: document.getElementById('ai-language').value,
-                perspective: document.getElementById('ai-perspective').value
+                perspective: document.getElementById('ai-perspective').value,
+                nsfwBlock: document.getElementById('nsfw-block').value
             };
             
             const savedSettingsRaw = Storage.get('storyki_settings');
@@ -611,7 +627,8 @@
                 currentSettings.backgroundUrl !== (savedSettings.backgroundUrl || 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp') ||
                 currentSettings.textSize !== (savedSettings.textSize || 'normal') ||
                 currentSettings.aiLanguage !== (savedSettings.aiLanguage || 'en') ||
-                currentSettings.perspective !== (savedSettings.perspective || 'narrator')
+                currentSettings.perspective !== (savedSettings.perspective || 'narrator') ||
+                currentSettings.nsfwBlock !== (savedSettings.nsfwBlock || 'off')
             );
         }
         
