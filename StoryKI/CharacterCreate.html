@@ -1913,9 +1913,10 @@
             <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:20px; padding:24px; width:100%; max-width:520px; display:flex; flex-direction:column; gap:16px;">
                 <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Choose Your Protagonist</div>
                 
-                <div id="playable-list" style="display:flex; flex-direction:column; gap:8px; max-height:40vh; overflow:auto;"></div>
+                <div id="playable-list" style="display:none; flex-direction:column; gap:8px; max-height:40vh; overflow:auto;"></div>
                 
                 <div style="display:flex; gap:10px; margin-top:6px;">
+                    <button id="existing-character-btn" onclick="showPlayableList()" style="flex:1; padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;">Existing Character</button>
                     <button onclick="closePlayableChoice()" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">New Character</button>
                 </div>
             </div>
@@ -1993,6 +1994,7 @@
         <script>
             function openPlayableChoice(playable) {
                 const list = document.getElementById("playable-list");
+                const existingBtn = document.getElementById("existing-character-btn");
                 list.innerHTML = "";
                 playable.forEach(npc => {
                     const btn = document.createElement("button");
@@ -2001,7 +2003,14 @@
                     btn.onclick = () => openNPCSetup(npc.id);
                     list.appendChild(btn);
                 });
+                list.style.display = "none";
+                if (existingBtn) existingBtn.style.display = playable.length > 0 ? "inline-block" : "none";
                 document.getElementById("playable-choice-overlay").style.display = "flex";
+            }
+            function showPlayableList() {
+                const list = document.getElementById("playable-list");
+                if (!list) return;
+                list.style.display = "flex";
             }
             function closePlayableChoice() {
                 document.getElementById("playable-choice-overlay").style.display = "none";
@@ -2055,13 +2064,13 @@
 
                 const chars = getCharacters();
                 const nameParts = (npc.title || "").split(" ");
-                const firstName = nameParts.shift() || "Player";
-                const lastName = nameParts.join(" ");
+                const firstName = (npc.firstName || nameParts.shift() || "Player").trim();
+                const lastName = (npc.lastName || nameParts.join(" ")).trim();
 
                 const newChar = {
-                    id: generateId(),
+                    id: npc.id || generateId(),
                     genre: "character",
-                    title: npc.title || `${firstName} ${lastName}`.trim(),
+                    title: (npc.title || `${firstName} ${lastName}`.trim()).trim(),
                     firstName,
                     lastName,
                     raceId: npc.raceId || null,
@@ -2071,8 +2080,8 @@
                     age: typeof npc.age === "number" ? npc.age : (parseInt(npc.age) || 0),
                     birthdate: npc.birthdate ? { day: npc.birthdate.day || null, month: npc.birthdate.month || null } : null,
                     spawnId: selectedSpawnId,
-                    relations: [...(npc.relations || [])],
-                    skills: [...(npc.skills || [])],
+                    relations: JSON.parse(JSON.stringify(npc.relations || [])),
+                    skills: JSON.parse(JSON.stringify(npc.skills || [])),
                     startingDate: { day, month, year, time },
                     introduction: intro,
                     isPlayable: true,
