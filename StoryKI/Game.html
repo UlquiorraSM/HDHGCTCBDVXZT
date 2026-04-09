@@ -922,6 +922,11 @@
                 const exists = changes[key].some((entry) => {
                     if (!entry || entry.type !== change.type) return false;
                     if (change.type === "npcDeath") return entry.npcId === change.npcId;
+                    if (change.type === "eventExpired") {
+                        const sigA = JSON.stringify(change.event || {});
+                        const sigB = JSON.stringify(entry.event || {});
+                        return entry.locId === change.locId && entry.bucket === change.bucket && entry.index === change.index && sigA === sigB;
+                    }
                     return false;
                 });
                 if (!exists) {
@@ -1408,12 +1413,15 @@
 
                 if (!timeChanged) {
                     addMinutes(1);
+                    clearExpiredLocationEvents(currentNarrationTs);
+                    try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                     clearExpiredNpcMemories();
                 } else {
                     syncNpcInactivityCounters();
                     updateNPCBirthdays(d);
                     updatePlayerBirthday(d);
                     updateHeaderTime();
+                    clearExpiredLocationEvents(currentNarrationTs);
                     try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                     saveActiveCharacter();
                     clearExpiredNpcMemories();
@@ -2370,20 +2378,33 @@
                         const lists = [];
                         if (Array.isArray(ev["village-city"])) lists.push(...ev["village-city"].map(e => ({...e, _loc: loc.title})));
                         if (Array.isArray(ev["country-kingdom"])) lists.push(...ev["country-kingdom"].map(e => ({...e, _loc: loc.title})));
-                        const visible = lists.filter(e => _eventDayKey(e) <= nowDay);
-                        if (lists.length === 0) return;
-                        if (visible.length === 0) return;
+                        const normalized = lists
+                            .filter(e => e && e.day != null && e.month != null && e.year != null)
+                            .sort((a, b) => _eventTimeKey(a) - _eventTimeKey(b));
+                        if (normalized.length === 0) return;
                         contextLines.push(`- ${loc.title}:`);
-                        visible.forEach(e => {
+                        normalized.forEach(e => {
                             const type = (e.type === "secret") ? "SECRET EVENT" : "PUBLIC EVENT";
+                            const eventDay = _eventDayKey(e);
+                            const deltaDays = eventDay - nowDay;
+                            let phase = "PAST";
+                            if (deltaDays > 0) phase = "UPCOMING";
+                            else if (deltaDays === 0) phase = "TODAY";
                             const dateStr = `${String(e.day||0).toString().padStart(2,"0")}.${String(e.month||0).toString().padStart(2,"0")}.${e.year||0}`;
-                            const todayBadge = (_eventDayKey(e) === nowDay) ? " (TODAY)" : "";
+                            const timeStr = e.time || "00:00";
+                            let relativeBadge = "";
+                            if (deltaDays === 0) relativeBadge = " (TODAY)";
+                            else if (deltaDays === 1) relativeBadge = " (TOMORROW)";
+                            else if (deltaDays > 1) relativeBadge = ` (IN ${deltaDays} DAYS)`;
+                            else if (deltaDays === -1) relativeBadge = " (YESTERDAY)";
+                            else relativeBadge = ` (${Math.abs(deltaDays)} DAYS AGO)`;
                             const desc = e.description || "";
-                            contextLines.push(`  * [${type}] ${dateStr}${todayBadge} — ${desc}`);
+                            contextLines.push(`  * [${type} | ${phase}] ${dateStr} ${timeStr}${relativeBadge} — ${desc}`);
                         });
                     });
                     if (contextLines.length <= 1) return "";
-                    contextLines.push(`Current date reference: ${curDate}`);
+                    contextLines.push(`Current date reference: ${curDate} ${curTime}`);
+                    contextLines.push("Future PUBLIC events are fixed calendar facts. Do not move them earlier or later.");
                     contextLines.push("Secret events are unknown to NPCs; use them only as hidden world triggers.");
                     return contextLines.join("\n") + "\n";
                 } catch (e) {
@@ -2936,6 +2957,7 @@ ${shopContext}
 7. ALWAYS close quotation marks. If a character speaks, end the spoken line with a closing quote.
 8. Do NOT end your narration with "..." unless it's intentional and the sentence is complete; prefer complete sentences.
 9. Do NOT repeat exact sentences from the STORY LOG; continue with new developments.
+10. Respect EVENT chronology strictly: if an event is marked UPCOMING with a fixed date, never describe it as happening earlier than that date.
 
 # KNOWLEDGE BOUNDARY (STRICT)
 - DO NOT HALLUCINATE. Only use facts present in the WORLD KNOWLEDGE, PLAYER CHARACTER, PRESENT NPCs, MEMORIES, EVENTS, and LOCATION STATES above.
@@ -3474,6 +3496,55 @@ Example:
                     sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
                 }
             }
+            function clearExpiredLocationEvents(byTs = null) {
+                try {
+                    if (!activeChar || !activeChar.startingDate) return false;
+                    const cards = getCards();
+                    if (!Array.isArray(cards) || cards.length === 0) return false;
+                    const nowDay = _nowDayKey();
+                    let changed = false;
+                    cards.forEach((c) => {
+                        if (!c || c.genre !== "location") return;
+                        if (!c.events || typeof c.events !== "object") return;
+                        Object.keys(c.events).forEach((bucket) => {
+                            const list = c.events[bucket];
+                            if (!Array.isArray(list) || list.length === 0) return;
+                            const kept = [];
+                            list.forEach((evt, idx) => {
+                                if (!evt || evt.day == null || evt.month == null || evt.year == null) {
+                                    kept.push(evt);
+                                    return;
+                                }
+                                const isExpired = nowDay > _eventDayKey(evt);
+                                if (!isExpired) {
+                                    kept.push(evt);
+                                    return;
+                                }
+                                changed = true;
+                                if (byTs) {
+                                    rememberAnchoredWorldChange(byTs, {
+                                        type: "eventExpired",
+                                        locId: c.id,
+                                        bucket,
+                                        index: idx,
+                                        event: JSON.parse(JSON.stringify(evt))
+                                    });
+                                }
+                            });
+                            if (kept.length !== list.length) {
+                                c.events[bucket] = kept;
+                            }
+                        });
+                    });
+                    if (changed) {
+                        sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                    }
+                    return changed;
+                } catch (e) {
+                    console.warn("clearExpiredLocationEvents failed", e);
+                    return false;
+                }
+            }
             function rollbackAnchoredChangesByTs(ts) {
                 try {
                     if (!ts) return;
@@ -3517,6 +3588,23 @@ Example:
                         } else {
                             delete npc.deathInfo;
                         }
+                        changed = true;
+                    });
+                    pendingChanges.forEach((change) => {
+                        if (!change || change.type !== "eventExpired" || !change.locId || !change.bucket) return;
+                        const loc = cards.find((c) => c.genre === "location" && c.id === change.locId);
+                        if (!loc) return;
+                        if (!loc.events || typeof loc.events !== "object") loc.events = {};
+                        if (!Array.isArray(loc.events[change.bucket])) loc.events[change.bucket] = [];
+                        const list = loc.events[change.bucket];
+                        const restoredEvent = change.event ? JSON.parse(JSON.stringify(change.event)) : null;
+                        if (!restoredEvent) return;
+                        const restoreSig = JSON.stringify(restoredEvent);
+                        const exists = list.some((evt) => JSON.stringify(evt || {}) === restoreSig);
+                        if (exists) return;
+                        const idx = Number.isFinite(parseInt(change.index, 10)) ? parseInt(change.index, 10) : list.length;
+                        const boundedIdx = Math.max(0, Math.min(idx, list.length));
+                        list.splice(boundedIdx, 0, restoredEvent);
                         changed = true;
                     });
                     if (pendingChanges.length > 0) {
@@ -4201,6 +4289,8 @@ Example:
                 const char = loadLatestCharacter();
                 if (char) {
                     applyCharacter(char);
+                    clearExpiredLocationEvents();
+                    try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                     loadStoryLog();
                     // Ensure initial age baselines are set
                     try {
