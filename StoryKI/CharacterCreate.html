@@ -1161,6 +1161,16 @@
                 Storage.set(CHARS_KEY, JSON.stringify(chars));
             }
 
+            function readBirthdate(entity) {
+                if (!entity || typeof entity !== "object") return null;
+                const raw = entity.birthdate || entity.birthDate || entity.birthday || null;
+                if (!raw || typeof raw !== "object") return null;
+                const day = parseInt(raw.day, 10) || null;
+                const month = parseInt(raw.month, 10) || null;
+                if (!day || !month) return null;
+                return { day, month };
+            }
+
             function generateId() {
                 const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
                 let id = "";
@@ -2078,7 +2088,7 @@
                     gender: npc.gender || "male",
                     appearance: npc.appearance || "",
                     age: typeof npc.age === "number" ? npc.age : (parseInt(npc.age) || 0),
-                    birthdate: npc.birthdate ? { day: npc.birthdate.day || null, month: npc.birthdate.month || null } : null,
+                    birthdate: readBirthdate(npc),
                     spawnId: selectedSpawnId,
                     relations: JSON.parse(JSON.stringify(npc.relations || [])),
                     skills: JSON.parse(JSON.stringify(npc.skills || [])),

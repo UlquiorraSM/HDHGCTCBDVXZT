@@ -333,6 +333,43 @@
                 border-bottom-left-radius: 4px;
                 color: rgba(255, 255, 255, 0.88);
             }
+            .msg-bubble strong {
+                font-weight: 800;
+            }
+            .msg-bubble em {
+                font-style: italic;
+            }
+            .msg-bubble del {
+                text-decoration: line-through;
+                opacity: 0.9;
+            }
+            .msg-bubble code {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 6px;
+                padding: 1px 6px;
+                font-family: Consolas, "Courier New", monospace;
+                font-size: 0.92em;
+            }
+            .msg-bubble pre {
+                margin: 8px 0;
+                padding: 10px 12px;
+                border-radius: 10px;
+                background: rgba(0, 0, 0, 0.35);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                overflow-x: auto;
+            }
+            .msg-bubble pre code {
+                background: transparent;
+                border: none;
+                padding: 0;
+                font-size: 0.9em;
+            }
+            .msg-bubble a {
+                color: rgba(150, 200, 255, 0.95);
+                text-decoration: underline;
+                word-break: break-word;
+            }
             .msg-bubble.thinking {
                 color: rgba(255, 255, 255, 0.35);
                 font-style: italic;
@@ -863,6 +900,24 @@
             let _editRow = null;
             let _editIndex = -1;
             let currentNarrationTs = null;
+
+            function normalizeBirthdate(raw) {
+                if (!raw || typeof raw !== "object") return null;
+                const day = parseInt(raw.day, 10) || null;
+                const month = parseInt(raw.month, 10) || null;
+                if (!day || !month) return null;
+                return { day, month };
+            }
+
+            function readBirthdate(entity) {
+                if (!entity || typeof entity !== "object") return null;
+                return normalizeBirthdate(entity.birthdate || entity.birthDate || entity.birthday || null);
+            }
+
+            function formatBirthdate(bd) {
+                if (!bd || !bd.day || !bd.month) return "";
+                return `${String(bd.day).padStart(2, "0")}.${String(bd.month).padStart(2, "0")}`;
+            }
 
             /* ═══════════════════════════════════════
                TIME & COMMAND SYSTEM
@@ -1551,8 +1606,12 @@
                     for (let i = 0; i < chars.length; i++) {
                         const c = chars[i];
                         if (!c || c.status === "Dead") continue;
-                        const bd = c.birthdate;
+                        const bd = readBirthdate(c);
                         if (!bd || (!bd.day && !bd.month)) continue;
+                        if (!c.birthdate || c.birthdate.day !== bd.day || c.birthdate.month !== bd.month) {
+                            c.birthdate = { day: bd.day, month: bd.month };
+                            changed = true;
+                        }
                         if (typeof c.age !== "number") continue;
                         if (!c._ageCheck || typeof c._ageCheck !== "object") {
                             c._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
@@ -1574,8 +1633,11 @@
             function updatePlayerBirthday(currentDate) {
                 try {
                     if (!activeChar) return;
-                    const bd = activeChar.birthdate;
+                    const bd = readBirthdate(activeChar);
                     if (!bd || (!bd.day && !bd.month)) return;
+                    if (!activeChar.birthdate || activeChar.birthdate.day !== bd.day || activeChar.birthdate.month !== bd.month) {
+                        activeChar.birthdate = { day: bd.day, month: bd.month };
+                    }
                     if (typeof activeChar.age !== "number") return;
                     if (!activeChar._ageCheck || typeof activeChar._ageCheck !== "object") {
                         activeChar._ageCheck = { day: currentDate.day || 1, month: currentDate.month || 1, year: currentDate.year || 1983 };
@@ -1782,6 +1844,14 @@
                         }
                         if (!ch.raceName) ch.raceName = "Unknown Race";
                     }
+                    const bd = readBirthdate(ch);
+                    if (bd) {
+                        ch.birthdate = { day: bd.day, month: bd.month };
+                    } else {
+                        const sourceCard = getCards().find(c => c.genre === "character" && c.id === ch.id);
+                        const sourceBd = readBirthdate(sourceCard);
+                        if (sourceBd) ch.birthdate = { day: sourceBd.day, month: sourceBd.month };
+                    }
                     if (ch.isPlayable !== true) ch.isPlayable = true;
                 } catch {}
 
@@ -1950,6 +2020,42 @@
             /* ═══════════════════════════════════════
                MESSAGE HELPERS
             ═══════════════════════════════════════ */
+            function formatMessageText(text) {
+                let s = String(text || "");
+                const escapeHtml = (v) =>
+                    v.replace(/&/g, "&amp;")
+                     .replace(/</g, "&lt;")
+                     .replace(/>/g, "&gt;")
+                     .replace(/"/g, "&quot;")
+                     .replace(/'/g, "&#39;");
+                s = escapeHtml(s);
+                const blocks = [];
+                s = s.replace(/```([\s\S]*?)```/g, (_, code) => {
+                    const key = `%%BLOCK_${blocks.length}%%`;
+                    blocks.push(`<pre><code>${code.replace(/^\n+|\n+$/g, "")}</code></pre>`);
+                    return key;
+                });
+                const inlines = [];
+                s = s.replace(/`([^`\n]+)`/g, (_, code) => {
+                    const key = `%%INLINE_${inlines.length}%%`;
+                    inlines.push(`<code>${code}</code>`);
+                    return key;
+                });
+                s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+                s = s.replace(/\*\*\*([^\n*][\s\S]*?[^\n*])\*\*\*/g, "<strong><em>$1</em></strong>");
+                s = s.replace(/\*\*([^\n*][\s\S]*?[^\n*])\*\*/g, "<strong>$1</strong>");
+                s = s.replace(/__([^\n_][\s\S]*?[^\n_])__/g, "<strong>$1</strong>");
+                s = s.replace(/(^|[^*])\*([^*\n][\s\S]*?[^*\n])\*(?!\*)/g, "$1<em>$2</em>");
+                s = s.replace(/(^|[^_])_([^_\n][\s\S]*?[^_\n])_(?!_)/g, "$1<em>$2</em>");
+                s = s.replace(/~~([^\n~][\s\S]*?[^\n~])~~/g, "<del>$1</del>");
+                inlines.forEach((html, i) => {
+                    s = s.replace(`%%INLINE_${i}%%`, html);
+                });
+                blocks.forEach((html, i) => {
+                    s = s.replace(`%%BLOCK_${i}%%`, html);
+                });
+                return s;
+            }
             function appendBubble(role, text, cssExtra = "", scroll = true) {
                 const messagesEl = document.getElementById("messages");
                 
@@ -1975,7 +2081,7 @@
 
                 const bubble = document.createElement("div");
                 bubble.className = `msg-bubble ${cssExtra}`;
-                bubble.textContent = text;
+                bubble.innerHTML = formatMessageText(text);
 
                 row.appendChild(bubble);
                 messagesEl.appendChild(row);
@@ -2212,7 +2318,11 @@
                             if (sched && !ancestorIds.has(sched.schoolId)) {
                                 return;
                             }
+                            const age = parseInt(c.age, 10);
+                            const bd = readBirthdate(c);
                             context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
+                            if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
+                            if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
                             context += `  Unused Days Counter: ${Math.max(0, parseInt(c.unusedDaysCounter, 10) || 0)}\n`;
                             if (c.description) context += `  Description: ${c.description}\n`;
                             if (c.personality) context += `  Personality: ${c.personality}\n`;
@@ -2222,8 +2332,12 @@
                         if (deadCharacters.length > 0) {
                             context += "\nDEAD RESIDENTS (Known dead NPCs tied to this location and its parent regions. They are not physically present, but the area can reflect their deaths):\n";
                             deadCharacters.forEach((c) => {
+                                const age = parseInt(c.age, 10);
+                                const bd = readBirthdate(c);
                                 context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
                                 context += `  Status: Dead\n`;
+                                if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
+                                if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
                                 context += `  Cause of Death: ${c.deathCause || "Unknown"}\n`;
                                 if (c.description) context += `  Description: ${c.description}\n`;
                                 if (c.lore) context += `  Lore/History: ${c.lore}\n`;
@@ -2241,7 +2355,11 @@
                         context += "\nHOMELESS CHARACTERS (no home anywhere):\n";
                         homeless.forEach((c) => {
                             const race = c.raceName || "Unknown Race";
+                            const age = parseInt(c.age, 10);
+                            const bd = readBirthdate(c);
                             context += `- ${c.title} [ID: ${c.id}] (HOMELESS, ${race})\n`;
+                            if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
+                            if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
                             if (c.description) context += `  Description: ${c.description}\n`;
                             if (c.lore) context += `  Lore/History: ${c.lore}\n`;
                         });
@@ -3039,7 +3157,9 @@ Example:
                 const race = activeChar.raceName || "Unknown Race";
                 const gender = activeChar.gender || "";
                 const age = activeChar.age ? `${activeChar.age}` : "";
-                const bd = activeChar.birthdate ? `${String(activeChar.birthdate.day || 1).padStart(2,"0")}.${String(activeChar.birthdate.month || 1).padStart(2,"0")}` : "";
+                const bdObj = readBirthdate(activeChar);
+                if (bdObj) activeChar.birthdate = { day: bdObj.day, month: bdObj.month };
+                const bd = formatBirthdate(bdObj);
                 const app = activeChar.appearance || "";
                 let lines = [];
                 lines.push(`- NAME: ${name}`);
@@ -4166,7 +4286,7 @@ Example:
                 const newText = (input.value || "").trim();
                 if (!newText) { showToast("Text darf nicht leer sein.", "rgba(180,60,60,0.85)"); return; }
                 const bubble = _editRow.querySelector(".msg-bubble");
-                if (bubble) bubble.textContent = newText;
+                if (bubble) bubble.innerHTML = formatMessageText(newText);
                 // Update history
                 const entry = chatHistory[_editIndex];
                 if (entry && typeof entry === "object") {
@@ -4393,7 +4513,7 @@ Example:
                                 raceName: playable.raceName || "Unknown Race",
                                 gender: playable.gender || "",
                                 age: playable.age || 0,
-                                birthdate: playable.birthdate || null,
+                                birthdate: readBirthdate(playable),
                                 appearance: playable.appearance || "",
                                 relations: JSON.parse(JSON.stringify(playable.relations || [])),
                                 skills: JSON.parse(JSON.stringify(playable.skills || [])),
