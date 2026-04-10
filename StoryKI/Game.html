@@ -919,6 +919,17 @@
                 return `${String(bd.day).padStart(2, "0")}.${String(bd.month).padStart(2, "0")}`;
             }
 
+            function readSecrets(entity) {
+                if (!entity || typeof entity !== "object" || !Array.isArray(entity.secrets)) return [];
+                return entity.secrets
+                    .map((s) => {
+                        if (typeof s === "string") return s.trim();
+                        if (s && typeof s === "object") return String(s.text || "").trim();
+                        return "";
+                    })
+                    .filter(Boolean);
+            }
+
             /* ═══════════════════════════════════════
                TIME & COMMAND SYSTEM
             ═══════════════════════════════════════ */
@@ -2320,9 +2331,11 @@
                             }
                             const age = parseInt(c.age, 10);
                             const bd = readBirthdate(c);
+                            const secrets = readSecrets(c);
                             context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
                             if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
                             if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
+                            if (secrets.length > 0) context += `  Secrets: ${secrets.join(" | ")}\n`;
                             context += `  Unused Days Counter: ${Math.max(0, parseInt(c.unusedDaysCounter, 10) || 0)}\n`;
                             if (c.description) context += `  Description: ${c.description}\n`;
                             if (c.personality) context += `  Personality: ${c.personality}\n`;
@@ -2334,10 +2347,12 @@
                             deadCharacters.forEach((c) => {
                                 const age = parseInt(c.age, 10);
                                 const bd = readBirthdate(c);
+                                const secrets = readSecrets(c);
                                 context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
                                 context += `  Status: Dead\n`;
                                 if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
                                 if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
+                                if (secrets.length > 0) context += `  Secrets: ${secrets.join(" | ")}\n`;
                                 context += `  Cause of Death: ${c.deathCause || "Unknown"}\n`;
                                 if (c.description) context += `  Description: ${c.description}\n`;
                                 if (c.lore) context += `  Lore/History: ${c.lore}\n`;
@@ -2357,9 +2372,11 @@
                             const race = c.raceName || "Unknown Race";
                             const age = parseInt(c.age, 10);
                             const bd = readBirthdate(c);
+                            const secrets = readSecrets(c);
                             context += `- ${c.title} [ID: ${c.id}] (HOMELESS, ${race})\n`;
                             if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
                             if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
+                            if (secrets.length > 0) context += `  Secrets: ${secrets.join(" | ")}\n`;
                             if (c.description) context += `  Description: ${c.description}\n`;
                             if (c.lore) context += `  Lore/History: ${c.lore}\n`;
                         });
