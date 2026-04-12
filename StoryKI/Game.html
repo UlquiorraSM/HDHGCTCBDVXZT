@@ -930,6 +930,17 @@
                     .filter(Boolean);
             }
 
+            function readKnownSecrets(entity) {
+                if (!entity || typeof entity !== "object" || !Array.isArray(entity.knownSecrets)) return [];
+                return entity.knownSecrets
+                    .map((s) => {
+                        if (typeof s === "string") return s.trim();
+                        if (s && typeof s === "object") return String(s.text || "").trim();
+                        return "";
+                    })
+                    .filter(Boolean);
+            }
+
             /* ═══════════════════════════════════════
                TIME & COMMAND SYSTEM
             ═══════════════════════════════════════ */
@@ -1037,6 +1048,36 @@
                     id: npc.id,
                     cause: deathCause
                 };
+                sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                return true;
+            }
+
+            function addKnownSecret(npcId, secretText, anchorTs = null) {
+                const id = String(npcId || "").trim();
+                const secret = String(secretText || "").trim();
+                if (!id || !secret) return false;
+                if (activeChar && activeChar.id === id) return false; // Player can't learn secrets this way
+                const cards = getCards();
+                const npc = cards.find((c) => c.genre === "character" && c.id === id);
+                if (!npc) return false;
+
+                // Initialize knownSecrets array if needed
+                if (!Array.isArray(npc.knownSecrets)) npc.knownSecrets = [];
+
+                // Check if already known (avoid duplicates)
+                const alreadyKnown = npc.knownSecrets.some(s =>
+                    String(s.text || s).toLowerCase() === secret.toLowerCase()
+                );
+                if (alreadyKnown) return false;
+
+                // Add to known secrets with metadata
+                npc.knownSecrets.push({
+                    text: secret,
+                    learnedAt: Date.now(),
+                    learnedByTs: anchorTs || null,
+                    date: buildCurrentWorldStamp(anchorTs)
+                });
+
                 sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
                 return true;
             }
@@ -1330,6 +1371,14 @@
                         if (applyNpcDeath(npcId, deathCause, currentNarrationTs)) {
                             npcDeathsChanged = true;
                         }
+                        continue;
+                    }
+                    // Handle SecretRevelation tags: [[SecretRevelation:NPC_ID|Secret text]]
+                    const secretRevTag = content.match(/^SecretRevelation\s*:\s*([A-Za-z0-9\-_]+)\s*\|\s*(.+)$/i);
+                    if (secretRevTag) {
+                        const npcId = secretRevTag[1].trim();
+                        const secretText = secretRevTag[2].trim();
+                        addKnownSecret(npcId, secretText, currentNarrationTs);
                         continue;
                     }
                     const parts = content.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
@@ -2332,10 +2381,12 @@
                             const age = parseInt(c.age, 10);
                             const bd = readBirthdate(c);
                             const secrets = readSecrets(c);
+                            const knownSecrets = readKnownSecrets(c);
                             context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
                             if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
                             if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
                             if (secrets.length > 0) context += `  Secrets: ${secrets.join(" | ")}\n`;
+                            if (knownSecrets.length > 0) context += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
                             context += `  Unused Days Counter: ${Math.max(0, parseInt(c.unusedDaysCounter, 10) || 0)}\n`;
                             if (c.description) context += `  Description: ${c.description}\n`;
                             if (c.personality) context += `  Personality: ${c.personality}\n`;
@@ -2348,11 +2399,13 @@
                                 const age = parseInt(c.age, 10);
                                 const bd = readBirthdate(c);
                                 const secrets = readSecrets(c);
+                                const knownSecrets = readKnownSecrets(c);
                                 context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
                                 context += `  Status: Dead\n`;
                                 if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
                                 if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
                                 if (secrets.length > 0) context += `  Secrets: ${secrets.join(" | ")}\n`;
+                                if (knownSecrets.length > 0) context += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
                                 context += `  Cause of Death: ${c.deathCause || "Unknown"}\n`;
                                 if (c.description) context += `  Description: ${c.description}\n`;
                                 if (c.lore) context += `  Lore/History: ${c.lore}\n`;
@@ -2373,10 +2426,12 @@
                             const age = parseInt(c.age, 10);
                             const bd = readBirthdate(c);
                             const secrets = readSecrets(c);
+                            const knownSecrets = readKnownSecrets(c);
                             context += `- ${c.title} [ID: ${c.id}] (HOMELESS, ${race})\n`;
                             if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
                             if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
                             if (secrets.length > 0) context += `  Secrets: ${secrets.join(" | ")}\n`;
+                            if (knownSecrets.length > 0) context += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
                             if (c.description) context += `  Description: ${c.description}\n`;
                             if (c.lore) context += `  Lore/History: ${c.lore}\n`;
                         });
@@ -3115,6 +3170,8 @@ ${shopContext}
 - DO NOT HALLUCINATE. Only use facts present in the WORLD KNOWLEDGE, PLAYER CHARACTER, PRESENT NPCs, MEMORIES, EVENTS, and LOCATION STATES above.
 - If an NPC would not reasonably know something (not in their relations, memories, or current scene context), explicitly have them NOT know it; do NOT fill gaps with assumptions or "logical" guesses.
 - Do not attribute knowledge of SECRET EVENTS to NPCs; they remain unknown unless learned in-scene.
+- CHARACTER SECRETS: Each NPC's Secrets are listed in their profile. Only THAT SPECIFIC NPC knows their own secrets. Other NPCs do NOT know these secrets unless explicitly revealed in-scene.
+- KNOWN SECRETS: If an NPC has "Known Secrets (learned from others)" listed, these are secrets they learned from other characters (through the player revealing them or other means). This NPC IS aware of these secrets and CAN reference them in dialogue.
 
 # TIME & LOCATION MANAGEMENT (CRITICAL)
 1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
@@ -3150,6 +3207,16 @@ ${shopContext}
 - Use the exact NPC ID shown in the PRESENT CHARACTERS or DEAD RESIDENTS lists.
 - Use one death tag per dead NPC.
 - Only use this for NPCs, never for the player.
+
+# SECRET REVELATION TAGS (WHEN SECRETS ARE REVEALED)
+- When a player reveals another NPC's Secret TO an NPC (or an NPC learns a Secret through any means), append a SecretRevelation tag BEFORE the final metadata block.
+- Syntax:
+  [[SecretRevelation:TARGET_NPC_ID|Secret text that was revealed]]
+- TARGET_NPC_ID: The ID of the NPC who LEARNED the secret (the one who now knows it)
+- Secret text: The exact secret text from the original character's Secrets list
+- Example: If player tells NPC_A that NPC_B is a werewolf, and NPC_B's secret is "I am secretly a werewolf":
+  [[SecretRevelation:NPC_A|I am secretly a werewolf]]
+- This allows the AI to track which NPCs know which secrets across future conversations.
 
 ${nsfwInstruction}
 
