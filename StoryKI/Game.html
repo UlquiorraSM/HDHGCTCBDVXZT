@@ -1913,6 +1913,14 @@
                         if (sourceBd) ch.birthdate = { day: sourceBd.day, month: sourceBd.month };
                     }
                     if (ch.isPlayable !== true) ch.isPlayable = true;
+                    // Initialize discoveredLocations for backwards compatibility
+                    if (!Array.isArray(ch.discoveredLocations)) {
+                        ch.discoveredLocations = [];
+                    }
+                    // Mark current location as discovered if set
+                    if (ch.currentLocationId && !ch.discoveredLocations.includes(ch.currentLocationId)) {
+                        ch.discoveredLocations.push(ch.currentLocationId);
+                    }
                 } catch {}
 
                 const fullName = [ch.firstName, ch.lastName].filter(Boolean).join(" ") || (ch.title || "Unknown");
@@ -1944,7 +1952,7 @@
                         let earliest = null;
                         cards.filter(c => c.genre === "location").forEach(loc => {
                             const ev = loc.events || {};
-                            ["village-city","country-kingdom"].forEach(k => {
+                            ["custom"].forEach(k => {
                                 (Array.isArray(ev[k]) ? ev[k] : []).forEach(e => {
                                     if (!e || e.type === "secret") return;
                                     const key = `${String(e.year||0).padStart(4,"0")}-${String(e.month||0).padStart(2,"0")}-${String(e.day||0).padStart(2,"0")} ${e.time||"00:00"}`;
@@ -2245,6 +2253,14 @@
                         if (!loc) return "";
 
                         let indent = "  ".repeat(depth);
+                        const isVisible = isLocationVisible(id);
+
+                        if (!isVisible) {
+                            // Not visible: only name and ID
+                            return `${indent}- ${loc.title} [ID: ${loc.id}]\n`;
+                        }
+
+                        // Visible: full details
                         let type = (
                             loc.locationDetail ||
                             loc.locationSub ||
@@ -2465,35 +2481,11 @@
                 }
             }
 
-            function buildItemContext() {
-                try {
-                    const cards = getCards();
-                    const items = cards.filter((c) => c.genre === "item");
-                    if (items.length === 0) return "";
-
-                    let context = "\nWORLD ITEMS:\n";
-                    items.forEach((item) => {
-                        context += `- ${item.title}\n`;
-                        if (item.description) context += `  Description: ${item.description}\n`;
-                        if (item.tags && item.tags.length > 0) {
-                            context += `  Properties (AI Knowledge): ${item.tags.join(", ")}\n`;
-                        }
-                    });
-                    return context;
-                } catch (e) {
-                    console.error("Item context error", e);
-                    return "";
-                }
-            }
-
             function speciesKeyForLoc(loc) {
                 const sub = (loc.locationSub || "").toLowerCase();
                 const det = (loc.locationDetail || "").toLowerCase();
-                if (sub === "zivil") {
-                    if (det === "village" || det === "city") return "village-city";
-                    if (det === "country" || det === "kingdom") return "country-kingdom";
-                    return null;
-                }
+                if (sub === "custom") return "custom";
+                if (sub === "building") return "building";
                 if (sub === "forest") return "forest";
                 if (sub === "land" && det === "forest") return "forest";
                 if (sub === "landmark") return "landmark";
@@ -2571,15 +2563,14 @@
                         current = parent;
                     }
                     const contextLines = [];
-                    contextLines.push("\nZIVIL EVENTS (Current area and parent regions):");
+                    contextLines.push("\nLOCATION EVENTS (Current area and parent regions):");
                     const nowDay = _nowDayKey();
                     ancestors.forEach(loc => {
-                        if (loc.genre !== "location" || loc.locationSub !== "zivil") return;
+                        if (loc.genre !== "location" || loc.locationSub !== "custom") return;
                         const ev = loc.events || null;
                         if (!ev) return;
                         const lists = [];
-                        if (Array.isArray(ev["village-city"])) lists.push(...ev["village-city"].map(e => ({...e, _loc: loc.title})));
-                        if (Array.isArray(ev["country-kingdom"])) lists.push(...ev["country-kingdom"].map(e => ({...e, _loc: loc.title})));
+                        if (Array.isArray(ev["custom"])) lists.push(...ev["custom"].map(e => ({...e, _loc: loc.title})));
                         const normalized = lists
                             .filter(e => e && e.day != null && e.month != null && e.year != null)
                             .sort((a, b) => _eventTimeKey(a) - _eventTimeKey(b));
@@ -2882,14 +2873,13 @@
                         window._eventAppliedIds.clear();
                         window._eventOverrideSnapshot = {};
                     }
-                    const ancestors = _getAncestorsForCurrent().filter(c => c.genre === "location" && c.locationSub === "zivil");
+                    const ancestors = _getAncestorsForCurrent().filter(c => c.genre === "location" && c.locationSub === "custom");
                     if (ancestors.length === 0) return;
                     const applicable = [];
                     ancestors.forEach(loc => {
                         const ev = loc.events || {};
                         const all = []
-                            .concat(Array.isArray(ev["village-city"]) ? ev["village-city"] : [])
-                            .concat(Array.isArray(ev["country-kingdom"]) ? ev["country-kingdom"] : []);
+                            .concat(Array.isArray(ev["custom"]) ? ev["custom"] : []);
                         const eligible = all.filter(e => e && e.day != null && e.month != null && e.year != null && e.changes);
                         if (eligible.length === 0) return;
                         const latest = eligible
@@ -3063,7 +3053,6 @@
                 const worldHierarchy = buildLocationHierarchy();
                 const charContext = buildCharacterContext();
                 const raceContext = buildRaceContext();
-                const itemContext = buildItemContext();
                 const speciesContext = buildSpeciesPresenceContext();
                 const playerContext = buildPlayerContext();
                 const eventsContext = buildEventsContext();
@@ -3143,7 +3132,6 @@ ${playerContext}
 ${worldHierarchy}
 ${charContext}
 ${raceContext}
-${itemContext}
 ${speciesContext}
 ${eventsContext}
 ${locationMemoryContext}
@@ -3172,6 +3160,7 @@ ${shopContext}
 - Do not attribute knowledge of SECRET EVENTS to NPCs; they remain unknown unless learned in-scene.
 - CHARACTER SECRETS: Each NPC's Secrets are listed in their profile. Only THAT SPECIFIC NPC knows their own secrets. Other NPCs do NOT know these secrets unless explicitly revealed in-scene.
 - KNOWN SECRETS: If an NPC has "Known Secrets (learned from others)" listed, these are secrets they learned from other characters (through the player revealing them or other means). This NPC IS aware of these secrets and CAN reference them in dialogue.
+- LOCATION VISIBILITY: You only see full details for the CURRENT LOCATION, its ANCESTORS, and its CHILD-SUBLOCATIONS. Other locations show only "[ID: xxx] (details unknown)".
 
 # TIME & LOCATION MANAGEMENT (CRITICAL)
 1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
@@ -3396,6 +3385,8 @@ Example:
                     currentLocationId = card.id;
                     if (activeChar) activeChar.currentLocationId = card.id; // Save to activeChar
                     if (el) el.textContent = card.title.toUpperCase(); // Fixed: Show TITLE, not ID
+                    // Track discovered location and its chain
+                    addDiscoveredLocation(card.id);
                     try { recalcEventOverrides(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                 } else {
                     // Fallback: If no card found, keep the text but try to find a parent if possible
@@ -3409,6 +3400,98 @@ Example:
                 updatePresentNPCs();
                 saveActiveCharacter(); // Save the location state
                 try { loadBackground(); } catch {}
+            }
+
+            /* ═══════════════════════════════════════
+               LOCATION DISCOVERY SYSTEM
+            ═══════════════════════════════════════ */
+            function addDiscoveredLocation(locId) {
+                if (!activeChar || !locId) return;
+                if (!Array.isArray(activeChar.discoveredLocations)) {
+                    activeChar.discoveredLocations = [];
+                }
+                // Add current location
+                if (!activeChar.discoveredLocations.includes(locId)) {
+                    activeChar.discoveredLocations.push(locId);
+                }
+                // Also discover all parent locations (ancestors)
+                const cards = getCards();
+                let current = cards.find(c => c.id === locId);
+                while (current) {
+                    const parent = cards.find((c) => {
+                        if (c.genre !== "location" || !c.sublocations) return false;
+                        return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                    });
+                    if (parent && !activeChar.discoveredLocations.includes(parent.id)) {
+                        activeChar.discoveredLocations.push(parent.id);
+                    }
+                    current = parent;
+                }
+                // Discover all sibling locations (same parent) - you know they exist
+                const directParent = cards.find((c) => {
+                    if (c.genre !== "location" || !c.sublocations) return false;
+                    return Object.values(c.sublocations).some((arr) => (arr || []).includes(locId));
+                });
+                if (directParent && directParent.sublocations) {
+                    Object.values(directParent.sublocations).forEach((siblingIds) => {
+                        (siblingIds || []).forEach((sid) => {
+                            if (sid !== locId && !activeChar.discoveredLocations.includes(sid)) {
+                                activeChar.discoveredLocations.push(sid);
+                            }
+                        });
+                    });
+                }
+            }
+
+            function isLocationVisible(locId) {
+                if (!activeChar || !locId) return false;
+                if (!currentLocationId) return false;
+                if (locId === currentLocationId) return true;
+
+                const cards = getCards();
+
+                // Check if it's an ancestor of current location
+                let current = cards.find(c => c.id === currentLocationId);
+                while (current) {
+                    const parent = cards.find((c) => {
+                        if (c.genre !== "location" || !c.sublocations) return false;
+                        return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                    });
+                    if (parent) {
+                        if (parent.id === locId) return true;
+                        current = parent;
+                    } else {
+                        break;
+                    }
+                }
+
+                // Check if it's a child (sublocation) of current location
+                const currentLoc = cards.find(c => c.id === currentLocationId);
+                if (currentLoc && currentLoc.sublocations) {
+                    const allChildren = Object.values(currentLoc.sublocations).flat();
+                    if (allChildren.includes(locId)) return true;
+                }
+
+                return false;
+            }
+
+            function getDiscoveredLocationContext(locId) {
+                const cards = getCards();
+                const loc = cards.find(c => c.id === locId);
+                if (!loc) return "";
+                const isVisible = isLocationVisible(locId);
+                if (isVisible) {
+                    // Full details for visible locations
+                    let type = (loc.locationDetail || loc.locationSub || "Location").toUpperCase();
+                    let str = `- ${loc.title} (${type})`;
+                    if (loc.description) str += `: ${loc.description}`;
+                    str += "\n";
+                    if (loc.lore) str += `  Lore: ${loc.lore}\n`;
+                    return str;
+                } else {
+                    // Only name and ID for non-visible locations
+                    return `- ${loc.title} [ID: ${loc.id}]\n`;
+                }
             }
 
             function updatePresentNPCs() {
@@ -4576,7 +4659,7 @@ Example:
                                 let e = null;
                                 cards.filter(c => c.genre === "location").forEach(loc => {
                                     const ev = loc.events || {};
-                                    ["village-city","country-kingdom"].forEach(k => {
+                                    ["custom"].forEach(k => {
                                         (Array.isArray(ev[k]) ? ev[k] : []).forEach(v => {
                                             if (!v || v.type === "secret") return;
                                             const key = `${String(v.year||0).padStart(4,"0")}-${String(v.month||0).padStart(2,"0")}-${String(v.day||0).padStart(2,"0")} ${v.time||"00:00"}`;

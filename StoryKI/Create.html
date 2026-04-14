@@ -851,56 +851,6 @@
                 padding: 7px 4px;
                 text-align: center;
             }
-            /* ─── Variants Scene (same layout) ─── */
-            #variants-view {
-                position: fixed;
-                inset: 0;
-                display: flex;
-                flex-direction: column;
-                z-index: 1000;
-            }
-            #variants-view .form-scroll {
-                flex: 1;
-                overflow-y: auto;
-                width: 100%;
-                max-width: 1000px;
-                padding: 0 24px 40px 24px;
-                margin: 0 auto;
-            }
-            #variants-view .nav-title {
-                flex: 1;
-                font-size: 13px;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-                color: rgba(255, 255, 255, 0.5);
-                padding: 7px 4px;
-                text-align: center;
-            }
-            /* ─── Variants List Scene (same layout) ─── */
-            #variants-list-view {
-                position: fixed;
-                inset: 0;
-                display: flex;
-                flex-direction: column;
-                z-index: 1000;
-            }
-            #variants-list-view .form-scroll {
-                flex: 1;
-                overflow-y: auto;
-                width: 100%;
-                max-width: 1000px;
-                padding: 0 24px 40px 24px;
-                margin: 0 auto;
-            }
-            #variants-list-view .nav-title {
-                flex: 1;
-                font-size: 13px;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-                color: rgba(255, 255, 255, 0.5);
-                padding: 7px 4px;
-                text-align: center;
-            }
             #curse-view {
                 position: fixed;
                 inset: 0;
@@ -2311,7 +2261,7 @@
         </div>
 
         <!-- ══════════════════════════════
-             EVENTS SCENE (Zivil)
+             EVENTS SCENE
         ══════════════════════════════ -->
         <div id="events-view" style="display: none;">
             <nav class="top-nav">
@@ -2325,7 +2275,7 @@
             <div class="form-scroll">
                 <div class="form-title-row">
                     <h2>Manage Events</h2>
-                    <span class="entry-badge badge-locations">ZIVIL</span>
+                    <span class="entry-badge badge-locations">CUSTOM</span>
                 </div>
 
                 <div class="form-group">
@@ -2374,8 +2324,6 @@
                                 </button>
                             </div>
                         </div>
-                        <div id="ev-vc-group" style="display:none; margin-top:12px;"></div>
-                        <div id="ev-ck-group" style="display:none; margin-top:12px;"></div>
                         <div id="ev-desc-override-group" style="display:none; margin-top:12px;">
                             <div class="form-group">
                                 <label class="form-label">Card Description (override)</label>
@@ -2406,7 +2354,7 @@
         </div>
 
         <!-- ══════════════════════════════
-             CURSE SCENE (Zivil)
+             CURSE SCENE
         ══════════════════════════════ -->
         <div id="curse-view" style="display: none;">
             <nav class="top-nav">
@@ -2420,7 +2368,7 @@
             <div class="form-scroll">
                 <div class="form-title-row">
                     <h2>Manage Curses</h2>
-                    <span class="entry-badge badge-locations">ZIVIL</span>
+                    <span class="entry-badge badge-locations">CUSTOM</span>
                 </div>
 
                 <div class="form-group">
@@ -2445,78 +2393,6 @@
                 <div class="form-actions">
                     <button class="btn-cancel" onclick="showFormView()">← Back</button>
                     <button class="btn-save" onclick="confirmCurses()">Done</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══════════════════════════════
-             VARIANTS SCENE (Species)
-        ══════════════════════════════ -->
-        <div id="variants-view" style="display: none;">
-            <nav class="top-nav">
-                <button class="nav-back-btn" onclick="showFormView()" title="Back">
-                    ←
-                </button>
-                <span class="nav-title">SPECIES VARIANTS</span>
-                <div class="nav-count" id="variants-count">0</div>
-            </nav>
-            <div class="form-scroll">
-                <div class="form-title-row">
-                    <h2>Manage Variants</h2>
-                    <span class="entry-badge badge-species">SPECIES</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">New Variant</label>
-                    <div class="form-group">
-                        <label class="form-label">Name</label>
-                        <input type="text" class="form-input" id="variant-name-input" placeholder="e.g. Arctic Wolf" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Generally</label>
-                        <textarea class="form-textarea" id="variant-generally-input" placeholder="General traits..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Appearance</label>
-                        <textarea class="form-textarea" id="variant-appearance-input" placeholder="How the variant looks..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Personality</label>
-                        <textarea class="form-textarea" id="variant-personality-input" placeholder="Typical personality..."></textarea>
-                    </div>
-                    <div class="form-actions" style="margin-top:8px;">
-                        <button class="btn-save" onclick="variantsAdd()">+ Add Variant</button>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
-                    <button class="btn-save" onclick="confirmVariants()">Done</button>
-                    <button class="btn-save" onclick="openVariantsListScene()">Variants List</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══════════════════════════════
-             VARIANTS LIST SCENE (Species)
-        ══════════════════════════════ -->
-        <div id="variants-list-view" style="display: none;">
-            <nav class="top-nav">
-                <button class="nav-back-btn" onclick="showFormView()" title="Back">
-                    ←
-                </button>
-                <span class="nav-title">SPECIES VARIANTS LIST</span>
-                <div class="nav-count" id="variants-list-count">0</div>
-            </nav>
-            <div class="form-scroll">
-                <div class="form-title-row">
-                    <h2>Variants</h2>
-                    <span class="entry-badge badge-species">SPECIES</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Current Variants</label>
-                    <div id="variants-list-rows"></div>
-                </div>
-                <div class="form-actions">
-                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
                 </div>
             </div>
         </div>
@@ -2565,30 +2441,8 @@
                             <option value="species">Species</option>
                             <option value="lore">Lore</option>
                             <option value="character">Character</option>
-                            <option value="item">Item</option>
                             <option value="skill">Skill</option>
                         </select>
-                    </div>
-                </div>
-
-                <!-- ── Item Block ── -->
-                <div id="item-block" style="display: none">
-                    <div class="form-group">
-                        <label class="form-label">Tags (Bullet points for AI, max 10)</label>
-                        <div class="item-tag-container" id="item-tags-container">
-                            <!-- Tags will be rendered here -->
-                        </div>
-                        <div class="item-tag-input-wrapper">
-                            <input
-                                type="text"
-                                class="form-input"
-                                id="f-item-tag-input"
-                                placeholder="Add a tag and press Enter..."
-                                onkeydown="if(event.key === 'Enter') addItemTag()"
-                            />
-                            <button type="button" class="subloc-btn" onclick="addItemTag()" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
-                        </div>
-                        <div class="item-tag-count" id="item-tag-count">0 / 10 tags</div>
                     </div>
                 </div>
 
@@ -2754,32 +2608,6 @@
                             placeholder="Describe typical personality traits..."
                         ></textarea>
                     </div>
-                    <div class="form-group" id="species-catch-group">
-                        <label class="form-label">Catching</label>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <label style="display:flex; align-items:center; gap:8px;">
-                                <input type="checkbox" id="f-species-catchable" />
-                                <span>Can be caught</span>
-                            </label>
-                        </div>
-                        <div id="species-catch-how-wrap" style="margin-top:10px; display:none;">
-                            <input type="text" class="form-input" id="f-species-catch-how" placeholder="Describe how to catch it (text for AI)" />
-                        </div>
-                    </div>
-                    <div class="form-group" id="species-tools-group">
-                        <label class="form-label">Tools</label>
-                        <div class="tools-row">
-                            <button
-                                type="button"
-                                class="subloc-btn"
-                                id="species-variants-btn"
-                                onclick="openVariantsScene()"
-                            >
-                                <span class="subloc-icon">🧬</span>
-                                Variants
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 <div id="lore-block" style="display: none">
@@ -2829,8 +2657,7 @@
                     >
                         <option value="">Select a location type...</option>
                         <option value="building">Building</option>
-                        <option value="zivil">Zivil</option>
-                        <option value="land">Land</option>
+                        <option value="custom">Custom</option>
                     </select>
                 </div>
 
@@ -2852,36 +2679,48 @@
                     </div>
                 </div>
 
-                <div
-                    class="form-group"
-                    id="zivil-sub-group"
-                    style="display: none"
-                >
-                    <label class="form-label">Zivil Type</label>
-                    <select
-                        class="form-select"
-                        id="f-zivil-sub"
-                        onchange="onZivilSubChange()"
-                    >
-                        <option value="">Select a zivil type...</option>
-                        <option value="village">Village</option>
-                        <option value="city">City</option>
-                        <option value="country">Country</option>
-                        <option value="kingdom">Kingdom</option>
-                    </select>
-                </div>
-
                 <div class="form-group" id="other-tools-group" style="display:none">
                     <label class="form-label">Tools</label>
                     <div class="tools-row" id="tools-section-other" style="display:none">
                         <button
                             type="button"
                             class="subloc-btn"
-                            id="species-tool-btn"
-                            onclick="openSublocPicker('species-forest')"
+                            onclick="openSublocPicker('custom')"
+                        >
+                            <span class="subloc-icon">+</span>
+                            Sublocations
+                        </button>
+                        <button
+                            type="button"
+                            class="subloc-btn"
+                            onclick="openSublocPicker('custom-resident')"
+                        >
+                            <span class="subloc-icon">👤</span>
+                            Residents
+                        </button>
+                        <button
+                            type="button"
+                            class="subloc-btn"
+                            onclick="openSublocPicker('species-custom')"
                         >
                             <span class="subloc-icon">🐾</span>
                             Species
+                        </button>
+                        <button
+                            type="button"
+                            class="subloc-btn"
+                            onclick="openEventsScene('custom')"
+                        >
+                            <span class="subloc-icon">📅</span>
+                            Events
+                        </button>
+                        <button
+                            type="button"
+                            class="subloc-btn"
+                            onclick="addCursePrompt('custom')"
+                        >
+                            <span class="subloc-icon">💀</span>
+                            Curse
                         </button>
                         <button
                             type="button"
@@ -2892,259 +2731,37 @@
                             Background
                         </button>
                     </div>
-                </div>
 
-                <div class="form-group" id="land-sub-group" style="display:none">
-                    <label class="form-label">Land Type</label>
-                    <select class="form-select" id="f-land-sub" onchange="onLocationSubChange()">
-                        <option value="">Select a land type...</option>
-                        <option value="forest">Forest</option>
-                    </select>
-                </div>
-
-                <!-- ══ Village / City block ══ -->
-                <div id="village-city-block" style="display: none">
-                    <div class="zivil-side-layout">
-                        <!-- LEFT: RacialCiv + Sublocations -->
-                        <div class="zivil-main-col">
-                            <label class="form-label">Tools</label>
-                            <div class="tools-row" id="tools-section-vc" style="display:none">
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="openSublocPicker('village-city')"
-                                >
-                                    <span class="subloc-icon">&#43;</span>
-                                    Sublocations
-                                </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="openEventsScene('village-city')"
-                                >
-                                    <span class="subloc-icon">🎉</span>
-                                    Events
-                                </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    id="tools-resident-vc"
-                                    onclick="openSublocPicker('village-city-resident')"
-                                    style="display:none"
-                                >
-                                    <span class="subloc-icon">&#128100;</span>
-                                    Resident
-                                </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="openSublocPicker('species-village-city')"
-                                >
-                                    <span class="subloc-icon">🐾</span>
-                                    Species
-                                </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="setLocationBackground()"
-                                >
-                                    <span class="subloc-icon">🖼️</span>
-                                    Background
-                                </button>
-                                <button type="button" class="subloc-btn" onclick="addCursePrompt('village-city')"><span class="subloc-icon">💀</span> Curse</button>
-                            </div>
-
-                            <div class="spawn-check-group" id="spawn-check-group-vc" onclick="toggleSpawnCheckZivil('spawn-check-group-vc')" style="margin-top:14px; display:none;">
-                                <div class="spawn-checkbox">
-                                    <span class="spawn-checkbox-tick">&#10003;</span>
-                                </div>
-                                <span class="spawn-check-label">Can be Spawn</span>
-                                <span class="spawn-check-badge">SPAWN</span>
-                            </div>
-
-                            <!-- Sublocations for Village / City -->
-                            <div
-                                class="form-group"
-                                id="subloc-village-city-group"
-                            >
-                                <label class="form-label">Sublocations</label>
-                                <div
-                                    class="subloc-tags"
-                                    id="subloc-village-city-tags"
-                                ></div>
-                            </div>
-
-                            <!-- Residents for Village / City -->
-                            <div
-                                class="form-group"
-                                id="resident-village-city-group"
-                                style="display: none; margin-top: 14px"
-                            >
-                                <label class="form-label"
-                                    >Residents (NPCs)</label
-                                >
-                                <div
-                                    class="subloc-tags"
-                                    id="resident-village-city-tags"
-                                ></div>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="openSublocPicker('village-city-resident')"
-                                    style="display:none"
-                                >
-                                    <span class="subloc-icon">&#128100;</span>
-                                    Resident
-                                </button>
-                            </div>
+                    <!-- Can be Spawn -->
+                    <div
+                        class="spawn-check-group"
+                        id="spawn-check-group"
+                        onclick="toggleSpawnCheck()"
+                        style="margin-top: 14px;"
+                    >
+                        <div class="spawn-checkbox">
+                            <span class="spawn-checkbox-tick">&#10003;</span>
                         </div>
-
-                        <!-- RIGHT column removed: Population -->
+                        <span class="spawn-check-label">Can be Spawn</span>
+                        <span class="spawn-check-badge">SPAWN</span>
                     </div>
-                </div>
 
-                <!-- ══ Country / Kingdom block ══ -->
-                <div id="country-kingdom-block" style="display: none">
-                    <div class="zivil-side-layout">
-                        <!-- LEFT: RacialCiv + Sublocations -->
-                        <div class="zivil-main-col">
-                            <label class="form-label">Tools</label>
-                            <div class="tools-row" id="tools-section-ck" style="display:none">
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="
-                                        openSublocPicker('country-kingdom')
-                                    "
-                                >
-                                    <span class="subloc-icon">&#43;</span>
-                                    Sublocations
-                                </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="openEventsScene('country-kingdom')"
-                                >
-                                    <span class="subloc-icon">🎉</span>
-                                    Events
-                                </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    id="tools-resident-ck"
-                                    onclick="openSublocPicker('country-kingdom-resident')"
-                                    style="display:none"
-                                >
-                                    <span class="subloc-icon">&#128100;</span>
-                                    Resident
-                                </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="openSublocPicker('species-country-kingdom')"
-                                >
-                                    <span class="subloc-icon">🐾</span>
-                                    Species
-                                </button>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="setLocationBackground()"
-                                >
-                                    <span class="subloc-icon">🖼️</span>
-                                    Background
-                                </button>
-                                <button type="button" class="subloc-btn" onclick="addCursePrompt('country-kingdom')"><span class="subloc-icon">💀</span> Curse</button>
-                            </div>
-
-                            <div class="spawn-check-group" id="spawn-check-group-ck" onclick="toggleSpawnCheckZivil('spawn-check-group-ck')" style="margin-top:14px; display:none;">
-                                <div class="spawn-checkbox">
-                                    <span class="spawn-checkbox-tick">&#10003;</span>
-                                </div>
-                                <span class="spawn-check-label">Can be Spawn</span>
-                                <span class="spawn-check-badge">SPAWN</span>
-                            </div>
-
-                            <!-- Sublocations for Country / Kingdom -->
-                            <div
-                                class="form-group"
-                                id="subloc-country-kingdom-group"
-                            >
-                                <label class="form-label">Sublocations</label>
-                                <div
-                                    class="subloc-tags"
-                                    id="subloc-country-kingdom-tags"
-                                ></div>
-                            </div>
-
-                            <!-- Residents for Country / Kingdom -->
-                            <div
-                                class="form-group"
-                                id="resident-country-kingdom-group"
-                                style="display: none; margin-top: 14px"
-                            >
-                                <label class="form-label"
-                                    >Residents (NPCs)</label
-                                >
-                                <div
-                                    class="subloc-tags"
-                                    id="resident-country-kingdom-tags"
-                                ></div>
-                                <button
-                                    type="button"
-                                    class="subloc-btn"
-                                    onclick="openSublocPicker('country-kingdom-resident')"
-                                    style="display:none"
-                                >
-                                    <span class="subloc-icon">&#128100;</span>
-                                    Resident
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- RIGHT column removed: Population -->
+                    <!-- Sublocations for Custom -->
+                    <div class="form-group" id="subloc-custom-group" style="margin-top: 14px;">
+                        <label class="form-label">Sublocations</label>
+                        <div class="subloc-tags" id="subloc-custom-tags"></div>
                     </div>
-                </div>
 
-                <!-- ══ Land (Forest) block ══ -->
-                <div id="land-block" style="display: none">
-                    <div class="zivil-side-layout">
-                        <div class="zivil-main-col">
-                            <label class="form-label">Tools</label>
-                            <div class="tools-row" id="tools-section-land" style="display:none">
-                                <button type="button" class="subloc-btn" onclick="openSublocPicker('land')">
-                                    <span class="subloc-icon">&#43;</span>
-                                    Sublocations
-                                </button>
-                                <button type="button" class="subloc-btn" onclick="openEventsScene('forest')">
-                                    <span class="subloc-icon">🎉</span>
-                                    Events
-                                </button>
-                                <button type="button" class="subloc-btn" onclick="openSublocPicker('land-resident')">
-                                    <span class="subloc-icon">&#128100;</span>
-                                    Resident
-                                </button>
-                                <button type="button" class="subloc-btn" onclick="openSublocPicker('species-forest')">
-                                    <span class="subloc-icon">🐾</span>
-                                    Species
-                                </button>
-                                <button type="button" class="subloc-btn" onclick="setLocationBackground()">
-                                    <span class="subloc-icon">🖼️</span>
-                                    Background
-                                </button>
-                                <button type="button" class="subloc-btn" onclick="addCursePrompt('forest')">
-                                    <span class="subloc-icon">💀</span>
-                                    Curse
-                                </button>
-                            </div>
-                            <div class="spawn-check-group" id="spawn-check-group-land" onclick="toggleSpawnCheckZivil('spawn-check-group-land')" style="margin-top:14px; display:none;">
-                                <div class="spawn-checkbox">
-                                    <span class="spawn-checkbox-tick">&#10003;</span>
-                                </div>
-                                <span class="spawn-check-label">Can be Spawn</span>
-                                <span class="spawn-check-badge">SPAWN</span>
-                            </div>
-                        </div>
+                    <!-- Residents for Custom -->
+                    <div class="form-group" id="resident-custom-group" style="display: none; margin-top: 14px;">
+                        <label class="form-label">Residents (NPCs)</label>
+                        <div class="subloc-tags" id="resident-custom-tags"></div>
+                    </div>
+
+                    <!-- Species for Custom -->
+                    <div class="form-group" id="species-custom-group" style="display: none; margin-top: 14px;">
+                        <label class="form-label">Species</label>
+                        <div class="subloc-tags" id="species-custom-tags"></div>
                     </div>
                 </div>
 
@@ -3177,19 +2794,6 @@
                         <button type="button" class="subloc-btn" onclick="openResidentPicker()">
                             <span class="subloc-icon">&#128100;</span> Resident
                         </button>
-                    </div>
-
-                    <!-- Can be Spawn -->
-                    <div
-                        class="spawn-check-group"
-                        id="spawn-check-group"
-                        onclick="toggleSpawnCheck()"
-                    >
-                        <div class="spawn-checkbox">
-                            <span class="spawn-checkbox-tick">&#10003;</span>
-                        </div>
-                        <span class="spawn-check-label">Can be Spawn</span>
-                        <span class="spawn-check-badge">SPAWN</span>
                     </div>
 
                     <div id="shop-work-group" style="display:none; margin-top:14px;">
@@ -3985,7 +3589,6 @@
             let activeFilter = "all";
             let editingId = null; // null = new entry
             let ctxTargetId = null; // for context-menu
-            let itemTags = []; // for item tags
             let raceTags = []; // for race tags
             let loreTags = []; // for lore tags
             let curseTags = []; // for curse tags
@@ -4559,13 +4162,12 @@
             /* ─────────────────────────────────────────
                SCHOOL SCHEDULE (Building -> School)
             ───────────────────────────────────────── */
-            // ZIVIL EVENTS (Village/City/Country/Kingdom)
+            // EVENTS (Custom only)
             const eventsSelections = {
-                "village-city": [],
-                "country-kingdom": [],
+                custom: [],
             };
             let eventsTemp = [];
-            let eventsCtx = null; // 'village-city' | 'country-kingdom'
+            let eventsCtx = null; // 'custom'
             let _renderCtx = "main";
             let evChangeActive = false;
             let evBackup = null;
@@ -4586,19 +4188,12 @@
             function buildEventChangesFromCurrentCtx() {
                 const changes = {};
                 if (!eventsCtx) return changes;
-                if (eventsCtx === "village-city") {
-                    const sl = (sublocSelections["village-city"] || []).slice();
-                    const sp = (speciesSelections["village-city"] || []).slice();
+                if (eventsCtx === "custom") {
+                    const sl = (sublocSelections["custom"] || []).slice();
+                    const sp = (speciesSelections["custom"] || []).slice();
                     const res = (residentSelections || []).slice();
-                    if (sl.length) changes.sublocations = { "village-city": sl };
-                    if (sp.length) changes.species = { "village-city": sp };
-                    if (res.length) changes.residents = res;
-                } else if (eventsCtx === "country-kingdom") {
-                    const sl = (sublocSelections["country-kingdom"] || []).slice();
-                    const sp = (speciesSelections["country-kingdom"] || []).slice();
-                    const res = (residentSelections || []).slice();
-                    if (sl.length) changes.sublocations = { "country-kingdom": sl };
-                    if (sp.length) changes.species = { "country-kingdom": sp };
+                    if (sl.length) changes.sublocations = { custom: sl };
+                    if (sp.length) changes.species = { custom: sp };
                     if (res.length) changes.residents = res;
                 }
                 if ((curseTags || []).length) changes.curseTags = (curseTags || []).map(c => ({ ...c }));
@@ -4724,152 +4319,6 @@
                 showFormView();
             }
 
-            /* ─────────────────────────────────────────
-               SPECIES VARIANTS
-            ───────────────────────────────────────── */
-            let speciesVariants = []; // persisted per species: [{ id, name, generally, appearance, personality }]
-            let variantsTemp = []; // working edits while scene open
-            function openVariantsScene() {
-                variantsTemp = speciesVariants.map(v => ({ ...v }));
-                document.getElementById("variants-count").textContent = variantsTemp.length;
-                document.getElementById("form-view").style.display = "none";
-                const varList = document.getElementById("variants-list-view");
-                if (varList) varList.style.display = "none";
-                document.getElementById("variants-view").style.display = "flex";
-                renderVariantRows();
-            }
-            function variantsAdd() {
-                const name = (document.getElementById("variant-name-input").value || "").trim();
-                const generally = (document.getElementById("variant-generally-input").value || "").trim();
-                const appearance = (document.getElementById("variant-appearance-input").value || "").trim();
-                const personality = (document.getElementById("variant-personality-input").value || "").trim();
-                if (!name) { showToast("Variant needs a Name.", "#c04040"); return; }
-                const id = generateId();
-                variantsTemp.push({ id, name, generally, appearance, personality });
-                document.getElementById("variants-count").textContent = variantsTemp.length;
-                document.getElementById("variant-name-input").value = "";
-                document.getElementById("variant-generally-input").value = "";
-                document.getElementById("variant-appearance-input").value = "";
-                document.getElementById("variant-personality-input").value = "";
-                renderVariantRows();
-            }
-            function renderVariantRows() {
-                const wrap = document.getElementById("variant-rows");
-                if (!wrap) return;
-                wrap.innerHTML = "";
-                variantsTemp.forEach((v, idx) => {
-                    const row = document.createElement("div");
-                    row.className = "relation-row";
-                    row.innerHTML = `
-                        <div class="relation-row-header">
-                            <span class="relation-target-name">${escHtml(v.name || ("Variant " + (idx+1)))}</span>
-                            <div>
-                                <button class="relation-row-remove" onclick="variantRemove(${idx})">Remove</button>
-                            </div>
-                        </div>
-                        <div class="relation-controls">
-                            <div class="form-group">
-                                <label class="form-label">ID</label>
-                                <input type="text" class="form-input" value="${v.id}" readonly />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Name</label>
-                                <input type="text" class="form-input" value="${v.name || ""}" onchange="variantUpdate(${idx}, 'name', this.value)" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Generally</label>
-                                <textarea class="form-textarea" onchange="variantUpdate(${idx}, 'generally', this.value)">${v.generally || ""}</textarea>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Appearance</label>
-                                <textarea class="form-textarea" onchange="variantUpdate(${idx}, 'appearance', this.value)">${v.appearance || ""}</textarea>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Personality</label>
-                                <textarea class="form-textarea" onchange="variantUpdate(${idx}, 'personality', this.value)">${v.personality || ""}</textarea>
-                            </div>
-                        </div>
-                    `;
-                    wrap.appendChild(row);
-                });
-            }
-            function variantUpdate(idx, key, val) {
-                if (!variantsTemp[idx]) return;
-                variantsTemp[idx][key] = key === "name" ? (val || "").trim() : (val || "");
-                renderVariantRows();
-            }
-            function variantRemove(idx) {
-                variantsTemp.splice(idx, 1);
-                document.getElementById("variants-count").textContent = variantsTemp.length;
-                renderVariantRows();
-            }
-            function confirmVariants() {
-                speciesVariants = variantsTemp.map(v => ({ ...v }));
-                if (editingId) {
-                    const cards = getCards();
-                    const idx = cards.findIndex(c => c.id === editingId);
-                    if (idx !== -1) {
-                        const updated = { ...cards[idx], variants: speciesVariants.map(v => ({ ...v })) };
-                        cards[idx] = updated;
-                        const ids = new Set(speciesVariants.map(v => v.id));
-                        speciesVariants.forEach(v => {
-                            const vi = cards.findIndex(c => c.id === v.id);
-                            const base = {
-                                id: v.id,
-                                title: v.name || v.id,
-                                genre: "species",
-                                generally: v.generally || "",
-                                appearance: v.appearance || "",
-                                personality: v.personality || "",
-                                variantOf: editingId,
-                                updatedAt: new Date().toISOString()
-                            };
-                            if (vi >= 0) {
-                                cards[vi] = { ...cards[vi], ...base };
-                            } else {
-                                cards.push({ ...base, createdAt: new Date().toISOString(), version: "1.0" });
-                            }
-                        });
-                        const pruned = cards.filter(c => !(c.genre === "species" && c.variantOf === editingId && !ids.has(c.id)));
-                        saveCards(pruned);
-                        showToast("Variants saved to card.");
-                    }
-                }
-                showFormView();
-            }
-
-            /* Variants List view */
-            function openVariantsListScene() {
-                const count = (variantsTemp && variantsTemp.length) ? variantsTemp.length : speciesVariants.length;
-                document.getElementById("variants-list-count").textContent = count;
-                document.getElementById("form-view").style.display = "none";
-                const varEdit = document.getElementById("variants-view");
-                if (varEdit) varEdit.style.display = "none";
-                document.getElementById("variants-list-view").style.display = "flex";
-                renderVariantsList();
-            }
-            function renderVariantsList() {
-                const wrap = document.getElementById("variants-list-rows");
-                if (!wrap) return;
-                const list = (variantsTemp && variantsTemp.length) ? variantsTemp : speciesVariants;
-                wrap.innerHTML = "";
-                list.forEach((v, idx) => {
-                    const row = document.createElement("div");
-                    row.className = "relation-row";
-                    row.innerHTML = `
-                        <div class="relation-row-header">
-                            <span class="relation-target-name">${escHtml(v.name || ("Variant " + (idx+1)))}</span>
-                        </div>
-                        <div class="relation-controls" style="flex-direction:column; gap:6px;">
-                            <div><strong>ID:</strong> ${escHtml(v.id || "")}</div>
-                            <div><strong>Generally:</strong> ${escHtml(v.generally || "")}</div>
-                            <div><strong>Appearance:</strong> ${escHtml(v.appearance || "")}</div>
-                            <div><strong>Personality:</strong> ${escHtml(v.personality || "")}</div>
-                        </div>
-                    `;
-                    wrap.appendChild(row);
-                });
-            }
 
             function evOpenTool(kind) {
                 if (!eventsCtx) return;
@@ -4896,26 +4345,18 @@
                 evEditingIndex = idx;
                 const e = eventsTemp[idx] || {};
                 evCaptureBackup();
-                racialSelections["village-city"] = [];
-                racialSelections["country-kingdom"] = [];
-                sublocSelections["village-city"] = [];
-                sublocSelections["country-kingdom"] = [];
-                speciesSelections["village-city"] = [];
-                speciesSelections["country-kingdom"] = [];
                 residentSelections = [];
                 curseTags = [];
                 const ch = e.changes || {};
-                if (ch.racialCivilization) {
-                    if (ch.racialCivilization["village-city"]) racialSelections["village-city"] = ch.racialCivilization["village-city"].map(r => ({ ...r }));
-                    if (ch.racialCivilization["country-kingdom"]) racialSelections["country-kingdom"] = ch.racialCivilization["country-kingdom"].map(r => ({ ...r }));
+                if (ch.sublocations && ch.sublocations["custom"]) {
+                    sublocSelections["custom"] = ch.sublocations["custom"].slice();
+                } else {
+                    sublocSelections["custom"] = [];
                 }
-                if (ch.sublocations) {
-                    if (ch.sublocations["village-city"]) sublocSelections["village-city"] = ch.sublocations["village-city"].slice();
-                    if (ch.sublocations["country-kingdom"]) sublocSelections["country-kingdom"] = ch.sublocations["country-kingdom"].slice();
-                }
-                if (ch.species) {
-                    if (ch.species["village-city"]) speciesSelections["village-city"] = ch.species["village-city"].slice();
-                    if (ch.species["country-kingdom"]) speciesSelections["country-kingdom"] = ch.species["country-kingdom"].slice();
+                if (ch.species && ch.species["custom"]) {
+                    speciesSelections["custom"] = ch.species["custom"].slice();
+                } else {
+                    speciesSelections["custom"] = [];
                 }
                 if (Array.isArray(ch.residents)) {
                     residentSelections = ch.residents.slice();
@@ -4923,7 +4364,6 @@
                 if (Array.isArray(ch.curseTags)) {
                     curseTags = ch.curseTags.map(c => ({ ...c }));
                 }
-                // population removed
                 const t = document.getElementById(`ev-card-desc-${idx}`);
                 if (t) t.value = ch.cardDescription || "";
                 const panel = document.getElementById(`ev-change-inline-${idx}`);
@@ -4956,17 +4396,11 @@
             }
             function evCaptureBackup() {
                 evBackup = {
-                    racial: {
-                        "village-city": (racialSelections["village-city"] || []).map(r => ({ ...r })),
-                        "country-kingdom": (racialSelections["country-kingdom"] || []).map(r => ({ ...r }))
-                    },
                     subloc: {
-                        "village-city": (sublocSelections["village-city"] || []).slice(),
-                        "country-kingdom": (sublocSelections["country-kingdom"] || []).slice()
+                        custom: (sublocSelections["custom"] || []).slice()
                     },
                     species: {
-                        "village-city": (speciesSelections["village-city"] || []).slice(),
-                        "country-kingdom": (speciesSelections["country-kingdom"] || []).slice()
+                        custom: (speciesSelections["custom"] || []).slice()
                     },
                     residents: (residentSelections || []).slice(),
                     curses: (curseTags || []).map(c => ({ ...c }))
@@ -4974,12 +4408,8 @@
             }
             function evRestoreBackup() {
                 if (!evBackup) return;
-                racialSelections["village-city"] = evBackup.racial["village-city"].map(r => ({ ...r }));
-                racialSelections["country-kingdom"] = evBackup.racial["country-kingdom"].map(r => ({ ...r }));
-                sublocSelections["village-city"] = evBackup.subloc["village-city"].slice();
-                sublocSelections["country-kingdom"] = evBackup.subloc["country-kingdom"].slice();
-                speciesSelections["village-city"] = evBackup.species["village-city"].slice();
-                speciesSelections["country-kingdom"] = evBackup.species["country-kingdom"].slice();
+                sublocSelections["custom"] = evBackup.subloc["custom"].slice();
+                speciesSelections["custom"] = evBackup.species["custom"].slice();
                 residentSelections = evBackup.residents.slice();
                 curseTags = evBackup.curses.map(c => ({ ...c }));
                 evBackup = null;
@@ -4990,9 +4420,6 @@
                     evCaptureBackup();
                     _renderCtx = "event";
                     panel.style.display = "block";
-                    document.getElementById("ev-vc-group").style.display = (eventsCtx === "village-city") ? "block" : "none";
-                    document.getElementById("ev-ck-group").style.display = (eventsCtx === "country-kingdom") ? "block" : "none";
-                    // population and racial civilization removed
                     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
                 } else {
                     panel.style.display = "none";
@@ -5264,12 +4691,12 @@
                 wrap.appendChild(tag);
             }
             function getAvailableNPCsForSchool() {
-                // All characters that are residents in any zivil location (village/city/kingdom)
+                // All characters that are residents in any location
                 const cards = getCards();
                 const residentIds = new Set();
                 cards.forEach(c => {
-                    if (c.genre === "location" && c.locationSub === "zivil") {
-                        (c.residents || []).forEach(id => residentIds.add(id));
+                    if (c.genre === "location" && Array.isArray(c.residents)) {
+                        c.residents.forEach(id => residentIds.add(id));
                     }
                 });
                 return cards.filter(c => c.genre === "character" && residentIds.has(c.id));
@@ -5470,16 +4897,8 @@
                             card.appearance || "";
                         document.getElementById("f-species-personality").value =
                             card.personality || "";
-                        const cb = document.getElementById("f-species-catchable");
-                        const how = document.getElementById("f-species-catch-how");
-                        const wrap = document.getElementById("species-catch-how-wrap");
-                        if (cb) cb.checked = !!card.canBeCaught;
-                        if (how) how.value = card.canBeCaughtHow || "";
-                        if (wrap) wrap.style.display = (cb && cb.checked) ? "block" : "none";
-                        speciesVariants = Array.isArray(card.variants) ? card.variants.map(v => ({ ...v })) : [];
                     } else {
                         resetSpeciesFields();
-                        speciesVariants = [];
                     }
 
                     // restore lore category data
@@ -5495,15 +4914,6 @@
                     } else {
                         resetLoreFields();
                     }
-                    // restore item data
-                    if (card.genre === "item") {
-                        itemTags = card.tags ? [...card.tags] : [];
-                        renderItemTags();
-                    } else {
-                        itemTags = [];
-                        renderItemTags();
-                    }
-
                     // restore race tags
                     if (card.genre === "race") {
                         raceTags = card.tags ? [...card.tags] : [];
@@ -5557,17 +4967,9 @@
                     // restore species selections for location
                     if (card.genre === "location") {
                         const sp = card.species || {};
-                        speciesSelections["village-city"] = [...(sp["village-city"] || [])];
-                        speciesSelections["country-kingdom"] = [...(sp["country-kingdom"] || [])];
-                        speciesSelections["forest"] = [...(sp["forest"] || [])];
-                        speciesSelections["landmark"] = [...(sp["landmark"] || [])];
-                        speciesSelections["ocean"] = [...(sp["ocean"] || [])];
+                        speciesSelections["custom"] = [...(sp["custom"] || [])];
                     } else {
-                        speciesSelections["village-city"] = [];
-                        speciesSelections["country-kingdom"] = [];
-                        speciesSelections["forest"] = [];
-                        speciesSelections["landmark"] = [];
-                        speciesSelections["ocean"] = [];
+                        speciesSelections["custom"] = [];
                     }
                 } else {
                     document.getElementById("form-title").textContent =
@@ -5583,7 +4985,6 @@
                     updateLoreSummary();
                     skincolorData = [];
                     updateSkincolorSummary();
-                    speciesVariants = [];
 
                     document.getElementById("form-id-row").textContent = "";
                     document.getElementById("btn-save").textContent = "Create";
@@ -5751,8 +5152,6 @@
                 skincolorData = [];
                 updateSkincolorSummary();
                 resetCharacterFields();
-                itemTags = [];
-                renderItemTags();
                 raceTags = [];
                 renderGenericTags("race");
                 resetLoreFields();
@@ -5796,12 +5195,6 @@
                 if (g) g.value = "";
                 if (a) a.value = "";
                 if (p) p.value = "";
-                const cb = document.getElementById("f-species-catchable");
-                const how = document.getElementById("f-species-catch-how");
-                const wrap = document.getElementById("species-catch-how-wrap");
-                if (cb) cb.checked = false;
-                if (how) how.value = "";
-                if (wrap) wrap.style.display = "none";
             }
             function resetLoreFields() {
                 const mode = document.getElementById("f-lore-mode");
@@ -5831,14 +5224,7 @@
                 // Show / hide Species block
                 document.getElementById("species-block").style.display =
                     type === "species" ? "block" : "none";
-                (function(){
-                    const cb = document.getElementById("f-species-catchable");
-                    const wrap = document.getElementById("species-catch-how-wrap");
-                    if (cb && wrap) {
-                        wrap.style.display = cb.checked ? "block" : "none";
-                        cb.onchange = () => { wrap.style.display = cb.checked ? "block" : "none"; };
-                    }
-                })();
+
                 // Show / hide Lore block
                 document.getElementById("lore-block").style.display =
                     type === "lore" ? "block" : "none";
@@ -5847,15 +5233,9 @@
                 const descGrp = document.getElementById("description-group");
                 if (descGrp) descGrp.style.display = (type === "character" || type === "lore" || type === "species") ? "none" : "block";
 
-                // Show / hide Item block
-                document.getElementById("item-block").style.display =
-                    type === "item" ? "block" : "none";
-
                 const locGroup = document.getElementById("location-sub-group");
-                const zivilGroup = document.getElementById("zivil-sub-group");
                 const buildingGroup =
                     document.getElementById("building-sub-group");
-                const landGroup = document.getElementById("land-sub-group");
                 const mapGroup = document.getElementById("location-map-group");
 
                 if (type === "location") {
@@ -5874,136 +5254,71 @@
                     })();
                 } else {
                     locGroup.style.display = "none";
-                    zivilGroup.style.display = "none";
                     buildingGroup.style.display = "none";
-                    if (landGroup) landGroup.style.display = "none";
                     if (mapGroup) mapGroup.style.display = "none";
                     // Hide any location-specific tool sections that may still be visible
                     const otherTools = document.getElementById("other-tools-group");
                     const otherToolsRow = document.getElementById("tools-section-other");
-                    const toolsVc = document.getElementById("tools-section-vc");
-                    const toolsCk = document.getElementById("tools-section-ck");
                     const toolsBd = document.getElementById("tools-section-building");
-                    const toolsLand = document.getElementById("tools-section-land");
-                    const landBlock = document.getElementById("land-block");
-                    const spawnLand = document.getElementById("spawn-check-group-land");
-                    const resVcGrp = document.getElementById("resident-village-city-group");
-                    const resCkGrp = document.getElementById("resident-country-kingdom-group");
                     const sublocBuildGrp = document.getElementById("subloc-building-group");
                     const houseResGrp = document.getElementById("house-residents-group");
                     const schoolSchedGrp = document.getElementById("school-schedule-group");
                     const shopWorkGrp = document.getElementById("shop-work-group");
+                    const sublocCustomGrp = document.getElementById("subloc-custom-group");
+                    const resCustomGrp = document.getElementById("resident-custom-group");
                     if (otherTools) otherTools.style.display = "none";
                     if (otherToolsRow) otherToolsRow.style.display = "none";
-                    if (toolsVc) toolsVc.style.display = "none";
-                    if (toolsCk) toolsCk.style.display = "none";
                     if (toolsBd) toolsBd.style.display = "none";
-                    if (toolsLand) toolsLand.style.display = "none";
-                    if (landBlock) landBlock.style.display = "none";
-                    if (spawnLand) spawnLand.style.display = "none";
-                    if (resVcGrp) resVcGrp.style.display = "none";
-                    if (resCkGrp) resCkGrp.style.display = "none";
                     if (sublocBuildGrp) sublocBuildGrp.style.display = "none";
                     if (houseResGrp) houseResGrp.style.display = "none";
                     if (schoolSchedGrp) schoolSchedGrp.style.display = "none";
                     if (shopWorkGrp) shopWorkGrp.style.display = "none";
+                    if (sublocCustomGrp) sublocCustomGrp.style.display = "none";
+                    if (resCustomGrp) resCustomGrp.style.display = "none";
                     document.getElementById("f-location-sub").value = "";
-                    document.getElementById("f-zivil-sub").value = "";
-                    const landSel = document.getElementById("f-land-sub");
-                    if (landSel) landSel.value = "";
                     document.getElementById("f-building-sub").value = "";
                 }
             }
 
             function onLocationSubChange() {
                 const sub = document.getElementById("f-location-sub").value;
-                const zivilGroup = document.getElementById("zivil-sub-group");
                 const buildingGroup =
                     document.getElementById("building-sub-group");
-                const landGroup = document.getElementById("land-sub-group");
                 const sublocBuildingGroup = document.getElementById(
                     "subloc-building-group",
                 );
 
-                zivilGroup.style.display = sub === "zivil" ? "block" : "none";
                 buildingGroup.style.display =
                     sub === "building" ? "block" : "none";
-                if (landGroup) landGroup.style.display = sub === "land" ? "block" : "none";
                 sublocBuildingGroup.style.display =
                     sub === "building" ? "block" : "none";
 
                 const otherTools = document.getElementById("other-tools-group");
                 const otherToolsRow = document.getElementById("tools-section-other");
-                const speciesBtn = document.getElementById("species-tool-btn");
-                if (otherTools && otherToolsRow && speciesBtn) {
-                    const showOther =
-                        sub === "forest" || sub === "landmark" || sub === "ocean";
-                    // Land hat eigenen Tools-Block; niemals das generische Other-Tools zeigen
-                    const useOther = showOther && sub !== "land";
-                    otherTools.style.display = useOther ? "block" : "none";
-                    otherToolsRow.style.display = useOther ? "flex" : "none";
-                    if (useOther) speciesBtn.onclick = () => openSublocPicker("species-" + sub);
+                if (otherTools && otherToolsRow) {
+                    // Custom hat keine weiteren Sub-typen
+                    otherTools.style.display = sub === "custom" ? "block" : "none";
+                    otherToolsRow.style.display = sub === "custom" ? "flex" : "none";
                 }
                 const toolsBd = document.getElementById("tools-section-building");
                 if (toolsBd) toolsBd.style.display = (sub === "building" ? "flex" : "none");
-                const spawnVc = document.getElementById("spawn-check-group-vc");
-                const spawnCk = document.getElementById("spawn-check-group-ck");
-                if (spawnVc) spawnVc.style.display = (sub === "zivil" ? "flex" : "none");
-                if (spawnCk) spawnCk.style.display = (sub === "zivil" ? "flex" : "none");
-                const landBlock = document.getElementById("land-block");
-                const toolsLand = document.getElementById("tools-section-land");
-                const spawnLand = document.getElementById("spawn-check-group-land");
-                // Land-Detail steuert Sichtbarkeit: nur bei Forest zeigen
-                const landDetail = (document.getElementById("f-land-sub")?.value || "");
-                const showLandTools = (sub === "land" && landDetail === "forest");
-                if (landBlock) landBlock.style.display = showLandTools ? "block" : "none";
-                if (toolsLand) toolsLand.style.display = showLandTools ? "flex" : "none";
-                if (spawnLand) spawnLand.style.display = showLandTools ? "flex" : "none";
-                // Zivil-Blöcke und -Tools auf jeden Fall ausblenden, wenn nicht zivil
-                if (sub !== "zivil") {
-                    const vcBlock = document.getElementById("village-city-block");
-                    const ckBlock = document.getElementById("country-kingdom-block");
-                    const toolsVc = document.getElementById("tools-section-vc");
-                    const toolsCk = document.getElementById("tools-section-ck");
-                    const resVcGrp = document.getElementById("resident-village-city-group");
-                    const resCkGrp = document.getElementById("resident-country-kingdom-group");
-                    if (vcBlock) vcBlock.style.display = "none";
-                    if (ckBlock) ckBlock.style.display = "none";
-                    if (toolsVc) toolsVc.style.display = "none";
-                    if (toolsCk) toolsCk.style.display = "none";
-                    if (resVcGrp) resVcGrp.style.display = "none";
-                    if (resCkGrp) resCkGrp.style.display = "none";
-                }
 
-                if (sub !== "zivil") {
-                    document.getElementById("f-zivil-sub").value = "";
-                    // hide zivil-dependent subloc groups
-                    document.getElementById(
-                        "subloc-village-city-group",
-                    ).style.display = "none";
-                    document.getElementById(
-                        "subloc-country-kingdom-group",
-                    ).style.display = "none";
-                    // reset zivil spawn toggles visibility (state kept)
-                    if (spawnVc) spawnVc.style.display = "none";
-                    if (spawnCk) spawnCk.style.display = "none";
-                    sublocSelections["village-city"] = [];
-                    sublocSelections["country-kingdom"] = [];
-                    renderSublocTags("village-city");
-                    renderSublocTags("country-kingdom");
-                }
-                if (sub !== "land") {
-                    const landSel = document.getElementById("f-land-sub");
-                    if (landSel) landSel.value = "";
-                    if (landBlock) landBlock.style.display = "none";
-                    if (toolsLand) toolsLand.style.display = "none";
-                    if (spawnLand) spawnLand.style.display = "none";
-                }
                 if (sub !== "building") {
                     document.getElementById("f-building-sub").value = "";
                     sublocSelections["building"] = [];
                     renderSublocTags("building");
                     onBuildingSubChange();
+                }
+                // Custom-Gruppen Sichtbarkeit steuern
+                const sublocCustomGroup = document.getElementById("subloc-custom-group");
+                const residentCustomGroup = document.getElementById("resident-custom-group");
+                if (sublocCustomGroup) sublocCustomGroup.style.display = sub === "custom" ? "block" : "none";
+                if (residentCustomGroup) residentCustomGroup.style.display = sub === "custom" ? "block" : "none";
+                if (sub !== "custom") {
+                    sublocSelections["custom"] = [];
+                    residentSelections = [];
+                    renderSublocTags("custom");
+                    renderSublocTags("custom-resident");
                 }
             }
 
@@ -6032,44 +5347,20 @@
                     }
                 }
                 if (sub !== "house") {
-                    // Only clear if not a zivil type that has residents
-                    const locSub =
-                        document.getElementById("f-location-sub").value;
-                    const zivilDetail =
-                        document.getElementById("f-zivil-sub").value;
-                    const hasResidents =
-                        locSub === "zivil" &&
-                        ["village", "city", "kingdom"].includes(zivilDetail);
-
-                    if (!hasResidents) {
-                        residentSelections = [];
-                        renderSublocTags("resident");
-                        renderSublocTags("village-city-resident");
-                        renderSublocTags("country-kingdom-resident");
-                    }
+                    residentSelections = [];
+                    renderSublocTags("resident");
                 }
             }
 
             function getLocationSubtype() {
                 const sub = document.getElementById("f-location-sub").value;
-                if (sub === "zivil")
-                    return {
-                        locationSub: sub,
-                        locationDetail:
-                            document.getElementById("f-zivil-sub").value,
-                    };
-                if (sub === "land")
-                    return {
-                        locationSub: sub,
-                        locationDetail:
-                            document.getElementById("f-land-sub").value,
-                    };
                 if (sub === "building")
                     return {
                         locationSub: sub,
                         locationDetail:
                             document.getElementById("f-building-sub").value,
                     };
+                // Custom hat keinen weiteren Sub-type
                 return { locationSub: sub, locationDetail: "" };
             }
 
@@ -6079,56 +5370,6 @@
                 document.getElementById("f-location-sub").value =
                     card.locationSub || "";
                 onLocationSubChange();
-                if (card.locationSub === "zivil") {
-                    document.getElementById("f-zivil-sub").value =
-                        card.locationDetail || "";
-                    onZivilSubChange();
-                    // restore subloc selections
-                    if (card.sublocations) {
-                        sublocSelections["village-city"] =
-                            card.sublocations["village-city"] || [];
-                        sublocSelections["country-kingdom"] =
-                            card.sublocations["country-kingdom"] || [];
-                        renderSublocTags("village-city");
-                        renderSublocTags("country-kingdom");
-                    }
-                    // restore zivil events
-                    if (card.events) {
-                        eventsSelections["village-city"] = card.events["village-city"] || [];
-                        eventsSelections["country-kingdom"] = card.events["country-kingdom"] || [];
-                    } else {
-                        eventsSelections["village-city"] = [];
-                        eventsSelections["country-kingdom"] = [];
-                    }
-                    // restore racial selections
-                    if (card.racialCivilization) {
-                        racialSelections["village-city"] =
-                            card.racialCivilization["village-city"] || [];
-                        racialSelections["country-kingdom"] =
-                            card.racialCivilization["country-kingdom"] || [];
-                        renderRacialTags("village-city");
-                        renderRacialTags("country-kingdom");
-                    }
-                    // restore curse tags
-                    curseTags = card.curseTags || [];
-                    // population removed
-                    // restore residents for village, city, kingdom
-                    if (card.residents) {
-                        residentSelections = [...(card.residents || [])];
-                        renderSublocTags("village-city-resident");
-                        renderSublocTags("country-kingdom-resident");
-                    }
-                    // restore canBeSpawn for zivil
-                    (function(){
-                        const vc = document.getElementById("spawn-check-group-vc");
-                        const ck = document.getElementById("spawn-check-group-ck");
-                        if (vc) { if (card.canBeSpawn) vc.classList.add("active"); else vc.classList.remove("active"); }
-                        if (ck) { if (card.canBeSpawn) ck.classList.add("active"); else ck.classList.remove("active"); }
-                        // ensure visibility if sub is zivil
-                        if (vc) vc.style.display = "flex";
-                        if (ck) ck.style.display = "flex";
-                    })();
-                }
                 if (card.locationSub === "building") {
                     document.getElementById("f-building-sub").value =
                         card.locationDetail || "";
@@ -6187,37 +5428,35 @@
                     if (card.canBeSpawn) grp.classList.add("active");
                     else grp.classList.remove("active");
                 }
-                if (card.locationSub === "land") {
-                    const sel = document.getElementById("f-land-sub");
-                    if (sel) sel.value = card.locationDetail || "";
-                    const landBlock = document.getElementById("land-block");
-                    const toolsLand = document.getElementById("tools-section-land");
-                    const spawnLand = document.getElementById("spawn-check-group-land");
-                    if (landBlock) landBlock.style.display = "block";
-                    if (toolsLand) toolsLand.style.display = "flex";
-                    if (spawnLand) {
-                        if (card.canBeSpawn) spawnLand.classList.add("active");
-                        else spawnLand.classList.remove("active");
-                        spawnLand.style.display = "flex";
+                // Custom: restore sublocations, residents, species, events
+                if (card.locationSub === "custom" || !card.locationSub) {
+                    if (card.sublocations) {
+                        sublocSelections["custom"] = card.sublocations["custom"] || [];
+                        renderSublocTags("custom");
                     }
+                    if (card.residents) {
+                        residentSelections = [...(card.residents || [])];
+                        renderSublocTags("custom-resident");
+                    }
+                    // restore events for custom
+                    if (card.events) {
+                        eventsSelections["custom"] = card.events["custom"] || [];
+                    } else {
+                        eventsSelections["custom"] = [];
+                    }
+                    // curse tags for custom
+                    curseTags = card.curseTags || [];
                 }
             }
 
             function resetLocationSubtype() {
                 document.getElementById("f-location-sub").value = "";
-                document.getElementById("f-zivil-sub").value = "";
-                const landSel = document.getElementById("f-land-sub");
-                if (landSel) landSel.value = "";
                 document.getElementById("f-building-sub").value = "";
                 curseTags = [];
                 onBuildingSubChange();
                 resetSpawnCheck();
                 document.getElementById("location-sub-group").style.display =
                     "none";
-                document.getElementById("zivil-sub-group").style.display =
-                    "none";
-                const landGroup = document.getElementById("land-sub-group");
-                if (landGroup) landGroup.style.display = "none";
                 document.getElementById("building-sub-group").style.display =
                     "none";
                 resetSublocSelections();
@@ -6715,15 +5954,15 @@
             }
 
             /* ─────────────────────────────────────────
-               GENERIC TAGS (Items, Races)
+               GENERIC TAGS (Races, Lore)
             ───────────────────────────────────────── */
             function addGenericTag(type) {
-                const inputId = type === "item" ? "f-item-tag-input" : (type === "race" ? "f-race-tag-input" : "f-lore-tag-input");
+                const inputId = type === "race" ? "f-race-tag-input" : "f-lore-tag-input";
                 const input = document.getElementById(inputId);
                 const tag = input.value.trim();
                 if (!tag) return;
 
-                let tagArray = type === "item" ? itemTags : (type === "race" ? raceTags : loreTags);
+                let tagArray = type === "race" ? raceTags : loreTags;
                 if (tagArray.length >= 10) {
                     showToast("Maximum 10 tags allowed.", "rgba(180, 60, 60, 0.9)");
                     return;
@@ -6738,21 +5977,16 @@
             }
 
             function removeGenericTag(type, tag) {
-                if (type === "item") itemTags = itemTags.filter((t) => t !== tag);
-                else if (type === "race") raceTags = raceTags.filter((t) => t !== tag);
+                if (type === "race") raceTags = raceTags.filter((t) => t !== tag);
                 else loreTags = loreTags.filter((t) => t !== tag);
                 renderGenericTags(type);
             }
 
             function renderGenericTags(type) {
-                const containerId = type === "item"
-                    ? "item-tags-container"
-                    : (type === "race" ? "race-tags-container" : "lore-tags-container");
-                const countId = type === "item"
-                    ? "item-tag-count"
-                    : (type === "race" ? "race-tag-count" : "lore-tag-count");
+                const containerId = type === "race" ? "race-tags-container" : "lore-tags-container";
+                const countId = type === "race" ? "race-tag-count" : "lore-tag-count";
                 const container = document.getElementById(containerId);
-                const tagArray = type === "item" ? itemTags : (type === "race" ? raceTags : loreTags);
+                const tagArray = type === "race" ? raceTags : loreTags;
 
                 if (!container) return;
                 container.innerHTML = "";
@@ -6769,10 +6003,6 @@
                 if (countEl) countEl.textContent = `${tagArray.length} / 10 tags`;
             }
 
-            // Old Item-specific functions (can be removed if not used elsewhere, but I'll keep them as wrappers for now to avoid breaking existing UI calls)
-            function addItemTag() { addGenericTag("item"); }
-            function removeItemTag(tag) { removeGenericTag("item", tag); }
-            function renderItemTags() { renderGenericTags("item"); }
             function addLoreTag() { addGenericTag("lore"); }
 
             function addCursePrompt(ctx) {
@@ -6884,111 +6114,6 @@
             }
 
             /* ─────────────────────────────────────────
-               ZIVIL SUB → show/hide subloc groups
-            ───────────────────────────────────────── */
-            function onZivilSubChange() {
-                const val = document.getElementById("f-zivil-sub").value;
-
-                const vcGroup = document.getElementById(
-                    "subloc-village-city-group",
-                );
-                const ckGroup = document.getElementById(
-                    "subloc-country-kingdom-group",
-                );
-
-                // village / city block
-                const vcBlock = document.getElementById("village-city-block");
-                const ckBlock = document.getElementById(
-                    "country-kingdom-block",
-                );
-
-                vcBlock.style.display =
-                    val === "village" || val === "city" ? "block" : "none";
-                ckBlock.style.display =
-                    val === "country" || val === "county" || val === "kingdom" ? "block" : "none";
-
-                vcGroup.style.display =
-                    val === "village" || val === "city" ? "block" : "none";
-                ckGroup.style.display =
-                    val === "country" || val === "county" || val === "kingdom" ? "block" : "none";
-
-                // Resident blocks
-                const resVcGroup = document.getElementById(
-                    "resident-village-city-group",
-                );
-                const resCkGroup = document.getElementById(
-                    "resident-country-kingdom-group",
-                );
-                if (resVcGroup)
-                    resVcGroup.style.display =
-                        val === "village" || val === "city" ? "block" : "none";
-                if (resCkGroup)
-                    resCkGroup.style.display = val === "kingdom" || val === "country" || val === "county" ? "block" : "none";
-
-                // Tools sections and Resident tool buttons
-                const toolsVc = document.getElementById("tools-section-vc");
-                const toolsCk = document.getElementById("tools-section-ck");
-                if (toolsVc)
-                    toolsVc.style.display =
-                        val === "village" || val === "city" ? "flex" : "none";
-                if (toolsCk)
-                    toolsCk.style.display =
-                        val === "country" || val === "county" || val === "kingdom" ? "flex" : "none";
-                const toolsResVc = document.getElementById("tools-resident-vc");
-                const toolsResCk = document.getElementById("tools-resident-ck");
-                if (toolsResVc)
-                    toolsResVc.style.display =
-                        val === "village" || val === "city" ? "inline-flex" : "none";
-                if (toolsResCk)
-                    toolsResCk.style.display =
-                        val === "kingdom" || val === "country" || val === "county" ? "inline-flex" : "none";
-
-                // clear tags & population when hidden
-                if (val !== "village" && val !== "city") {
-                    sublocSelections["village-city"] = [];
-                    racialSelections["village-city"] = [];
-                    // clear residentSelections if not house & not city/village
-                    const sub = document.getElementById("f-location-sub").value;
-                    const buildDetail =
-                        document.getElementById("f-building-sub").value;
-                    const zivilDetail =
-                        document.getElementById("f-zivil-sub").value;
-                    const hasResidents =
-                        (sub === "building" && buildDetail === "house") ||
-                        (sub === "zivil" &&
-                            ["village", "city", "kingdom", "country", "county"].includes(
-                                zivilDetail,
-                            ));
-                    if (!hasResidents) {
-                        residentSelections = [];
-                        renderSublocTags("resident");
-                        renderSublocTags("village-city-resident");
-                        renderSublocTags("country-kingdom-resident");
-                    }
-                    (function(){
-                        const pv = document.getElementById("pop-village-city");
-                        if (pv) pv.value = "";
-                        const pvf = document.getElementById("pop-village-city-fmt");
-                        if (pvf) pvf.textContent = "";
-                    })();
-                }
-                if (val !== "country" && val !== "county" && val !== "kingdom") {
-                    sublocSelections["country-kingdom"] = [];
-                    racialSelections["country-kingdom"] = [];
-                    (function(){
-                        const pk = document.getElementById("pop-country-kingdom");
-                        if (pk) pk.value = "";
-                        const pkf = document.getElementById("pop-country-kingdom-fmt");
-                        if (pkf) pkf.textContent = "";
-                    })();
-                }
-                renderSublocTags("village-city");
-                renderSublocTags("country-kingdom");
-                renderRacialTags("village-city");
-                renderRacialTags("country-kingdom");
-            }
-
-            /* ─────────────────────────────────────────
                POPULATION HELPERS
             ───────────────────────────────────────── */
             function updatePopFormatted(ctx) {
@@ -7027,10 +6152,7 @@
                RACIAL CIVILIZATION STATE
             ───────────────────────────────────────── */
             // key → array of { id, name, pct }
-            const racialSelections = {
-                "village-city": [],
-                "country-kingdom": [],
-            };
+            const racialSelections = {};
             let racialPickerContext = null;
             let racialPickerTemp = []; // array of { id, name, pct }
 
@@ -7177,19 +6299,14 @@
             ───────────────────────────────────────── */
             // key → array of card IDs
             const sublocSelections = {
-                "village-city": [], // Buildings only
-                "country-kingdom": [], // Village, City, Building
-                building: [], // Buildings (when location-sub = building) — future use
+                building: [], // Buildings (when location-sub = building)
+                custom: [], // Custom locations
             };
             let residentSelections = []; // array of card IDs for characters
             let sublocPickerContext = null; // which key is open or "resident"
             let sublocPickerTemp = []; // temp selection while picker is open
             const speciesSelections = {
-                "village-city": [],
-                "country-kingdom": [],
-                forest: [],
-                landmark: [],
-                ocean: [],
+                custom: [],
             };
 
             /* ─────────────────────────────────────────
@@ -7197,18 +6314,14 @@
             ───────────────────────────────────────── */
             function renderSublocTags(ctx) {
                 const tagMapMain = {
-                    "village-city": "subloc-village-city-tags",
-                    "country-kingdom": "subloc-country-kingdom-tags",
                     building: "subloc-building-tags",
                     resident: "house-resident-tags",
-                    "village-city-resident": "resident-village-city-tags",
-                    "country-kingdom-resident": "resident-country-kingdom-tags",
+                    custom: "subloc-custom-tags",
+                    "custom-resident": "resident-custom-tags",
                 };
                 const tagMapEvent = {
-                    "village-city": "subloc-village-city-event-tags",
-                    "country-kingdom": "subloc-country-kingdom-event-tags",
-                    "village-city-resident": "resident-village-city-event-tags",
-                    "country-kingdom-resident": "resident-country-kingdom-event-tags",
+                    custom: "subloc-custom-event-tags",
+                    "custom-resident": "resident-custom-event-tags",
                 };
                 const mapUse = (typeof _renderCtx !== "undefined" && _renderCtx === "event") ? tagMapEvent : tagMapMain;
                 const container = document.getElementById(mapUse[ctx]);
@@ -7249,14 +6362,14 @@
             ───────────────────────────────────────── */
             // Returns which locationSub values are allowed in a given picker context
             function sublocAllowedTypes(ctx) {
-                // Allow all location types for sublocation picking to enable cross-linking
                 if (ctx === "building") return ["building"];
                 if (ctx === "resident" || ctx.endsWith("-resident"))
                     return ["character"];
+                // Custom can have any location type as sublocations
+                if (ctx === "custom") return null;
                 return null; // null = no restriction by locationSub
             }
 
-            // For country-kingdom: which zivil-sub detail values count as "village/city"
             function sublocAllowedDetails(ctx) {
                 return null; // no restriction by locationDetail
             }
@@ -7274,17 +6387,11 @@
                 }
 
                 const titles = {
-                    "village-city": "Select Sublocations",
-                    "country-kingdom": "Select Sublocations",
                     building: "Select Buildings",
                     resident: "Select Residents (NPCs)",
-                    "village-city-resident": "Select Residents (NPCs)",
-                    "country-kingdom-resident": "Select Residents (NPCs)",
-                    "species-village-city": "Select Species",
-                    "species-country-kingdom": "Select Species",
-                    "species-forest": "Select Species",
-                    "species-landmark": "Select Species",
-                    "species-ocean": "Select Species",
+                    "custom": "Select Sublocations",
+                    "custom-resident": "Select Residents (NPCs)",
+                    "species-custom": "Select Species",
                 };
                 document.getElementById("subloc-picker-title").textContent =
                     titles[ctx] || "Select Sublocations";
@@ -7407,8 +6514,22 @@
                         ? parentCard.residents
                         : null;
 
+                // Find parent of the current card being edited (to exclude it from sublocations)
+                const findParentOfCurrent = () => {
+                    if (!editingId) return null;
+                    return all.find(c =>
+                        c.genre === "location" &&
+                        c.sublocations &&
+                        Object.values(c.sublocations).some(arr => (arr || []).includes(editingId))
+                    ) || null;
+                };
+                const parentOfCurrentCard = findParentOfCurrent();
+                const parentOfCurrentId = parentOfCurrentCard ? parentOfCurrentCard.id : null;
+
                 const candidates = all.filter((c) => {
                     if (c.id === editingId) return false;
+                    // Don't allow selecting the parent as a sublocation (would create a cycle)
+                    if (parentOfCurrentId && c.id === parentOfCurrentId) return false;
 
                     if (speciesMode) {
                         if (c.genre !== "species") return false;
@@ -7430,16 +6551,19 @@
                         // Must match one of the allowed locationSub values
                         const subMatch = !allowed || allowed.includes(c.locationSub);
 
-                        // For country-kingdom we also want village/city zivil entries:
-                        // those have locationSub="zivil" and locationDetail in ["village","city"]
+                        // For restricted contexts, we need to check details for zivil types
+                        // If allowedDetails is defined, zivil locations MUST have a matching detail
                         let detailMatch = false;
-                        if (allowedDetails) {
-                            detailMatch =
-                                c.locationSub === "zivil" &&
-                                allowedDetails.includes(c.locationDetail);
+                        let detailRequired = false;
+                        if (allowedDetails && c.locationSub === "zivil") {
+                            detailRequired = true;
+                            detailMatch = allowedDetails.includes(c.locationDetail);
                         }
 
-                        if (!subMatch && !detailMatch) return false;
+                        // If detail is required but doesn't match, reject
+                        if (detailRequired && !detailMatch) return false;
+                        // Otherwise, check if subMatch is satisfied
+                        if (!subMatch) return false;
                     }
 
                     // Hide cards that are already used elsewhere (unless currently selected in this picker)
@@ -7533,12 +6657,6 @@
             function resetSpawnCheck() {
                 const b = document.getElementById("spawn-check-group");
                 if (b) b.classList.remove("active");
-                const v = document.getElementById("spawn-check-group-vc");
-                if (v) v.classList.remove("active");
-                const k = document.getElementById("spawn-check-group-ck");
-                if (k) k.classList.remove("active");
-                const l = document.getElementById("spawn-check-group-land");
-                if (l) l.classList.remove("active");
             }
 
             /* ─── Is Playable (same visual style) ─── */
@@ -7553,52 +6671,25 @@
             }
 
             function resetSublocSelections() {
-                sublocSelections["village-city"] = [];
-                sublocSelections["country-kingdom"] = [];
                 sublocSelections["building"] = [];
+                sublocSelections["custom"] = [];
                 residentSelections = [];
-                speciesSelections["village-city"] = [];
-                speciesSelections["country-kingdom"] = [];
-                speciesSelections["forest"] = [];
-                speciesSelections["landmark"] = [];
-                speciesSelections["ocean"] = [];
-                renderSublocTags("village-city");
-                renderSublocTags("country-kingdom");
+                speciesSelections["custom"] = [];
+                eventsSelections["custom"] = [];
                 renderSublocTags("building");
+                renderSublocTags("custom");
                 renderSublocTags("resident");
-                renderSublocTags("village-city-resident");
-                renderSublocTags("country-kingdom-resident");
-                document.getElementById(
-                    "subloc-village-city-group",
-                ).style.display = "none";
-                document.getElementById(
-                    "subloc-country-kingdom-group",
-                ).style.display = "none";
+                renderSublocTags("custom-resident");
                 document.getElementById("subloc-building-group").style.display =
                     "none";
-                document.getElementById(
-                    "resident-village-city-group",
-                ).style.display = "none";
-                document.getElementById(
-                    "resident-country-kingdom-group",
-                ).style.display = "none";
+                document.getElementById("subloc-custom-group").style.display = "none";
+                document.getElementById("resident-custom-group").style.display = "none";
                 const otherTools = document.getElementById("other-tools-group");
                 const otherToolsRow = document.getElementById("tools-section-other");
                 if (otherTools) otherTools.style.display = "none";
                 if (otherToolsRow) otherToolsRow.style.display = "none";
-                // reset racial
-                racialSelections["village-city"] = [];
-                racialSelections["country-kingdom"] = [];
-                renderRacialTags("village-city");
-                renderRacialTags("country-kingdom");
                 // reset curses
                 curseTags = [];
-                // population removed
-                // hide blocks
-                document.getElementById("village-city-block").style.display =
-                    "none";
-                document.getElementById("country-kingdom-block").style.display =
-                    "none";
             }
 
             function saveEntry() {
@@ -7622,12 +6713,10 @@
                     type === "location"
                         ? (() => {
                             const out = {};
-                            const vc = (sublocSelections["village-city"] || []);
-                            const ck = (sublocSelections["country-kingdom"] || []);
                             const bd = (sublocSelections["building"] || []);
-                            if (vc.length) out["village-city"] = [...vc];
-                            if (ck.length) out["country-kingdom"] = [...ck];
+                            const cu = (sublocSelections["custom"] || []);
                             if (bd.length) out["building"] = [...bd];
+                            if (cu.length) out["custom"] = [...cu];
                             return out;
                         })()
                         : {};
@@ -7635,16 +6724,8 @@
                     type === "location"
                         ? (() => {
                             const out = {};
-                            const vc = (speciesSelections["village-city"] || []);
-                            const ck = (speciesSelections["country-kingdom"] || []);
-                            const fr = (speciesSelections["forest"] || []);
-                            const lm = (speciesSelections["landmark"] || []);
-                            const oc = (speciesSelections["ocean"] || []);
-                            if (vc.length) out["village-city"] = [...vc];
-                            if (ck.length) out["country-kingdom"] = [...ck];
-                            if (fr.length) out["forest"] = [...fr];
-                            if (lm.length) out["landmark"] = [...lm];
-                            if (oc.length) out["ocean"] = [...oc];
+                            const cu = (speciesSelections["custom"] || []);
+                            if (cu.length) out["custom"] = [...cu];
                             return out;
                         })()
                         : {};
@@ -7667,11 +6748,9 @@
                 const zivilEventsData =
                     type === "location"
                         ? (() => {
-                            const vc = (eventsSelections["village-city"] || []).map(e => ({...e}));
-                            const ck = (eventsSelections["country-kingdom"] || []).map(e => ({...e}));
+                            const cu = (eventsSelections["custom"] || []).map(e => ({...e}));
                             const out = {};
-                            if (vc.length) out["village-city"] = vc;
-                            if (ck.length) out["country-kingdom"] = ck;
+                            if (cu.length) out["custom"] = cu;
                             return Object.keys(out).length ? out : null;
                         })()
                         : null;
@@ -7691,10 +6770,7 @@
                 const residents =
                     type === "location" &&
                     ((locationSub === "building" && locationDetail === "house") ||
-                        (locationSub === "zivil" &&
-                            ["village", "city", "kingdom"].includes(
-                                locationDetail,
-                            )))
+                        locationSub === "custom" || !locationSub)
                         ? [...residentSelections]
                         : [];
 
@@ -7729,10 +6805,7 @@
 
                 const canBeSpawn =
                     type === "location" && (
-                        (document.getElementById("spawn-check-group") && document.getElementById("spawn-check-group").classList.contains("active")) ||
-                        (document.getElementById("spawn-check-group-vc") && document.getElementById("spawn-check-group-vc").classList.contains("active")) ||
-                        (document.getElementById("spawn-check-group-ck") && document.getElementById("spawn-check-group-ck").classList.contains("active")) ||
-                        (document.getElementById("spawn-check-group-land") && document.getElementById("spawn-check-group-land").classList.contains("active"))
+                        document.getElementById("spawn-check-group") && document.getElementById("spawn-check-group").classList.contains("active")
                     );
 
                 // Character fields
@@ -7752,14 +6825,7 @@
                     type === "species"
                         ? (document.getElementById("f-species-generally").value.trim())
                         : "";
-                const catchable =
-                    type === "species"
-                        ? !!document.getElementById("f-species-catchable").checked
-                        : false;
-                const catchHow =
-                    type === "species"
-                        ? (document.getElementById("f-species-catch-how").value.trim())
-                        : "";
+
                 const age =
                     type === "character"
                         ? parseInt(document.getElementById("f-char-age").value) || 0
@@ -7806,14 +6872,7 @@
                           }
                         : null;
 
-                const tags =
-                    type === "item"
-                        ? [...itemTags]
-                        : (type === "race"
-                            ? [...raceTags]
-                            : (type === "lore" ? [...loreTags] : []));
                 const currentCurseTags = type === "location" ? [...curseTags] : [];
-                const variantsData = type === "species" ? speciesVariants.map(v => ({ ...v })) : [];
 
                 let cards = getCards();
 
@@ -7957,9 +7016,6 @@
                             appearance,
                             personality,
                             generally,
-                            variants: variantsData,
-                            canBeCaught: catchable,
-                            canBeCaughtHow: catchHow,
                             age,
                             gender,
                             raceId,
@@ -7968,7 +7024,6 @@
                             deathCause,
                             isPlayable,
                             birthdate,
-                            tags,
                             curseTags: currentCurseTags,
                             description: desc,
                             updatedAt: new Date().toISOString(),
@@ -8010,9 +7065,6 @@
                         appearance,
                         personality,
                         generally,
-                        variants: variantsData,
-                        canBeCaught: catchable,
-                        canBeCaughtHow: catchHow,
                         age,
                         gender,
                         raceId,
@@ -8021,7 +7073,6 @@
                         deathCause,
                         isPlayable,
                         birthdate,
-                        tags,
                         curseTags: currentCurseTags,
                         description: desc,
                         createdAt: new Date().toISOString(),

@@ -1303,8 +1303,7 @@
                 const locs = cards
                     .filter(c => 
                         c.genre === "location" &&
-                        c.locationSub === "zivil" &&
-                        ["village","city"].includes(c.locationDetail) &&
+                        c.locationSub === "custom" &&
                         Array.isArray(c.residents) && c.residents.length > 0
                     )
                     .sort((a,b) => (a.title||"").localeCompare(b.title||""));
@@ -1509,11 +1508,11 @@
                     });
             }
 
-            /* Spawn locations = location cards with canBeSpawn = true (building or zivil) */
+            /* Spawn locations = location cards with canBeSpawn = true (building or custom) */
             function getSpawnBuildings() {
                 return getCards().filter((c) =>
                     c.genre === "location" &&
-                    (c.locationSub === "building" || c.locationSub === "zivil") &&
+                    (c.locationSub === "building" || c.locationSub === "custom") &&
                     c.canBeSpawn === true
                 );
             }
@@ -1691,16 +1690,26 @@
                 if (emptyPlaceholder) emptyPlaceholder.style.display = "none";
 
                 const folders = new Map(); // folderId -> { card, children: [] }
+                const rootSpawnIds = new Set(); // Track which spawns are roots (no parent)
+
+                // First pass: identify all spawns that have a parent
                 spawns.forEach(s => {
-                    if (s.locationSub === "building") {
-                        const parent = findParentLocation(s.id);
-                        const folderCard = parent || s;
-                        const folderId = folderCard.id;
-                        if (!folders.has(folderId)) folders.set(folderId, { card: folderCard, children: [] });
+                    const parent = findParentLocation(s.id);
+                    if (parent) {
+                        // This spawn has a parent - add it as child
+                        const folderId = parent.id;
+                        if (!folders.has(folderId)) folders.set(folderId, { card: parent, children: [] });
                         folders.get(folderId).children.push(s);
                     } else {
-                        const folderId = s.id;
-                        if (!folders.has(folderId)) folders.set(folderId, { card: s, children: [] });
+                        // No parent - mark as root
+                        rootSpawnIds.add(s.id);
+                    }
+                });
+
+                // Second pass: add root spawns as folders (only if not already a folder from being a parent)
+                spawns.forEach(s => {
+                    if (rootSpawnIds.has(s.id) && !folders.has(s.id)) {
+                        folders.set(s.id, { card: s, children: [] });
                     }
                 });
 
@@ -1730,6 +1739,9 @@
                     });
                     fRow.addEventListener("dblclick", (e) => {
                         e.stopPropagation();
+                        // Only allow selection if the folder itself is a spawn location
+                        const isFolderSpawn = spawns.some(s => s.id === fid);
+                        if (!isFolderSpawn) return; // Folder is just a parent, not a spawn
                         if (selectedSpawnId === fid) selectedSpawnId = null;
                         else selectedSpawnId = fid;
                         renderSpawnListInto(listId, emptyId, selectedSpawnId);
