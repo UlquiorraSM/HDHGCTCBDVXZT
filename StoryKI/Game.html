@@ -149,15 +149,21 @@
                 display: flex;
                 align-items: center;
                 gap: 12px;
-                padding: 12px 14px;
-                background: rgba(255, 255, 255, 0.05);
+                padding: 10px 12px;
+                background: rgba(255, 255, 255, 0.08);
                 border-radius: 10px;
-                border-left: 3px solid rgba(255, 255, 255, 0.2);
             }
-            .stats-relation-item.friend { border-left-color: #4caf50; }
-            .stats-relation-item.enemy { border-left-color: #f44336; }
-            .stats-relation-item.neutral { border-left-color: #9e9e9e; }
-            .stats-relation-item.family { border-left-color: #ff9800; }
+            #stats-relations-list.horizontal {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 8px;
+            }
+            #stats-relations-list.horizontal .stats-relation-item {
+                flex: 1 1 calc(50% - 4px);
+                min-width: 140px;
+                max-width: calc(50% - 4px);
+            }
 
             .stats-relation-avatar {
                 width: 40px;
@@ -1058,7 +1064,7 @@
                     <textarea
                         id="user-input"
                         rows="1"
-                        placeholder="Was tust du als nächstes…"
+                        placeholder="What do you do next…"
                         autocomplete="off"
                     ></textarea>
                     <button id="send-btn" title="Senden">&#10148;</button>
@@ -1141,7 +1147,13 @@
 
                 <!-- Relations -->
                 <div id="stats-relations-section" style="display:flex; flex-direction:column; gap:12px;">
-                    <div style="color:rgba(255,255,255,.5); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Relations</div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                        <span style="color:rgba(255,255,255,.5); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Relations</span>
+                        <select id="relations-layout-select" onchange="toggleRelationsLayout()" style="background:rgba(40,40,40,0.9); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; font-size:11px; padding:4px 8px; cursor:pointer;">
+                            <option value="vertical">1x...</option>
+                            <option value="horizontal">2x...</option>
+                        </select>
+                    </div>
                     <div id="stats-relations-list" style="display:flex; flex-direction:column; gap:8px;">
                         <!-- Relations will be rendered here -->
                     </div>
@@ -1159,9 +1171,9 @@
 
         <div id="back-popup-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000; backdrop-filter:blur(10px);">
             <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:20px; width:100%; max-width:480px; display:flex; flex-direction:column; gap:14px;">
-                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Story verwalten</div>
+                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Manage story</div>
                 <div style="display:flex; flex-direction:column; gap:6px;">
-                    <label for="back-story-input" style="color:rgba(255,255,255,.75); font-size:13px;">Story-Name</label>
+                    <label for="back-story-input" style="color:rgba(255,255,255,.75); font-size:13px;">Story Name</label>
                     <input id="back-story-input" type="text" style="padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,.15); background:rgba(20,20,25,.9); color:#fff; outline:none;">
                 </div>
                 <div style="display:flex; gap:10px;">
@@ -1184,6 +1196,8 @@
             const SELECTED_WORLD_ID_KEY = "storyki_selected_world_id";
             const CURRENT_STORY_ID_KEY = "storyki_current_story_id";
             const ANCHORED_WORLD_CHANGES_KEY = "storyki_anchored_world_changes";
+            const PENDING_MESSAGE_KEY = "storyki_pending_message";
+            const RELATIONS_LAYOUT_KEY = "storyki_relations_layout";
             const NSFW_BLOCKED_TOKEN = "__NSFW_BLOCKED__";
             const NSFW_BLOCKED_TEXT = "The generated message contained offensive content which has been blocked due to your NSWF block.";
 
@@ -5374,7 +5388,7 @@ Example:
                 const cards = getCards();
 
                 // Filter only family relations
-                const familyRelations = activeChar.relations.filter(rel => rel.type === "family");
+                const familyRelations = activeChar.relations.filter(rel => rel.relation === "Family");
 
                 if (familyRelations.length === 0) {
                     container.innerHTML = '<div class="stats-no-relations">No family relations</div>';
@@ -5388,18 +5402,53 @@ Example:
                     const item = document.createElement("div");
                     item.className = "stats-relation-item family";
 
-                    const npcName = [npc.firstName, npc.lastName].filter(Boolean).join(" ") || "Unknown";
-                    const emoji = "👨‍👩‍👧‍👦";
+                    const npcName = npc.title || "Unknown";
+                    
+                    // Avatar: either profile picture or nothing
+                    let avatarHtml = "";
+                    if (npc.pfpUrl) {
+                        avatarHtml = `<div class="stats-relation-avatar"><img src="${escHtml(npc.pfpUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" /></div>`;
+                    } else {
+                        avatarHtml = `<div class="stats-relation-avatar" style="background:transparent;border:none;"></div>`;
+                    }
 
                     item.innerHTML = `
-                        <div class="stats-relation-avatar">${emoji}</div>
+                        ${avatarHtml}
                         <div class="stats-relation-info">
                             <div class="stats-relation-name">${escHtml(npcName)}</div>
-                            <div class="stats-relation-type">${rel.description || "Family"}</div>
+                            <div class="stats-relation-type">${escHtml(rel.familySub || "Family")}</div>
                         </div>
                     `;
                     container.appendChild(item);
                 });
+            }
+
+            function toggleRelationsLayout() {
+                const select = document.getElementById("relations-layout-select");
+                const list = document.getElementById("stats-relations-list");
+                if (select && list) {
+                    if (select.value === "horizontal") {
+                        list.classList.add("horizontal");
+                    } else {
+                        list.classList.remove("horizontal");
+                    }
+                    // Save the layout preference
+                    Storage.set(RELATIONS_LAYOUT_KEY, select.value);
+                }
+            }
+
+            function restoreRelationsLayout() {
+                const saved = Storage.get(RELATIONS_LAYOUT_KEY);
+                const select = document.getElementById("relations-layout-select");
+                const list = document.getElementById("stats-relations-list");
+                if (saved && select && list) {
+                    select.value = saved;
+                    if (saved === "horizontal") {
+                        list.classList.add("horizontal");
+                    } else {
+                        list.classList.remove("horizontal");
+                    }
+                }
             }
 
             function renderStatsSkills() {
@@ -5641,16 +5690,19 @@ Example:
             /* ═══════════════════════════════════════
                NAVIGATION
             ═══════════════════════════════════════ */
-
-            /* ═══════════════════════════════════════
-               NAVIGATION
-            ═══════════════════════════════════════ */
             function goBack() {
+                // Block navigation if a message is being generated
+                if (isBusy) {
+                    showToast("Please wait until the message is generated...", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
                 const storyId = Storage.get(CURRENT_STORY_ID_KEY);
                 if (storyId) {
                     const scenarios = getScenariosLocal();
                     const story = scenarios.find(x => x.id === storyId);
                     if (story && story.official !== false) {
+                        // Save any pending input text before leaving
+                        savePendingInput();
                         document.body.style.opacity = "0";
                         setTimeout(() => { window.location.href = "../index.html"; }, 400);
                         return;
@@ -5659,6 +5711,29 @@ Example:
                 ensureStoryRecord();
                 autoSaveStory();
                 showBackPopup();
+            }
+
+            function savePendingInput() {
+                const inputEl = document.getElementById("user-input");
+                if (inputEl && inputEl.value.trim()) {
+                    Storage.set(PENDING_MESSAGE_KEY, inputEl.value);
+                } else {
+                    Storage.remove(PENDING_MESSAGE_KEY);
+                }
+            }
+
+            function restorePendingInput() {
+                const saved = Storage.get(PENDING_MESSAGE_KEY);
+                if (saved) {
+                    const inputEl = document.getElementById("user-input");
+                    if (inputEl) {
+                        inputEl.value = saved;
+                        // Trigger auto-resize
+                        inputEl.style.height = "auto";
+                        inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + "px";
+                    }
+                    Storage.remove(PENDING_MESSAGE_KEY);
+                }
             }
 
             /* ═══════════════════════════════════════
@@ -5690,6 +5765,10 @@ Example:
                     clearExpiredLocationEvents();
                     try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                     loadStoryLog();
+                    // Restore any pending message from previous session
+                    restorePendingInput();
+                    // Restore relations layout preference
+                    restoreRelationsLayout();
                     // Ensure initial age baselines are set
                     try {
                         const d0 = (char && char.startingDate) ? char.startingDate : null;

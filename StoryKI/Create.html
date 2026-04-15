@@ -404,6 +404,15 @@
                 background: rgba(255, 255, 255, 0.1);
             }
 
+            .entry-pfp {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                flex-shrink: 0;
+            }
+
             /* ─── Context Menu ─── */
             .context-menu {
                 position: fixed;
@@ -2425,6 +2434,36 @@
                 opacity: 1;
                 transform: translateX(-50%) translateY(0);
             }
+
+            /* Profile Picture Preview */
+            .pfp-input-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .pfp-input-row input {
+                flex: 1;
+            }
+            .pfp-preview {
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                overflow: hidden;
+                background: rgba(255, 255, 255, 0.1);
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .pfp-preview img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .pfp-preview-placeholder {
+                font-size: 20px;
+            }
         </style>
     </head>
     <body>
@@ -2769,6 +2808,22 @@
                             </div>
                             <span class="spawn-check-label">Is playable</span>
                             <span class="spawn-check-badge">PLAYER</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Profile Picture URL (1:1, optional)</label>
+                        <div class="pfp-input-row">
+                            <input
+                                type="url"
+                                class="form-input"
+                                id="f-char-pfp"
+                                placeholder="https://example.com/image.png"
+                                oninput="updatePfpPreview()"
+                            />
+                            <div class="pfp-preview" id="pfp-preview">
+                                <img src="" alt="Preview" style="display:none;" />
+                                <span class="pfp-preview-placeholder">👤</span>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group">
@@ -4204,7 +4259,14 @@
                     const bClass = badgeClass(card.genre);
                     const bLabel = (card.genre || "UNKNOWN").toUpperCase();
 
+                    // Profile picture for characters
+                    let pfpHtml = "";
+                    if (card.genre === "character" && card.pfpUrl) {
+                        pfpHtml = `<img class="entry-pfp" src="${escHtml(card.pfpUrl)}" alt="" />`;
+                    }
+
                     item.innerHTML = `
+                    ${pfpHtml}
                     <span class="entry-name">${escHtml(card.title)}</span>
                     <span class="entry-badge ${bClass}">${bLabel}</span>
                     <button class="entry-menu-btn" title="Options" onclick="openContextMenu(event,'${card.id}')">&#8943;</button>
@@ -5388,13 +5450,10 @@
                                 "f-char-birth-month",
                             ).value = card.birthdate.month || "1";
                         }
+                        const pfpEl = document.getElementById("f-char-pfp");
+                        if (pfpEl) pfpEl.value = card.pfpUrl || "";
                         applyCharacterLevelData(card);
-                        relationSelections = card.relations
-                            ? [...card.relations]
-                            : [];
-                        renderRelationTags();
-                        secretSelections = card.secrets ? [...card.secrets] : [];
-                        renderSecretTags();
+                        updatePfpPreview();
                         selectedSkillId = card.skillId || "";
                         renderSkillTag();
                         updateSkillGroupVisibility();
@@ -5691,6 +5750,9 @@
                 if (dcEl) dcEl.value = "";
                 document.getElementById("f-char-birth-day").value = "";
                 document.getElementById("f-char-birth-month").value = "1";
+                const pfpEl = document.getElementById("f-char-pfp");
+                if (pfpEl) pfpEl.value = "";
+                updatePfpPreview();
                 (function(){
                     const grp = document.getElementById("playable-check-group");
                     if (grp) grp.classList.remove("active");
@@ -7621,6 +7683,23 @@
                 if (grp) grp.classList.remove("active");
             }
 
+            function updatePfpPreview() {
+                const input = document.getElementById("f-char-pfp");
+                const preview = document.getElementById("pfp-preview");
+                const img = preview.querySelector("img");
+                const placeholder = preview.querySelector(".pfp-preview-placeholder");
+                const url = input.value.trim();
+                if (url) {
+                    img.src = url;
+                    img.style.display = "block";
+                    placeholder.style.display = "none";
+                } else {
+                    img.src = "";
+                    img.style.display = "none";
+                    placeholder.style.display = "block";
+                }
+            }
+
             function resetSublocSelections() {
                 sublocSelections["building"] = [];
                 sublocSelections["custom"] = [];
@@ -7829,6 +7908,10 @@
                                   ) || 1,
                           }
                         : null;
+                const pfpUrl =
+                    type === "character"
+                        ? document.getElementById("f-char-pfp").value.trim()
+                        : "";
 
                 const currentCurseTags = type === "location" ? [...curseTags] : [];
 
@@ -7992,6 +8075,7 @@
                             deathCause,
                             isPlayable,
                             birthdate,
+                            pfpUrl,
                             curseTags: currentCurseTags,
                             description: desc,
                             ...(systemData ? { systemConfig: systemData } : {}),
@@ -8045,6 +8129,7 @@
                         deathCause,
                         isPlayable,
                         birthdate,
+                        pfpUrl,
                         curseTags: currentCurseTags,
                         description: desc,
                         ...(systemData ? { systemConfig: systemData } : {}),
@@ -8105,7 +8190,22 @@
                 const cards = getCards();
                 const idx = cards.findIndex(c => c.id === id);
                 if (idx === -1) return;
-                const copy = { ...cards[idx], id: generateId() };
+                const original = cards[idx];
+                // System cards cannot be duplicated
+                if (original.genre === "system") {
+                    showToast("System cards cannot be duplicated.", "rgba(180, 60, 60, 0.9)");
+                    return;
+                }
+                // Create copy without residents and sublocations
+                const copy = {
+                    ...original,
+                    id: generateId(),
+                    residents: undefined,
+                    sublocations: undefined
+                };
+                // Explicitly delete the properties to ensure they're not copied
+                delete copy.residents;
+                delete copy.sublocations;
                 cards.push(copy);
                 saveCards(cards);
                 showToast("Entry duplicated.");
