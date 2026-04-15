@@ -4788,6 +4788,43 @@ Example:
                 }
             };
 
+            document.getElementById("erase-btn").onclick = () => {
+                if (isBusy) return;
+                const messagesEl = document.getElementById("messages");
+                const rows = Array.from(messagesEl.querySelectorAll(".msg-row"));
+                if (!rows.length) return;
+                const lastRow = rows[rows.length - 1];
+                
+                // Check if this is the first AI message and it's protected
+                if (isFirstMessageProtected && lastRow.classList.contains("ai") && messagesEl.querySelectorAll(".msg-row.ai").length === 1) {
+                    showToast("🔒 The first message is protected.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                
+                // Remove last row from DOM
+                lastRow.remove();
+                
+                // Remove from history
+                if (chatHistory.length > 0) {
+                    const removed = chatHistory.pop();
+                    // Also remove any pre-divider linked to this user message
+                    try {
+                        if (removed && typeof removed === 'object' && removed.sender !== "Narrator") {
+                            const ts = removed.timestamp;
+                            const linked = document.querySelector(`.chat-divider[data-linked-ts="${ts}"]`);
+                            if (linked) linked.remove();
+                        }
+                    } catch {}
+                    saveStoryLog();
+                    // Roll back world state
+                    if (removed && typeof removed !== 'string' && removed.sender === "Narrator") {
+                        rollbackAnchoredChangesByTs(removed.timestamp);
+                    }
+                    rollbackToLastWorldState();
+                    showToast("Message deleted.", "rgba(180, 60, 60, 0.85)");
+                }
+            };
+
             document.getElementById("edit-btn").onclick = () => {
                 if (isBusy) return;
                 const messagesEl = document.getElementById("messages");
