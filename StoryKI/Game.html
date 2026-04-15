@@ -109,6 +109,116 @@
                 border-color: rgba(255, 255, 255, 0.4);
             }
 
+            .nav-stats-btn {
+                padding: 8px 14px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                background: rgba(40, 100, 140, 0.4);
+                color: #7ec9ff;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s;
+                flex-shrink: 0;
+            }
+            .nav-stats-btn:hover {
+                background: rgba(50, 120, 170, 0.6);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+
+            /* Stats Panel */
+            #stats-panel-overlay {
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+            #stats-panel-overlay.show {
+                opacity: 1;
+            }
+            #stats-panel-overlay.show #stats-panel {
+                transform: translateY(0);
+            }
+            #stats-panel {
+                transform: translateY(20px);
+                transition: transform 0.3s ease-out;
+            }
+
+            .stats-relation-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 14px;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+                border-left: 3px solid rgba(255, 255, 255, 0.2);
+            }
+            .stats-relation-item.friend { border-left-color: #4caf50; }
+            .stats-relation-item.enemy { border-left-color: #f44336; }
+            .stats-relation-item.neutral { border-left-color: #9e9e9e; }
+            .stats-relation-item.family { border-left-color: #ff9800; }
+
+            .stats-relation-avatar {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                flex-shrink: 0;
+            }
+            .stats-relation-info {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .stats-relation-name {
+                color: #fff;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            .stats-relation-type {
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 12px;
+                text-transform: capitalize;
+            }
+            .stats-no-relations {
+                color: rgba(255, 255, 255, 0.4);
+                font-size: 13px;
+                font-style: italic;
+                text-align: center;
+                padding: 20px;
+            }
+
+            /* Stats Skills */
+            .stats-skill-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 14px;
+                background: rgba(100, 140, 100, 0.25);
+                border: 1px solid rgba(100, 200, 100, 0.3);
+                border-radius: 20px;
+                color: #7ecf7e;
+                font-size: 13px;
+                font-weight: 500;
+            }
+            .stats-skill-tag::before {
+                content: "🛠️";
+                font-size: 12px;
+            }
+            .stats-no-skills {
+                color: rgba(255, 255, 255, 0.4);
+                font-size: 13px;
+                font-style: italic;
+                text-align: center;
+                padding: 20px;
+            }
+
             #header-title .story-label {
                 font-size: 11px;
                 font-weight: 700;
@@ -576,6 +686,137 @@
                 background: rgba(70, 20, 20, 0.7);
                 color: #ff9090;
             }
+            .act-btn.btn-move {
+                border-color: rgba(100, 100, 180, 0.3);
+                color: rgba(140, 140, 220, 0.85);
+                position: relative;
+            }
+            .act-btn.btn-move:hover {
+                background: rgba(30, 30, 60, 0.7);
+                color: #a0a0ff;
+            }
+            .act-btn.btn-travel {
+                border-color: rgba(180, 100, 100, 0.3);
+                color: rgba(220, 140, 140, 0.85);
+                position: relative;
+            }
+            .act-btn.btn-travel:hover {
+                background: rgba(60, 30, 30, 0.7);
+                color: #ffa0a0;
+            }
+            #move-dropdown {
+                position: fixed;
+                background: rgba(30, 30, 35, 0.98);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 12px;
+                padding: 8px 0;
+                min-width: 200px;
+                max-width: 280px;
+                max-height: 300px;
+                overflow-y: auto;
+                display: none;
+                flex-direction: column;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+            }
+            #move-dropdown.show {
+                display: flex;
+            }
+            #travel-dropdown {
+                position: fixed;
+                background: rgba(30, 30, 35, 0.98);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 12px;
+                padding: 8px 0;
+                min-width: 220px;
+                max-width: 320px;
+                max-height: 350px;
+                overflow-y: auto;
+                display: none;
+                flex-direction: column;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+            }
+            #travel-dropdown.show {
+                display: flex;
+            }
+            .travel-header {
+                padding: 10px 16px;
+                color: rgba(220, 140, 140, 0.9);
+                font-size: 12px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                margin-bottom: 4px;
+            }
+            .travel-option {
+                padding: 10px 16px;
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 13px;
+                cursor: pointer;
+                transition: background 0.15s;
+                border: none;
+                background: none;
+                text-align: left;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+            }
+            .travel-option:hover {
+                background: rgba(180, 100, 100, 0.2);
+                color: #fff;
+            }
+            .travel-option.selected {
+                background: rgba(180, 100, 100, 0.35);
+                color: #ff9f9f;
+                border-left: 3px solid #ff9f9f;
+            }
+            .travel-option .travel-time {
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 11px;
+            }
+            .travel-empty {
+                padding: 16px;
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 13px;
+                text-align: center;
+            }
+            .move-option {
+                padding: 10px 16px;
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 13px;
+                cursor: pointer;
+                transition: background 0.15s;
+                border: none;
+                background: none;
+                text-align: left;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .move-option:hover {
+                background: rgba(100, 100, 180, 0.2);
+                color: #fff;
+            }
+            .move-option.selected {
+                background: rgba(100, 100, 180, 0.35);
+                color: #7ec9ff;
+                border-left: 3px solid #7ec9ff;
+            }
+            .move-option.current {
+                color: rgba(140, 140, 220, 0.9);
+                font-weight: 500;
+            }
+            .move-option.empty {
+                color: rgba(255, 255, 255, 0.4);
+                font-style: italic;
+                cursor: default;
+            }
+            .move-option.empty:hover {
+                background: none;
+            }
             .act-btn.locked {
                 opacity: 0.5;
                 cursor: not-allowed !important;
@@ -773,6 +1014,9 @@
                 <button class="nav-back-btn" onclick="goBack()" title="Back">
                     &#8592;
                 </button>
+                <button class="nav-stats-btn" onclick="toggleStatsPanel()" title="Character Stats">
+                    📊 Stats
+                </button>
 
                 <div id="header-title">
                     <div class="story-label">StoryKI</div>
@@ -832,6 +1076,12 @@
                     <button class="act-btn btn-erase" id="erase-btn">
                         ✕ Erase
                     </button>
+                    <button class="act-btn btn-move" id="move-btn">
+                        → Move to...
+                    </button>
+                    <button class="act-btn btn-travel" id="travel-btn" style="display:none;">
+                        🚂 Travel
+                    </button>
                 <button class="act-btn btn-edit" id="edit-save-btn" style="display:none;">
                     ✔ Save
                 </button>
@@ -844,6 +1094,68 @@
 
         <!-- Toast -->
         <div id="toast"></div>
+
+        <!-- Move to Dropdown -->
+        <div id="move-dropdown"></div>
+
+        <!-- Travel Dropdown -->
+        <div id="travel-dropdown"></div>
+
+        <!-- Stats Panel Overlay -->
+        <div id="stats-panel-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:2500; backdrop-filter:blur(10px);">
+            <div id="stats-panel" style="background:rgba(25,25,30,.95); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:28px; width:100%; max-width:520px; max-height:85vh; overflow-y:auto; display:flex; flex-direction:column; gap:20px; box-shadow:0 20px 60px rgba(0,0,0,.6);">
+                <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,.1); padding-bottom:16px;">
+                    <div style="color:#fff; font-weight:700; font-size:20px;">📊 Character Stats</div>
+                    <button onclick="closeStatsPanel()" style="width:32px; height:32px; border-radius:50%; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1); color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
+                </div>
+
+                <!-- Character Name -->
+                <div id="stats-name-section" style="text-align:center; padding:10px 0;">
+                    <div id="stats-char-name" style="color:#7ec9ff; font-size:26px; font-weight:700;">—</div>
+                    <div id="stats-char-race" style="color:rgba(255,255,255,.6); font-size:14px; margin-top:4px;">—</div>
+                </div>
+
+                <!-- Age -->
+                <div id="stats-age-section" style="display:flex; align-items:center; justify-content:center; gap:12px; padding:12px 20px; background:rgba(255,255,255,.05); border-radius:12px;">
+                    <span style="color:rgba(255,255,255,.5); font-size:13px;">Age:</span>
+                    <span id="stats-age" style="color:#fff; font-size:18px; font-weight:600;">—</span>
+                    <span id="stats-birthdate" style="color:rgba(255,255,255,.4); font-size:12px;"></span>
+                </div>
+
+                <!-- Level & XP (Only when Level System is active) -->
+                <div id="stats-level-section" style="display:none; flex-direction:column; gap:10px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <div style="color:#ffd700; font-size:20px; font-weight:700;">⚔️ Level <span id="stats-level">1</span></div>
+                        <div style="color:rgba(255,255,255,.6); font-size:13px;"><span id="stats-xp-current">0</span> / <span id="stats-xp-needed">100</span> XP</div>
+                    </div>
+                    <div style="width:100%; height:12px; background:rgba(0,0,0,.4); border-radius:6px; overflow:hidden; border:1px solid rgba(255,215,0,.3);">
+                        <div id="stats-xp-bar" style="height:100%; width:0%; background:linear-gradient(90deg, #ffd700, #ffaa00); transition:width 0.3s ease;"></div>
+                    </div>
+                </div>
+
+                <!-- Appearance -->
+                <div id="stats-appearance-section" style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="color:rgba(255,255,255,.5); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Appearance</div>
+                    <div id="stats-appearance" style="color:rgba(255,255,255,.85); font-size:14px; line-height:1.6; padding:14px 16px; background:rgba(255,255,255,.05); border-radius:10px; min-height:60px;">—</div>
+                </div>
+
+                <!-- Relations -->
+                <div id="stats-relations-section" style="display:flex; flex-direction:column; gap:12px;">
+                    <div style="color:rgba(255,255,255,.5); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Relations</div>
+                    <div id="stats-relations-list" style="display:flex; flex-direction:column; gap:8px;">
+                        <!-- Relations will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Skills -->
+                <div id="stats-skills-section" style="display:flex; flex-direction:column; gap:12px; display:none;">
+                    <div style="color:rgba(255,255,255,.5); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Skills</div>
+                    <div id="stats-skills-list" style="display:flex; flex-wrap:wrap; gap:8px;">
+                        <!-- Skills will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div id="back-popup-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000; backdrop-filter:blur(10px);">
             <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:20px; width:100%; max-width:480px; display:flex; flex-direction:column; gap:14px;">
@@ -900,6 +1212,10 @@
             let _editRow = null;
             let _editIndex = -1;
             let currentNarrationTs = null;
+
+            // Pending travel state (delayed until user sends a message)
+            let pendingMoveLocationId = null; // For "Move to..."
+            let pendingTravel = null; // { destinationId, transportBuildingId, travelTime } for "Travel"
 
             function normalizeBirthdate(raw) {
                 if (!raw || typeof raw !== "object") return null;
@@ -1121,6 +1437,21 @@
                 if (entry.location) {
                     updateLocation(entry.location);
                 }
+
+                // Restore level data if present in entry
+                if (entry.levelData) {
+                    activeChar.levelData = { ...entry.levelData };
+                    // Update the character card in storage
+                    const cards = getCards();
+                    const idx = cards.findIndex(c => c.id === activeChar.id);
+                    if (idx !== -1) {
+                        cards[idx].levelData = { ...entry.levelData };
+                        Storage.set("storyki_world_cards", JSON.stringify(cards));
+                    }
+                    // Update stats display
+                    renderStatsLevel();
+                }
+
                 saveActiveCharacter();
             }
 
@@ -1180,13 +1511,17 @@
                 const tm = d.time || "00:00";
                 const loc = document.getElementById("header-location")?.textContent || "Unknown Location";
 
+                // Save level data if level system is active
+                const levelData = isLevelSystemActive() ? (activeChar?.levelData || { level: 1, xp: 0 }) : null;
+
                 const entry = {
                     sender: sender,
                     text: text,
                     date: `${day}.${mon}.${yr}`,
                     time: tm,
                     location: loc,
-                    timestamp: tsOverride || Date.now()
+                    timestamp: tsOverride || Date.now(),
+                    ...(levelData ? { levelData: { ...levelData } } : {})
                 };
 
                 chatHistory.push(entry);
@@ -1371,6 +1706,14 @@
                         if (applyNpcDeath(npcId, deathCause, currentNarrationTs)) {
                             npcDeathsChanged = true;
                         }
+                        continue;
+                    }
+                    // Handle Killed tags: [[Killed:Species_ID:Player,NPC_ID,...]]
+                    const killedTag = content.match(/^Killed\s*:\s*([A-Za-z0-9\-_]+)\s*:\s*(.+)$/i);
+                    if (killedTag) {
+                        const speciesId = killedTag[1].trim();
+                        const recipientsStr = killedTag[2].trim();
+                        processKillCommand(speciesId, recipientsStr);
                         continue;
                     }
                     // Handle SecretRevelation tags: [[SecretRevelation:NPC_ID|Secret text]]
@@ -1884,6 +2227,16 @@
 
             function getCards() {
                 return JSON.parse(Storage.get(CARDS_KEY) || "[]");
+            }
+
+            function escHtml(text) {
+                if (typeof text !== 'string') return '';
+                return text
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
             }
 
             function applyCharacter(ch) {
@@ -3110,6 +3463,18 @@
 - If your generated response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY [[NSFW]] and nothing else.`
                     : "";
 
+                // Killed Command nur zeigen wenn Level System aktiv
+                const killedInstruction = isLevelSystemActive()
+                    ? `# KILLED TAGS (XP DISTRIBUTION - ONLY WHEN A SPECIES IS KILLED)
+- When a species is killed by the player or NPCs, append a Killed tag BEFORE the final metadata block.
+- Syntax:
+  [[Killed:Species_ID:Recipients]]
+- Species_ID: The ID of the species that was killed (from PRESENT SPECIES list)
+- Recipients: Comma-separated list of who receives XP ("Player" for player, or NPC_IDs)
+- Example: [[Killed:wolf_123:Player,NPC_Alice]]
+- This distributes XP rewards to the specified recipients based on the species XP configuration.`
+                    : "";
+
                 return `[SYSTEM INSTRUCTIONS]
 You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
 
@@ -3208,6 +3573,8 @@ ${shopContext}
 - This allows the AI to track which NPCs know which secrets across future conversations.
 
 ${nsfwInstruction}
+
+${killedInstruction}
 
 # RESPONSE FORMAT (MANDATORY)
 Your response MUST consist of two parts:
@@ -3400,6 +3767,7 @@ Example:
                 updatePresentNPCs();
                 saveActiveCharacter(); // Save the location state
                 try { loadBackground(); } catch {}
+                updateTravelButtonVisibility(); // Show/hide travel button based on transport building
             }
 
             /* ═══════════════════════════════════════
@@ -4132,6 +4500,14 @@ Example:
 
             let _pendingPreUserDividerLabel = null;
             async function sendMessage() {
+                // Execute any pending travel BEFORE sending the message
+                let travelExecuted = false;
+                if (pendingTravel) {
+                    travelExecuted = executePendingTravel();
+                } else if (pendingMoveLocationId) {
+                    travelExecuted = executePendingMove();
+                }
+
                 const inputEl = document.getElementById("user-input");
                 const text = inputEl.value.trim();
                 if (isEditing) { showToast("Finish editing with Save or Cancel.", "rgba(180,60,60,0.85)"); return; }
@@ -4442,7 +4818,7 @@ Example:
                 if (saveBtn) saveBtn.style.display = "inline-flex";
                 if (cancelBtn) cancelBtn.style.display = "inline-flex";
                 // Lock other action buttons
-                ['retry-btn','continue-btn','erase-btn','edit-btn'].forEach(id => {
+                ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','travel-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = true; b.classList.add('locked'); }
                 });
@@ -4473,7 +4849,7 @@ Example:
                 const cancelBtn = document.getElementById("edit-cancel-btn");
                 if (saveBtn) saveBtn.style.display = "none";
                 if (cancelBtn) cancelBtn.style.display = "none";
-                ['retry-btn','continue-btn','erase-btn','edit-btn'].forEach(id => {
+                ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = false; b.classList.remove('locked'); }
                 });
@@ -4491,18 +4867,6 @@ Example:
                 const cancelBtn = document.getElementById("edit-cancel-btn");
                 if (saveBtn) saveBtn.style.display = "none";
                 if (cancelBtn) cancelBtn.style.display = "none";
-                ['retry-btn','continue-btn','erase-btn','edit-btn'].forEach(id => {
-                    const b = document.getElementById(id);
-                    if (b) { b.disabled = false; b.classList.remove('locked'); }
-                });
-            };
-
-            document.getElementById("erase-btn").onclick = () => {
-                const messagesEl = document.getElementById("messages");
-                const rows = Array.from(messagesEl.children).filter(c => c.classList.contains("msg-row") || c.classList.contains("chat-divider"));
-                if (!rows.length) return;
-
-                const lastRow = rows[rows.length - 1];
                 
                 // Check if this is the first AI message and it's protected
                 const aiRows = messagesEl.querySelectorAll(".msg-row.ai");
@@ -4531,13 +4895,676 @@ Example:
                     rollbackToLastWorldState();
                     showToast("Message deleted.", "rgba(180, 60, 60, 0.85)");
                 }
+                // Unlock buttons
+                ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','travel-btn'].forEach(id => {
+                    const b = document.getElementById(id);
+                    if (b) { b.disabled = false; b.classList.remove('locked'); }
+                });
             };
+
+            /* ═══════════════════════════════════════
+               MOVE TO LOCATION
+            ═══════════════════════════════════════ */
+            function findParentLocationOfCurrent() {
+                if (!currentLocationId) return null;
+                const cards = getCards();
+                const currentLoc = cards.find(c => c.id === currentLocationId);
+                if (!currentLoc) return null;
+                // Find parent by checking all locations with sublocations
+                for (const card of cards) {
+                    if (card.genre !== "location" || !card.sublocations) continue;
+                    for (const key of Object.keys(card.sublocations)) {
+                        const arr = card.sublocations[key];
+                        if (Array.isArray(arr) && arr.includes(currentLocationId)) {
+                            return card;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            function getSiblingLocations() {
+                const parent = findParentLocationOfCurrent();
+                if (!parent) return [];
+                const cards = getCards();
+                const siblings = [];
+                // Get all sublocations from parent (all types)
+                for (const key of Object.keys(parent.sublocations || {})) {
+                    const arr = parent.sublocations[key];
+                    if (Array.isArray(arr)) {
+                        arr.forEach(id => {
+                            if (id === currentLocationId) return; // Skip current
+                            const loc = cards.find(c => c.id === id && c.genre === "location");
+                            if (loc) siblings.push(loc);
+                        });
+                    }
+                }
+                return siblings.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+            }
+
+            function renderMoveDropdown() {
+                const dropdown = document.getElementById("move-dropdown");
+                if (!dropdown) return;
+                dropdown.innerHTML = "";
+                const siblings = getSiblingLocations();
+                if (siblings.length === 0) {
+                    const empty = document.createElement("div");
+                    empty.className = "move-option empty";
+                    empty.textContent = "No adjacent locations";
+                    dropdown.appendChild(empty);
+                } else {
+                    siblings.forEach(loc => {
+                        const btn = document.createElement("button");
+                        btn.className = "move-option" + (pendingMoveLocationId === loc.id ? " selected" : "");
+                        btn.innerHTML = `<span>📍</span> ${escHtml(loc.title || "Unnamed")}${pendingMoveLocationId === loc.id ? ' <span style="color:#7ec9ff">✓</span>' : ''}`;
+                        btn.onclick = () => selectMoveDestination(loc.id, loc.title);
+                        dropdown.appendChild(btn);
+                    });
+                }
+            }
+
+            function selectMoveDestination(locationId, locationName) {
+                // Toggle selection
+                if (pendingMoveLocationId === locationId) {
+                    pendingMoveLocationId = null;
+                    showToast("Move cancelled", "rgba(180, 60, 60, 0.85)");
+                } else {
+                    pendingMoveLocationId = locationId;
+                    pendingTravel = null; // Clear any pending travel
+                    showToast(`Will move to ${locationName || 'selected location'} when you send a message`, "rgba(60, 140, 180, 0.85)");
+                }
+                renderMoveDropdown();
+                closeMoveDropdown();
+            }
+
+            function executePendingMove() {
+                if (!pendingMoveLocationId) return false;
+                const moved = moveToLocation(pendingMoveLocationId);
+                pendingMoveLocationId = null;
+                return moved;
+            }
+
+            function toggleMoveDropdown() {
+                const dropdown = document.getElementById("move-dropdown");
+                const btn = document.getElementById("move-btn");
+                if (!dropdown || !btn) return;
+                const isOpen = dropdown.classList.contains("show");
+                if (isOpen) {
+                    dropdown.classList.remove("show");
+                } else {
+                    renderMoveDropdown();
+                    dropdown.classList.add("show");
+                    // Position dropdown above the button
+                    const rect = btn.getBoundingClientRect();
+                    dropdown.style.position = "fixed";
+                    dropdown.style.bottom = `calc(100vh - ${rect.top - 8}px)`;
+                    dropdown.style.left = `${rect.left + rect.width / 2}px`;
+                    dropdown.style.transform = "translateX(-50%)";
+                }
+            }
+
+            function closeMoveDropdown() {
+                const dropdown = document.getElementById("move-dropdown");
+                if (dropdown) dropdown.classList.remove("show");
+            }
+
+            function moveToLocation(locationId) {
+                closeMoveDropdown();
+                if (!locationId || locationId === currentLocationId) return false;
+                const cards = getCards();
+                const loc = cards.find(c => c.id === locationId && c.genre === "location");
+                if (!loc) {
+                    showToast("Location not found.", "rgba(180, 60, 60, 0.85)");
+                    return false;
+                }
+                // Update current location
+                updateLocation(locationId);
+                if (activeChar) {
+                    activeChar.currentLocationId = locationId;
+                    // Mark as discovered
+                    if (!activeChar.discoveredLocations) activeChar.discoveredLocations = [];
+                    if (!activeChar.discoveredLocations.includes(locationId)) {
+                        activeChar.discoveredLocations.push(locationId);
+                    }
+                    saveStoryLog();
+                }
+                // Add system message about location change
+                const locationName = loc.title || "Unknown Location";
+                addSystemDivider(`Moved to: ${locationName}`);
+                showToast(`Moved to ${locationName}`, "rgba(60, 140, 180, 0.85)");
+                return true;
+            }
+
+            document.getElementById("move-btn").onclick = (e) => {
+                e.stopPropagation();
+                toggleMoveDropdown();
+            };
+
+            // Close dropdown when clicking outside
+            document.addEventListener("click", (e) => {
+                const dropdown = document.getElementById("move-dropdown");
+                const btn = document.getElementById("move-btn");
+                if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+                    closeMoveDropdown();
+                }
+            });
+
+            /* ═══════════════════════════════════════
+               TRAVEL (Transport Building)
+            ═══════════════════════════════════════ */
+            function isCurrentLocationTransportBuilding() {
+                if (!currentLocationId) return false;
+                const cards = getCards();
+                const currentLoc = cards.find(c => c.id === currentLocationId);
+                if (!currentLoc) return false;
+                return currentLoc.genre === "location" &&
+                       currentLoc.locationSub === "building" &&
+                       currentLoc.locationDetail === "transport";
+            }
+
+            function updateTravelButtonVisibility() {
+                const travelBtn = document.getElementById("travel-btn");
+                if (!travelBtn) return;
+                if (isCurrentLocationTransportBuilding()) {
+                    travelBtn.style.display = "inline-flex";
+                } else {
+                    travelBtn.style.display = "none";
+                    closeTravelDropdown();
+                }
+            }
+
+            function getTransportDestinations() {
+                if (!currentLocationId) return [];
+                const cards = getCards();
+                const currentLoc = cards.find(c => c.id === currentLocationId);
+                if (!currentLoc || !Array.isArray(currentLoc.transportDestinations)) return [];
+                return currentLoc.transportDestinations.map(dest => {
+                    const loc = cards.find(c => c.id === dest.id);
+                    const building = dest.transportBuildingId ? cards.find(c => c.id === dest.transportBuildingId) : null;
+                    return { ...dest, title: loc ? loc.title : "Unknown", buildingTitle: building ? building.title : null };
+                });
+            }
+
+            function renderTravelDropdown() {
+                const dropdown = document.getElementById("travel-dropdown");
+                if (!dropdown) return;
+                dropdown.innerHTML = "";
+                const destinations = getTransportDestinations();
+                if (destinations.length === 0) {
+                    const empty = document.createElement("div");
+                    empty.className = "travel-empty";
+                    empty.textContent = "No destinations available";
+                    dropdown.appendChild(empty);
+                } else {
+                    // Header
+                    const header = document.createElement("div");
+                    header.className = "travel-header";
+                    header.textContent = "Select Destination";
+                    dropdown.appendChild(header);
+                    // Destinations
+                    destinations.forEach(dest => {
+                        const btn = document.createElement("button");
+                        const isSelected = pendingTravel && pendingTravel.destinationId === dest.id;
+                        btn.className = "travel-option" + (isSelected ? " selected" : "");
+                        const timeDisplay = dest.time ? `<span class="travel-time">${escHtml(dest.time)}</span>` : "";
+                        const buildingDisplay = dest.buildingTitle ? `<span style="font-size:10px;color:rgba(255,255,255,0.5);">📍 ${escHtml(dest.buildingTitle)}</span>` : "";
+                        const checkMark = isSelected ? ' <span style="color:#7ec9ff">✓</span>' : '';
+                        btn.innerHTML = `<div style="display:flex;flex-direction:column;gap:2px;"><span>${escHtml(dest.title || "Unnamed")}${checkMark}</span>${buildingDisplay}</div>${timeDisplay}`;
+                        btn.onclick = () => selectTravelDestination(dest.id, dest.transportBuildingId, dest.time, dest.title);
+                        dropdown.appendChild(btn);
+                    });
+                }
+            }
+
+            function toggleTravelDropdown() {
+                const dropdown = document.getElementById("travel-dropdown");
+                const btn = document.getElementById("travel-btn");
+                if (!dropdown || !btn) return;
+                const isOpen = dropdown.classList.contains("show");
+                if (isOpen) {
+                    dropdown.classList.remove("show");
+                } else {
+                    renderTravelDropdown();
+                    dropdown.classList.add("show");
+                    // Position dropdown above the button
+                    const rect = btn.getBoundingClientRect();
+                    dropdown.style.position = "fixed";
+                    dropdown.style.bottom = `calc(100vh - ${rect.top - 8}px)`;
+                    dropdown.style.left = `${rect.left + rect.width / 2}px`;
+                    dropdown.style.transform = "translateX(-50%)";
+                }
+            }
+
+            function closeTravelDropdown() {
+                const dropdown = document.getElementById("travel-dropdown");
+                if (dropdown) dropdown.classList.remove("show");
+            }
+
+            function parseTravelTime(timeStr) {
+                if (!timeStr) return { hours: 0, minutes: 0 };
+                const hoursMatch = timeStr.match(/(\d+)\s*h/);
+                const minsMatch = timeStr.match(/(\d+)\s*min/);
+                const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
+                const minutes = minsMatch ? parseInt(minsMatch[1]) : 0;
+                return { hours, minutes };
+            }
+
+            function addTravelTimeToGameTime(hours, minutes) {
+                const totalMinutesToAdd = hours * 60 + minutes;
+                if (totalMinutesToAdd <= 0) return;
+                const newMinutes = gameMinutes + totalMinutesToAdd;
+                gameMinutes = newMinutes;
+                // Update time of day display
+                updateTimeOfDayDisplay();
+            }
+
+            function selectTravelDestination(destinationId, transportBuildingId, travelTime, destinationName) {
+                // Toggle selection
+                if (pendingTravel && pendingTravel.destinationId === destinationId) {
+                    pendingTravel = null;
+                    showToast("Travel cancelled", "rgba(180, 60, 60, 0.85)");
+                } else {
+                    pendingTravel = { destinationId, transportBuildingId, travelTime };
+                    pendingMoveLocationId = null; // Clear any pending move
+                    const timeStr = travelTime ? ` (${travelTime})` : '';
+                    showToast(`Will travel to ${destinationName || 'selected destination'}${timeStr} when you send a message`, "rgba(60, 140, 180, 0.85)");
+                }
+                renderTravelDropdown();
+                closeTravelDropdown();
+            }
+
+            function executePendingTravel() {
+                if (!pendingTravel) return false;
+                const { destinationId, transportBuildingId, travelTime } = pendingTravel;
+                const traveled = travelToDestinationNow(destinationId, transportBuildingId, travelTime);
+                pendingTravel = null;
+                return traveled;
+            }
+
+            function travelToDestination(destinationId, transportBuildingId, travelTime) {
+                // This is now just for immediate travel if needed elsewhere
+                return travelToDestinationNow(destinationId, transportBuildingId, travelTime);
+            }
+
+            function travelToDestinationNow(destinationId, transportBuildingId, travelTime) {
+                closeTravelDropdown();
+                if (!destinationId || destinationId === currentLocationId) return false;
+                const cards = getCards();
+                const loc = cards.find(c => c.id === destinationId && c.genre === "location");
+                if (!loc) {
+                    showToast("Destination not found.", "rgba(180, 60, 60, 0.85)");
+                    return false;
+                }
+                // Parse and add travel time
+                const { hours, minutes } = parseTravelTime(travelTime);
+                if (hours > 0 || minutes > 0) {
+                    addTravelTimeToGameTime(hours, minutes);
+                }
+                // If transport building is specified, navigate to that building first, then to parent location
+                if (transportBuildingId) {
+                    const building = cards.find(c => c.id === transportBuildingId);
+                    if (building) {
+                        // Navigate to the transport building (child location)
+                        updateLocation(transportBuildingId);
+                        if (activeChar) {
+                            activeChar.currentLocationId = transportBuildingId;
+                            if (!activeChar.discoveredLocations) activeChar.discoveredLocations = [];
+                            if (!activeChar.discoveredLocations.includes(transportBuildingId)) {
+                                activeChar.discoveredLocations.push(transportBuildingId);
+                            }
+                            // Also discover the parent location
+                            if (!activeChar.discoveredLocations.includes(destinationId)) {
+                                activeChar.discoveredLocations.push(destinationId);
+                            }
+                            saveStoryLog();
+                        }
+                        // Add system message
+                        const buildingName = building.title || "Station";
+                        const locationName = loc.title || "Unknown Location";
+                        const timeInfo = hours > 0 || minutes > 0 ? ` (${hours > 0 ? hours + "h " : ""}${minutes > 0 ? minutes + "min" : ""})` : "";
+                        addSystemDivider(`Traveled to: ${buildingName} (${locationName})${timeInfo}`);
+                        showToast(`Arrived at ${buildingName}${timeInfo}`, "rgba(60, 140, 180, 0.85)");
+                        return true;
+                    }
+                }
+                // Fallback: Update to destination location (old behavior)
+                updateLocation(destinationId);
+                if (activeChar) {
+                    activeChar.currentLocationId = destinationId;
+                    if (!activeChar.discoveredLocations) activeChar.discoveredLocations = [];
+                    if (!activeChar.discoveredLocations.includes(destinationId)) {
+                        activeChar.discoveredLocations.push(destinationId);
+                    }
+                    saveStoryLog();
+                }
+                // Add system message
+                const locationName = loc.title || "Unknown Location";
+                const timeInfo = hours > 0 || minutes > 0 ? ` (${hours > 0 ? hours + "h " : ""}${minutes > 0 ? minutes + "min" : ""})` : "";
+                addSystemDivider(`Traveled to: ${locationName}${timeInfo}`);
+                showToast(`Traveled to ${locationName}${timeInfo}`, "rgba(60, 140, 180, 0.85)");
+                return true;
+            }
+
+            document.getElementById("travel-btn").onclick = (e) => {
+                e.stopPropagation();
+                toggleTravelDropdown();
+            };
+
+            // Close travel dropdown when clicking outside
+            document.addEventListener("click", (e) => {
+                const dropdown = document.getElementById("travel-dropdown");
+                const btn = document.getElementById("travel-btn");
+                if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+                    closeTravelDropdown();
+                }
+            });
+
+            /* ═══════════════════════════════════════
+               STATS PANEL
+            ═══════════════════════════════════════ */
+            function toggleStatsPanel() {
+                const overlay = document.getElementById("stats-panel-overlay");
+                if (!overlay) return;
+                const isVisible = overlay.style.display === "flex";
+                if (isVisible) {
+                    closeStatsPanel();
+                } else {
+                    renderStatsPanel();
+                    overlay.style.display = "flex";
+                    // Trigger reflow for animation
+                    void overlay.offsetWidth;
+                    overlay.classList.add("show");
+                }
+            }
+
+            function closeStatsPanel() {
+                const overlay = document.getElementById("stats-panel-overlay");
+                if (!overlay) return;
+                overlay.classList.remove("show");
+                setTimeout(() => {
+                    overlay.style.display = "none";
+                }, 200);
+            }
+
+            function renderStatsPanel() {
+                if (!activeChar) {
+                    document.getElementById("stats-char-name").textContent = "No Character";
+                    document.getElementById("stats-char-race").textContent = "—";
+                    document.getElementById("stats-age").textContent = "—";
+                    document.getElementById("stats-birthdate").textContent = "";
+                    document.getElementById("stats-appearance").textContent = "No character data available.";
+                    document.getElementById("stats-relations-list").innerHTML = '<div class="stats-no-relations">No relations</div>';
+                    return;
+                }
+
+                // Name
+                const fullName = [activeChar.firstName, activeChar.lastName].filter(Boolean).join(" ") || "Unknown";
+                document.getElementById("stats-char-name").textContent = fullName;
+                document.getElementById("stats-char-race").textContent = activeChar.raceName || "—";
+
+                // Age & Birthdate
+                const age = activeChar.age || "—";
+                document.getElementById("stats-age").textContent = age + (typeof age === "number" ? " years" : "");
+                const bd = readBirthdate(activeChar);
+                if (bd && bd.day && bd.month) {
+                    document.getElementById("stats-birthdate").textContent = `(${bd.day}.${bd.month})`;
+                } else {
+                    document.getElementById("stats-birthdate").textContent = "";
+                }
+
+                // Appearance
+                document.getElementById("stats-appearance").textContent = activeChar.appearance || "No appearance description available.";
+
+                // Relations
+                renderStatsRelations();
+
+                // Skills
+                renderStatsSkills();
+
+                // Level & XP
+                renderStatsLevel();
+            }
+
+            function renderStatsRelations() {
+                const container = document.getElementById("stats-relations-list");
+                container.innerHTML = "";
+
+                if (!activeChar || !activeChar.relations || activeChar.relations.length === 0) {
+                    container.innerHTML = '<div class="stats-no-relations">No family relations</div>';
+                    return;
+                }
+
+                const cards = getCards();
+
+                // Filter only family relations
+                const familyRelations = activeChar.relations.filter(rel => rel.type === "family");
+
+                if (familyRelations.length === 0) {
+                    container.innerHTML = '<div class="stats-no-relations">No family relations</div>';
+                    return;
+                }
+
+                familyRelations.forEach(rel => {
+                    const npc = cards.find(c => c.id === rel.targetId && c.genre === "character");
+                    if (!npc) return;
+
+                    const item = document.createElement("div");
+                    item.className = "stats-relation-item family";
+
+                    const npcName = [npc.firstName, npc.lastName].filter(Boolean).join(" ") || "Unknown";
+                    const emoji = "👨‍👩‍👧‍👦";
+
+                    item.innerHTML = `
+                        <div class="stats-relation-avatar">${emoji}</div>
+                        <div class="stats-relation-info">
+                            <div class="stats-relation-name">${escHtml(npcName)}</div>
+                            <div class="stats-relation-type">${rel.description || "Family"}</div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            function renderStatsSkills() {
+                const section = document.getElementById("stats-skills-section");
+                const container = document.getElementById("stats-skills-list");
+
+                // Check if character has a skill
+                if (!activeChar || !activeChar.skillId) {
+                    section.style.display = "none";
+                    return;
+                }
+
+                // Show section
+                section.style.display = "flex";
+                container.innerHTML = "";
+
+                // Find the skill card
+                const cards = getCards();
+                const skill = cards.find(c => c.id === activeChar.skillId && c.genre === "skill");
+
+                if (!skill) {
+                    container.innerHTML = '<div class="stats-no-skills">No skills found</div>';
+                    return;
+                }
+
+                // Create skill tag
+                const tag = document.createElement("div");
+                tag.className = "stats-skill-tag";
+                tag.textContent = skill.title || "Unknown Skill";
+                container.appendChild(tag);
+            }
+
+            /* ═══════════════════════════════════════
+               LEVEL SYSTEM & XP
+            ═══════════════════════════════════════ */
+            function getSystemConfig() {
+                const cards = getCards();
+                const systemCard = cards.find(c => c.genre === "system");
+                return systemCard?.systemConfig || null;
+            }
+
+            function isLevelSystemActive() {
+                const config = getSystemConfig();
+                return config && config.levelSystemEnabled;
+            }
+
+            function renderStatsLevel() {
+                const section = document.getElementById("stats-level-section");
+                if (!section) return;
+
+                // Check if Level System is active
+                if (!isLevelSystemActive()) {
+                    section.style.display = "none";
+                    return;
+                }
+
+                // Show section
+                section.style.display = "flex";
+
+                // Get player level data
+                const levelData = activeChar?.levelData || { level: 1, xp: 0 };
+                const config = getSystemConfig();
+
+                // Calculate XP needed for current level
+                const baseXP = config.expBase || 100;
+                const increment = config.expIncrement || 100;
+                const xpForCurrentLevel = baseXP + (increment * (levelData.level - 1));
+
+                // Update display
+                document.getElementById("stats-level").textContent = levelData.level;
+                document.getElementById("stats-xp-current").textContent = levelData.xp;
+                document.getElementById("stats-xp-needed").textContent = xpForCurrentLevel;
+
+                // Update XP bar
+                const percentage = Math.min(100, (levelData.xp / xpForCurrentLevel) * 100);
+                document.getElementById("stats-xp-bar").style.width = percentage + "%";
+            }
+
+            function calculateXPForLevel(level, config) {
+                const baseXP = config.expBase || 100;
+                const increment = config.expIncrement || 100;
+                return baseXP + (increment * (level - 1));
+            }
+
+            function addXP(targetId, amount) {
+                const config = getSystemConfig();
+                if (!config || !config.levelSystemEnabled) return;
+
+                const cards = getCards();
+                const target = cards.find(c => c.id === targetId && c.genre === "character");
+                if (!target) return;
+
+                // Initialize level data if not exists
+                if (!target.levelData) {
+                    target.levelData = { level: config.levelMin || 1, xp: 0 };
+                }
+
+                // Add XP
+                target.levelData.xp += amount;
+
+                // Check for level up
+                const maxLevel = config.levelMax || 100;
+                let leveledUp = false;
+
+                while (target.levelData.level < maxLevel) {
+                    const xpNeeded = calculateXPForLevel(target.levelData.level, config);
+                    if (target.levelData.xp >= xpNeeded) {
+                        target.levelData.xp -= xpNeeded;
+                        target.levelData.level++;
+                        leveledUp = true;
+                    } else {
+                        break;
+                    }
+                }
+
+                // Save changes
+                const idx = cards.findIndex(c => c.id === targetId);
+                if (idx !== -1) {
+                    cards[idx] = target;
+                    Storage.set("storyki_world_cards", JSON.stringify(cards));
+                }
+
+                // Update display if it's the active character
+                if (activeChar && activeChar.id === targetId) {
+                    renderStatsLevel();
+                }
+
+                return { leveledUp, newLevel: target.levelData.level };
+            }
+
+            /* ═══════════════════════════════════════
+               KILL COMMAND PROCESSING
+            ═══════════════════════════════════════ */
+            function processKillCommand(speciesId, recipientsStr) {
+                const config = getSystemConfig();
+                if (!config || !config.levelSystemEnabled) {
+                    console.log("Level System not active, skipping XP distribution");
+                    return;
+                }
+
+                const cards = getCards();
+
+                // Find species and get XP reward
+                const species = cards.find(c => c.id === speciesId && c.genre === "species");
+                if (!species) {
+                    console.warn("Species not found for XP distribution:", speciesId);
+                    return;
+                }
+
+                const totalXP = species.xpReward || 0;
+                if (totalXP <= 0) {
+                    console.log("No XP reward for species:", speciesId);
+                    return;
+                }
+
+                // Parse recipients
+                const recipients = recipientsStr.split(/,\s*/).map(s => s.trim()).filter(Boolean);
+                if (recipients.length === 0) {
+                    console.log("No recipients for XP distribution");
+                    return;
+                }
+
+                // Calculate XP per recipient
+                const xpPerRecipient = Math.floor(totalXP / recipients.length);
+
+                // Distribute XP
+                recipients.forEach(recipient => {
+                    if (recipient.toLowerCase() === "player") {
+                        // Add XP to active character (player)
+                        if (activeChar) {
+                            const result = addXP(activeChar.id, xpPerRecipient);
+                            if (result && result.leveledUp) {
+                                showToast(`Level Up! You are now level ${result.newLevel}!`, "#ffd700");
+                            }
+                        }
+                    } else {
+                        // Add XP to NPC
+                        const npc = cards.find(c => c.id === recipient && c.genre === "character");
+                        if (npc) {
+                            const result = addXP(npc.id, xpPerRecipient);
+                            if (result && result.leveledUp) {
+                                console.log(`NPC ${npc.firstName || npc.id} leveled up to ${result.newLevel}`);
+                            }
+                        } else {
+                            console.warn("NPC not found for XP distribution:", recipient);
+                        }
+                    }
+                });
+
+                // Show toast with XP distribution info
+                if (recipients.length === 1 && recipients[0].toLowerCase() === "player" && activeChar) {
+                    showToast(`+${xpPerRecipient} XP gained!`, "#4a90e2");
+                } else if (recipients.length > 1) {
+                    showToast(`+${xpPerRecipient} XP distributed to ${recipients.length} targets!`, "#4a90e2");
+                }
+            }
 
             /* ═══════════════════════════════════════
                BUTTON LOCKING DURING GENERATION
             ═══════════════════════════════════════ */
             function lockAllButtons() {
-                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn'];
+                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn', 'move-btn', 'travel-btn'];
                 buttons.forEach(btnId => {
                     const btn = document.getElementById(btnId);
                     if (btn) {
@@ -4551,7 +5578,7 @@ Example:
             }
 
             function unlockAllButtons() {
-                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn'];
+                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn', 'move-btn', 'travel-btn'];
                 buttons.forEach(btnId => {
                     const btn = document.getElementById(btnId);
                     if (btn) {
@@ -4705,6 +5732,17 @@ Example:
 
                 ensureStoryRecord();
                 autoSaveStory();
+
+                // Stats panel close on outside click
+                const statsOverlay = document.getElementById("stats-panel-overlay");
+                if (statsOverlay) {
+                    statsOverlay.addEventListener("click", (e) => {
+                        if (e.target.id === "stats-panel-overlay") {
+                            closeStatsPanel();
+                        }
+                    });
+                }
+
                 setTimeout(() => {
                     document.body.style.opacity = "1";
                 }, 100);

@@ -801,6 +801,45 @@
                 padding: 7px 4px;
                 text-align: center;
             }
+            /* ─── Level Scene (same layout) ─── */
+            #level-view {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+                background: rgba(10, 10, 10, 0.98);
+            }
+            #level-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #level-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
+            #level-view .nav-count {
+                min-width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: rgba(60, 60, 60, 0.85);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 8px;
+            }
             /* ─── Map Scene (same layout) ─── */
             #map-view {
                 position: fixed;
@@ -1025,6 +1064,190 @@
             }
             .subloc-tag-remove:hover {
                 color: #ff7070;
+            }
+
+            /* ─── Transport Destination Tags ─── */
+            .transport-dest-tag {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 10px 14px;
+                border-radius: 8px;
+                background: rgba(40, 40, 40, 0.95);
+                border: 1.5px solid rgba(255, 255, 255, 0.12);
+                margin-bottom: 8px;
+            }
+            .transport-dest-info {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                flex: 1;
+            }
+            .transport-dest-name {
+                color: #fff;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            .transport-dest-building {
+                color: rgba(220, 180, 120, 0.9);
+                font-size: 11px;
+                font-weight: 500;
+                margin-top: 2px;
+            }
+            .transport-dest-time-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .transport-dest-time-label {
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 11px;
+                font-weight: 500;
+            }
+            .transport-dest-time-input {
+                background: rgba(14, 14, 14, 0.8);
+                border: 1.5px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                padding: 6px 10px;
+                color: #fff;
+                font-size: 12px;
+                font-family: inherit;
+                width: 120px;
+                outline: none;
+            }
+            .transport-dest-time-input:focus {
+                border-color: rgba(255, 255, 255, 0.25);
+            }
+            .transport-dest-time-input::placeholder {
+                color: rgba(255, 255, 255, 0.3);
+            }
+
+            /* ─── Transport Destination Picker ─── */
+            .transport-picker-item {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                padding: 10px 14px !important;
+            }
+            .transport-picker-main-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                cursor: pointer;
+            }
+            .transport-picker-details {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-top: 8px;
+                margin-left: 32px;
+                padding-top: 8px;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+            }
+            .transport-picker-building-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .transport-picker-building-label {
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 11px;
+                font-weight: 500;
+                white-space: nowrap;
+            }
+            .transport-picker-building-select {
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+                padding: 6px 10px;
+                color: #fff;
+                font-size: 12px;
+                font-family: inherit;
+                flex: 1;
+                outline: none;
+                cursor: pointer;
+            }
+            .transport-picker-building-select:focus {
+                border-color: rgba(255, 255, 255, 0.35);
+            }
+            .transport-picker-building-select option {
+                background: rgba(20, 20, 20, 0.98);
+                color: #fff;
+            }
+            .transport-picker-time-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .transport-picker-time-label {
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 11px;
+                font-weight: 500;
+                white-space: nowrap;
+            }
+            .transport-picker-time-input {
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+                padding: 6px 10px;
+                color: #fff;
+                font-size: 12px;
+                font-family: inherit;
+                width: 120px;
+                outline: none;
+            }
+            .transport-picker-time-input:focus {
+                border-color: rgba(255, 255, 255, 0.35);
+            }
+            .transport-picker-time-input::placeholder {
+                color: rgba(255, 255, 255, 0.3);
+            }
+            .transport-time-inputs {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .transport-time-number {
+                background: rgba(14, 14, 14, 0.9);
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+                padding: 6px 8px;
+                color: #fff;
+                font-size: 13px;
+                font-family: inherit;
+                width: 50px;
+                text-align: center;
+                outline: none;
+                appearance: textfield;
+                -moz-appearance: textfield;
+            }
+            .transport-time-number::-webkit-outer-spin-button,
+            .transport-time-number::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                appearance: none;
+                margin: 0;
+            }
+            .transport-time-number:focus {
+                border-color: rgba(255, 255, 255, 0.35);
+            }
+            .transport-time-unit {
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 12px;
+                font-weight: 500;
+            }
+
+            #transport-dest-picker {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 3150;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(4px);
+            }
+            #transport-dest-picker.visible {
+                display: flex;
             }
 
             /* ─── Sublocation Picker Panel ─── */
@@ -1391,6 +1614,7 @@
             }
             .namegen-section {
                 /* visible by default for male, hidden for female */
+                display: block;
             }
 
             /* ─── Name Generator View ─── */
@@ -2442,6 +2666,7 @@
                             <option value="lore">Lore</option>
                             <option value="character">Character</option>
                             <option value="skill">Skill</option>
+                            <option value="system">System</option>
                         </select>
                     </div>
                 </div>
@@ -2558,6 +2783,9 @@
                             <button type="button" class="subloc-btn relation-btn" id="tool-btn-skills" onclick="showSkillsScene()">
                                 <span class="subloc-icon">🛠️</span> Skills
                             </button>
+                            <button type="button" class="subloc-btn relation-btn" id="tool-btn-level" onclick="showLevelScene()" style="display:none;">
+                                <span class="subloc-icon">📈</span> Level
+                            </button>
                         </div>
                     </div>
                     <div id="char-relation-group" style="display:none; margin-top: 14px;">
@@ -2608,6 +2836,29 @@
                             placeholder="Describe typical personality traits..."
                         ></textarea>
                     </div>
+
+                    <!-- XP Reward (only when Level System is active) -->
+                    <div id="species-xp-group" class="form-group" style="display:none; margin-top:14px;">
+                        <label class="form-label">XP Reward</label>
+                        <div class="tools-row">
+                            <button
+                                type="button"
+                                class="subloc-btn"
+                                id="species-xp-btn"
+                                onclick="toggleSpeciesXpPanel()"
+                            >
+                                <span class="subloc-icon">⚡</span>
+                                XP
+                            </button>
+                        </div>
+                        <div id="species-xp-panel" style="display:none; margin-top:12px; padding:14px; background:rgba(255,255,255,.05); border-radius:10px; border:1px solid rgba(255,255,255,.1);">
+                            <label class="form-label" style="font-size:12px;">XP gained when killing this species</label>
+                            <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                                <input type="number" id="species-xp-value" class="form-input" value="0" min="0" style="flex:1;">
+                                <span style="color:rgba(255,255,255,.5); font-size:13px;">XP</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="lore-block" style="display: none">
@@ -2640,6 +2891,82 @@
                             <button type="button" class="subloc-btn" onclick="addLoreTag()" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
                         </div>
                         <div class="item-tag-count" id="lore-tag-count">0 / 10 tags</div>
+                    </div>
+                </div>
+
+                <!-- ── System Block ── -->
+                <div id="system-block" style="display: none">
+                    <div class="form-group">
+                        <label class="form-label">System Settings</label>
+                        <div class="tools-row" id="system-level-btn-row">
+                            <button
+                                type="button"
+                                class="subloc-btn"
+                                id="system-level-btn"
+                                onclick="toggleLevelSystemPanel()"
+                            >
+                                <span class="subloc-icon">📈</span>
+                                Level System
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Level System Panel (hidden by default) -->
+                    <div id="level-system-panel" style="display:none; margin-top:14px; padding:16px; background:rgba(255,255,255,.05); border-radius:12px; border:1px solid rgba(255,255,255,.1);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                            <span style="color:#fff; font-weight:600;">Level System Settings</span>
+                            <label class="switch" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="checkbox" id="level-system-enabled" onchange="onLevelSystemToggle()">
+                                <span style="color:rgba(255,255,255,.7); font-size:13px;">Enabled</span>
+                            </label>
+                        </div>
+
+                        <!-- Min/Max Level -->
+                        <div id="level-minmax-section" style="display:none;">
+                            <div style="display:flex; gap:12px; margin-bottom:16px;">
+                                <div style="flex:1;">
+                                    <label class="form-label" style="font-size:12px;">Min Level</label>
+                                    <input type="number" id="level-min" class="form-input" value="1" min="1" max="999" style="width:100%;">
+                                </div>
+                                <div style="flex:1;">
+                                    <label class="form-label" style="font-size:12px;">Max Level</label>
+                                    <input type="number" id="level-max" class="form-input" value="100" min="1" max="999" style="width:100%;">
+                                </div>
+                            </div>
+
+                            <!-- EXP Settings -->
+                            <div id="exp-settings-section" style="display:none;">
+                                <div style="border-top:1px solid rgba(255,255,255,.1); padding-top:16px;">
+                                    <div style="color:rgba(255,255,255,.5); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">EXP Settings</div>
+
+                                    <div style="margin-bottom:12px;">
+                                        <label class="form-label" style="font-size:12px;">Base EXP for Level 1</label>
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <input type="number" id="exp-base" class="form-input" value="100" min="1" style="flex:1;">
+                                            <span style="color:rgba(255,255,255,.5); font-size:13px;">XP</span>
+                                        </div>
+                                    </div>
+
+                                    <div style="margin-bottom:12px;">
+                                        <label class="form-label" style="font-size:12px;">Additional EXP per Level</label>
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <input type="number" id="exp-increment" class="form-input" value="100" min="0" style="flex:1;">
+                                            <span style="color:rgba(255,255,255,.5); font-size:13px;">XP more</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Preview -->
+                                    <div style="background:rgba(0,0,0,.3); border-radius:8px; padding:12px; margin-top:12px;">
+                                        <div style="color:rgba(255,255,255,.5); font-size:11px; margin-bottom:8px;">Preview:</div>
+                                        <div id="exp-preview" style="font-size:12px; color:rgba(255,255,255,.8); line-height:1.6;">
+                                            Level 1 = 100 XP<br>
+                                            Level 2 = 200 XP<br>
+                                            Level 3 = 300 XP
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -2777,6 +3104,7 @@
                         <option value="house">House</option>
                         <option value="shop">Shop</option>
                         <option value="school">School</option>
+                        <option value="transport">Transport</option>
                     </select>
                     <div class="form-group" style="margin-top:14px;">
                         <label class="form-label">Tools</label>
@@ -2784,6 +3112,18 @@
                             <button type="button" class="subloc-btn" onclick="setLocationBackground()">
                                 <span class="subloc-icon">🖼️</span> Background
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Transport Destination -->
+                    <div id="transport-destination-group" style="display: none; margin-top: 14px;">
+                        <label class="form-label">Transport Destination</label>
+                        <div class="subloc-tags" id="transport-destination-tags"></div>
+                        <button type="button" class="subloc-btn" onclick="openTransportDestinationPicker()">
+                            <span class="subloc-icon">🚂</span> Select Destination
+                        </button>
+                        <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 6px;">
+                            Select a Custom Location this transport leads to (e.g., Train Station → Tokyo)
                         </div>
                     </div>
 
@@ -3405,6 +3745,61 @@
         </div>
 
         <!-- ══════════════════════════════
+             CHARACTER LEVEL SCENE
+        ══════════════════════════════ -->
+        <div id="level-view" style="display: none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                    ←
+                </button>
+                <span class="nav-title">CHARACTER LEVEL</span>
+                <div class="nav-count" id="level-count">0</div>
+            </nav>
+
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Character Level</h2>
+                    <span class="entry-badge badge-character">CHARACTER</span>
+                </div>
+
+                <!-- Current Level Info -->
+                <div class="form-group" style="text-align: center; padding: 20px; background: rgba(255,215,0,0.1); border-radius: 12px; border: 1px solid rgba(255,215,0,0.3);">
+                    <div style="font-size: 48px; font-weight: 700; color: #ffd700; margin-bottom: 8px;">
+                        ⚔️ <span id="level-current-display">1</span>
+                    </div>
+                    <div style="color: rgba(255,255,255,0.7); font-size: 14px;">Current Level</div>
+                </div>
+
+                <!-- Level Selector -->
+                <div class="form-group">
+                    <label class="form-label">Set Level</label>
+                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                        <input type="range" id="level-slider" min="1" max="100" value="1" style="flex: 1; min-width: 200px;">
+                        <input type="number" id="level-input" class="form-input" min="1" max="100" value="1" style="width: 80px; text-align: center;">
+                    </div>
+                    <div id="level-range-hint" style="margin-top: 8px; color: rgba(255,255,255,0.5); font-size: 12px;">
+                        Min: 1 | Max: 100
+                    </div>
+                </div>
+
+                <!-- XP Info -->
+                <div class="form-group" style="padding: 14px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                    <label class="form-label" style="font-size: 12px;">Current XP</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" id="level-xp-input" class="form-input" value="0" min="0" style="flex: 1;">
+                        <span style="color: rgba(255,255,255,0.5);">XP</span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-save" onclick="confirmLevel()">Done</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
              MAP DISTANCES SCENE (Location)
         ══════════════════════════════ -->
         <div id="map-view" style="display: none;">
@@ -3428,6 +3823,24 @@
                 <div class="form-actions">
                     <button class="btn-cancel" onclick="showFormView()">← Back</button>
                     <button class="btn-save" onclick="confirmMapScene()">Done</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TRANSPORT DESTINATION PICKER ── -->
+        <div id="transport-dest-picker">
+            <div class="subloc-picker-panel">
+                <div class="subloc-picker-header">
+                    <span class="subloc-picker-title">Select Transport Destination</span>
+                    <button class="subloc-picker-close" onclick="closeTransportDestinationPicker()">
+                        &#10005;
+                    </button>
+                </div>
+                <input type="text" class="subloc-picker-search" id="transport-dest-search" placeholder="Search Custom Locations..." oninput="renderTransportDestinationList()" />
+                <div class="subloc-picker-list" id="transport-dest-list"></div>
+                <div class="subloc-picker-actions">
+                    <button class="btn-cancel" onclick="closeTransportDestinationPicker()">Cancel</button>
+                    <button class="btn-save" onclick="confirmTransportDestinationPicker()">Select</button>
                 </div>
             </div>
         </div>
@@ -3892,6 +4305,7 @@
                 const sec = document.getElementById("secrets-view");
                 const cls = document.getElementById("classes-view");
                 const skl = document.getElementById("skills-view");
+                const lvl = document.getElementById("level-view");
                 const ev = document.getElementById("events-view");
                 const wrk = document.getElementById("work-view");
                 const map = document.getElementById("map-view");
@@ -3902,6 +4316,7 @@
                 if (sec) sec.style.display = "none";
                 if (cls) cls.style.display = "none";
                 if (skl) skl.style.display = "none";
+                if (lvl) lvl.style.display = "none";
                 if (ev) ev.style.display = "none";
                 if (wrk) wrk.style.display = "none";
                 if (map) map.style.display = "none";
@@ -4690,6 +5105,103 @@
                 tag.innerHTML = `<span>${escHtml(sk.title)}</span>`;
                 wrap.appendChild(tag);
             }
+
+            /* ─────────────────────────────────────────
+               CHARACTER LEVEL (when Level System is active)
+            ───────────────────────────────────────── */
+            let levelTempData = { level: 1, xp: 0 };
+
+            function updateLevelButtonVisibility() {
+                const btn = document.getElementById("tool-btn-level");
+                const type = document.getElementById("f-type").value;
+                if (!btn) return;
+
+                // Only show for characters when Level System is active
+                if (type === "character" && isLevelSystemActive()) {
+                    btn.style.display = "inline-flex";
+                } else {
+                    btn.style.display = "none";
+                }
+            }
+
+            function showLevelScene() {
+                const config = getSystemConfig();
+                if (!config || !config.levelSystemEnabled) {
+                    showToast("Level System is not active.", "#c04040");
+                    return;
+                }
+
+                // Get current level data from editing card or defaults
+                const minLevel = config.levelMin || 1;
+                const maxLevel = config.levelMax || 100;
+
+                // Initialize temp data from current card if editing
+                if (editingId) {
+                    const cards = getCards();
+                    const card = cards.find(c => c.id === editingId);
+                    if (card && card.levelData) {
+                        levelTempData = { ...card.levelData };
+                    } else {
+                        levelTempData = { level: minLevel, xp: 0 };
+                    }
+                } else {
+                    levelTempData = { level: minLevel, xp: 0 };
+                }
+
+                // Update UI
+                document.getElementById("level-current-display").textContent = levelTempData.level;
+                document.getElementById("level-slider").min = minLevel;
+                document.getElementById("level-slider").max = maxLevel;
+                document.getElementById("level-slider").value = levelTempData.level;
+                document.getElementById("level-input").min = minLevel;
+                document.getElementById("level-input").max = maxLevel;
+                document.getElementById("level-input").value = levelTempData.level;
+                document.getElementById("level-xp-input").value = levelTempData.xp;
+                document.getElementById("level-range-hint").textContent = `Min: ${minLevel} | Max: ${maxLevel}`;
+
+                // Show level view
+                document.getElementById("form-view").style.display = "none";
+                document.getElementById("level-view").style.display = "flex";
+            }
+
+            function confirmLevel() {
+                levelTempData.level = parseInt(document.getElementById("level-input").value) || 1;
+                levelTempData.xp = parseInt(document.getElementById("level-xp-input").value) || 0;
+                showFormView();
+            }
+
+            // Sync slider and input
+            document.getElementById("level-slider")?.addEventListener("input", function() {
+                document.getElementById("level-input").value = this.value;
+                document.getElementById("level-current-display").textContent = this.value;
+            });
+            document.getElementById("level-input")?.addEventListener("input", function() {
+                document.getElementById("level-slider").value = this.value;
+                document.getElementById("level-current-display").textContent = this.value;
+            });
+
+            function getSystemConfig() {
+                const cards = getCards();
+                const systemCard = cards.find(c => c.genre === "system");
+                return systemCard?.systemConfig || null;
+            }
+
+            function getCharacterLevelData() {
+                // Returns level data to be saved with the character
+                return levelTempData.level > 1 || levelTempData.xp > 0 ? { ...levelTempData } : null;
+            }
+
+            function applyCharacterLevelData(card) {
+                if (card.genre !== "character") return;
+                if (card.levelData) {
+                    levelTempData = { ...card.levelData };
+                } else {
+                    const config = getSystemConfig();
+                    const minLevel = config?.levelMin || 1;
+                    levelTempData = { level: minLevel, xp: 0 };
+                }
+            }
+
             function getAvailableNPCsForSchool() {
                 // All characters that are residents in any location
                 const cards = getCards();
@@ -4876,6 +5388,7 @@
                                 "f-char-birth-month",
                             ).value = card.birthdate.month || "1";
                         }
+                        applyCharacterLevelData(card);
                         relationSelections = card.relations
                             ? [...card.relations]
                             : [];
@@ -4897,6 +5410,8 @@
                             card.appearance || "";
                         document.getElementById("f-species-personality").value =
                             card.personality || "";
+                        updateSpeciesXpVisibility();
+                        applySpeciesXpData(card);
                     } else {
                         resetSpeciesFields();
                     }
@@ -4964,6 +5479,8 @@
                     resetLocationSubtype();
                     onTypeChange();
                     if (card.genre === "location") applyLocationSubtype(card);
+                    // restore system data
+                    if (card.genre === "system") applySystemData(card);
                     // restore species selections for location
                     if (card.genre === "location") {
                         const sp = card.species || {};
@@ -5213,6 +5730,13 @@
             function onTypeChange() {
                 const type = document.getElementById("f-type").value;
 
+                // Check System type restriction (only one allowed)
+                if (type === "system" && hasSystemCard(editingId)) {
+                    showToast("Only one System card is allowed!", "#c04040");
+                    document.getElementById("f-type").value = "";
+                    return;
+                }
+
                 // Show / hide Name Generator button
                 document.getElementById("namegen-form-group").style.display =
                     type === "race" ? "block" : "none";
@@ -5229,9 +5753,19 @@
                 document.getElementById("lore-block").style.display =
                     type === "lore" ? "block" : "none";
 
+                // Show / hide System block
+                document.getElementById("system-block").style.display =
+                    type === "system" ? "block" : "none";
+
                 // Show / hide Description at bottom for Character
                 const descGrp = document.getElementById("description-group");
-                if (descGrp) descGrp.style.display = (type === "character" || type === "lore" || type === "species") ? "none" : "block";
+                if (descGrp) descGrp.style.display = (type === "character" || type === "lore" || type === "species" || type === "system") ? "none" : "block";
+
+                // Show / hide Species XP group based on Level System availability
+                updateSpeciesXpVisibility();
+
+                // Show / hide Level button for characters
+                updateLevelButtonVisibility();
 
                 const locGroup = document.getElementById("location-sub-group");
                 const buildingGroup =
@@ -5346,9 +5880,21 @@
                         renderShopDays();
                     }
                 }
+                // Transport destination group
+                const transportGrp = document.getElementById("transport-destination-group");
+                if (transportGrp) {
+                    const isTransport = sub === "transport";
+                    transportGrp.style.display = isTransport ? "block" : "none";
+                    if (isTransport) {
+                        renderTransportDestinationTags();
+                    }
+                }
                 if (sub !== "house") {
                     residentSelections = [];
                     renderSublocTags("resident");
+                }
+                if (sub !== "transport") {
+                    transportDestinations = [];
                 }
             }
 
@@ -5423,6 +5969,11 @@
                         residentSelections = [...(card.residents || [])];
                         renderSublocTags("resident");
                     }
+                    // restore transport destinations
+                    if (card.locationDetail === "transport") {
+                        transportDestinations = Array.isArray(card.transportDestinations) ? card.transportDestinations.map(d => ({...d})) : [];
+                        renderTransportDestinationTags();
+                    }
                     // restore canBeSpawn
                     const grp = document.getElementById("spawn-check-group");
                     if (card.canBeSpawn) grp.classList.add("active");
@@ -5453,6 +6004,7 @@
                 document.getElementById("f-location-sub").value = "";
                 document.getElementById("f-building-sub").value = "";
                 curseTags = [];
+                transportDestinationId = null;
                 onBuildingSubChange();
                 resetSpawnCheck();
                 document.getElementById("location-sub-group").style.display =
@@ -5598,6 +6150,147 @@
                 const mode = document.getElementById("f-lore-mode").value;
                 const grp = document.getElementById("lore-tags-group");
                 if (grp) grp.style.display = mode === "tags" ? "block" : "none";
+            }
+
+            /* ─────────────────────────────────────────
+               SYSTEM TYPE & LEVEL SYSTEM
+            ───────────────────────────────────────── */
+            function hasSystemCard(excludeId = null) {
+                const cards = getCards();
+                return cards.some(c => c.genre === "system" && c.id !== excludeId);
+            }
+
+            function onTypeChangeSystemCheck() {
+                const type = document.getElementById("f-type").value;
+                if (type === "system" && hasSystemCard(editingId)) {
+                    showToast("Only one System card is allowed!", "#c04040");
+                    document.getElementById("f-type").value = "";
+                    onTypeChange();
+                    return false;
+                }
+                return true;
+            }
+
+            function toggleLevelSystemPanel() {
+                const panel = document.getElementById("level-system-panel");
+                const isVisible = panel.style.display === "block";
+                panel.style.display = isVisible ? "none" : "block";
+            }
+
+            function onLevelSystemToggle() {
+                const enabled = document.getElementById("level-system-enabled").checked;
+                const minmaxSection = document.getElementById("level-minmax-section");
+                const expSection = document.getElementById("exp-settings-section");
+
+                if (enabled) {
+                    minmaxSection.style.display = "block";
+                    expSection.style.display = "block";
+                    updateExpPreview();
+                } else {
+                    minmaxSection.style.display = "none";
+                    expSection.style.display = "none";
+                }
+            }
+
+            function updateExpPreview() {
+                const base = parseInt(document.getElementById("exp-base").value) || 100;
+                const increment = parseInt(document.getElementById("exp-increment").value) || 100;
+                const preview = document.getElementById("exp-preview");
+
+                let html = "";
+                for (let i = 1; i <= 3; i++) {
+                    const exp = base + (increment * (i - 1));
+                    html += `Level ${i} = ${exp} XP<br>`;
+                }
+                html += "...";
+                preview.innerHTML = html;
+            }
+
+            function getSystemData() {
+                const type = document.getElementById("f-type").value;
+                if (type !== "system") return null;
+
+                const levelSystemEnabled = document.getElementById("level-system-enabled").checked;
+                if (!levelSystemEnabled) {
+                    return {
+                        levelSystemEnabled: false
+                    };
+                }
+
+                return {
+                    levelSystemEnabled: true,
+                    levelMin: parseInt(document.getElementById("level-min").value) || 1,
+                    levelMax: parseInt(document.getElementById("level-max").value) || 100,
+                    expBase: parseInt(document.getElementById("exp-base").value) || 100,
+                    expIncrement: parseInt(document.getElementById("exp-increment").value) || 100
+                };
+            }
+
+            function applySystemData(card) {
+                if (card.genre !== "system") return;
+
+                // Reset UI
+                document.getElementById("level-system-enabled").checked = false;
+                document.getElementById("level-minmax-section").style.display = "none";
+                document.getElementById("exp-settings-section").style.display = "none";
+
+                // Get systemConfig from card
+                const config = card.systemConfig;
+                if (config && config.levelSystemEnabled) {
+                    document.getElementById("level-system-enabled").checked = true;
+                    document.getElementById("level-minmax-section").style.display = "block";
+                    document.getElementById("exp-settings-section").style.display = "block";
+
+                    document.getElementById("level-min").value = config.levelMin || 1;
+                    document.getElementById("level-max").value = config.levelMax || 100;
+                    document.getElementById("exp-base").value = config.expBase || 100;
+                    document.getElementById("exp-increment").value = config.expIncrement || 100;
+
+                    updateExpPreview();
+                }
+            }
+
+            /* ─────────────────────────────────────────
+               SPECIES XP (when Level System is active)
+            ───────────────────────────────────────── */
+            function isLevelSystemActive() {
+                const cards = getCards();
+                const systemCard = cards.find(c => c.genre === "system" && c.systemConfig?.levelSystemEnabled);
+                return !!systemCard;
+            }
+
+            function updateSpeciesXpVisibility() {
+                const xpGroup = document.getElementById("species-xp-group");
+                const type = document.getElementById("f-type").value;
+                if (!xpGroup) return;
+
+                if (type === "species" && isLevelSystemActive()) {
+                    xpGroup.style.display = "block";
+                } else {
+                    xpGroup.style.display = "none";
+                }
+            }
+
+            function toggleSpeciesXpPanel() {
+                const panel = document.getElementById("species-xp-panel");
+                const isVisible = panel.style.display === "block";
+                panel.style.display = isVisible ? "none" : "block";
+            }
+
+            function getSpeciesXpData() {
+                const type = document.getElementById("f-type").value;
+                if (type !== "species") return null;
+
+                const xpValue = parseInt(document.getElementById("species-xp-value").value) || 0;
+                return xpValue > 0 ? { xpReward: xpValue } : null;
+            }
+
+            function applySpeciesXpData(card) {
+                if (card.genre !== "species") return;
+
+                const xpValue = card.xpReward || 0;
+                document.getElementById("species-xp-value").value = xpValue;
+                document.getElementById("species-xp-panel").style.display = xpValue > 0 ? "block" : "none";
             }
 
             /* gender = "male"|"female"   nameType = "first"|"last" */
@@ -6303,6 +6996,7 @@
                 custom: [], // Custom locations
             };
             let residentSelections = []; // array of card IDs for characters
+            let transportDestinations = []; // array of {id, time, transportBuildingId} for transport destinations
             let sublocPickerContext = null; // which key is open or "resident"
             let sublocPickerTemp = []; // temp selection while picker is open
             const speciesSelections = {
@@ -6433,6 +7127,263 @@
                     renderSublocTags(sublocPickerContext);
                 }
                 closeSublocPicker();
+            }
+
+            /* ─────────────────────────────────────────
+               TRANSPORT DESTINATION PICKER
+            ───────────────────────────────────────── */
+            let transportDestTempArr = []; // temp array of {id, time, transportBuildingId} while picker is open
+
+            function getTransportBuildingsForLocation(locationId, allCards) {
+                // Method 1: Check sublocations["building"] of the location
+                const loc = allCards.find(c => c.id === locationId);
+                console.log("[DEBUG] Checking location:", locationId, "loc:", loc, "sublocations:", loc?.sublocations);
+
+                const transportBuildings = [];
+
+                if (loc && loc.sublocations) {
+                    const buildingIds = loc.sublocations["building"] || [];
+                    console.log("[DEBUG] Building IDs from sublocations:", buildingIds);
+                    buildingIds.forEach(bid => {
+                        const building = allCards.find(c => c.id === bid);
+                        console.log("[DEBUG] Checking building:", bid, "locationDetail:", building?.locationDetail);
+                        if (building && building.locationDetail === "transport") {
+                            transportBuildings.push(building);
+                        }
+                    });
+                }
+
+                // Method 2: Find buildings that have this location as parent in any sublocation type
+                // This handles cases where buildings might not be listed in sublocations["building"]
+                allCards.forEach(c => {
+                    if (c.genre === "location" && c.locationSub === "building" && c.locationDetail === "transport") {
+                        // Check if this transport building belongs to the target location
+                        // A building belongs to a location if it's in any of that location's sublocation arrays
+                        if (loc && loc.sublocations) {
+                            Object.values(loc.sublocations).forEach(arr => {
+                                if (Array.isArray(arr) && arr.includes(c.id)) {
+                                    if (!transportBuildings.find(b => b.id === c.id)) {
+                                        console.log("[DEBUG] Found transport building via parent check:", c.id);
+                                        transportBuildings.push(c);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+
+                console.log("[DEBUG] Total transport buildings found:", transportBuildings.length);
+                return transportBuildings;
+            }
+
+            function hasTransportBuilding(locationId, allCards) {
+                const has = getTransportBuildingsForLocation(locationId, allCards).length > 0;
+                console.log("[DEBUG] hasTransportBuilding:", locationId, "=", has);
+                return has;
+            }
+
+            function openTransportDestinationPicker() {
+                transportDestTempArr = transportDestinations.map(d => ({...d})); // copy array
+                document.getElementById("transport-dest-search").value = "";
+                document.getElementById("transport-dest-picker").classList.add("visible");
+                renderTransportDestinationList();
+            }
+
+            function closeTransportDestinationPicker() {
+                document.getElementById("transport-dest-picker").classList.remove("visible");
+                transportDestTempArr = [];
+            }
+
+            function confirmTransportDestinationPicker() {
+                transportDestinations = transportDestTempArr.map(d => ({...d})); // copy array
+                renderTransportDestinationTags();
+                closeTransportDestinationPicker();
+            }
+
+            function renderTransportDestinationList() {
+                const list = document.getElementById("transport-dest-list");
+                const term = document.getElementById("transport-dest-search").value.toLowerCase().trim();
+                const all = getCards();
+
+                // Find parent of current building being edited (if any)
+                let ownParentId = null;
+                if (editingId) {
+                    const parent = all.find(c =>
+                        c.genre === "location" &&
+                        c.sublocations &&
+                        Object.values(c.sublocations).some(arr => (arr || []).includes(editingId))
+                    );
+                    if (parent) ownParentId = parent.id;
+                }
+
+                // Only Custom Locations that have Transport Buildings as sublocations
+                const candidates = all.filter(c => {
+                    if (c.genre !== "location") return false;
+                    if (c.locationSub !== "custom") return false;
+                    if (c.id === editingId) return false; // exclude self
+                    if (c.id === ownParentId) return false; // exclude own parent
+                    if (term && !(c.title || "").toLowerCase().includes(term)) return false;
+                    // Only include if location has at least one transport building
+                    if (!hasTransportBuilding(c.id, all)) return false;
+                    return true;
+                }).sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+
+                list.innerHTML = "";
+
+                if (candidates.length === 0) {
+                    list.innerHTML = `<div class="subloc-picker-empty">No locations with transport stations found.</div>`;
+                    return;
+                }
+
+                candidates.forEach((card) => {
+                    const selectedIdx = transportDestTempArr.findIndex(d => d.id === card.id);
+                    const selected = selectedIdx >= 0;
+
+                    // Container for the row
+                    const row = document.createElement("div");
+                    row.className = "subloc-picker-item transport-picker-item" + (selected ? " selected" : "");
+
+                    // Main row content (always visible)
+                    const mainRow = document.createElement("div");
+                    mainRow.className = "transport-picker-main-row";
+                    mainRow.innerHTML = `
+                        <div class="subloc-picker-checkbox">${selected ? "✓" : ""}</div>
+                        <div class="subloc-picker-info">
+                            <div class="subloc-picker-name">${escHtml(card.title || "Unnamed")}</div>
+                        </div>
+                    `;
+                    mainRow.onclick = (e) => {
+                        // Prevent toggling if clicking on inputs or select
+                        if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+
+                        if (selected) {
+                            // Deselect
+                            transportDestTempArr.splice(selectedIdx, 1);
+                        } else {
+                            // Select with default time and first transport building
+                            const transportBuildings = getTransportBuildingsForLocation(card.id, all);
+                            const firstTransportId = transportBuildings.length > 0 ? transportBuildings[0].id : "";
+                            transportDestTempArr.push({ id: card.id, time: "", transportBuildingId: firstTransportId });
+                        }
+                        renderTransportDestinationList();
+                    };
+                    row.appendChild(mainRow);
+
+                    // Transport building selector and time input (only visible when selected)
+                    if (selected) {
+                        const detailsRow = document.createElement("div");
+                        detailsRow.className = "transport-picker-details";
+
+                        // Get transport buildings for this location
+                        const transportBuildings = getTransportBuildingsForLocation(card.id, all);
+                        const currentEntry = transportDestTempArr[selectedIdx];
+                        const currentTransportId = currentEntry.transportBuildingId || (transportBuildings[0]?.id || "");
+
+                        // Transport building selector
+                        if (transportBuildings.length > 1) {
+                            const buildingRow = document.createElement("div");
+                            buildingRow.className = "transport-picker-building-row";
+                            let selectHtml = `<span class="transport-picker-building-label">Station:</span><select class="transport-picker-building-select" id="tb-select-${card.id}">`;
+                            transportBuildings.forEach(tb => {
+                                const isSelected = tb.id === currentTransportId;
+                                selectHtml += `<option value="${tb.id}" ${isSelected ? "selected" : ""}>${escHtml(tb.title || "Unnamed")}</option>`;
+                            });
+                            selectHtml += `</select>`;
+                            buildingRow.innerHTML = selectHtml;
+                            const select = buildingRow.querySelector(`#tb-select-${card.id}`);
+                            select.onchange = (e) => {
+                                transportDestTempArr[selectedIdx].transportBuildingId = e.target.value;
+                            };
+                            select.onclick = (e) => e.stopPropagation();
+                            detailsRow.appendChild(buildingRow);
+                        }
+
+                        // Time input row
+                        const timeRow = document.createElement("div");
+                        timeRow.className = "transport-picker-time-row";
+                        const currentTime = transportDestTempArr[selectedIdx].time || "";
+                        // Parse current time (format: "2h 30min" or "30min" or "2h")
+                        const hoursMatch = currentTime.match(/(\d+)\s*h/);
+                        const minsMatch = currentTime.match(/(\d+)\s*min/);
+                        const hours = hoursMatch ? hoursMatch[1] : "";
+                        const mins = minsMatch ? minsMatch[1] : "";
+                        timeRow.innerHTML = `
+                            <span class="transport-picker-time-label">Travel time:</span>
+                            <div class="transport-time-inputs">
+                                <input type="number" class="transport-time-number" placeholder="0" min="0" value="${hours}" id="time-h-${card.id}" />
+                                <span class="transport-time-unit">h</span>
+                                <input type="number" class="transport-time-number" placeholder="0" min="0" max="59" value="${mins}" id="time-m-${card.id}" />
+                                <span class="transport-time-unit">min</span>
+                            </div>
+                        `;
+                        const hoursInput = timeRow.querySelector(`#time-h-${card.id}`);
+                        const minsInput = timeRow.querySelector(`#time-m-${card.id}`);
+                        const updateTime = () => {
+                            const h = parseInt(hoursInput.value) || 0;
+                            const m = parseInt(minsInput.value) || 0;
+                            let timeStr = "";
+                            if (h > 0) timeStr += `${h}h `;
+                            if (m > 0) timeStr += `${m}min`;
+                            transportDestTempArr[selectedIdx].time = timeStr.trim();
+                        };
+                        hoursInput.onchange = updateTime;
+                        minsInput.onchange = updateTime;
+                        hoursInput.onclick = (e) => e.stopPropagation();
+                        minsInput.onclick = (e) => e.stopPropagation();
+                        detailsRow.appendChild(timeRow);
+
+                        row.appendChild(detailsRow);
+                    }
+
+                    list.appendChild(row);
+                });
+            }
+
+            function renderTransportDestinationTags() {
+                const container = document.getElementById("transport-destination-tags");
+                container.innerHTML = "";
+                if (!transportDestinations || transportDestinations.length === 0) return;
+
+                const all = getCards();
+
+                transportDestinations.forEach((dest) => {
+                    const card = all.find(c => c.id === dest.id);
+                    if (!card) return;
+
+                    // Find transport building name if specified
+                    let buildingName = "";
+                    if (dest.transportBuildingId) {
+                        const building = all.find(c => c.id === dest.transportBuildingId);
+                        if (building) buildingName = building.title || "Unnamed Station";
+                    }
+
+                    const tag = document.createElement("div");
+                    tag.className = "transport-dest-tag";
+                    tag.innerHTML = `
+                        <div class="transport-dest-info">
+                            <span class="transport-dest-name">${escHtml(card.title || "Unnamed")}</span>
+                            ${buildingName ? `<span class="transport-dest-building">📍 ${escHtml(buildingName)}</span>` : ""}
+                            <div class="transport-dest-time-row">
+                                <span class="transport-dest-time-label">Travel time:</span>
+                                <input type="text" class="transport-dest-time-input" placeholder="e.g. 2h 30min" value="${escHtml(dest.time || "")}" onchange="updateTransportDestinationTime('${dest.id}', this.value)" />
+                            </div>
+                        </div>
+                        <button type="button" class="subloc-tag-remove" onclick="removeTransportDestination('${dest.id}')">&times;</button>
+                    `;
+                    container.appendChild(tag);
+                });
+            }
+
+            function removeTransportDestination(id) {
+                transportDestinations = transportDestinations.filter(d => d.id !== id);
+                renderTransportDestinationTags();
+            }
+
+            function updateTransportDestinationTime(id, time) {
+                const dest = transportDestinations.find(d => d.id === id);
+                if (dest) {
+                    dest.time = time;
+                }
             }
 
             /* ─────────────────────────────────────────
@@ -6767,6 +7718,13 @@
                         ? [...shopWorkers]
                         : null;
 
+                const transportDestinationsData =
+                    type === "location" &&
+                    locationSub === "building" &&
+                    locationDetail === "transport"
+                        ? transportDestinations.map(d => ({...d}))
+                        : [];
+
                 const residents =
                     type === "location" &&
                     ((locationSub === "building" && locationDetail === "house") ||
@@ -6873,6 +7831,15 @@
                         : null;
 
                 const currentCurseTags = type === "location" ? [...curseTags] : [];
+
+                // System data
+                const systemData = type === "system" ? getSystemData() : null;
+
+                // Species XP data
+                const speciesXpData = type === "species" ? getSpeciesXpData() : null;
+
+                // Character Level data
+                const levelData = type === "character" ? getCharacterLevelData() : null;
 
                 let cards = getCards();
 
@@ -7002,6 +7969,7 @@
                             ...(species && Object.keys(species).length ? { species } : {}),
                             ...(racialCivilization && Object.keys(racialCivilization).length ? { racialCivilization } : {}),
                             population,
+                            transportDestinations: transportDestinationsData,
                             events: zivilEventsData,
                             residents,
                             relations: type === "character" ? [...relationSelections] : [],
@@ -7026,6 +7994,9 @@
                             birthdate,
                             curseTags: currentCurseTags,
                             description: desc,
+                            ...(systemData ? { systemConfig: systemData } : {}),
+                            ...(speciesXpData ? { xpReward: speciesXpData.xpReward } : {}),
+                            ...(levelData ? { levelData } : {}),
                             updatedAt: new Date().toISOString(),
                         };
                         cards[idx] = baseUpdate;
@@ -7051,6 +8022,7 @@
                         ...(species && Object.keys(species).length ? { species } : {}),
                         ...(racialCivilization && Object.keys(racialCivilization).length ? { racialCivilization } : {}),
                         population,
+                        transportDestinations: transportDestinationsData,
                         events: zivilEventsData,
                         residents,
                         relations: type === "character" ? [...relationSelections] : [],
@@ -7075,6 +8047,9 @@
                         birthdate,
                         curseTags: currentCurseTags,
                         description: desc,
+                        ...(systemData ? { systemConfig: systemData } : {}),
+                        ...(speciesXpData ? { xpReward: speciesXpData.xpReward } : {}),
+                        ...(levelData ? { levelData } : {}),
                         createdAt: new Date().toISOString(),
                         version: "1.0",
                     };
@@ -7467,6 +8442,21 @@
                 }
                 
                 renderList();
+
+                // EXP preview input listeners
+                document.getElementById("exp-base")?.addEventListener("input", updateExpPreview);
+                document.getElementById("exp-increment")?.addEventListener("input", updateExpPreview);
+
+                // Level slider/input sync
+                document.getElementById("level-slider")?.addEventListener("input", function() {
+                    document.getElementById("level-input").value = this.value;
+                    document.getElementById("level-current-display").textContent = this.value;
+                });
+                document.getElementById("level-input")?.addEventListener("input", function() {
+                    document.getElementById("level-slider").value = this.value;
+                    document.getElementById("level-current-display").textContent = this.value;
+                });
+
                 setTimeout(() => {
                     document.body.style.opacity = "1";
                 }, 100);
