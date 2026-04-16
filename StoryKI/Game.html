@@ -3587,11 +3587,11 @@ ${shopContext}
 - Whenever any PRESENT NPC performs an explicit action in your narration:
   - Append a single NPC memory tag BEFORE the final metadata block.
   - Use 'Common' for everyday actions; use 'Important' for significant events (kissed, slept together, fought, confessed, etc.).
-- Syntax (IDs only; no extra text here — the full narration becomes the memory text):
+- Syntax (IDs only; the narration will be auto-summarized for each NPC):
   [[Memory: ID1:Common,ID2:Important,ID3:Common]]
   - IDs are character IDs of the NPCs that acted
   - Level: Common or Important
-  - The entire narration text will be stored for each listed NPC as their memory
+  - A short summary (1-2 sentences) of your narration will be stored as each NPC's memory
 
 # NPC DEATH TAGS (MANDATORY WHEN A RESIDENT NPC DIES)
 - If a resident NPC truly dies in the scene, append a death tag BEFORE the final metadata block.
@@ -4014,6 +4014,26 @@ Example:
                 }
             }
             
+            // Extract a short summary from narrative text (first 1-2 sentences, max 200 chars)
+            function extractMemorySummary(text) {
+                if (!text) return "";
+                // Split by sentence endings
+                const sentences = text.split(/(?<=[.!?])\s+/);
+                let summary = "";
+                for (let i = 0; i < Math.min(2, sentences.length); i++) {
+                    const trimmed = sentences[i].trim();
+                    if (trimmed) {
+                        summary += trimmed + " ";
+                    }
+                }
+                summary = summary.trim();
+                // Fallback: if no clear sentences, take first 200 chars
+                if (!summary) {
+                    summary = text.slice(0, 200).trim();
+                }
+                return summary;
+            }
+
             function addNpcMemoriesFromPending(narrativeText, anchorTs = null) {
                 const targets = Array.isArray(window._pendingMemoryTargets) ? window._pendingMemoryTargets : [];
                 if (targets.length === 0) return;
@@ -4022,6 +4042,10 @@ Example:
                 const dateStr = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
                 const timeStr = d.time || "00:00";
                 const locName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                
+                // Generate short summary instead of full text
+                const memorySummary = extractMemorySummary(narrativeText);
+                
                 let changed = false;
                 targets.forEach(({ id, level }) => {
                     const npc = cards.find(c => c.genre === "character" && c.id === id);
@@ -4033,10 +4057,11 @@ Example:
                         location: locName,
                         level: (level || "Common"),
                         dayCount: _worldDayCount(d),
-                        text: String(narrativeText || "").slice(0, 800),
+                        text: memorySummary,
                         logTs: anchorTs || null
                     });
-                    if (npc.memories.length > 200) npc.memories = npc.memories.slice(-200);
+                    // Keep more entries now since they're shorter (max 500 instead of 200)
+                    if (npc.memories.length > 500) npc.memories = npc.memories.slice(-500);
                     changed = true;
                 });
                 if (changed) {
