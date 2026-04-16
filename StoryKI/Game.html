@@ -2848,6 +2848,29 @@
                 }
             }
 
+            function buildLoreContext() {
+                try {
+                    const cards = getCards();
+                    // Filter lore cards with mode "always"
+                    const loreCards = cards.filter((c) => c.genre === "lore" && c.loreMode === "always");
+                    if (loreCards.length === 0) return "";
+
+                    let context = "\nWORLD LORE (Always Active):\n";
+                    loreCards.forEach((l) => {
+                        context += `- ${l.title}\n`;
+                        if (l.description) context += `  ${l.description}\n`;
+                        if (l.loreData) context += `  Details: ${l.loreData}\n`;
+                        if (l.loreTags && l.loreTags.length > 0) {
+                            context += `  Tags: ${l.loreTags.join(", ")}\n`;
+                        }
+                    });
+                    return context;
+                } catch (e) {
+                    console.error("Lore context error", e);
+                    return "";
+                }
+            }
+
             function speciesKeyForLoc(loc) {
                 const sub = (loc.locationSub || "").toLowerCase();
                 const det = (loc.locationDetail || "").toLowerCase();
@@ -3423,6 +3446,7 @@
                 const speciesContext = buildSpeciesPresenceContext();
                 const playerContext = buildPlayerContext();
                 const eventsContext = buildEventsContext();
+                const loreContext = buildLoreContext();
                 const locationMemoryContext = buildLocationMemoryContext();
                 const locationStateContext = buildLocationStateContext();
                 const locationCurseContext = buildLocationCurseContext();
@@ -3512,6 +3536,7 @@ ${worldHierarchy}
 ${charContext}
 ${raceContext}
 ${speciesContext}
+${loreContext}
 ${eventsContext}
 ${locationMemoryContext}
 ${locationStateContext}
