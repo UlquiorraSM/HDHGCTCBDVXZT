@@ -4559,6 +4559,38 @@ Example:
                     }
                 }
 
+                // Date set command: patterns like 3.2, 3.2.2008, 3.2.08 (not in quotes)
+                const dateCmd = (text.includes('"') || text.includes("'")) ? null : (text.match(/\b(\d{1,2})\.(\d{1,2})(?:\.(\d{2}|\d{4}))?\b/));
+                if (dateCmd && activeChar) {
+                    try {
+                        const day = parseInt(dateCmd[1], 10);
+                        const month = parseInt(dateCmd[2], 10);
+                        let year = dateCmd[3] ? parseInt(dateCmd[3], 10) : null;
+                        // Validate day and month
+                        if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+                            const sd = activeChar.startingDate || {};
+                            // Handle 2-digit year
+                            if (year !== null && year < 100) {
+                                year = year < 50 ? 2000 + year : 1900 + year;
+                            }
+                            // Use current year if not specified
+                            if (year === null) {
+                                year = sd.year || 1983;
+                            }
+                            activeChar.startingDate = {
+                                day: day,
+                                month: month,
+                                year: year,
+                                time: sd.time || "00:00"
+                            };
+                            saveActiveCharacter();
+                            _pendingPreUserDividerLabel = `DATE SET: ${activeChar.startingDate.day}.${String(activeChar.startingDate.month).padStart(2,"0")}.${activeChar.startingDate.year}`;
+                        }
+                    } catch (e) {
+                        console.error("Date parsing failed", e);
+                    }
+                }
+
                 const bubble = appendBubble("user", text);
                 const senderName = activeChar
                     ? [activeChar.firstName, activeChar.lastName]
