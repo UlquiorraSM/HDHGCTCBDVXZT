@@ -4279,7 +4279,27 @@ Example:
             }
 
             function addLocationMemoryFromNarration(text, anchorTs = null) {
-                if (!currentLocationId) return;
+                if (!currentLocationId || !text) return;
+                
+                // Only save to location if there's an actual location state change
+                // Check for LocState tags [[LocState:key=value]]
+                const hasLocState = /\[\[LocState:[^\]]+\]\]/i.test(text);
+                
+                // Check for explicit location change markers in text
+                // (e.g., "The room is now dirty", "A gum spot appears on the floor")
+                const locationChangeKeywords = [
+                    /(?:room|floor|wall|door|window|ceiling|ground|table|chair|bed|desk|shelf|\bbench\b|\bcouch\b|\bsofa\b) (?:is|are|becomes?|got|gets?|turns?|now|appears?|materializes?|forms?|creates?|makes?)/i,
+                    /(?:dirty|clean|messy|tidy|broken|fixed|open|closed|locked|unlocked|wet|dry|cold|warm|hot|dark|bright|light)/i,
+                    /(?:kaugummi|gum|spot|fleck|dreck|schmutz|staub|dirt|dust|trash|müll)/i,
+                    /(?:empty|full|filled|cleared|organized|cluttered|decorated|painted)/i
+                ];
+                const hasLocationDescription = locationChangeKeywords.some(pattern => pattern.test(text));
+                
+                // Only proceed if there's evidence of location state change
+                if (!hasLocState && !hasLocationDescription) {
+                    return; // Skip - this is likely just character action, not location change
+                }
+                
                 const cards = getCards();
                 const locCard = cards.find((c) => c.id === currentLocationId);
                 if (!locCard) return;
@@ -4287,18 +4307,32 @@ Example:
                 const dateStr = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
                 const timeStr = d.time || "00:00";
                 const locName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                
+                // Extract only the location-relevant part (first 2 sentences or LocState context)
+                let relevantText = text;
+                if (!hasLocState) {
+                    // If no explicit state tag, extract just the location description part
+                    const sentences = text.split(/(?<=[.!?])\s+/);
+                    const locationSentences = sentences.filter(s => 
+                        locationChangeKeywords.some(pattern => pattern.test(s))
+                    );
+                    if (locationSentences.length > 0) {
+                        relevantText = locationSentences.slice(0, 2).join(" ");
+                    }
+                }
+                
                 const entry = {
                     date: dateStr,
                     time: timeStr,
                     location: locName,
-                    level: "Common",
+                    level: hasLocState ? "Important" : "Common",
                     dayCount: _worldDayCount(d),
-                    text: String(text || "").slice(0, 800),
+                    text: String(relevantText || "").slice(0, 300), // Shorter for location
                     logTs: anchorTs || null
                 };
                 if (!Array.isArray(locCard.memories)) locCard.memories = [];
                 locCard.memories.push(entry);
-                if (locCard.memories.length > 200) locCard.memories = locCard.memories.slice(-200);
+                if (locCard.memories.length > 50) locCard.memories = locCard.memories.slice(-50); // Reduced from 200
                 sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
             }
 
