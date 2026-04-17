@@ -225,23 +225,6 @@
                 padding: 20px;
             }
 
-            #header-title .story-label {
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 0.08em;
-                text-transform: uppercase;
-                color: rgba(255, 255, 255, 0.35);
-                margin-bottom: 2px;
-            }
-            #header-title .story-name {
-                font-size: 15px;
-                font-weight: 700;
-                color: #fff;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 260px;
-            }
 
             /* Info Block (Time/Loc) */
             #header-info {
@@ -1023,11 +1006,6 @@
                 <button class="nav-stats-btn" onclick="toggleStatsPanel()" title="Character Stats">
                     📊 Stats
                 </button>
-
-                <div id="header-title">
-                    <div class="story-label">StoryKI</div>
-                    <div class="story-name" id="story-name">Adventure</div>
-                </div>
 
                 <div id="header-info">
                     <div id="header-location">—</div>
@@ -2373,12 +2351,6 @@
                 }
                 document.getElementById("header-info").style.display = "flex";
 
-                const storyId = getCurrentStoryId();
-                const scenarios = getScenariosLocal();
-                const story = storyId ? scenarios.find(x => x.id === storyId) : null;
-                document.getElementById("story-name").textContent =
-                    (story && story.name) ? story.name : (fullName + "'s Story");
-
                 // Welcome overlay
                 const wRow = document.getElementById("welcome-char-row");
                 wRow.style.display = "flex";
@@ -2585,6 +2557,133 @@
             /* ═══════════════════════════════════════
                AI
             ═══════════════════════════════════════ */
+            // Visited Locations Tracking
+            function getVisitedLocations() {
+                try {
+                    return JSON.parse(localStorage.getItem("visitedLocations") || "[]");
+                } catch {
+                    return [];
+                }
+            }
+
+            function trackVisitedLocation(locId) {
+                if (!locId) return;
+                const visited = new Set(getVisitedLocations());
+                visited.add(locId);
+                localStorage.setItem("visitedLocations", JSON.stringify([...visited]));
+            }
+
+            function isLocationVisited(locId) {
+                return getVisitedLocations().includes(locId);
+            }
+
+            function buildSmartLocationContext() {
+                try {
+                    const cards = getCards();
+                    const locations = cards.filter((c) => c.genre === "location");
+                    if (!currentLocationId || locations.length === 0) return "";
+
+                    const current = locations.find(l => l.id === currentLocationId);
+                    if (!current) return "";
+
+                    // Get ancestors (parent regions)
+                    const ancestors = [];
+                    let parent = current;
+                    while (parent) {
+                        ancestors.push(parent);
+                        const nextParent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(parent.id));
+                        });
+                        parent = nextParent;
+                    }
+
+                    // Get immediate children (sublocations)
+                    const children = [];
+                    if (current.sublocations) {
+                        Object.values(current.sublocations).forEach(arr => {
+                            if (Array.isArray(arr)) {
+                                arr.forEach(id => {
+                                    const child = locations.find(l => l.id === id);
+                                    if (child) children.push(child);
+                                });
+                            }
+                        });
+                    }
+
+                    const contextLines = [];
+                    contextLines.push("\n# WORLD LOCATIONS (Smart Visibility)\n");
+
+                    // ZONE 1: Current Location (FULL DETAILS)
+                    contextLines.push("## CURRENT LOCATION (Full Details)\n");
+                    const curType = (current.locationDetail || current.locationSub || "Location").toUpperCase();
+                    contextLines.push(`- ${current.title} (${curType})`);
+                    if (current.description) contextLines.push(`  Description: ${current.description}`);
+                    if (current.lore) contextLines.push(`  Lore: ${current.lore}`);
+
+                    // Residents at current location
+                    if (current.residents && current.residents.length > 0) {
+                        const chars = cards.filter(c => c.genre === "character");
+                        current.residents.forEach(resId => {
+                            const char = chars.find(c => c.id === resId);
+                            if (char) {
+                                const isDead = (char.status || "Alive") === "Dead";
+                                const label = isDead ? "Dead Resident" : "Resident";
+                                contextLines.push(`  * ${label}: ${char.title} (${char.raceName || "Character"})`);
+                            }
+                        });
+                    }
+
+                    // ZONE 2: Visited Ancestors (Summary only)
+                    const visitedAncestors = ancestors.filter(a => a.id !== current.id && isLocationVisited(a.id));
+                    if (visitedAncestors.length > 0) {
+                        contextLines.push("\n## KNOWN REGIONS (Previously Visited)\n");
+                        visitedAncestors.forEach(loc => {
+                            const type = (loc.locationDetail || loc.locationSub || "Location").toUpperCase();
+                            contextLines.push(`- ${loc.title} (${type})${loc.description ? `: ${loc.description.substring(0, 60)}...` : ""}`);
+                        });
+                    }
+
+                    // ZONE 2b: Unvisited Ancestors (Name only)
+                    const unvisitedAncestors = ancestors.filter(a => a.id !== current.id && !isLocationVisited(a.id));
+                    if (unvisitedAncestors.length > 0) {
+                        contextLines.push("\n## UNKNOWN PARENT REGIONS\n");
+                        unvisitedAncestors.forEach(loc => {
+                            contextLines.push(`- ${loc.title} [ID: ${loc.id}] (Region known but never visited)`);
+                        });
+                    }
+
+                    // ZONE 3: Sublocations (Children) - Always show as "discoverable"
+                    if (children.length > 0) {
+                        contextLines.push("\n## SUBLOCATIONS (Can be entered)\n");
+                        children.forEach(child => {
+                            const isChildVisited = isLocationVisited(child.id);
+                            const childType = (child.locationDetail || child.locationSub || "Location").toUpperCase();
+                            if (isChildVisited) {
+                                contextLines.push(`- ${child.title} (${childType}) - Visited: ${child.description ? child.description.substring(0, 50) + "..." : "No description"}`);
+                            } else {
+                                contextLines.push(`- ${child.title} (${childType}) - Not yet explored`);
+                            }
+                        });
+                    }
+
+                    // ZONE 4: All other locations (not in hierarchy) - minimal info
+                    const knownIds = new Set([current.id, ...ancestors.map(a => a.id), ...children.map(c => c.id)]);
+                    const otherVisited = locations.filter(l => !knownIds.has(l.id) && isLocationVisited(l.id));
+                    if (otherVisited.length > 0) {
+                        contextLines.push("\n## OTHER VISITED LOCATIONS\n");
+                        otherVisited.forEach(loc => {
+                            contextLines.push(`- ${loc.title} [ID: ${loc.id}]`);
+                        });
+                    }
+
+                    return contextLines.join("\n") + "\n";
+                } catch (e) {
+                    console.error("Smart location context error", e);
+                    return "";
+                }
+            }
+
             function buildLocationHierarchy() {
                 try {
                     const cards = getCards();
@@ -2712,7 +2811,36 @@
                 }
             }
 
-            function buildCharacterContext() {
+            // NPC Mention Tracking for continuity
+            let _mentionedNpcIds = new Set();
+            function trackMentionedNpc(npcId) {
+                if (!npcId) return;
+                _mentionedNpcIds.add(npcId);
+                // Keep only last 5 mentioned NPCs to avoid bloat
+                if (_mentionedNpcIds.size > 5) {
+                    const arr = [..._mentionedNpcIds];
+                    _mentionedNpcIds = new Set(arr.slice(-5));
+                }
+            }
+
+            function extractAndTrackMentionedNpcs(text) {
+                if (!text) return;
+                const cards = getCards();
+                const characters = cards.filter(c => c.genre === "character");
+                
+                characters.forEach(char => {
+                    const name = char.title;
+                    if (!name) return;
+                    
+                    // Simple name matching (case insensitive, word boundaries)
+                    const regex = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                    if (regex.test(text)) {
+                        trackMentionedNpc(char.id);
+                    }
+                });
+            }
+
+            function buildSmartCharacterContext() {
                 try {
                     const cards = getCards();
                     if (!currentLocationId) return "";
@@ -2720,6 +2848,7 @@
                     const currentLoc = cards.find((c) => c.id === currentLocationId);
                     if (!currentLoc) return "";
 
+                    // Get ancestors (parent locations)
                     const ancestors = [];
                     let current = currentLoc;
                     while (current) {
@@ -2732,98 +2861,174 @@
                     }
 
                     const ancestorIds = new Set(ancestors.map(a => a.id));
-
                     const scheduleNow = computeSchoolPresenceNow();
                     const scheduledByNpc = scheduleNow.byNpc || new Map();
 
-                    // Collect all resident IDs from this location and its ancestors
+                    // Get currently PRESENT NPCs (visible in bar)
+                    const presentIds = getPresentNpcIds();
+                    const presentSet = new Set(presentIds);
+
+                    // Get all resident IDs from this location and ancestors
                     const residentIds = new Set();
                     ancestors.forEach((loc) => {
                         if (loc.residents) {
                             loc.residents.forEach((id) => residentIds.add(id));
                         }
                     });
-                    const characters = cards.filter((c) => c.genre === "character" && residentIds.has(c.id));
 
-                    const livingCharacters = [];
-                    const deadCharacters = [];
-                    characters.forEach((c) => {
-                        if ((c.status || "Alive") === "Dead") deadCharacters.push(c);
-                        else livingCharacters.push(c);
-                    });
+                    // Categorize characters
+                    const presentNPCs = [];
+                    const residentNPCs = [];
+                    const deadHereNPCs = [];
+                    const mentionedNPCs = [];
 
-                    let context = "";
-                    if (livingCharacters.length > 0 || deadCharacters.length > 0) {
-                        context += "\nPRESENT CHARACTERS (Residents of this location and its parent regions):\n";
-                        context += "NOTE: Presence does NOT mean friendship. Check 'Character Relationships' for status.\n";
-                        livingCharacters.forEach((c) => {
-                            const sched = scheduledByNpc.get(c.id);
-                            if (sched && !ancestorIds.has(sched.schoolId)) {
-                                return;
+                    // Process residents
+                    residentIds.forEach(id => {
+                        const c = cards.find(card => card.genre === "character" && card.id === id);
+                        if (!c) return;
+
+                        const isDead = (c.status || "Alive") === "Dead";
+                        const isPresent = presentSet.has(id);
+
+                        // Check school schedule - if at school, not present here
+                        const sched = scheduledByNpc.get(c.id);
+                        const atSchool = sched && !ancestorIds.has(sched.schoolId);
+
+                        if (isDead) {
+                            // Only show dead NPCs if they died HERE
+                            if (c.deathLocationId === currentLocationId || ancestorIds.has(c.deathLocationId)) {
+                                deadHereNPCs.push(c);
                             }
-                            const age = parseInt(c.age, 10);
-                            const bd = readBirthdate(c);
-                            const secrets = readSecrets(c);
-                            const knownSecrets = readKnownSecrets(c);
-                            context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
-                            if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
-                            if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
-                            if (secrets.length > 0) context += `  Secrets: ${secrets.join(" | ")}\n`;
-                            if (knownSecrets.length > 0) context += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
-                            context += `  Unused Days Counter: ${Math.max(0, parseInt(c.unusedDaysCounter, 10) || 0)}\n`;
-                            if (c.description) context += `  Description: ${c.description}\n`;
-                            if (c.personality) context += `  Personality: ${c.personality}\n`;
-                            if (c.appearance) context += `  Appearance: ${c.appearance}\n`;
-                            if (c.lore) context += `  Lore/History: ${c.lore}\n`;
-                        });
-                        if (deadCharacters.length > 0) {
-                            context += "\nDEAD RESIDENTS (Known dead NPCs tied to this location and its parent regions. They are not physically present, but the area can reflect their deaths):\n";
-                            deadCharacters.forEach((c) => {
-                                const age = parseInt(c.age, 10);
-                                const bd = readBirthdate(c);
-                                const secrets = readSecrets(c);
-                                const knownSecrets = readKnownSecrets(c);
-                                context += `- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})\n`;
-                                context += `  Status: Dead\n`;
-                                if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
-                                if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
-                                if (secrets.length > 0) context += `  Secrets: ${secrets.join(" | ")}\n`;
-                                if (knownSecrets.length > 0) context += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
-                                context += `  Cause of Death: ${c.deathCause || "Unknown"}\n`;
-                                if (c.description) context += `  Description: ${c.description}\n`;
-                                if (c.lore) context += `  Lore/History: ${c.lore}\n`;
-                            });
-                        }
-                    }
-                    const allResidentIds = new Set();
-                    cards.forEach((c) => {
-                        if (c.genre === "location" && c.residents) {
-                            c.residents.forEach((id) => allResidentIds.add(id));
+                        } else if (isPresent && !atSchool) {
+                            presentNPCs.push(c);
+                        } else {
+                            // Resident but not present (could be elsewhere)
+                            residentNPCs.push(c);
                         }
                     });
-                    const homeless = cards.filter((c) => c.genre === "character" && (c.status || "Alive") !== "Dead" && !allResidentIds.has(c.id));
-                    if (homeless.length > 0) {
-                        context += "\nHOMELESS CHARACTERS (no home anywhere):\n";
-                        homeless.forEach((c) => {
-                            const race = c.raceName || "Unknown Race";
+
+                    // Check for recently mentioned NPCs that might be elsewhere
+                    _mentionedNpcIds.forEach(id => {
+                        if (residentIds.has(id) || presentSet.has(id)) return; // Already covered
+                        const c = cards.find(card => card.genre === "character" && card.id === id);
+                        if (c && (c.status || "Alive") !== "Dead") {
+                            mentionedNPCs.push(c);
+                        }
+                    });
+
+                    // Build context with tiers
+                    const contextLines = [];
+                    contextLines.push("\n# CHARACTERS (Smart Visibility Tiers)\n");
+
+                    // TIER 1: PRESENT - Full details
+                    if (presentNPCs.length > 0) {
+                        contextLines.push("## PRESENT (Physically Here - Full Details)\n");
+                        contextLines.push("These NPCs are currently visible and can interact.\n");
+                        presentNPCs.forEach((c) => {
                             const age = parseInt(c.age, 10);
                             const bd = readBirthdate(c);
                             const secrets = readSecrets(c);
                             const knownSecrets = readKnownSecrets(c);
-                            context += `- ${c.title} [ID: ${c.id}] (HOMELESS, ${race})\n`;
-                            if (Number.isFinite(age) && age > 0) context += `  Age: ${age}\n`;
-                            if (bd) context += `  Birthdate: ${formatBirthdate(bd)}\n`;
-                            if (secrets.length > 0) context += `  Secrets: ${secrets.join(" | ")}\n`;
-                            if (knownSecrets.length > 0) context += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
-                            if (c.description) context += `  Description: ${c.description}\n`;
-                            if (c.lore) context += `  Lore/History: ${c.lore}\n`;
+                            
+                            contextLines.push(`- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})`);
+                            if (Number.isFinite(age) && age > 0) contextLines.push(`  Age: ${age}`);
+                            if (bd) contextLines.push(`  Birthdate: ${formatBirthdate(bd)}`);
+                            if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
+                            if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
+                            if (c.appearance) contextLines.push(`  Appearance: ${c.appearance}`);
+                            if (c.personality) contextLines.push(`  Personality: ${c.personality}`);
+                            if (c.description) contextLines.push(`  Description: ${c.description}`);
+                            if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
+                            
+                            // Include recent memories for present NPCs
+                            if (c.memories && c.memories.length > 0) {
+                                const recentMems = c.memories.slice(-3);
+                                contextLines.push(`  Recent Memories:`);
+                                recentMems.forEach(m => {
+                                    const txt = m.text || m;
+                                    const lvl = m.level || "Common";
+                                    contextLines.push(`    [${lvl}] ${txt.substring(0, 80)}${txt.length > 80 ? "..." : ""}`);
+                                });
+                            }
+                            contextLines.push("");
                         });
                     }
-                    return context;
+
+                    // TIER 2: RESIDENTS - Summaries only
+                    if (residentNPCs.length > 0) {
+                        contextLines.push("## RESIDENTS (Live Here, Currently Elsewhere)\n");
+                        contextLines.push("These NPCs belong to this location but are not currently present.\n");
+                        residentNPCs.forEach((c) => {
+                            const sched = scheduledByNpc.get(c.id);
+                            let location = "Unknown location";
+                            if (sched) {
+                                const schoolCard = cards.find(card => card.id === sched.schoolId);
+                                location = schoolCard ? `At ${schoolCard.title} (School)` : "At school";
+                            }
+                            contextLines.push(`- ${c.title} (${c.raceName || "Character"})${c.description ? ` - ${c.description.substring(0, 50)}...` : ""}`);
+                            contextLines.push(`  Currently: ${location}`);
+                        });
+                        contextLines.push("");
+                    }
+
+                    // TIER 3: DEAD HERE - Atmosphere only
+                    if (deadHereNPCs.length > 0) {
+                        contextLines.push("## DEAD HERE (Former Residents)\n");
+                        contextLines.push("These NPCs died at this location. Their presence lingers in memory.\n");
+                        deadHereNPCs.forEach((c) => {
+                            contextLines.push(`- ${c.title} (${c.raceName || "Character"}) - ${c.deathCause || "Unknown cause"}`);
+                            if (c.lore) contextLines.push(`  Legend: ${c.lore.substring(0, 60)}...`);
+                        });
+                        contextLines.push("");
+                    }
+
+                    // TIER 4: MENTIONED - For continuity
+                    if (mentionedNPCs.length > 0) {
+                        contextLines.push("## MENTIONED (Referenced in Recent Story)\n");
+                        contextLines.push("These NPCs were mentioned recently but are elsewhere.\n");
+                        mentionedNPCs.forEach((c) => {
+                            contextLines.push(`- ${c.title} (${c.raceName || "Character"}) - Not present here`);
+                        });
+                        contextLines.push("");
+                    }
+
+                    // KNOWN ELSEWHERE - Characters with relations to player
+                    if (activeChar && activeChar.relations && activeChar.relations.length > 0) {
+                        const knownIds = new Set();
+                        activeChar.relations.forEach(r => {
+                            if (r.targetId) knownIds.add(r.targetId);
+                        });
+                        // Filter out those already mentioned
+                        const knownElsewhere = [];
+                        knownIds.forEach(id => {
+                            if (residentIds.has(id) || presentSet.has(id) || _mentionedNpcIds.has(id)) return;
+                            const c = cards.find(card => card.genre === "character" && card.id === id);
+                            if (c && (c.status || "Alive") !== "Dead") {
+                                knownElsewhere.push(c);
+                            }
+                        });
+                        
+                        if (knownElsewhere.length > 0) {
+                            contextLines.push("## KNOWN ELSEWHERE (Relations to Player)\n");
+                            knownElsewhere.forEach((c) => {
+                                const rel = activeChar.relations.find(r => r.targetId === c.id);
+                                const relText = rel ? (rel.relation === "Family" ? rel.familySub : rel.relation) : "Known";
+                                contextLines.push(`- ${c.title} (${c.raceName || "Character"}) - ${relText}`);
+                            });
+                            contextLines.push("");
+                        }
+                    }
+
+                    return contextLines.join("\n");
                 } catch (e) {
-                    console.error("Character context error", e);
+                    console.error("Smart character context error", e);
                     return "";
                 }
+            }
+
+            // Legacy function - kept for compatibility
+            function buildCharacterContext() {
+                return buildSmartCharacterContext();
             }
 
             function buildRaceContext() {
@@ -3440,7 +3645,7 @@
                 const curLocPath = getCurrentLocationPath();
                 const curLocName = document.getElementById("header-location")?.textContent || "Unknown Location";
                 
-                const worldHierarchy = buildLocationHierarchy();
+                const worldHierarchy = buildSmartLocationContext();
                 const charContext = buildCharacterContext();
                 const raceContext = buildRaceContext();
                 const speciesContext = buildSpeciesPresenceContext();
@@ -3793,6 +3998,8 @@ Example:
                     if (el) el.textContent = card.title.toUpperCase(); // Fixed: Show TITLE, not ID
                     // Track discovered location and its chain
                     addDiscoveredLocation(card.id);
+                    // Track visited for smart location context
+                    trackVisitedLocation(card.id);
                     try { recalcEventOverrides(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                 } else {
                     // Fallback: If no card found, keep the text but try to find a parent if possible
@@ -4675,6 +4882,8 @@ Example:
                     if (finalText !== NSFW_BLOCKED_TEXT) {
                         addNpcMemoriesFromPending(finalText, ts);
                         addLocationMemoryFromNarration(finalText, ts);
+                        // Track NPCs mentioned in the narration for continuity context
+                        extractAndTrackMentionedNpcs(finalText);
                     }
                 } catch (err) {
                     removeTypingIndicator();
