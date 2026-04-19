@@ -1776,6 +1776,15 @@
 
             function startNewStory() {
                 if (!_selectedWorld) return;
+                
+                // WICHTIG: Welt-Daten aus localStorage neu laden, falls sie in Create.html bearbeitet wurden
+                // _selectedWorld könnte veraltete Daten enthalten (stale reference)
+                const scenarios = getScenarios();
+                const freshWorld = scenarios.find(x => x.id === _selectedWorld.id);
+                if (freshWorld) {
+                    _selectedWorld = freshWorld;
+                }
+                
                 const r = hasSpawnRequirement(_selectedWorld);
                 if (!r.hasSpawn) alert("This world has no spawn location");
                 if (!r.hasSpawn) return;
