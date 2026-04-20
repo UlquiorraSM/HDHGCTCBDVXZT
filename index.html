@@ -1048,14 +1048,11 @@
 
             // List of default character files to load from characters/ folder
             // Add new character files here to make them available as defaults
-            const BUILTIN_CHAR_FILES = [];
+            const BUILTIN_CHAR_FILES = ["characters/Lain.json"];
 
             async function ensureDefaultWorlds() {
                 try {
                     const scenarios = getScenarios();
-                    const hasWorld = scenarios.some(x => !x.worldId);
-                    if (hasWorld) return;
-
                     const now = Date.now();
                     let worldLoaded = false;
 
@@ -1133,12 +1130,21 @@
                             const resp = await fetch(charFile);
                             if (!resp.ok) continue;
                             const data = await resp.json();
-                            if (!data || !data.character) continue;
+                            if (!data) continue;
 
-                            const char = data.character;
+                            // Support both formats: { character: {...} } or direct {...}
+                            let char = null;
+                            if (data.character) {
+                                char = data.character;
+                            } else if (data.id || data.title) {
+                                // Direct format like Lain.json
+                                char = data;
+                            }
+                            if (!char) continue;
+
                             const charId = char.id || Math.random().toString(36).slice(2, 10);
 
-                            // Check if this character already exists
+                            // Check if this character already exists (by id or title)
                             const existing = chars.find(x => x.id === charId || x.title === char.title);
                             if (existing) continue;
 
@@ -1146,9 +1152,11 @@
                             chars.push({
                                 ...char,
                                 id: charId,
+                                isStandalone: true,
                                 official: true
                             });
                             charLoaded = true;
+                            console.log(`Loaded default character: ${char.title || charId} from ${charFile}`);
                         } catch (fileErr) {
                             console.warn(`Failed to load character file ${charFile}:`, fileErr);
                         }
