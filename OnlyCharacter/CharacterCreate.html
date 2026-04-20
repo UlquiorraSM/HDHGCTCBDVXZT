@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Create Character</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+
+            body::before {
+                content: "";
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.3);
+                z-index: -1;
+            }
+
+            .container {
+                background: rgba(20, 20, 30, 0.9);
+                border-radius: 16px;
+                padding: 40px;
+                width: 100%;
+                max-width: 600px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            }
+
+            h1 {
+                color: #fff;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 28px;
+                font-weight: 300;
+            }
+
+            .form-group {
+                margin-bottom: 24px;
+            }
+
+            label {
+                display: block;
+                color: rgba(255, 255, 255, 0.8);
+                margin-bottom: 8px;
+                font-size: 14px;
+                font-weight: 500;
+            }
+
+            input[type="text"],
+            textarea {
+                width: 100%;
+                padding: 14px 16px;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                color: #fff;
+                font-size: 15px;
+                font-family: inherit;
+                transition: all 0.3s ease;
+            }
+
+            input[type="text"]:focus,
+            textarea:focus {
+                outline: none;
+                border-color: #667eea;
+                background: rgba(255, 255, 255, 0.15);
+            }
+
+            textarea {
+                min-height: 100px;
+                resize: vertical;
+            }
+
+            .button-group {
+                display: flex;
+                gap: 12px;
+                margin-top: 30px;
+            }
+
+            button {
+                flex: 1;
+                padding: 14px 24px;
+                border: none;
+                border-radius: 8px;
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .btn-primary {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #fff;
+            }
+
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            }
+
+            .btn-secondary {
+                background: rgba(255, 255, 255, 0.1);
+                color: rgba(255, 255, 255, 0.8);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .btn-secondary:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            .world-select {
+                margin-bottom: 24px;
+            }
+
+            select {
+                width: 100%;
+                padding: 14px 16px;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                color: #fff;
+                font-size: 15px;
+                cursor: pointer;
+            }
+
+            select option {
+                background: #2a2a3a;
+                color: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Create Character</h1>
+            
+            <div class="form-group">
+                <label for="charName">Name</label>
+                <input type="text" id="charName" placeholder="Enter character name..." />
+            </div>
+
+            <div class="form-group">
+                <label for="charGenerally">Generally</label>
+                <textarea id="charGenerally" placeholder="General information about the character..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="charAppearance">Appearance</label>
+                <textarea id="charAppearance" placeholder="How does the character look..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="charPersonality">Personality</label>
+                <textarea id="charPersonality" placeholder="Character traits, behavior, attitude..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="charCoverUrl">Cover URL (Optional)</label>
+                <input type="text" id="charCoverUrl" placeholder="https://example.com/image.jpg" />
+            </div>
+
+            <div class="form-group">
+                <label for="charBackgroundUrl">Background URL (Optional)</label>
+                <input type="text" id="charBackgroundUrl" placeholder="https://example.com/background.jpg" />
+            </div>
+
+            <div class="button-group">
+                <button class="btn-secondary" onclick="backToMenu()">Back</button>
+                <button class="btn-primary" onclick="saveCharacter()">Create Character</button>
+            </div>
+        </div>
+
+        <script>
+            const SCENARIOS_KEY = "storyki_scenarios";
+            const SETTINGS_KEY = "storyki_settings";
+
+            function getScenarios() {
+                try {
+                    return JSON.parse(localStorage.getItem(SCENARIOS_KEY) || "[]");
+                } catch {
+                    return [];
+                }
+            }
+
+            function setScenarios(scenarios) {
+                localStorage.setItem(SCENARIOS_KEY, JSON.stringify(scenarios));
+            }
+
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            // Background loading from settings (same as index.html)
+            function applyBg(url) {
+                if (!url) return;
+                document.body.style.backgroundImage = `url("${url}")`;
+                document.body.style.backgroundSize = "cover";
+                document.body.style.backgroundPosition = "center";
+                document.body.style.backgroundAttachment = "fixed";
+            }
+
+            function loadBackground() {
+                // Read settings from localStorage (where settings.html saves them)
+                const settings = localStorage.getItem(SETTINGS_KEY);
+                if (settings) {
+                    try {
+                        const data = JSON.parse(settings);
+                        if (data.backgroundUrl) {
+                            applyBg(data.backgroundUrl);
+                            return;
+                        }
+                    } catch(e) {}
+                }
+                // Default fallback
+                applyBg("https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp");
+            }
+
+            // Listen for background changes from other pages
+            window.addEventListener("backgroundChanged", function (event) {
+                const backgroundUrl = event.detail.backgroundUrl;
+                applyBg(backgroundUrl);
+            });
+
+            function backToMenu() {
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "../index.html";
+                }, 300);
+            }
+
+            const CHARACTERS_KEY = "storyki_standalone_characters";
+
+            function getStandaloneCharacters() {
+                try {
+                    return JSON.parse(localStorage.getItem(CHARACTERS_KEY) || "[]");
+                } catch {
+                    return [];
+                }
+            }
+
+            function setStandaloneCharacters(chars) {
+                localStorage.setItem(CHARACTERS_KEY, JSON.stringify(chars));
+            }
+
+            let _editCharId = null;
+
+            function saveCharacter() {
+                const name = document.getElementById("charName").value.trim();
+                const generally = document.getElementById("charGenerally").value.trim();
+                const appearance = document.getElementById("charAppearance").value.trim();
+                const personality = document.getElementById("charPersonality").value.trim();
+                const coverUrl = document.getElementById("charCoverUrl").value.trim();
+                const backgroundUrl = document.getElementById("charBackgroundUrl").value.trim();
+
+                if (!name) {
+                    alert("Please enter a character name!");
+                    return;
+                }
+
+                const chars = getStandaloneCharacters();
+
+                if (_editCharId) {
+                    // Update existing character
+                    const idx = chars.findIndex(c => c.id === _editCharId);
+                    if (idx === -1) {
+                        alert("Character not found!");
+                        return;
+                    }
+                    chars[idx].title = name;
+                    chars[idx].name = name;
+                    chars[idx].generally = generally;
+                    chars[idx].appearance = appearance;
+                    chars[idx].personality = personality;
+                    chars[idx].coverUrl = coverUrl || null;
+                    chars[idx].backgroundUrl = backgroundUrl || null;
+                    chars[idx].description = `${generally}\n\nAppearance: ${appearance}\n\nPersonality: ${personality}`.trim();
+                    chars[idx].updatedAt = Date.now();
+                    setStandaloneCharacters(chars);
+                    alert(`Character "${name}" updated successfully!`);
+                } else {
+                    // Create new character
+                    const character = {
+                        id: generateId(),
+                        genre: "character",
+                        title: name,
+                        name: name,
+                        generally: generally,
+                        appearance: appearance,
+                        personality: personality,
+                        coverUrl: coverUrl || null,
+                        backgroundUrl: backgroundUrl || null,
+                        description: `${generally}\n\nAppearance: ${appearance}\n\nPersonality: ${personality}`.trim(),
+                        createdAt: Date.now(),
+                        isStandalone: true
+                    };
+                    chars.push(character);
+                    setStandaloneCharacters(chars);
+                    alert(`Character "${name}" created successfully!`);
+                }
+                backToMenu();
+            }
+
+            // Initialize
+            window.addEventListener("load", () => {
+                loadBackground();
+                
+                // Check if we're editing an existing character
+                const editId = sessionStorage.getItem("storyki_edit_character_id");
+                if (editId) {
+                    _editCharId = editId;
+                    const chars = getStandaloneCharacters();
+                    const char = chars.find(c => c.id === editId);
+                    if (char) {
+                        // Fill form with existing data
+                        document.getElementById("charName").value = char.title || "";
+                        document.getElementById("charGenerally").value = char.generally || "";
+                        document.getElementById("charAppearance").value = char.appearance || "";
+                        document.getElementById("charPersonality").value = char.personality || "";
+                        document.getElementById("charCoverUrl").value = char.coverUrl || "";
+                        document.getElementById("charBackgroundUrl").value = char.backgroundUrl || "";
+                        // Update button text
+                        document.querySelector(".btn-primary").textContent = "Update Character";
+                        // Update title
+                        document.querySelector("h1").textContent = "Edit Character";
+                    }
+                    // Clear the edit ID so we don't keep editing mode after this session
+                    sessionStorage.removeItem("storyki_edit_character_id");
+                }
+                
+                document.body.style.opacity = "1";
+            });
+
+            // Regularly check for background changes
+            setInterval(loadBackground, 4000);
+
+            document.body.style.opacity = "0";
+            document.body.style.transition = "opacity 0.3s ease";
+        </script>
+    </body>
+</html>
