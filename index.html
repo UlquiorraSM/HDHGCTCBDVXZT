@@ -448,12 +448,70 @@
                 width: auto !important;
                 min-width: 0 !important;
                 max-width: none !important;
+            }
+            #all-characters-grid {
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 12px;
+                width: 100%;
+                max-width: 1100px;
+                margin-top: 14px;
+            }
+            #all-characters-grid .world-card {
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: none !important;
                 height: auto !important;
                 aspect-ratio: 1 / 1;
             }
             html, body { -ms-overflow-style: none; scrollbar-width: none; }
             html::-webkit-scrollbar { display: none; }
             body::-webkit-scrollbar { display: none; }
+
+            /* Mobile styles for player characters */
+            @media (max-width: 700px) {
+                #players-list {
+                    flex-direction: column !important;
+                    overflow-x: visible !important;
+                    overflow-y: auto !important;
+                    gap: 12px !important;
+                    padding: 10px !important;
+                }
+                #players-list .world-card {
+                    min-width: auto !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    height: 120px !important;
+                    flex-direction: row !important;
+                    padding: 12px !important;
+                }
+                #players-list .player-cover {
+                    width: 80px !important;
+                    height: 80px !important;
+                    border-radius: 8px !important;
+                    flex-shrink: 0 !important;
+                    background-size: cover !important;
+                    background-position: center !important;
+                }
+                #players-list .player-info {
+                    flex: 1 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    justify-content: center !important;
+                    min-width: 0 !important;
+                }
+                #players-list .player-actions {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 4px !important;
+                    width: auto !important;
+                    min-width: 100px !important;
+                }
+                #players-list .player-actions button {
+                    padding: 6px 10px !important;
+                    font-size: 12px !important;
+                }
+            }
             #scenarios-list { scrollbar-width: none; }
             #scenarios-list::-webkit-scrollbar { display: none; }
             #stories-list { scrollbar-width: none; }
@@ -540,13 +598,18 @@
                     <!-- Dynamically rendered -->
                 </div>
                 <div id="no-scenarios-hint" style="color:rgba(255,255,255,.8); text-align:center; margin: 20px 0; display:none;">
-                    No world found. Create a new one with "Create World".
+                    Nothing found. Create something new!
                 </div>
             </div>
             <div class="menu-buttons">
                 <div class="menu-row">
-                    <button class="menu-button" onclick="createStory()">
-                        Create World
+                    <button class="menu-button" onclick="toggleViewMode()" id="view-mode-btn">
+                        Switch to Character
+                    </button>
+                </div>
+                <div class="menu-row" id="player-btn-row" style="display:none;">
+                    <button class="menu-button" onclick="openPlayerMenu()">
+                        Create Player
                     </button>
                 </div>
                 <div class="menu-row">
@@ -590,6 +653,25 @@
                 <div id="all-worlds-grid"></div>
                 <div class="menu-buttons" style="max-width: 300px;">
                     <button class="menu-button" onclick="closeAllWorldsMenu()">Back</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-container" id="all-characters-menu" style="display:none;">
+            <h1>All Characters</h1>
+            <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                <div class="search-container">
+                    <input
+                        type="text"
+                        id="all-characters-search"
+                        class="search-input"
+                        placeholder="Search characters..."
+                        oninput="renderAllCharacters()"
+                    />
+                </div>
+                <div id="all-characters-grid"></div>
+                <div class="menu-buttons" style="max-width: 300px;">
+                    <button class="menu-button" onclick="closeAllCharactersMenu()">Back</button>
                 </div>
             </div>
         </div>
@@ -736,6 +818,88 @@
             </div>
         </div>
 
+        <!-- Character Configuration Panel -->
+        <div id="char-conf-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:2000; backdrop-filter:blur(10px);">
+            <div class="conf-panel">
+                <h2>Configure character</h2>
+                
+                <div class="conf-group">
+                    <label class="conf-label">Character name</label>
+                    <input type="text" id="conf-char-name" class="conf-input" placeholder="Enter name...">
+                </div>
+                
+                <div class="conf-group">
+                    <label class="conf-label">Cover URL</label>
+                    <input type="text" id="conf-char-cover" class="conf-input" placeholder="https://...">
+                    <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">Small image used as cover on the character card.</div>
+                </div>
+
+                <div class="conf-actions">
+                    <button class="conf-btn conf-btn-cancel" onclick="closeCharConf()">Cancel</button>
+                    <button class="conf-btn conf-btn-save" onclick="saveCharConf()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Characters Menu (like stories-menu) -->
+        <div id="players-menu" style="display:none; opacity:0; position:fixed; inset:0; z-index:1000; flex-direction:column; align-items:center; padding:40px 20px;">
+            <!-- Background will be set by loadBackground() -->
+            <div id="players-bg" style="position:fixed; inset:0; z-index:-2; background-size:cover; background-position:center; background-attachment:fixed;"></div>
+            <div style="position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:-1;"></div>
+            
+            <div class="stories-header" style="width:100%; max-width:1200px; display:flex; align-items:center; justify-content:space-between; margin-bottom:30px;">
+                <button class="back-button" onclick="closePlayerMenu()" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px; transition:all 0.3s;">&#8592; Back</button>
+                <h2 style="color:#fff; font-weight:300; font-size:28px; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.3);">Your Player Characters</h2>
+                <div style="width:80px;"></div>
+            </div>
+            
+            <div class="stories-search-container" style="width:100%; max-width:800px; margin-bottom:30px;">
+                <input type="text" id="player-search" class="search-input" placeholder="Search players..." oninput="renderPlayerCharacters()" style="width:100%; padding:14px 20px; border-radius:12px; border:none; background:rgba(255,255,255,0.15); color:#fff; font-size:16px; backdrop-filter:blur(10px); outline:none;">
+            </div>
+            
+            <div id="players-list" class="stories-list" style="width:100%; max-width:1200px; display:flex; gap:24px; overflow-x:auto; padding:20px; scroll-behavior:smooth;">
+                <!-- Dynamically rendered -->
+            </div>
+            
+            <div id="no-players-hint" style="color:rgba(255,255,255,.9); text-align:center; margin: 40px 0; display:none; font-size:16px; text-shadow:0 2px 4px rgba(0,0,0,0.3);">
+                No player characters found. Click "Create new" to add one.
+            </div>
+        </div>
+
+        <!-- New Character Story - Player Selection Overlay -->
+        <div id="new-char-story-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000; backdrop-filter:blur(10px);">
+            <div class="conf-panel" style="max-width:500px; width:90%;">
+                <h2>Start New Story</h2>
+                
+                <div class="conf-group">
+                    <label class="conf-label">Select Your Player Character</label>
+                    <select id="story-player-select" class="conf-input" style="background:rgba(255,255,255,0.1); color:#fff; cursor:pointer;">
+                        <option value="" style="background:#2a2a3a; color:#fff;">-- Choose a player --</option>
+                    </select>
+                </div>
+                
+                <div class="conf-group">
+                    <label class="conf-label">Story Introduction (Optional)</label>
+                    <textarea id="story-intro-input" class="conf-input" placeholder="How does the story begin..." style="min-height:100px; resize:vertical; background:rgba(255,255,255,0.1); color:#fff;"></textarea>
+                </div>
+
+                <div class="conf-group">
+                    <label class="conf-label">Starting Date & Time</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                        <input type="number" id="story-day" class="conf-input" placeholder="Day" min="1" max="31" value="1" style="background:rgba(255,255,255,0.1); color:#fff;">
+                        <input type="number" id="story-month" class="conf-input" placeholder="Month" min="1" max="12" value="1" style="background:rgba(255,255,255,0.1); color:#fff;">
+                        <input type="number" id="story-year" class="conf-input" placeholder="Year" min="1" max="9999" value="1983" style="background:rgba(255,255,255,0.1); color:#fff;">
+                    </div>
+                    <input type="time" id="story-time" class="conf-input" value="09:00" style="background:rgba(255,255,255,0.1); color:#fff; width:100%;">
+                </div>
+
+                <div class="conf-actions">
+                    <button class="conf-btn conf-btn-cancel" onclick="closeNewCharStoryOverlay()">Cancel</button>
+                    <button class="conf-btn conf-btn-save" onclick="startNewCharacterStory()">Start Story</button>
+                </div>
+            </div>
+        </div>
+
         <script>
             // Storage Helper (Non-persistent session storage)
             const Storage = {
@@ -751,6 +915,13 @@
             const ANCHORED_WORLD_CHANGES_KEY = "storyki_anchored_world_changes"; // for session
             const UNIVERSE_UPLOADS_KEY = "storyki_universe_uploaded_worlds";
             let _selectedWorld = null;
+            let _selectedCharacter = null;
+            let _viewMode = 'worlds'; // 'worlds' oder 'characters'
+
+            // ID Generator
+            function generateId() {
+                return Math.random().toString(36).slice(2, 10);
+            }
 
             // Hintergrund aus Settings laden
             function applyBg(url) {
@@ -769,11 +940,13 @@
             function loadBackground() {
                 // Prüfen, ob wir in der Story-Auswahl einer Welt sind
                 const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
+                const characterId = Storage.get(SELECTED_CHAR_ID_KEY);
                 const storiesMenu = document.getElementById("stories-menu");
-                
+
                 // Wir prüfen nun über getComputedStyle, ob das Menü WIRKLICH sichtbar ist (nicht nur inline)
                 const isStoriesVisible = storiesMenu && window.getComputedStyle(storiesMenu).display === "flex";
-                
+
+                // Wenn Stories-Menü sichtbar und eine Welt ausgewählt ist, nutze Welt-Hintergrund
                 if (isStoriesVisible && worldId) {
                     const scenarios = getScenarios();
                     const world = scenarios.find(x => x.id === worldId);
@@ -783,9 +956,25 @@
                     }
                 }
 
-                // Falls nicht in Stories oder kein Welt-Hintergrund:
-                // Globaler Background aus Settings
-                const settings = Storage.get("storyki_settings");
+                // Wenn Stories-Menü sichtbar und ein Character ausgewählt ist, nutze globalen Hintergrund
+                // (Character-Stories haben keinen eigenen Hintergrund)
+                if (isStoriesVisible && characterId) {
+                    // Nutze globalen Hintergrund für Character-Stories
+                    const settings = Storage.get("storyki_settings");
+                    if (settings) {
+                        try {
+                            const data = JSON.parse(settings);
+                            if (data.backgroundUrl) {
+                                applyBg(data.backgroundUrl);
+                                return;
+                            }
+                        } catch(e) {}
+                    }
+                }
+
+                // Falls nicht in Stories oder kein spezifischer Hintergrund:
+                // Globaler Background aus Settings (immer frisch aus localStorage lesen)
+                const settings = localStorage.getItem("storyki_settings");
                 if (settings) {
                     try {
                         const data = JSON.parse(settings);
@@ -795,7 +984,7 @@
                         }
                     } catch(e) {}
                 }
-                
+
                 // Default-Fallback
                 applyBg("https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp");
             }
@@ -852,56 +1041,126 @@
             }
             
             let _preloadedBg = new Map();
+
+            // List of default world files to load from worlds/ folder
+            // Add new world files here to make them available as defaults
+            const BUILTIN_WORLD_FILES = ["worlds/DefaultWorld.json","worlds/Higurashi.json"];
+
+            // List of default character files to load from characters/ folder
+            // Add new character files here to make them available as defaults
+            const BUILTIN_CHAR_FILES = [];
+
             async function ensureDefaultWorlds() {
                 try {
                     const scenarios = getScenarios();
                     const hasWorld = scenarios.some(x => !x.worldId);
                     if (hasWorld) return;
-                    const resp = await fetch("worlds/DefaultWorld.json");
-                    if (!resp.ok) return;
-                    const data = await resp.json();
-                    if (!data || !data.world || !data.world.data) return;
+
                     const now = Date.now();
-                    const world = data.world;
-                    const worldId = world.id || Math.random().toString(36).slice(2, 10);
-                    scenarios.push({
-                        id: worldId,
-                        name: world.name || "Default World",
-                        createdAt: now,
-                        updatedAt: now,
-                        data: {
-                            cards: Array.isArray(world.data.cards) ? world.data.cards : [],
-                            settings: world.data.settings || {}
-                        }
-                    });
-                    // Optional stories array support
-                    if (Array.isArray(data.stories)) {
-                        data.stories.forEach(st => {
+                    let worldLoaded = false;
+
+                    // Try to load each builtin world file
+                    for (const worldFile of BUILTIN_WORLD_FILES) {
+                        try {
+                            const resp = await fetch(worldFile);
+                            if (!resp.ok) continue;
+                            const data = await resp.json();
+                            if (!data || !data.world || !data.world.data) continue;
+
+                            const world = data.world;
+                            const worldId = world.id || Math.random().toString(36).slice(2, 10);
+
+                            // Check if this world already exists
+                            const existing = scenarios.find(x => x.id === worldId || x.name === world.name);
+                            if (existing) continue;
+
                             scenarios.push({
-                                id: st.id || Math.random().toString(36).slice(2, 10),
-                                worldId,
-                                name: st.name || "Story",
-                                createdAt: st.createdAt || now,
-                                updatedAt: st.updatedAt || now,
-                                signature: st.signature || "",
-                                official: st.official !== false,
+                                id: worldId,
+                                name: world.name || "Default World",
+                                createdAt: now,
+                                updatedAt: now,
+                                official: true,
                                 data: {
-                                    cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
-                                    characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
-                                    log: Array.isArray(st.data?.log) ? st.data.log : [],
-                                    settings: st.data?.settings || {},
-                                    anchoredWorldChanges: st.data?.anchoredWorldChanges || {},
-                                    chapters: Array.isArray(st.data?.chapters) ? st.data.chapters : (Array.isArray(st.data?.lightNovelChapters) ? st.data.lightNovelChapters : [])
+                                    cards: Array.isArray(world.data.cards) ? world.data.cards : [],
+                                    settings: world.data.settings || {}
                                 }
                             });
-                        });
+                            worldLoaded = true;
+
+                            // Optional stories array support
+                            if (Array.isArray(data.stories)) {
+                                data.stories.forEach(st => {
+                                    scenarios.push({
+                                        id: st.id || Math.random().toString(36).slice(2, 10),
+                                        worldId,
+                                        name: st.name || "Story",
+                                        createdAt: st.createdAt || now,
+                                        updatedAt: st.updatedAt || now,
+                                        signature: st.signature || "",
+                                        official: st.official !== false,
+                                        data: {
+                                            cards: Array.isArray(st.data?.cards) ? st.data.cards : [],
+                                            characters: Array.isArray(st.data?.characters) ? st.data.characters : [],
+                                            log: Array.isArray(st.data?.log) ? st.data.log : [],
+                                            settings: st.data?.settings || {},
+                                            anchoredWorldChanges: st.data?.anchoredWorldChanges || {},
+                                            chapters: Array.isArray(st.data?.chapters) ? st.data.chapters : (Array.isArray(st.data?.lightNovelChapters) ? st.data.lightNovelChapters : [])
+                                        }
+                                    });
+                                });
+                            }
+                        } catch (fileErr) {
+                            console.warn(`Failed to load world file ${worldFile}:`, fileErr);
+                        }
                     }
-                    setScenarios(scenarios);
+
+                    if (worldLoaded) {
+                        setScenarios(scenarios);
+                    }
                 } catch (e) {
                     console.warn("Default world load failed", e);
                 }
             }
-            const BUILTIN_WORLD_FILES = ["worlds/DefaultWorld.json","worlds/Higurashi.json"];
+
+            async function ensureDefaultCharacters() {
+                try {
+                    const chars = getStandaloneCharacters();
+                    let charLoaded = false;
+
+                    // Try to load each builtin character file
+                    for (const charFile of BUILTIN_CHAR_FILES) {
+                        try {
+                            const resp = await fetch(charFile);
+                            if (!resp.ok) continue;
+                            const data = await resp.json();
+                            if (!data || !data.character) continue;
+
+                            const char = data.character;
+                            const charId = char.id || Math.random().toString(36).slice(2, 10);
+
+                            // Check if this character already exists
+                            const existing = chars.find(x => x.id === charId || x.title === char.title);
+                            if (existing) continue;
+
+                            // Add the character
+                            chars.push({
+                                ...char,
+                                id: charId,
+                                official: true
+                            });
+                            charLoaded = true;
+                        } catch (fileErr) {
+                            console.warn(`Failed to load character file ${charFile}:`, fileErr);
+                        }
+                    }
+
+                    if (charLoaded) {
+                        setStandaloneCharacters(chars);
+                    }
+                } catch (e) {
+                    console.warn("Default character load failed", e);
+                }
+            }
             const WORLD_COVER_FALLBACKS = {
                 "DefaultWorld": "https://i.pinimg.com/736x/b5/50/11/b55011336000f4b29fdd5703dc0506de.jpg",
                 "Higurashi": "https://i.pinimg.com/736x/67/c4/0e/67c40e8b2b1d55ddf7e4913bff34aee4.jpg",
@@ -1223,16 +1482,47 @@
                 } catch(e) {}
             }
             
+            function toggleViewMode() {
+                _viewMode = _viewMode === 'worlds' ? 'characters' : 'worlds';
+                const btn = document.getElementById('view-mode-btn');
+                const title = document.querySelector('.menu-container h1');
+                const searchInput = document.getElementById('world-search');
+                const hintEl = document.getElementById('no-scenarios-hint');
+                const playerBtnRow = document.getElementById('player-btn-row');
+                
+                if (_viewMode === 'characters') {
+                    btn.textContent = 'Switch to Worlds';
+                    if (title) title.textContent = 'Your Characters';
+                    if (searchInput) searchInput.placeholder = 'Searching for characters...';
+                    if (hintEl) hintEl.textContent = 'No character found. Create a new one with "Create Character".';
+                    // Show Create Player button when in characters view
+                    if (playerBtnRow) playerBtnRow.style.display = 'flex';
+                } else {
+                    btn.textContent = 'Switch to One Character';
+                    if (title) title.textContent = 'Your Worlds';
+                    if (searchInput) searchInput.placeholder = 'Searching for worlds...';
+                    if (hintEl) hintEl.textContent = 'No world available. Create a new one with "Create World".';
+                    // Hide Create Player button when in worlds view
+                    if (playerBtnRow) playerBtnRow.style.display = 'none';
+                }
+                renderScenarios();
+            }
+
             function renderScenarios() {
                 const listEl = document.getElementById("scenarios-list");
                 const hintEl = document.getElementById("no-scenarios-hint");
                 const searchInput = document.getElementById("world-search");
                 const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
-                
+
                 listEl.innerHTML = "";
-                
-                // Welten filtern: Keine parent worldId UND Suchbegriff vorhanden
-                let scenarios = getScenarios().filter(s => !s.worldId);
+
+                if (_viewMode === 'characters') {
+                    renderCharactersView(listEl, hintEl, searchTerm);
+                    return;
+                }
+
+                // Welten filtern: Keine parent worldId UND keine characterId (nur reine Welten)
+                let scenarios = getScenarios().filter(s => !s.worldId && !s.characterId);
                 
                 if (searchTerm) {
                     scenarios = scenarios.filter(s => 
@@ -1247,19 +1537,13 @@
                     return bu - au;
                 });
                 
-                if (!scenarios.length) {
-                    hintEl.style.display = "block";
-                    hintEl.textContent = searchTerm ? "No world with that name was found." : "No world available. Create a new one with „Create World“.";
-                    return;	
-                }
-                
                 hintEl.style.display = "none";
                 
                 // Desktop/Mobile alignment robust:
                 // - Mobile: align left for horizontal scrolling
                 // - Desktop: if up to 3 visible cards, center; otherwise align left
                 const isMobile = window.innerWidth <= 700;
-                const visibleCount = Math.min(scenarios.length, 5);
+                const visibleCount = Math.min(scenarios.length + 1, 5); // +1 für Create-Button
                 listEl.style.margin = "0 auto";
                 listEl.style.maxWidth = "100%";
                 listEl.style.width = "auto";
@@ -1271,7 +1555,31 @@
                     listEl.scrollLeft = 0;
                 }
 
-                scenarios.slice(0, 5).forEach(s => {
+                // Create World Karte ganz vorne
+                const createCard = document.createElement("div");
+                createCard.className = "world-card";
+                createCard.style.backgroundImage = "linear-gradient(135deg, rgba(100, 100, 100, 0.8) 0%, rgba(80, 80, 80, 0.8) 100%)";
+                createCard.style.cursor = "pointer";
+                createCard.style.display = "flex";
+                createCard.style.flexDirection = "column";
+                createCard.style.justifyContent = "center";
+                createCard.style.alignItems = "center";
+                createCard.style.gap = "10px";
+                
+                const plusIcon = document.createElement("div");
+                plusIcon.textContent = "+";
+                plusIcon.style.cssText = "font-size: 48px; font-weight: 300; color: rgba(255,255,255,0.9);";
+                
+                const createText = document.createElement("div");
+                createText.textContent = "Create World";
+                createText.style.cssText = "font-size: 16px; font-weight: 600; color: #fff;";
+                
+                createCard.appendChild(plusIcon);
+                createCard.appendChild(createText);
+                createCard.onclick = () => createStory();
+                listEl.appendChild(createCard);
+
+                scenarios.slice(0, 4).forEach(s => {
                     const card = document.createElement("div");
                     card.className = "world-card";
                     
@@ -1375,7 +1683,7 @@
                     listEl.appendChild(card);
                 });
                 
-                if (scenarios.length > 5) {
+                if (scenarios.length > 4) {
                     const allCard = document.createElement("div");
                     allCard.className = "world-card";
                     const name = document.createElement("div");
@@ -1421,6 +1729,1021 @@
                     setTimeout(() => { document.getElementById("main-menu").style.opacity = "1"; }, 50);
                 }, 200);
             }
+            
+            function openAllCharactersMenu() {
+                document.getElementById("main-menu").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("main-menu").style.display = "none";
+                    document.getElementById("all-characters-menu").style.display = "flex";
+                    renderAllCharacters();
+                    setTimeout(() => { document.getElementById("all-characters-menu").style.opacity = "1"; }, 50);
+                }, 200);
+            }
+            
+            function closeAllCharactersMenu() {
+                document.getElementById("all-characters-menu").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("all-characters-menu").style.display = "none";
+                    document.getElementById("main-menu").style.display = "flex";
+                    setTimeout(() => { document.getElementById("main-menu").style.opacity = "1"; }, 50);
+                }, 200);
+            }
+            
+            const STANDALONE_CHARS_KEY = "storyki_standalone_characters";
+
+            function getStandaloneCharacters() {
+                try {
+                    return JSON.parse(localStorage.getItem(STANDALONE_CHARS_KEY) || "[]");
+                } catch {
+                    return [];
+                }
+            }
+
+            function setStandaloneCharacters(chars) {
+                localStorage.setItem(STANDALONE_CHARS_KEY, JSON.stringify(chars));
+            }
+
+            function deleteCharacter(charId) {
+                if (!confirm("Delete this character?")) return;
+                const chars = getStandaloneCharacters().filter(c => c.id !== charId);
+                setStandaloneCharacters(chars);
+                renderScenarios();
+            }
+
+            function downloadCharacter(char) {
+                const data = JSON.stringify(char, null, 2);
+                const blob = new Blob([data], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${char.title || "character"}_export.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            let _confCharId = null;
+
+            function openCharacterConf(char) {
+                _confCharId = char.id;
+                document.getElementById("conf-char-name").value = char.title || "";
+                document.getElementById("conf-char-cover").value = char.coverUrl || "";
+                document.getElementById("char-conf-overlay").style.display = "flex";
+            }
+
+            function closeCharConf() {
+                document.getElementById("char-conf-overlay").style.display = "none";
+                _confCharId = null;
+            }
+
+            function saveCharConf() {
+                if (!_confCharId) return;
+                const chars = getStandaloneCharacters();
+                const idx = chars.findIndex(c => c.id === _confCharId);
+                if (idx === -1) return;
+                
+                chars[idx].title = document.getElementById("conf-char-name").value.trim() || chars[idx].title;
+                chars[idx].name = chars[idx].title;
+                chars[idx].coverUrl = document.getElementById("conf-char-cover").value.trim();
+                chars[idx].updatedAt = Date.now();
+                
+                setStandaloneCharacters(chars);
+                renderScenarios();
+                closeCharConf();
+            }
+
+            function editCharacter(charOrId) {
+                // Accept either an object with id property or just the id string
+                const charId = typeof charOrId === 'string' ? charOrId : charOrId.id;
+                // Save character ID to session and navigate to CharacterCreate.html for editing
+                sessionStorage.setItem("storyki_edit_character_id", charId);
+                sessionStorage.setItem("storyki_previous_view", "characters");
+                navigateWithTransition("OnlyCharacter/CharacterCreate.html");
+            }
+
+            function uploadCharacterToUniverse(char) {
+                // For now, just alert - can be implemented later with actual upload logic
+                alert("Upload feature coming soon for: " + (char.title || "Character"));
+            }
+
+            function renderCharactersView(listEl, hintEl, searchTerm) {
+                // Load standalone characters (independent chat bots)
+                let allCharacters = getStandaloneCharacters();
+                
+                if (searchTerm) {
+                    allCharacters = allCharacters.filter(c => 
+                        (c.title || "").toLowerCase().includes(searchTerm) ||
+                        (c.description || "").toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                // Sortieren nach Name
+                allCharacters.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+                
+                hintEl.style.display = "none";
+                
+                const isMobile = window.innerWidth <= 700;
+                const visibleCount = Math.min(allCharacters.length + 1, 4); // +1 für Create-Button, max 4
+                listEl.style.margin = "0 auto";
+                listEl.style.maxWidth = "100%";
+                listEl.style.width = "auto";
+                if (isMobile) {
+                    listEl.style.justifyContent = "flex-start";
+                    listEl.scrollLeft = 0;
+                } else {
+                    listEl.style.justifyContent = (visibleCount <= 3) ? "center" : "flex-start";
+                    listEl.scrollLeft = 0;
+                }
+
+                // Create Character Karte ganz vorne
+                const createCard = document.createElement("div");
+                createCard.className = "world-card";
+                createCard.style.backgroundImage = "linear-gradient(135deg, rgba(100, 100, 100, 0.8) 0%, rgba(80, 80, 80, 0.8) 100%)";
+                createCard.style.cursor = "pointer";
+                createCard.style.display = "flex";
+                createCard.style.flexDirection = "column";
+                createCard.style.justifyContent = "center";
+                createCard.style.alignItems = "center";
+                createCard.style.gap = "10px";
+
+                const plusIcon = document.createElement("div");
+                plusIcon.textContent = "+";
+                plusIcon.style.cssText = "font-size: 48px; font-weight: 300; color: rgba(255,255,255,0.9);";
+
+                const createText = document.createElement("div");
+                createText.textContent = "Create Character";
+                createText.style.cssText = "font-size: 16px; font-weight: 600; color: #fff;";
+
+                createCard.appendChild(plusIcon);
+                createCard.appendChild(createText);
+                createCard.onclick = () => createCharacter();
+                listEl.appendChild(createCard);
+
+                if (!allCharacters.length) {
+                    if (!searchTerm) {
+                        hintEl.style.display = "block";
+                        hintEl.textContent = "No characters available. Click Create Character to add one.";
+                    }
+                    return;
+                }
+
+                allCharacters.slice(0, 4).forEach(c => {
+                    const card = document.createElement("div");
+                    card.className = "world-card";
+                    
+                    const coverUrl = (c?.coverUrl || c?.image || "").trim();
+                    if (coverUrl) {
+                        card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.55), rgba(10,10,15,.55)), url("${coverUrl}")`;
+                    } else {
+                        card.style.backgroundImage = "linear-gradient(rgba(10,10,15,.55), rgba(10,10,15,.55)), url('https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp')";
+                    }
+                    
+                    const header = document.createElement("div");
+                    header.style.cssText = "display:flex; flex-direction:column; gap:6px; margin-bottom: 5px;";
+                    
+                    const nameRow = document.createElement("div");
+                    nameRow.style.cssText = "display:flex; align-items:center; gap:8px; width:100%; min-width:0;";
+                    
+                    const name = document.createElement("div");
+                    name.textContent = c.title || "Unnamed Character";
+                    name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+                    nameRow.appendChild(name);
+                    
+                    header.appendChild(nameRow);
+                    
+                    const actions = document.createElement("div");
+                    actions.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-top: auto;";
+                    
+                    const row1 = document.createElement("div");
+                    row1.style.cssText = "display:flex; gap:6px; justify-content:center;";
+                    
+                    const selectBtn = document.createElement("button");
+                    selectBtn.textContent = "Select";
+                    selectBtn.className = "menu-button";
+                    selectBtn.style.cssText = "padding:8px 6px; font-size:12px; width:100%; flex:none;";
+                    selectBtn.onclick = () => { selectCharacterAndPlay(c); };
+
+                    row1.appendChild(selectBtn);
+
+                    const row2 = document.createElement("div");
+                    row2.style.cssText = "display:flex; gap:0; border-radius:8px; overflow:hidden;";
+
+                    const editBtn = document.createElement("button");
+                    editBtn.textContent = "Edit";
+                    editBtn.className = "menu-button";
+                    editBtn.style.cssText = "padding:8px 0; font-size:12px; flex:1; background: rgba(74, 144, 226, 0.6); border-radius:0;";
+                    editBtn.onclick = () => { editCharacter(c); };
+                    editBtn.style.borderTopLeftRadius = "8px";
+                    editBtn.style.borderBottomLeftRadius = "8px";
+
+                    const downloadBtn = document.createElement("button");
+                    downloadBtn.textContent = "📥";
+                    downloadBtn.className = "menu-button";
+                    downloadBtn.title = "Download character (.json)";
+                    downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
+                    downloadBtn.onclick = () => { downloadCharacter(c); };
+                    const uploadBtn = document.createElement("button");
+                    uploadBtn.textContent = "☁️";
+                    uploadBtn.className = "menu-button";
+                    uploadBtn.title = "Upload character as URL";
+                    uploadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(120,110,200,0.75); border-radius:0;";
+                    uploadBtn.onclick = () => { uploadCharacterToUniverse(c); };
+
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.textContent = "🗑️";
+                    deleteBtn.className = "menu-button";
+                    deleteBtn.title = "Delete character";
+                    deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,0.7); border-radius:0;";
+                    deleteBtn.onclick = () => { deleteCharacter(c.id); };
+                    deleteBtn.style.borderTopRightRadius = "8px";
+                    deleteBtn.style.borderBottomRightRadius = "8px";
+
+                    row2.appendChild(editBtn);
+                    row2.appendChild(downloadBtn);
+                    row2.appendChild(uploadBtn);
+                    row2.appendChild(deleteBtn);
+                    
+                    actions.appendChild(row1);
+                    actions.appendChild(row2);
+                    
+                    card.appendChild(header);
+                    card.appendChild(actions);
+                    listEl.appendChild(card);
+                });
+                
+                // Show all card for characters if more than 4
+                if (allCharacters.length > 4) {
+                    const allCard = document.createElement("div");
+                    allCard.className = "world-card";
+                    const name = document.createElement("div");
+                    name.textContent = "Show all";
+                    name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; text-align:center;";
+                    const btn = document.createElement("button");
+                    btn.textContent = "Show all";
+                    btn.className = "menu-button";
+                    btn.style.cssText = "padding:8px 10px; font-size:12px;";
+                    btn.onclick = () => { openAllCharactersMenu(); };
+                    allCard.appendChild(name);
+                    allCard.appendChild(btn);
+                    listEl.appendChild(allCard);
+                }
+            }
+            
+            function createCharacter() {
+                // Zur OnlyCharacter/CharacterCreate.html navigieren
+                // Speichern, dass wir vom Characters-View kommen
+                sessionStorage.setItem("storyki_previous_view", "characters");
+                navigateWithTransition("OnlyCharacter/CharacterCreate.html");
+            }
+            
+            const PLAYER_CHARS_KEY = "storyki_player_characters";
+            
+            function getPlayerCharacters() {
+                try {
+                    return JSON.parse(localStorage.getItem(PLAYER_CHARS_KEY) || "[]");
+                } catch {
+                    return [];
+                }
+            }
+            
+            function setPlayerCharacters(players) {
+                localStorage.setItem(PLAYER_CHARS_KEY, JSON.stringify(players));
+            }
+            
+            function openPlayerMenu() {
+                // Zeige Player Characters Menü
+                document.getElementById("main-menu").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("main-menu").style.display = "none";
+                    document.getElementById("players-menu").style.display = "flex";
+                    // Apply background to players menu
+                    const settings = sessionStorage.getItem("storyki_settings");
+                    const bgDiv = document.getElementById("players-bg");
+                    if (settings && bgDiv) {
+                        try {
+                            const data = JSON.parse(settings);
+                            if (data.backgroundUrl) {
+                                bgDiv.style.backgroundImage = `url("${data.backgroundUrl}")`;
+                            } else {
+                                bgDiv.style.backgroundImage = "url('https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp')";
+                            }
+                        } catch(e) {
+                            bgDiv.style.backgroundImage = "url('https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp')";
+                        }
+                    } else if (bgDiv) {
+                        bgDiv.style.backgroundImage = "url('https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp')";
+                    }
+                    renderPlayerCharacters();
+                    setTimeout(() => {
+                        document.getElementById("players-menu").style.opacity = "1";
+                    }, 50);
+                }, 300);
+            }
+            
+            function closePlayerMenu() {
+                document.getElementById("players-menu").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("players-menu").style.display = "none";
+                    document.getElementById("main-menu").style.display = "flex";
+                    renderScenarios();
+                    // Ensure Create Player button is visible when in characters view
+                    const playerBtnRow = document.getElementById('player-btn-row');
+                    if (_viewMode === 'characters' && playerBtnRow) {
+                        playerBtnRow.style.display = 'flex';
+                    }
+                    setTimeout(() => {
+                        document.getElementById("main-menu").style.opacity = "1";
+                    }, 50);
+                }, 300);
+            }
+            
+            function renderPlayerCharacters() {
+                const listEl = document.getElementById("players-list");
+                const hintEl = document.getElementById("no-players-hint");
+                const searchInput = document.getElementById("player-search");
+                const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
+
+                if (!listEl) return;
+
+                listEl.innerHTML = "";
+
+                // Get players from localStorage
+                let players = [];
+                try {
+                    players = JSON.parse(localStorage.getItem("storyki_player_characters") || "[]");
+                } catch(e) {
+                    players = [];
+                }
+
+                if (searchTerm) {
+                    players = players.filter(p =>
+                        (p.title || "").toLowerCase().includes(searchTerm) ||
+                        (p.name || "").toLowerCase().includes(searchTerm)
+                    );
+                }
+
+                hintEl.style.display = "none";
+
+                const isMobile = window.innerWidth <= 700;
+
+                // Desktop: horizontal scroll layout
+                if (!isMobile) {
+                    const visibleCount = Math.min(players.length + 1, 5);
+                    listEl.style.margin = "0 auto";
+                    listEl.style.maxWidth = "100%";
+                    listEl.style.width = "auto";
+                    listEl.style.justifyContent = (visibleCount <= 3) ? "center" : "flex-start";
+                    listEl.style.flexDirection = "row";
+                    listEl.scrollLeft = 0;
+                }
+
+                // Create new Player Card at the front
+                const createCard = document.createElement("div");
+                createCard.className = "world-card";
+                if (isMobile) {
+                    createCard.style.cssText = `
+                        background: linear-gradient(135deg, rgba(100, 100, 100, 0.8) 0%, rgba(80, 80, 80, 0.8) 100%);
+                        cursor: pointer;
+                        display: flex;
+                        flex-direction: row;
+                        justify-content: center;
+                        align-items: center;
+                        gap: 15px;
+                        width: 100%;
+                        height: 80px;
+                        border-radius: 12px;
+                        transition: transform 0.3s, box-shadow 0.3s;
+                        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+                    `;
+                } else {
+                    createCard.style.cssText = `
+                        background: linear-gradient(135deg, rgba(100, 100, 100, 0.8) 0%, rgba(80, 80, 80, 0.8) 100%);
+                        cursor: pointer;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        gap: 15px;
+                        min-width: 220px;
+                        height: 280px;
+                        border-radius: 16px;
+                        transition: transform 0.3s, box-shadow 0.3s;
+                        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                    `;
+                }
+                createCard.onmouseover = () => { createCard.style.transform = isMobile ? "scale(1.01)" : "translateY(-8px) scale(1.02)"; };
+                createCard.onmouseout = () => { createCard.style.transform = "translateY(0) scale(1)"; };
+
+                const plusIcon = document.createElement("div");
+                plusIcon.textContent = "+";
+                plusIcon.style.cssText = isMobile
+                    ? "font-size: 32px; font-weight: 200; color: rgba(255,255,255,0.95);"
+                    : "font-size: 64px; font-weight: 200; color: rgba(255,255,255,0.95); text-shadow: 0 4px 15px rgba(0,0,0,0.3);";
+
+                const createText = document.createElement("div");
+                createText.textContent = "Create new";
+                createText.style.cssText = isMobile
+                    ? "font-size: 16px; font-weight: 600; color: #fff;"
+                    : "font-size: 18px; font-weight: 600; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.3);";
+
+                createCard.appendChild(plusIcon);
+                createCard.appendChild(createText);
+                createCard.onclick = () => navigateToPlayerCreate();
+                listEl.appendChild(createCard);
+
+                if (!players.length && !searchTerm) {
+                    hintEl.style.display = "block";
+                    hintEl.textContent = "No player characters found. Click \"Create new\" to add one.";
+                }
+
+                players.forEach(p => {
+                    const card = document.createElement("div");
+                    card.className = "world-card";
+                    const coverUrl = (p?.coverUrl || p?.image || "").trim();
+
+                    if (isMobile) {
+                        // Mobile layout: horizontal card with cover left, name center, buttons right
+                        card.style.cssText = `
+                            position: relative;
+                            width: 100%;
+                            height: 120px;
+                            border-radius: 12px;
+                            padding: 12px;
+                            display: flex;
+                            flex-direction: row;
+                            align-items: center;
+                            gap: 12px;
+                            color: #fff;
+                            background: ${coverUrl ? `linear-gradient(rgba(10,10,15,.7), rgba(10,10,15,.9)), url("${coverUrl}")` : `linear-gradient(135deg, rgba(100,100,100,0.8) 0%, rgba(80,80,80,0.8) 100%)`};
+                            background-size: cover;
+                            background-position: center;
+                            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+                            transition: transform 0.3s, box-shadow 0.3s;
+                            overflow: hidden;
+                        `;
+
+                        // Cover image (left)
+                        const coverDiv = document.createElement("div");
+                        coverDiv.className = "player-cover";
+                        if (coverUrl) {
+                            coverDiv.style.cssText = `
+                                width: 80px;
+                                height: 80px;
+                                border-radius: 8px;
+                                flex-shrink: 0;
+                                background-image: url("${coverUrl}");
+                                background-size: cover;
+                                background-position: center;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            `;
+                        } else {
+                            coverDiv.style.cssText = `
+                                width: 80px;
+                                height: 80px;
+                                border-radius: 8px;
+                                flex-shrink: 0;
+                                background: linear-gradient(135deg, rgba(120,120,120,0.6) 0%, rgba(100,100,100,0.6) 100%);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 32px;
+                                color: rgba(255,255,255,0.5);
+                            `;
+                            coverDiv.textContent = "👤";
+                        }
+
+                        // Info (center)
+                        const infoDiv = document.createElement("div");
+                        infoDiv.className = "player-info";
+                        infoDiv.style.cssText = "flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0;";
+
+                        const name = document.createElement("div");
+                        name.textContent = p.title || p.name || "Unnamed Player";
+                        name.style.cssText = "color:#fff; font-weight:700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+                        infoDiv.appendChild(name);
+
+                        // Actions (right)
+                        const actionsDiv = document.createElement("div");
+                        actionsDiv.className = "player-actions";
+                        actionsDiv.style.cssText = "display: flex; flex-direction: row; gap: 4px; min-width: 120px;";
+
+                        const editBtn = document.createElement("button");
+                        editBtn.textContent = "✏️";
+                        editBtn.style.cssText = "padding: 8px; font-size: 14px; flex: 1; background: rgba(100,100,100,0.7); color:#fff; border:none; border-radius: 6px; cursor:pointer;";
+                        editBtn.onclick = () => { editPlayerCharacter(p); };
+
+                        const downloadBtn = document.createElement("button");
+                        downloadBtn.textContent = "📥";
+                        downloadBtn.style.cssText = "padding: 8px; font-size: 14px; flex: 1; background: rgba(76,175,80,0.7); color:#fff; border:none; border-radius: 6px; cursor:pointer;";
+                        downloadBtn.onclick = () => { downloadPlayerCharacter(p); };
+
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.textContent = "🗑️";
+                        deleteBtn.style.cssText = "padding: 8px; font-size: 14px; flex: 1; background: rgba(244,67,54,0.7); color:#fff; border:none; border-radius: 6px; cursor:pointer;";
+                        deleteBtn.onclick = () => { deletePlayerCharacter(p.id); };
+
+                        actionsDiv.appendChild(editBtn);
+                        actionsDiv.appendChild(downloadBtn);
+                        actionsDiv.appendChild(deleteBtn);
+
+                        card.appendChild(coverDiv);
+                        card.appendChild(infoDiv);
+                        card.appendChild(actionsDiv);
+                    } else {
+                        // Desktop layout: vertical card
+                        card.style.cssText = `
+                            position: relative;
+                            min-width: 220px;
+                            height: 280px;
+                            border-radius: 16px;
+                            padding: 20px;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: flex-start;
+                            align-items: center;
+                            color: #fff;
+                            background-size: cover;
+                            background-position: center;
+                            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                            transition: transform 0.3s, box-shadow 0.3s;
+                            overflow: hidden;
+                        `;
+                        card.onmouseover = () => { card.style.transform = "translateY(-8px) scale(1.02)"; card.style.boxShadow = "0 12px 40px rgba(0,0,0,0.4)"; };
+                        card.onmouseout = () => { card.style.transform = "translateY(0) scale(1)"; card.style.boxShadow = "0 8px 32px rgba(0,0,0,0.3)"; };
+
+                        if (coverUrl) {
+                            card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.6), rgba(10,10,15,.8)), url("${coverUrl}")`;
+                        } else {
+                            card.style.background = `linear-gradient(135deg, rgba(100,100,100,0.8) 0%, rgba(80,80,80,0.8) 100%)`;
+                        }
+
+                        const header = document.createElement("div");
+                        header.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-bottom: auto; width:100%; text-align:center;";
+
+                        const name = document.createElement("div");
+                        name.textContent = p.title || p.name || "Unnamed Player";
+                        name.style.cssText = "color:#fff; font-weight:700; font-size: 18px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+                        header.appendChild(name);
+
+                        const actions = document.createElement("div");
+                        actions.style.cssText = "display:flex; gap:4px; width:100%; margin-top: auto; border-radius:8px; overflow:hidden;";
+
+                        const editBtn = document.createElement("button");
+                        editBtn.textContent = "Edit";
+                        editBtn.style.cssText = "padding:8px 0; font-size:12px; flex:1; background: rgba(100,100,100,0.7); color:#fff; border:none; cursor:pointer; font-weight:500; transition:all 0.2s;";
+                        editBtn.onmouseover = () => editBtn.style.background = "rgba(120,120,120,0.85)";
+                        editBtn.onmouseout = () => editBtn.style.background = "rgba(100,100,100,0.7)";
+                        editBtn.onclick = () => { editPlayerCharacter(p); };
+
+                        const downloadBtn = document.createElement("button");
+                        downloadBtn.textContent = "📥";
+                        downloadBtn.title = "Download player";
+                        downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(76,175,80,0.7); color:#fff; border:none; cursor:pointer; transition:all 0.2s;";
+                        downloadBtn.onmouseover = () => downloadBtn.style.background = "rgba(76,175,80,0.85)";
+                        downloadBtn.onmouseout = () => downloadBtn.style.background = "rgba(76,175,80,0.7)";
+                        downloadBtn.onclick = () => { downloadPlayerCharacter(p); };
+
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.textContent = "🗑️";
+                        deleteBtn.title = "Delete player";
+                        deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(244,67,54,0.7); color:#fff; border:none; cursor:pointer; transition:all 0.2s;";
+                        deleteBtn.onmouseover = () => deleteBtn.style.background = "rgba(244,67,54,0.85)";
+                        deleteBtn.onmouseout = () => deleteBtn.style.background = "rgba(244,67,54,0.7)";
+                        deleteBtn.onclick = () => { deletePlayerCharacter(p.id); };
+
+                        actions.appendChild(editBtn);
+                        actions.appendChild(downloadBtn);
+                        actions.appendChild(deleteBtn);
+
+                        card.appendChild(header);
+                        card.appendChild(actions);
+                    }
+
+                    listEl.appendChild(card);
+                });
+            }
+            
+            function navigateToPlayerCreate() {
+                // Speichern, dass wir vom Characters-View kommen
+                sessionStorage.setItem("storyki_previous_view", "characters");
+                navigateWithTransition("OnlyCharacter/PlayerCreate.html");
+            }
+            
+            function selectPlayerCharacter(player) {
+                // Player als aktiven Spieler setzen
+                Storage.set("storyki_active_player", JSON.stringify(player));
+                alert(`Player "${player.title || player.name}" selected!`);
+                closePlayerMenu();
+            }
+            
+            function editPlayerCharacter(player) {
+                // Edit-Modus für Player
+                sessionStorage.setItem("storyki_edit_player_id", player.id);
+                sessionStorage.setItem("storyki_previous_view", "characters");
+                navigateWithTransition("OnlyCharacter/PlayerCreate.html");
+            }
+            
+            function downloadPlayerCharacter(player) {
+                const data = JSON.stringify(player, null, 2);
+                const blob = new Blob([data], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${player.title || player.name || "player"}_export.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            
+            function deletePlayerCharacter(playerId) {
+                if (!confirm("Delete this player character?")) return;
+                const players = getPlayerCharacters().filter(p => p.id !== playerId);
+                setPlayerCharacters(players);
+                renderPlayerCharacters();
+            }
+            
+            function selectCharacterAndPlay(character) {
+                // Zeige Stories dieses Charakters (1:1 wie bei Worlds)
+                openCharacterStories(character.id);
+            }
+            
+            const SELECTED_CHAR_ID_KEY = "storyki_selected_char_id";
+            
+            function openCharacterStories(charId) {
+                const chars = getStandaloneCharacters();
+                const character = chars.find(c => c.id === charId);
+                if (!character) return;
+
+                _selectedCharacter = character;
+                Storage.set(SELECTED_CHAR_ID_KEY, charId);
+
+                // WICHTIG: Lösche worldId damit Character-Stories nicht unter Worlds landen
+                Storage.remove(SELECTED_WORLD_ID_KEY);
+                Storage.remove(CURRENT_STORY_ID_KEY);
+
+                // Schließe alle anderen Menüs
+                const menusToClose = ["main-menu", "all-characters-menu", "all-worlds-menu", "players-menu", "worlds-menu"];
+                menusToClose.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.style.opacity = "0";
+                        setTimeout(() => { el.style.display = "none"; }, 200);
+                    }
+                });
+
+                // Zeige Stories-Menü (wie bei Worlds)
+                setTimeout(() => {
+                    document.getElementById("stories-menu").style.display = "flex";
+                    document.getElementById("selected-world-title").textContent = character.title || "Character";
+                    // Zeige Hintergrund
+                    applyBg("https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp");
+                    renderCharacterStories(charId);
+                    loadBackground();
+                    setTimeout(() => {
+                        document.getElementById("stories-menu").style.opacity = "1";
+                    }, 50);
+                }, 300);
+            }
+            
+            function renderCharacterStories(charId) {
+                const listEl = document.getElementById("stories-list");
+                const hintEl = document.getElementById("no-stories-hint");
+                const searchInput = document.getElementById("story-search");
+                const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
+                
+                listEl.innerHTML = "";
+                
+                // Filtere Stories mit characterId (statt worldId)
+                let stories = getScenarios().filter(s => s.characterId === charId);
+                
+                if (searchTerm) {
+                    stories = stories.filter(s => 
+                        (s.name || "").toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                // "New Story" Karte ganz vorne (wie bei Worlds)
+                const createCard = document.createElement("div");
+                createCard.className = "world-card";
+                createCard.style.backgroundImage = "linear-gradient(135deg, rgba(100, 100, 100, 0.8) 0%, rgba(80, 80, 80, 0.8) 100%)";
+                createCard.style.cursor = "pointer";
+                createCard.style.display = "flex";
+                createCard.style.flexDirection = "column";
+                createCard.style.justifyContent = "center";
+                createCard.style.alignItems = "center";
+                createCard.style.gap = "10px";
+                
+                const plusIcon = document.createElement("div");
+                plusIcon.textContent = "+";
+                plusIcon.style.cssText = "font-size: 48px; font-weight: 300; color: rgba(255,255,255,0.9);";
+                
+                const createText = document.createElement("div");
+                createText.textContent = "New Story";
+                createText.style.cssText = "font-size: 16px; font-weight: 600; color: #fff;";
+                
+                createCard.appendChild(plusIcon);
+                createCard.appendChild(createText);
+                createCard.onclick = () => createNewCharacterStory(charId);
+                listEl.appendChild(createCard);
+                
+                if (!stories.length) {
+                    hintEl.style.display = "block";
+                    hintEl.textContent = searchTerm ? "No story found with this name." : "You have no stories with this character yet.";
+                    return;
+                }
+                hintEl.style.display = "none";
+                
+                const isMobile = window.innerWidth <= 700;
+                listEl.style.margin = "0 auto";
+                listEl.style.maxWidth = "100%";
+                listEl.style.width = "auto";
+                if (isMobile) {
+                    listEl.style.justifyContent = "flex-start";
+                    listEl.scrollLeft = 0;
+                } else {
+                    listEl.style.justifyContent = (stories.length <= 3) ? "center" : "flex-start";
+                    listEl.scrollLeft = 0;
+                }
+
+                stories.forEach(s => {
+                    const card = document.createElement("div");
+                    card.className = "world-card story-card";
+                    
+                    let coverUrl = (s?.data?.settings?.coverUrl || "").trim();
+                    if (coverUrl) {
+                        card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.55), rgba(10,10,15,.55)), url("${coverUrl}")`;
+                    } else {
+                        card.style.backgroundImage = "";
+                    }
+                    
+                    const header = document.createElement("div");
+                    header.style.cssText = "display:flex; flex-direction:column; gap:6px; margin-bottom: 5px;";
+                    
+                    const nameRow = document.createElement("div");
+                    nameRow.style.cssText = "display:flex; align-items:center; gap:8px; width:100%; min-width:0;";
+                    
+                    const name = document.createElement("div");
+                    name.textContent = s.name || "Unnamed Story";
+                    name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+                    nameRow.appendChild(name);
+                    
+                    header.appendChild(nameRow);
+                    
+                    const actions = document.createElement("div");
+                    actions.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-top: auto;";
+                    
+                    const playBtn = document.createElement("button");
+                    playBtn.textContent = "Continue";
+                    playBtn.className = "menu-button";
+                    playBtn.style.cssText = "padding:8px 10px; font-size:12px; align-self:stretch;";
+                    playBtn.onclick = () => { resumeCharacterStory(s); };
+                    
+                    const btnRow = document.createElement("div");
+                    btnRow.style.cssText = "display:flex; gap:0; border-radius:8px; overflow:hidden;";
+
+                    const confBtn = document.createElement("button");
+                    confBtn.textContent = "⚙️";
+                    confBtn.className = "menu-button";
+                    confBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(100, 100, 100, 0.6); border-radius:0;";
+                    confBtn.title = "Rename story";
+                    confBtn.onclick = () => { openStoryConf(s.id); };
+                    confBtn.style.borderTopLeftRadius = "8px";
+                    confBtn.style.borderBottomLeftRadius = "8px";
+
+                    const copyBtn = document.createElement("button");
+                    copyBtn.textContent = "📋";
+                    copyBtn.className = "menu-button";
+                    copyBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90, 160, 90, 0.6); border-radius:0;";
+                    copyBtn.title = "Copy";
+                    copyBtn.onclick = () => { copyCharacterStory(s.id); };
+
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.textContent = "🗑️";
+                    deleteBtn.className = "menu-button";
+                    deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150, 40, 40, 0.7); border-radius:0;";
+                    deleteBtn.title = "Delete story";
+                    deleteBtn.onclick = () => {
+                        if (!confirm("Really delete the story?")) return;
+                        const items = getScenarios().filter(x => x.id !== s.id);
+                        setScenarios(items);
+                        renderCharacterStories(charId);
+                    };
+                    deleteBtn.style.borderTopRightRadius = "8px";
+                    deleteBtn.style.borderBottomRightRadius = "8px";
+
+                    btnRow.appendChild(confBtn);
+                    btnRow.appendChild(copyBtn);
+                    btnRow.appendChild(deleteBtn);
+                    
+                    actions.appendChild(playBtn);
+                    actions.appendChild(btnRow);
+                    
+                    card.appendChild(header);
+                    card.appendChild(actions);
+                    listEl.appendChild(card);
+                });
+            }
+            
+            let _pendingCharId = null;
+
+            function createNewCharacterStory(charId) {
+                _pendingCharId = charId;
+                
+                // Check if player exists
+                const players = getPlayerCharacters();
+                if (!players.length) {
+                    alert("You need to create at least one Player Character first!\n\nClick 'Create Player' in the main menu.");
+                    _pendingCharId = null;
+                    return;
+                }
+                
+                // Fill player select
+                const select = document.getElementById("story-player-select");
+                select.innerHTML = '<option value="" style="background:#2a2a3a; color:#fff;">-- Choose a player --</option>';
+                players.forEach(p => {
+                    const option = document.createElement("option");
+                    option.value = p.id;
+                    option.textContent = p.title || p.name || "Unnamed Player";
+                    option.style.cssText = "background:#2a2a3a; color:#fff;";
+                    select.appendChild(option);
+                });
+                
+                // Show overlay
+                document.getElementById("new-char-story-overlay").style.display = "flex";
+            }
+            
+            function closeNewCharStoryOverlay() {
+                document.getElementById("new-char-story-overlay").style.display = "none";
+                document.getElementById("story-player-select").value = "";
+                document.getElementById("story-intro-input").value = "";
+                document.getElementById("story-day").value = "1";
+                document.getElementById("story-month").value = "1";
+                document.getElementById("story-year").value = "1983";
+                document.getElementById("story-time").value = "09:00";
+                _pendingCharId = null;
+            }
+            
+            function startNewCharacterStory() {
+                const playerId = document.getElementById("story-player-select").value;
+                const intro = document.getElementById("story-intro-input").value.trim();
+                const day = parseInt(document.getElementById("story-day").value) || 1;
+                const month = parseInt(document.getElementById("story-month").value) || 1;
+                const year = parseInt(document.getElementById("story-year").value) || 1983;
+                const time = document.getElementById("story-time").value || "09:00";
+
+                if (!playerId) {
+                    alert("Please select a player character!");
+                    return;
+                }
+
+                if (!_pendingCharId) {
+                    alert("Error: No character selected.");
+                    closeNewCharStoryOverlay();
+                    return;
+                }
+                
+                const chars = getStandaloneCharacters();
+                const character = chars.find(c => c.id === _pendingCharId);
+                const players = getPlayerCharacters();
+                const player = players.find(p => p.id === playerId);
+                
+                if (!character || !player) {
+                    alert("Error loading character or player.");
+                    closeNewCharStoryOverlay();
+                    return;
+                }
+                
+                // Create the story
+                const scenarios = getScenarios();
+                const id = generateId();
+                
+                const newStory = {
+                    id: id,
+                    name: `${character.title || "Story"}`,
+                    characterId: _pendingCharId,
+                    data: {
+                        cards: [{...character}, {...player}],
+                        settings: {},
+                        log: intro ? [{ role: "system", content: intro, timestamp: Date.now() }] : []
+                    },
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+                
+                scenarios.push(newStory);
+                setScenarios(scenarios);
+                
+                // Load into session and go to Game.html
+                Storage.set("storyki_storycards", JSON.stringify(newStory.data.cards));
+                Storage.set("storyki_storylog", JSON.stringify(newStory.data.log));
+                Storage.set("storyki_characters", JSON.stringify([]));
+                Storage.set(ANCHORED_WORLD_CHANGES_KEY, JSON.stringify({}));
+                
+                const globalSettingsRaw = Storage.get("storyki_settings");
+                let mergedSettings = {};
+                try {
+                    const globalSettings = globalSettingsRaw ? JSON.parse(globalSettingsRaw) : {};
+                    mergedSettings = { ...globalSettings, ...newStory.data.settings };
+                } catch {
+                    mergedSettings = newStory.data.settings || {};
+                }
+                Storage.set("storyki_settings", JSON.stringify(mergedSettings));
+                
+                Storage.set(CURRENT_STORY_ID_KEY, id);
+                Storage.remove(SELECTED_WORLD_ID_KEY);
+                Storage.set("storyki_active_player", player.id);
+                Storage.set("storyki_active_character", character.id);
+                Storage.set("storyki_starting_date", JSON.stringify({ day, month, year, time }));
+                // Setze auch in sessionStorage für OCGame.html
+                sessionStorage.setItem("storyki_current_story_id", id);
+
+                closeNewCharStoryOverlay();
+                console.log("Navigating to OnlyCharacter/OCGame.html...");
+                // Direkte Navigation wie in StoryKI/CharacterCreate.html
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "OnlyCharacter/OCGame.html";
+                }, 400);
+            }
+
+            function resumeCharacterStory(story) {
+                // Lade Story-Daten in Session
+                Storage.set("storyki_storycards", JSON.stringify(story.data.cards || []));
+                Storage.set("storyki_storylog", JSON.stringify(story.data.log || []));
+                Storage.set("storyki_characters", JSON.stringify([]));
+                Storage.set(ANCHORED_WORLD_CHANGES_KEY, JSON.stringify({}));
+
+                // Set active character and player from story data
+                const cards = story.data?.cards || [];
+
+                // Find bot character: either by genre or by having title but no name property
+                let botChar = cards.find(c => c.genre === "character" || (!c.name && c.title));
+                if (!botChar && cards.length > 0) {
+                    // Fallback: first card that is not a player (players have .name)
+                    botChar = cards.find(c => !c.name);
+                }
+
+                // Find player character: by having a name property
+                let playerChar = cards.find(c => c.name);
+
+                // Save full player object to session storage (not just ID) to prevent "No character selected" error
+                if (botChar) Storage.set("storyki_active_character", botChar.id);
+                if (playerChar) {
+                    // Save full player object as JSON string
+                    Storage.set("storyki_active_player", JSON.stringify(playerChar));
+                } else {
+                    // Try to find player from global storage if not in cards
+                    const players = getPlayerCharacters();
+                    const savedPlayerId = story.data?.playerId || story.characterId;
+                    const foundPlayer = players.find(p => p.id === savedPlayerId);
+                    if (foundPlayer) {
+                        Storage.set("storyki_active_player", JSON.stringify(foundPlayer));
+                    }
+                }
+
+                const globalSettingsRaw = Storage.get("storyki_settings");
+                let mergedSettings = {};
+                try {
+                    const globalSettings = globalSettingsRaw ? JSON.parse(globalSettingsRaw) : {};
+                    const storySettings = story.data?.settings || {};
+                    mergedSettings = { ...globalSettings, ...storySettings };
+                } catch {
+                    mergedSettings = story.data?.settings || {};
+                }
+                Storage.set("storyki_settings", JSON.stringify(mergedSettings));
+
+                Storage.set(CURRENT_STORY_ID_KEY, story.id);
+                Storage.remove(SELECTED_WORLD_ID_KEY);
+                // Setze auch in sessionStorage für OCGame.html
+                sessionStorage.setItem("storyki_current_story_id", story.id);
+
+                // Direkte Navigation wie in StoryKI/CharacterCreate.html
+                document.body.style.opacity = "0";
+                setTimeout(() => {
+                    window.location.href = "OnlyCharacter/OCGame.html";
+                }, 400);
+            }
+            
+            function copyCharacterStory(storyId) {
+                const scenarios = getScenarios();
+                const story = scenarios.find(s => s.id === storyId);
+                if (!story) return;
+                
+                const copy = {
+                    ...story,
+                    id: generateId(),
+                    name: `${story.name || "Story"} (Copy)`,
+                    data: JSON.parse(JSON.stringify(story.data)),
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+                scenarios.push(copy);
+                setScenarios(scenarios);
+                renderCharacterStories(story.characterId);
+            }
+
             function renderAllWorlds() {
                 const grid = document.getElementById("all-worlds-grid");
                 const qEl = document.getElementById("all-worlds-search");
@@ -1501,6 +2824,80 @@
                         btnRow2.appendChild(uploadBtn);
                     }
                     if (deleteBtn) btnRow2.appendChild(deleteBtn);
+                    card.appendChild(name);
+                    card.appendChild(btnRow);
+                    card.appendChild(btnRow2);
+                    grid.appendChild(card);
+                });
+            }
+
+            function renderAllCharacters() {
+                const grid = document.getElementById("all-characters-grid");
+                const qEl = document.getElementById("all-characters-search");
+                const q = (qEl ? qEl.value : "").toLowerCase().trim();
+                grid.innerHTML = "";
+                let chars = getStandaloneCharacters();
+                if (q) {
+                    chars = chars.filter(c =>
+                        (c.title || "").toLowerCase().includes(q) ||
+                        (c.description || "").toLowerCase().includes(q)
+                    );
+                }
+                chars.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+
+                chars.forEach(c => {
+                    const card = document.createElement("div");
+                    card.className = "world-card";
+                    const coverUrl = (c?.coverUrl || c?.image || "").trim();
+                    if (coverUrl) {
+                        card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.55), rgba(10,10,15,.55)), url("${coverUrl}")`;
+                    }
+                    const name = document.createElement("div");
+                    name.textContent = c.title || "Unnamed Character";
+                    name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; text-align:center;";
+
+                    const btnRow = document.createElement("div");
+                    btnRow.style.cssText = "display:flex; gap:6px; justify-content:center; margin-top:auto;";
+                    const selectBtn = document.createElement("button");
+                    selectBtn.textContent = "Select";
+                    selectBtn.className = "menu-button";
+                    selectBtn.style.cssText = "padding:8px 6px; font-size:12px; min-width:0; width:100%;";
+                    selectBtn.onclick = () => { openCharacterStories(c.id); };
+                    btnRow.appendChild(selectBtn);
+
+                    const btnRow2 = document.createElement("div");
+                    btnRow2.style.cssText = "display:flex; gap:0; border-radius:8px; overflow:hidden; margin-top:6px;";
+                    const editBtn = document.createElement("button");
+                    editBtn.textContent = "Edit";
+                    editBtn.className = "menu-button";
+                    editBtn.style.cssText = "padding:8px 0; font-size:12px; flex:1; background: rgba(74, 144, 226, 0.6); border-radius:0;";
+                    editBtn.onclick = () => { editCharacter(c.id); };
+                    editBtn.style.borderTopLeftRadius = "8px";
+                    editBtn.style.borderBottomLeftRadius = "8px";
+                    const downloadBtn = document.createElement("button");
+                    downloadBtn.textContent = "📥";
+                    downloadBtn.className = "menu-button";
+                    downloadBtn.title = "Download character (.json)";
+                    downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
+                    downloadBtn.onclick = () => { downloadCharacter(c); };
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.textContent = "🗑️";
+                    deleteBtn.className = "menu-button";
+                    deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,0.7); border-radius:0;";
+                    deleteBtn.onclick = () => {
+                        if (!confirm("Character wirklich löschen?")) return;
+                        const items = getStandaloneCharacters().filter(x => x.id !== c.id);
+                        localStorage.setItem(STANDALONE_CHARS_KEY, JSON.stringify(items));
+                        renderCharactersView(document.getElementById("characters-list"), document.getElementById("no-characters-hint"), "");
+                        renderAllCharacters();
+                    };
+                    deleteBtn.style.borderTopRightRadius = "8px";
+                    deleteBtn.style.borderBottomRightRadius = "8px";
+
+                    btnRow2.appendChild(editBtn);
+                    btnRow2.appendChild(downloadBtn);
+                    btnRow2.appendChild(deleteBtn);
+
                     card.appendChild(name);
                     card.appendChild(btnRow);
                     card.appendChild(btnRow2);
@@ -1725,7 +3122,12 @@
                     scenarios[idx].data.settings.coverUrl = newCover;
                     scenarios[idx].updatedAt = Date.now();
                     setScenarios(scenarios);
-                    renderStories(Storage.get(SELECTED_WORLD_ID_KEY));
+                    // Prüfen, ob es eine World-Story oder Character-Story ist
+                    if (scenarios[idx].worldId) {
+                        renderStories(Storage.get(SELECTED_WORLD_ID_KEY));
+                    } else if (scenarios[idx].characterId) {
+                        renderCharacterStories(scenarios[idx].characterId);
+                    }
                     closeStoryConf();
                 }
             }
@@ -1760,7 +3162,9 @@
 
             function backToMainMenu() {
                 _selectedWorld = null;
+                _selectedCharacter = null;
                 Storage.remove(SELECTED_WORLD_ID_KEY);
+                Storage.remove(SELECTED_CHAR_ID_KEY);
                 
                 document.getElementById("stories-menu").style.opacity = "0";
                 setTimeout(() => {
@@ -1855,34 +3259,36 @@
                 try {
                     const cards = JSON.parse(Storage.get("storyki_storycards") || "[]");
                     if (!cards || cards.length === 0) return;
-                    
+
                     const chars = JSON.parse(Storage.get("storyki_characters") || "[]");
                     const log = JSON.parse(Storage.get("storyki_storylog") || "[]");
                     const settings = JSON.parse(Storage.get("storyki_settings") || "{}");
                     const anchoredWorldChanges = JSON.parse(Storage.get(ANCHORED_WORLD_CHANGES_KEY) || "{}");
                     const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
+                    const characterId = Storage.get(SELECTED_CHAR_ID_KEY);
                     const currentStoryId = Storage.get(CURRENT_STORY_ID_KEY);
-                    
-                    if (!worldId) return;
+
+                    // Nur speichern wenn worldId ODER characterId vorhanden ist
+                    if (!worldId && !characterId) return;
 
                     // Signatur zur Vermeidung unnötiger Updates (wenn sich nichts geändert hat)
-                    const sig = JSON.stringify({ w: worldId, c: cards.length, ch: chars.length, l: log.length, s: Object.keys(settings || {}).length });
+                    const sig = JSON.stringify({ w: worldId, c: characterId, cards: cards.length, ch: chars.length, l: log.length, s: Object.keys(settings || {}).length });
                     const scenarios = getScenarios();
-                    
+
                     const already = scenarios.some(x => x.signature === sig);
                     if (already) return;
-                    
+
                     let targetStory = null;
                     if (currentStoryId) {
                         targetStory = scenarios.find(x => x.id === currentStoryId);
                     }
-                    
+
                     if (targetStory) {
                         // Vorhandene Story aktualisieren
                         targetStory.updatedAt = Date.now();
                         targetStory.signature = sig;
                         targetStory.data = { cards, characters: chars, log, settings, anchoredWorldChanges };
-                        
+
                         // Wenn der Charakter-Name im Story-Titel sein soll:
                         if (chars.length > 0 && targetStory.name.startsWith("Story ")) {
                              const mainChar = chars[0];
@@ -1892,22 +3298,36 @@
                         // Neue Story anlegen
                         const id = Math.random().toString(36).slice(2, 10);
                         let name = "Story " + new Date().toLocaleString();
-                        if (chars.length > 0) {
+
+                        // Finde den Charakter-Namen für den Titel
+                        const botChar = cards.find(c => c.genre === "character" || !c.name);
+                        if (botChar && botChar.title) {
+                            name = `${botChar.title} - ${new Date().toLocaleDateString()}`;
+                        } else if (chars.length > 0) {
                             const mainChar = chars[0];
                             name = `${mainChar.firstName} ${mainChar.lastName} - ${new Date().toLocaleDateString()}`;
                         }
-                        
-                        scenarios.push({
-                            id, 
-                            worldId,
-                            name, 
-                            createdAt: Date.now(), 
+
+                        // Erstelle Story-Objekt
+                        const newStory = {
+                            id,
+                            name,
+                            createdAt: Date.now(),
                             updatedAt: Date.now(),
                             signature: sig,
                             data: { cards, characters: chars, log, settings, anchoredWorldChanges }
-                        });
+                        };
+
+                        // Füge worldId ODER characterId hinzu (nicht beides)
+                        if (worldId) {
+                            newStory.worldId = worldId;
+                        } else if (characterId) {
+                            newStory.characterId = characterId;
+                        }
+
+                        scenarios.push(newStory);
                     }
-                    
+
                     setScenarios(scenarios);
                     renderScenarios();
                 } catch (e) {
@@ -1922,6 +3342,8 @@
                 console.log("Create Story");
                 Storage.remove(SELECTED_WORLD_ID_KEY); // Sicherstellen, dass keine Welt-ID geladen wird (für neue Welt)
                 Storage.remove(ANCHORED_WORLD_CHANGES_KEY);
+                // Speichern, dass wir vom Worlds-View kommen
+                sessionStorage.setItem("storyki_previous_view", "worlds");
                 navigateWithTransition("StoryKI/Create.html");
             }
 
@@ -2319,7 +3741,36 @@
             // Render scenarios and capture drafts if returned from Create.html
             window.addEventListener("load", async () => {
                 await ensureDefaultWorlds();
+                await ensureDefaultCharacters();
                 captureDraftFromSessionIfAny();
+                // Prüfen, ob wir von einer anderen Seite zurückkommen (Create.html oder CharacterCreate.html)
+                const previousView = sessionStorage.getItem("storyki_previous_view");
+                if (previousView && (previousView === "worlds" || previousView === "characters")) {
+                    _viewMode = previousView;
+                    // Button-Text und UI anpassen
+                    const btn = document.getElementById('view-mode-btn');
+                    const title = document.querySelector('.menu-container h1');
+                    const searchInput = document.getElementById('world-search');
+                    const hintEl = document.getElementById('no-scenarios-hint');
+                    const playerBtnRow = document.getElementById('player-btn-row');
+                    if (_viewMode === 'characters') {
+                        if (btn) btn.textContent = 'Switch to Worlds';
+                        if (title) title.textContent = 'Your Characters';
+                        if (searchInput) searchInput.placeholder = 'Searching for characters...';
+                        if (hintEl) hintEl.textContent = 'No character found. Create a new one with "Create Character".';
+                        // Show Create Player button when in characters view
+                        if (playerBtnRow) playerBtnRow.style.display = 'flex';
+                    } else {
+                        if (btn) btn.textContent = 'Switch to Character';
+                        if (title) title.textContent = 'Your Worlds';
+                        if (searchInput) searchInput.placeholder = 'Searching for worlds...';
+                        if (hintEl) hintEl.textContent = 'No world available. Create a new one with "Create World".';
+                        // Hide Create Player button when in worlds view
+                        if (playerBtnRow) playerBtnRow.style.display = 'none';
+                    }
+                    // Gespeicherten View löschen nach der Wiederherstellung
+                    sessionStorage.removeItem("storyki_previous_view");
+                }
                 renderScenarios();
                 refreshSeeUrlsButton();
                 const listEl = document.getElementById("scenarios-list");
