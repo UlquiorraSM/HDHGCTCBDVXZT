@@ -1135,15 +1135,18 @@
                BACKGROUND
             ═══════════════════════════════════════ */
             function loadBackground() {
-                const raw = Storage.get(SETTINGS_KEY);
+                // Read settings from localStorage (where settings.html saves them)
+                const raw = localStorage.getItem(SETTINGS_KEY);
                 const url = raw
                     ? JSON.parse(raw).backgroundUrl ||
                       "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp"
                     : "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
                 const el = document.getElementById("bg-layer");
-                el.style.backgroundImage = `url(${url})`;
-                el.style.backgroundSize = "cover";
-                el.style.backgroundPosition = "center";
+                if (el) {
+                    el.style.backgroundImage = `url(${url})`;
+                    el.style.backgroundSize = "cover";
+                    el.style.backgroundPosition = "center";
+                }
             }
 
             /* ═══════════════════════════════════════

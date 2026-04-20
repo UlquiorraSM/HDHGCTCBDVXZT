@@ -4185,8 +4185,8 @@
            BACKGROUND
         ───────────────────────────────────────── */
             function loadBackground() {
-                // Immer globalen Hintergrund aus Settings verwenden
-                const raw = Storage.get("storyki_settings");
+                // Read settings from localStorage (where settings.html saves them)
+                const raw = localStorage.getItem("storyki_settings");
                 const url = raw
                     ? JSON.parse(raw).backgroundUrl ||
                       "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp"
