@@ -893,6 +893,27 @@
                 </div>
 
                 <div class="conf-group">
+                    <label class="conf-label">Relationship to Character</label>
+                    <select id="story-relation-type" class="conf-input" onchange="updateRelationSubtype()" style="background:rgba(255,255,255,0.1); color:#fff; cursor:pointer; margin-bottom:8px;">
+                        <option value="unknown" style="background:#2a2a3a; color:#fff;">Unknown</option>
+                        <option value="friend" style="background:#2a2a3a; color:#fff;">Friend</option>
+                        <option value="known" style="background:#2a2a3a; color:#fff;">Known</option>
+                        <option value="enemy" style="background:#2a2a3a; color:#fff;">Enemy</option>
+                        <option value="family" style="background:#2a2a3a; color:#fff;">Family</option>
+                    </select>
+                    <select id="story-relation-subtype" class="conf-input" style="background:rgba(255,255,255,0.1); color:#fff; cursor:pointer; display:none;">
+                        <option value="sibling" style="background:#2a2a3a; color:#fff;">Sibling</option>
+                        <option value="child" style="background:#2a2a3a; color:#fff;">Child</option>
+                        <option value="parent" style="background:#2a2a3a; color:#fff;">Parent</option>
+                        <option value="grandchild" style="background:#2a2a3a; color:#fff;">Grandchild</option>
+                        <option value="grandparent" style="background:#2a2a3a; color:#fff;">Grandparent</option>
+                        <option value="cousin" style="background:#2a2a3a; color:#fff;">Cousin</option>
+                        <option value="aunt_uncle" style="background:#2a2a3a; color:#fff;">Aunt/Uncle</option>
+                        <option value="niece_nephew" style="background:#2a2a3a; color:#fff;">Niece/Nephew</option>
+                    </select>
+                </div>
+
+                <div class="conf-group">
                     <label class="conf-label">Starting Date & Time</label>
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
                         <input type="number" id="story-day" class="conf-input" placeholder="Day" min="1" max="31" value="1" style="background:rgba(255,255,255,0.1); color:#fff;">
@@ -1760,6 +1781,7 @@
             
             const STANDALONE_CHARS_KEY = "storyki_standalone_characters";
             const CHARACTER_FAVORITES_KEY = "storyki_character_favorites";
+            const WORLD_FAVORITES_KEY = "storyki_world_favorites";
 
             function getCharacterFavorites() {
                 try {
@@ -1787,6 +1809,35 @@
                     favorites.push(charId);
                 }
                 setCharacterFavorites(favorites);
+                return idx < 0; // true if now favorited
+            }
+
+            function getWorldFavorites() {
+                try {
+                    return JSON.parse(localStorage.getItem(WORLD_FAVORITES_KEY) || "[]");
+                } catch {
+                    return [];
+                }
+            }
+
+            function setWorldFavorites(favorites) {
+                localStorage.setItem(WORLD_FAVORITES_KEY, JSON.stringify(favorites));
+            }
+
+            function isWorldFavorite(worldId) {
+                const favorites = getWorldFavorites();
+                return favorites.includes(worldId);
+            }
+
+            function toggleWorldFavorite(worldId) {
+                const favorites = getWorldFavorites();
+                const idx = favorites.indexOf(worldId);
+                if (idx >= 0) {
+                    favorites.splice(idx, 1);
+                } else {
+                    favorites.push(worldId);
+                }
+                setWorldFavorites(favorites);
                 return idx < 0; // true if now favorited
             }
 
@@ -2641,9 +2692,21 @@
                 _pendingCharId = null;
             }
             
+            function updateRelationSubtype() {
+                const relationType = document.getElementById("story-relation-type").value;
+                const subtypeSelect = document.getElementById("story-relation-subtype");
+                if (relationType === "family") {
+                    subtypeSelect.style.display = "block";
+                } else {
+                    subtypeSelect.style.display = "none";
+                }
+            }
+
             function startNewCharacterStory() {
                 const playerId = document.getElementById("story-player-select").value;
                 const intro = document.getElementById("story-intro-input").value.trim();
+                const relationType = document.getElementById("story-relation-type").value;
+                const relationSubtype = document.getElementById("story-relation-subtype").value;
                 const day = parseInt(document.getElementById("story-day").value) || 1;
                 const month = parseInt(document.getElementById("story-month").value) || 1;
                 const year = parseInt(document.getElementById("story-year").value) || 1983;
@@ -2675,13 +2738,21 @@
                 const scenarios = getScenarios();
                 const id = generateId();
                 
+                // Build relation data
+                const relationData = {
+                    type: relationType,
+                    subtype: relationType === "family" ? relationSubtype : null
+                };
+
                 const newStory = {
                     id: id,
                     name: `${character.title || "Story"}`,
                     characterId: _pendingCharId,
                     data: {
                         cards: [{...character}, {...player}],
-                        settings: {},
+                        settings: {
+                            relation: relationData
+                        },
                         log: intro ? [{ role: "system", content: intro, timestamp: Date.now() }] : []
                     },
                     createdAt: Date.now(),
@@ -2695,6 +2766,7 @@
                 Storage.set("storyki_storycards", JSON.stringify(newStory.data.cards));
                 Storage.set("storyki_storylog", JSON.stringify(newStory.data.log));
                 Storage.set("storyki_characters", JSON.stringify([]));
+                Storage.set("storyki_settings", JSON.stringify(newStory.data.settings));
                 Storage.set(ANCHORED_WORLD_CHANGES_KEY, JSON.stringify({}));
                 
                 const globalSettingsRaw = Storage.get("storyki_settings");
@@ -2805,10 +2877,16 @@
                 const qEl = document.getElementById("all-worlds-search");
                 const q = (qEl ? qEl.value : "").toLowerCase().trim();
                 grid.innerHTML = "";
-                const scenarios = getScenarios()
+                const favorites = getWorldFavorites();
+                let scenarios = getScenarios()
                     .filter(s => !s.worldId)
                     .filter(s => !q || (s.name || "").toLowerCase().includes(q))
-                    .sort((a,b) => (a.name || "").localeCompare(b.name || ""));
+                    .sort((a, b) => {
+                        const aFav = favorites.includes(a.id) ? 1 : 0;
+                        const bFav = favorites.includes(b.id) ? 1 : 0;
+                        if (aFav !== bFav) return bFav - aFav; // favorites first
+                        return (a.name || "").localeCompare(b.name || "");
+                    });
                 scenarios.forEach(s => {
                     const card = document.createElement("div");
                     card.className = "world-card";
@@ -2821,6 +2899,28 @@
                     name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; text-align:center;";
                     const btnRow = document.createElement("div");
                     btnRow.style.cssText = "display:flex; gap:6px; justify-content:center; margin-top:auto;";
+                    
+                    // Favorite star button
+                    const isFav = isWorldFavorite(s.id);
+                    const starBtn = document.createElement("button");
+                    starBtn.innerHTML = isFav ? "&#9733;" : "&#9734;"; // filled or empty star
+                    starBtn.className = "menu-button";
+                    starBtn.title = isFav ? "Remove from favorites" : "Add to favorites";
+                    starBtn.style.cssText = isFav
+                        ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; border: none;"
+                        : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                    starBtn.onclick = () => {
+                        const nowFav = toggleWorldFavorite(s.id);
+                        starBtn.innerHTML = nowFav ? "&#9733;" : "&#9734;";
+                        starBtn.title = nowFav ? "Remove from favorites" : "Add to favorites";
+                        starBtn.style.cssText = nowFav
+                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; border: none;"
+                            : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                        // Re-render to sort favorites to top
+                        renderAllWorlds();
+                    };
+                    btnRow.appendChild(starBtn);
+                    
                     const selectBtn = document.createElement("button");
                     selectBtn.textContent = "Select";
                     selectBtn.className = "menu-button";
