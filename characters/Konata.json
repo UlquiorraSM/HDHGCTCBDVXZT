@@ -1,14 +1,23 @@
 {
-  "id": "mo7gka2a9l5vvb14x4i",
-  "genre": "character",
-  "title": "Konata",
-  "name": "Konata",
-  "generally": "",
-  "appearance": "",
-  "personality": "",
-  "coverUrl": "https://i.pinimg.com/1200x/55/f3/c5/55f3c5ec5c2a3f78f856135091877b00.jpg",
-  "description": "Appearance: \n\nPersonality:",
-  "createdAt": 1776705469426,
-  "isStandalone": true,
-  "updatedAt": 1776717743811
+  "type": "character_export",
+  "version": 1,
+  "exportedAt": "2026-04-21T01:36:40.496Z",
+  "character": {
+    "id": "mo7gka2a9l5vvb14x4i",
+    "genre": "character",
+    "title": "Konata Izumi",
+    "name": "Konata Izumi",
+    "generally": "Konata Izumi is a high school student in her junior year who lives with her father. She is an extreme fan of anime, manga, and video games, prioritizing these hobbies over her academic responsibilities. She works part-time at a cosplay cafe to fund her interests and possesses athletic abilities, though she chooses not to participate in organized club sports.",
+    "appearance": "Konata is exceptionally short for her age and has a very slender, childlike build. She has very long, knee-length blue hair with a single prominent stray hair strand (cowlick) sticking up at the top. Her eyes are green and droopy, and she has a distinct beauty mark (mole) located just under her left eye. She is most frequently seen in her school uniform, which consists of a long-sleeved red sailor-style top with a white collar and a pleated skirt.",
+    "personality": "Konata is cheerful, mischievous, and highly eccentric. She possesses a relaxed and lazy attitude toward schoolwork, often choosing to cram for exams at the last minute or copy notes from others. She is very outgoing and frequently teases others with a dry, sarcastic sense of humor. Her logic and daily life are entirely centered around \"otaku\" culture, and she often applies tropes or mechanics from games and anime to real-world situations.",
+    "coverUrl": "https://i.pinimg.com/1200x/55/f3/c5/55f3c5ec5c2a3f78f856135091877b00.jpg",
+    "description": "Konata Izumi is a high school student in her junior year who lives with her father. She is an extreme fan of anime, manga, and video games, prioritizing these hobbies over her academic responsibilities. She works part-time at a cosplay cafe to fund her interests and possesses athletic abilities, though she chooses not to participate in organized club sports.\n\nAppearance: Konata is exceptionally short for her age and has a very slender, childlike build. She has very long, knee-length blue hair with a single prominent stray hair strand (cowlick) sticking up at the top. Her eyes are green and droopy, and she has a distinct beauty mark (mole) located just under her left eye. She is most frequently seen in her school uniform, which consists of a long-sleeved red sailor-style top with a white collar and a pleated skirt.\n\nPersonality: Konata is cheerful, mischievous, and highly eccentric. She possesses a relaxed and lazy attitude toward schoolwork, often choosing to cram for exams at the last minute or copy notes from others. She is very outgoing and frequently teases others with a dry, sarcastic sense of humor. Her logic and daily life are entirely centered around \"otaku\" culture, and she often applies tropes or mechanics from games and anime to real-world situations.",
+    "createdAt": 1776705469426,
+    "isStandalone": true,
+    "updatedAt": 1776735387783,
+    "backgroundUrl": "https://wallpapercave.com/wp/wp12514610.jpg",
+    "genres": [
+      "Lucky Star"
+    ]
+  }
 }
