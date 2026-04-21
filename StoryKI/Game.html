@@ -5100,12 +5100,20 @@ Example:
                 appendTypingIndicator();
 
                 const systemInst = buildSystemPrompt();
+                
+                // Get last user message text for tag matching (reuse lastUserEntry from above)
+                const lastUserText = lastUserEntry 
+                    ? (typeof lastUserEntry === 'string' 
+                        ? lastUserEntry.substring(lastUserEntry.indexOf(':') + 1).trim()
+                        : lastUserEntry.text)
+                    : "";
+                const tagMatchedContext = buildTagMatchedContext(lastUserText);
 
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
                     const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
+                    const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
