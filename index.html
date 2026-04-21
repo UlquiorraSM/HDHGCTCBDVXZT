@@ -660,14 +660,23 @@
         <div class="menu-container" id="all-characters-menu" style="display:none;">
             <h1>All Characters</h1>
             <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                <div class="search-container">
+                <div class="search-container" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;">
                     <input
                         type="text"
                         id="all-characters-search"
                         class="search-input"
                         placeholder="Search characters..."
                         oninput="renderAllCharacters()"
+                        style="flex: 1; min-width: 200px;"
                     />
+                    <select
+                        id="all-characters-genre"
+                        class="search-input"
+                        onchange="renderAllCharacters()"
+                        style="width: auto; min-width: 150px; padding: 12px 16px; cursor: pointer;"
+                    >
+                        <option value="">All Genres</option>
+                    </select>
                 </div>
                 <div id="all-characters-grid"></div>
                 <div class="menu-buttons" style="max-width: 300px;">
@@ -1771,7 +1780,13 @@
             }
 
             function downloadCharacter(char) {
-                const data = JSON.stringify(char, null, 2);
+                const payload = {
+                    type: "character_export",
+                    version: 1,
+                    exportedAt: new Date().toISOString(),
+                    character: char
+                };
+                const data = JSON.stringify(payload, null, 2);
                 const blob = new Blob([data], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
@@ -2842,18 +2857,74 @@
                 });
             }
 
+            function getAllCharacterGenres() {
+                const chars = getStandaloneCharacters();
+                const genres = new Set();
+                chars.forEach(c => {
+                    if (c.genres && Array.isArray(c.genres)) {
+                        c.genres.forEach(g => {
+                            if (g && typeof g === 'string') genres.add(g.trim());
+                        });
+                    }
+                    // Also check legacy genre field
+                    if (c.genre && typeof c.genre === 'string' && c.genre !== 'character') {
+                        genres.add(c.genre.trim());
+                    }
+                });
+                return Array.from(genres).sort();
+            }
+
+            function updateGenreDropdown() {
+                const dropdown = document.getElementById("all-characters-genre");
+                if (!dropdown) return;
+                const currentValue = dropdown.value;
+                const genres = getAllCharacterGenres();
+                
+                // Keep "All Genres" option and add dynamic ones
+                dropdown.innerHTML = '<option value="">All Genres</option>';
+                genres.forEach(g => {
+                    const option = document.createElement("option");
+                    option.value = g;
+                    option.textContent = g;
+                    if (g === currentValue) option.selected = true;
+                    dropdown.appendChild(option);
+                });
+            }
+
             function renderAllCharacters() {
                 const grid = document.getElementById("all-characters-grid");
                 const qEl = document.getElementById("all-characters-search");
+                const genreEl = document.getElementById("all-characters-genre");
                 const q = (qEl ? qEl.value : "").toLowerCase().trim();
+                const selectedGenre = (genreEl ? genreEl.value : "").trim();
+                
                 grid.innerHTML = "";
                 let chars = getStandaloneCharacters();
+                
+                // Update genre dropdown with available genres
+                updateGenreDropdown();
+                
+                // Text search filter
                 if (q) {
                     chars = chars.filter(c =>
                         (c.title || "").toLowerCase().includes(q) ||
                         (c.description || "").toLowerCase().includes(q)
                     );
                 }
+                
+                // Genre filter
+                if (selectedGenre) {
+                    chars = chars.filter(c => {
+                        // Check genres array
+                        if (c.genres && Array.isArray(c.genres)) {
+                            if (c.genres.some(g => g && g.trim() === selectedGenre)) return true;
+                        }
+                        // Check legacy genre field
+                        if (c.genre && c.genre.trim() === selectedGenre) return true;
+                        return false;
+                    });
+                }
+                
                 chars.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
 
                 chars.forEach(c => {
@@ -3500,6 +3571,39 @@
                             alert("Alle Welten und Stories importiert.");
                             return;
                         }
+                        // Character export import
+                        if (data && (data.type === "character_export" || data.character)) {
+                            const chars = getStandaloneCharacters();
+                            const char = data.character;
+                            if (!char || !char.title) throw new Error("Ungültige Character-Datei.");
+
+                            // Check if character already exists
+                            const existingIdx = chars.findIndex(c => c.id === char.id || c.title === char.title);
+                            let charId = char.id || Math.random().toString(36).slice(2, 10);
+
+                            if (existingIdx >= 0) {
+                                // Update existing character
+                                charId = chars[existingIdx].id; // Keep existing ID
+                                chars[existingIdx] = { ...char, id: charId, updatedAt: Date.now() };
+                            } else {
+                                // Add new character
+                                if (chars.some(c => c.id === charId)) charId = Math.random().toString(36).slice(2, 10);
+                                chars.push({
+                                    ...char,
+                                    id: charId,
+                                    isStandalone: true,
+                                    createdAt: Date.now(),
+                                    updatedAt: Date.now()
+                                });
+                            }
+
+                            setStandaloneCharacters(chars);
+                            renderScenarios();
+                            loadBackground();
+                            alert("Character erfolgreich geladen!");
+                            return;
+                        }
+
                         // World export import
                         if (data && (data.type === "world_export" || data.world)) {
                             let scenarios = getScenarios();
@@ -3557,11 +3661,11 @@
                             Storage.set(ANCHORED_WORLD_CHANGES_KEY, JSON.stringify(data.story.anchoredWorldChanges || {}));
                         }
                         
-                        alert("Spielstand erfolgreich geladen!");
+                        alert("World successfully loaded!");
                         loadBackground(); // Update background immediately
                     } catch (err) {
                         console.error("Failed to parse JSON", err);
-                        alert("Fehler beim Laden der Datei. Ist es eine gültige StoryKI JSON?");
+                        alert("Error loading file. Is it a valid Story AI JSON file?");
                     }
                 };
                 reader.readAsText(file);
