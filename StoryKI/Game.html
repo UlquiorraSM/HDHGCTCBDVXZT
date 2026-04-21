@@ -4701,6 +4701,55 @@ Example:
             function _normalizeText(s) {
                 return String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
             }
+
+            // Build context for cards whose tags match words in the player's message
+            // Matches Race cards and Location cards (Building/Custom subtypes only)
+            function buildTagMatchedContext(playerText) {
+                if (!playerText) return "";
+                const text = _normalizeText(playerText);
+                const words = text.split(/\s+/).filter(w => w.length >= 2);
+                if (words.length === 0) return "";
+
+                const cards = getCards();
+                const matchedCards = [];
+
+                // Filter for Race and Location (Building/Custom) cards with tags
+                const taggableCards = cards.filter(c => {
+                    if (c.genre === "race" && Array.isArray(c.tags) && c.tags.length > 0) return true;
+                    if (c.genre === "location" && Array.isArray(c.tags) && c.tags.length > 0) {
+                        const sub = c.locationSubType || "";
+                        return sub === "building" || sub === "custom";
+                    }
+                    return false;
+                });
+
+                // Find matches
+                for (const card of taggableCards) {
+                    const cardTags = (card.tags || []).map(t => _normalizeText(t));
+                    for (const tag of cardTags) {
+                        if (tag.length < 2) continue;
+                        // Check if any word in the message contains this tag or vice versa
+                        for (const word of words) {
+                            if (word.includes(tag) || tag.includes(word)) {
+                                matchedCards.push(card);
+                                break;
+                            }
+                        }
+                        if (matchedCards.includes(card)) break;
+                    }
+                }
+
+                if (matchedCards.length === 0) return "";
+
+                // Build context string
+                let result = "\n### MENTIONED TOPICS ###\n";
+                matchedCards.forEach(card => {
+                    const desc = (card.description || "").substring(0, 200);
+                    result += `- ${card.title}${desc ? ": " + desc : ""}\n`;
+                });
+                return result;
+            }
+
             function getLastNarratorText() {
                 for (let i = chatHistory.length - 1; i >= 0; i--) {
                     const e = chatHistory[i];
@@ -4888,12 +4937,13 @@ Example:
                 const typing = appendTypingIndicator();
 
                 const systemInst = buildSystemPrompt();
+                const tagMatchedContext = buildTagMatchedContext(text);
 
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
                     const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
+                    const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
@@ -4905,7 +4955,7 @@ Example:
                         finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
+                            const finalPrompt2 = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\nNarrator:";
                             const response2 = await askAIWithRetry(finalPrompt2);
                             const clean2 = processAICommands(response2);
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(applyTextSizeLimit(clean2));

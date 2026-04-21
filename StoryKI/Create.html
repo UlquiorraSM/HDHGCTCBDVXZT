@@ -735,32 +735,6 @@
                 border-color: rgba(120,180,255,0.6);
                 color: #fff;
             }
-            /* ─── Random Names Scene ─── */
-            #random-names-view {
-                position: fixed;
-                inset: 0;
-                display: none;
-                flex-direction: column;
-                z-index: 1000;
-            }
-            #random-names-view .form-scroll {
-                flex: 1;
-                overflow-y: auto;
-                width: 100%;
-                max-width: 800px;
-                padding: 0 24px 40px 24px;
-                margin: 0 auto;
-            }
-            #random-names-view .nav-title {
-                flex: 1;
-                font-size: 13px;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-                color: rgba(255, 255, 255, 0.5);
-                padding: 7px 4px;
-                text-align: center;
-            }
-
             /* ─── Secrets Scene (same layout as Relations) ─── */
             #secrets-view {
                 position: fixed;
@@ -2686,72 +2660,6 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════
-             RANDOM NAMES SCENE
-        ══════════════════════════════ -->
-        <div id="random-names-view">
-            <nav class="top-nav">
-                <button class="nav-back" onclick="hideRandomNamesScene()">←</button>
-                <div class="nav-title">EDIT LOCATION NAMES</div>
-                <div style="width: 40px;"></div>
-            </nav>
-            <div class="form-scroll">
-                <div style="padding: 20px 0;">
-                    <!-- Name Mode Toggle -->
-                    <div style="display: flex; gap: 10px; margin-bottom: 24px;">
-                        <button type="button" id="scene-btn-full-names" class="subloc-btn active" onclick="setRandomNameMode('full')" style="flex: 1; padding: 12px;">
-                            <span class="subloc-icon">📝</span> Full Names
-                        </button>
-                        <button type="button" id="scene-btn-split-names" class="subloc-btn" onclick="setRandomNameMode('split')" style="flex: 1; padding: 12px;">
-                            <span class="subloc-icon">🔀</span> Split Names
-                        </button>
-                    </div>
-                    
-                    <!-- Full Names Mode -->
-                    <div id="scene-full-names-mode">
-                        <label class="form-label">Complete Names</label>
-                        <div id="scene-random-names-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                            <!-- Full name inputs will be added here -->
-                        </div>
-                        <button type="button" class="subloc-btn" onclick="addRandomLocationNameInput()" style="margin-top: 14px; width: 100%;">
-                            <span class="subloc-icon">+</span> Add Full Name
-                        </button>
-                    </div>
-                    
-                    <!-- Split Names Mode -->
-                    <div id="scene-split-names-mode" style="display: none;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <!-- Left Parts -->
-                            <div>
-                                <label class="form-label">First Parts</label>
-                                <div id="scene-left-parts-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                                    <!-- Left part inputs will be added here -->
-                                </div>
-                                <button type="button" class="subloc-btn" onclick="addRandomNamePart('left')" style="margin-top: 14px; width: 100%;">
-                                    <span class="subloc-icon">+</span> Add First
-                                </button>
-                            </div>
-                            
-                            <!-- Right Parts -->
-                            <div>
-                                <label class="form-label">Second Parts</label>
-                                <div id="scene-right-parts-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                                    <!-- Right part inputs will be added here -->
-                                </div>
-                                <button type="button" class="subloc-btn" onclick="addRandomNamePart('right')" style="margin-top: 14px; width: 100%;">
-                                    <span class="subloc-icon">+</span> Add Second
-                                </button>
-                            </div>
-                        </div>
-                        <div style="margin-top: 20px; padding: 14px; background: rgba(30,30,45,0.6); border-radius: 10px; font-size: 0.9em; color: #a0a0b0; text-align: center;">
-                            <strong>How it works:</strong> Names will be randomly combined<br>
-                            First + Second = <strong>"Green"</strong> + <strong>"wood"</strong> = <strong>"Greenwood"</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- ════════════════════════════════════
              FORM VIEW (free scene, not a modal)
         ════════════════════════════════════ -->
@@ -2798,33 +2706,7 @@
                             <option value="character">Character</option>
                             <option value="skill">Skill</option>
                             <option value="system">System</option>
-                            <option value="random">Random</option>
                         </select>
-                    </div>
-                </div>
-
-                <!-- Random Selection Block -->
-                <div id="random-block" style="display: none">
-                    <div class="form-group">
-                        <label class="form-label">Random Selection</label>
-                        <select
-                            class="form-select"
-                            id="f-random-selection"
-                            onchange="onRandomSelectionChange()"
-                        >
-                            <option value="">Select what to randomize...</option>
-                            <option value="location">Location</option>
-                            <option value="building">Building</option>
-                            <option value="race">Race</option>
-                        </select>
-                    </div>
-
-                    <!-- Random Location Names Button -->
-                    <div id="random-location-names-group" style="display: none; margin-top: 14px;">
-                        <label class="form-label">Names</label>
-                        <button type="button" class="subloc-btn" onclick="showRandomNamesScene()" style="width: 100%;">
-                            <span class="subloc-icon">📝</span> Edit Names
-                        </button>
                     </div>
                 </div>
 
@@ -3364,6 +3246,25 @@
                         id="f-description"
                         placeholder="Describe this entry..."
                     ></textarea>
+                </div>
+
+                <!-- Location Tags (Building & Custom only) -->
+                <div class="form-group" id="location-tags-group" style="display: none; margin-top: 10px;">
+                    <label class="form-label" style="font-size: 12px; color: rgba(255,255,255,0.4);">Tags (Bullet points for AI, max 10)</label>
+                    <div class="item-tag-container" id="location-tags-container">
+                        <!-- Tags will be rendered here -->
+                    </div>
+                    <div class="item-tag-input-wrapper">
+                        <input
+                            type="text"
+                            class="form-input"
+                            id="f-location-tag-input"
+                            placeholder="Add a tag and press Enter..."
+                            onkeydown="if(event.key === 'Enter') addGenericTag('location')"
+                        />
+                        <button type="button" class="subloc-btn" onclick="addGenericTag('location')" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
+                    </div>
+                    <div class="item-tag-count" id="location-tag-count">0 / 10 tags</div>
                 </div>
 
                 <!-- Race tools: Name Generator + Lore (Race only) -->
@@ -4177,6 +4078,7 @@
             let ctxTargetId = null; // for context-menu
             let raceTags = []; // for race tags
             let loreTags = []; // for lore tags
+            let locationTags = []; // for location tags (building & custom)
             let curseTags = []; // for curse tags
             let curseTemp = [];
             let curseCtx = null;
@@ -5620,6 +5522,18 @@
                         raceTags = [];
                         renderGenericTags("race");
                     }
+                    // restore location tags
+                    if (card.genre === "location") {
+                        locationTags = card.tags ? [...card.tags] : [];
+                        renderGenericTags("location");
+                        // Show tags group if building or custom
+                        const sub = card.locationSubType || "";
+                        const locTagsGroup = document.getElementById("location-tags-group");
+                        if (locTagsGroup) locTagsGroup.style.display = (sub === "building" || sub === "custom") ? "block" : "none";
+                    } else {
+                        locationTags = [];
+                        renderGenericTags("location");
+                    }
 
                     // restore name generator data
                     const ng = card.nameGenerator || {};
@@ -5701,7 +5615,6 @@
                     resetCharacterFields();
                     resetSpeciesFields();
                     resetLoreFields();
-                    resetRandomFields();
                 }
 
                 // Update the small badge pill in form nav
@@ -5867,7 +5780,6 @@
                 raceTags = [];
                 renderGenericTags("race");
                 resetLoreFields();
-                resetRandomFields();
                 renderList();
             }
 
@@ -5926,187 +5838,6 @@
             /* ─────────────────────────────────────────
                LOCATION SUB-DROPDOWNS
             ───────────────────────────────────────── */
-            // Random Location Names - Full Names Mode
-            let randomLocationNames = [];
-            // Random Location Names - Split Names Mode
-            let randomLocationNameMode = "full"; // 'full' or 'split'
-            let randomLocationLeftParts = [];
-            let randomLocationRightParts = [];
-
-            function onRandomSelectionChange() {
-                const selection = document.getElementById("f-random-selection").value;
-                const namesGroup = document.getElementById("random-location-names-group");
-                if (namesGroup) {
-                    namesGroup.style.display = selection === "location" ? "block" : "none";
-                }
-                // Reset names when switching away from location
-                if (selection !== "location") {
-                    resetRandomLocationNameData();
-                }
-            }
-
-            function resetRandomLocationNameData() {
-                randomLocationNames = [];
-                randomLocationNameMode = "full";
-                randomLocationLeftParts = [];
-                randomLocationRightParts = [];
-                renderRandomLocationNames();
-                renderRandomNameParts();
-                updateNameModeButtons();
-            }
-
-            function setRandomNameMode(mode) {
-                randomLocationNameMode = mode;
-                // Update scene containers
-                const sceneFullMode = document.getElementById("scene-full-names-mode");
-                const sceneSplitMode = document.getElementById("scene-split-names-mode");
-                if (sceneFullMode) sceneFullMode.style.display = mode === "full" ? "block" : "none";
-                if (sceneSplitMode) sceneSplitMode.style.display = mode === "split" ? "block" : "none";
-                updateNameModeButtons();
-            }
-
-            function updateNameModeButtons() {
-                // Scene buttons
-                const sceneBtnFull = document.getElementById("scene-btn-full-names");
-                const sceneBtnSplit = document.getElementById("scene-btn-split-names");
-                if (sceneBtnFull) {
-                    sceneBtnFull.classList.toggle("active", randomLocationNameMode === "full");
-                    sceneBtnFull.style.background = randomLocationNameMode === "full"
-                        ? "linear-gradient(135deg, #4a6fa5, #6b5b95)"
-                        : "rgba(40,40,60,0.6)";
-                }
-                if (sceneBtnSplit) {
-                    sceneBtnSplit.classList.toggle("active", randomLocationNameMode === "split");
-                    sceneBtnSplit.style.background = randomLocationNameMode === "split"
-                        ? "linear-gradient(135deg, #4a6fa5, #6b5b95)"
-                        : "rgba(40,40,60,0.6)";
-                }
-            }
-
-            // Full Names Functions
-            function addRandomLocationNameInput() {
-                randomLocationNames.push("");
-                renderRandomLocationNames();
-                // Focus the new input
-                const inputs = document.querySelectorAll(".random-location-name-input");
-                if (inputs.length > 0) {
-                    inputs[inputs.length - 1].focus();
-                }
-            }
-
-            function removeRandomLocationName(index) {
-                randomLocationNames.splice(index, 1);
-                renderRandomLocationNames();
-            }
-
-            function updateRandomLocationName(index, value) {
-                randomLocationNames[index] = value;
-            }
-
-            // Split Names Functions
-            function addRandomNamePart(side) {
-                if (side === "left") {
-                    randomLocationLeftParts.push("");
-                    renderRandomNameParts();
-                    const inputs = document.querySelectorAll(".random-left-part-input");
-                    if (inputs.length > 0) inputs[inputs.length - 1].focus();
-                } else {
-                    randomLocationRightParts.push("");
-                    renderRandomNameParts();
-                    const inputs = document.querySelectorAll(".random-right-part-input");
-                    if (inputs.length > 0) inputs[inputs.length - 1].focus();
-                }
-            }
-
-            function removeRandomNamePart(side, index) {
-                if (side === "left") {
-                    randomLocationLeftParts.splice(index, 1);
-                } else {
-                    randomLocationRightParts.splice(index, 1);
-                }
-                renderRandomNameParts();
-            }
-
-            function updateRandomNamePart(side, index, value) {
-                if (side === "left") {
-                    randomLocationLeftParts[index] = value;
-                } else {
-                    randomLocationRightParts[index] = value;
-                }
-            }
-
-            function renderRandomLocationNames() {
-                // Render in scene
-                const sceneContainer = document.getElementById("scene-random-names-list");
-                if (sceneContainer) {
-                    sceneContainer.innerHTML = "";
-                    randomLocationNames.forEach((name, index) => {
-                        const row = document.createElement("div");
-                        row.style.cssText = "display: flex; gap: 8px; align-items: center;";
-                        row.innerHTML = `
-                            <input type="text" class="form-input random-location-name-input" value="${escHtml(name)}" placeholder="Enter location name..." oninput="updateRandomLocationName(${index}, this.value)" style="flex: 1;">
-                            <button type="button" onclick="removeRandomLocationName(${index})" style="background: rgba(180, 60, 60, 0.8); border: none; border-radius: 6px; color: #fff; width: 32px; height: 32px; cursor: pointer; font-size: 16px;">×</button>
-                        `;
-                        sceneContainer.appendChild(row);
-                    });
-                }
-            }
-
-            function renderRandomNameParts() {
-                // Render left parts in scene
-                const sceneLeftContainer = document.getElementById("scene-left-parts-list");
-                if (sceneLeftContainer) {
-                    sceneLeftContainer.innerHTML = "";
-                    randomLocationLeftParts.forEach((part, index) => {
-                        const row = document.createElement("div");
-                        row.style.cssText = "display: flex; gap: 8px; align-items: center;";
-                        row.innerHTML = `
-                            <input type="text" class="form-input random-left-part-input" value="${escHtml(part)}" placeholder="First part..." oninput="updateRandomNamePart('left', ${index}, this.value)" style="flex: 1;">
-                            <button type="button" onclick="removeRandomNamePart('left', ${index})" style="background: rgba(180, 60, 60, 0.8); border: none; border-radius: 6px; color: #fff; width: 32px; height: 32px; cursor: pointer; font-size: 16px;">×</button>
-                        `;
-                        sceneLeftContainer.appendChild(row);
-                    });
-                }
-
-                // Render right parts in scene
-                const sceneRightContainer = document.getElementById("scene-right-parts-list");
-                if (sceneRightContainer) {
-                    sceneRightContainer.innerHTML = "";
-                    randomLocationRightParts.forEach((part, index) => {
-                        const row = document.createElement("div");
-                        row.style.cssText = "display: flex; gap: 8px; align-items: center;";
-                        row.innerHTML = `
-                            <input type="text" class="form-input random-right-part-input" value="${escHtml(part)}" placeholder="Second part..." oninput="updateRandomNamePart('right', ${index}, this.value)" style="flex: 1;">
-                            <button type="button" onclick="removeRandomNamePart('right', ${index})" style="background: rgba(180, 60, 60, 0.8); border: none; border-radius: 6px; color: #fff; width: 32px; height: 32px; cursor: pointer; font-size: 16px;">×</button>
-                        `;
-                        sceneRightContainer.appendChild(row);
-                    });
-                }
-            }
-
-            function resetRandomFields() {
-                resetRandomLocationNameData();
-                const sel = document.getElementById("f-random-selection");
-                if (sel) sel.value = "";
-                onRandomSelectionChange();
-            }
-
-            function showRandomNamesScene() {
-                const scene = document.getElementById("random-names-view");
-                if (scene) {
-                    scene.style.display = "flex";
-                    // Render in scene
-                    setRandomNameMode(randomLocationNameMode);
-                    renderRandomLocationNames();
-                    renderRandomNameParts();
-                }
-            }
-
-            function hideRandomNamesScene() {
-                const scene = document.getElementById("random-names-view");
-                if (scene) scene.style.display = "none";
-            }
-
             function onTypeChange() {
                 const type = document.getElementById("f-type").value;
 
@@ -6137,13 +5868,9 @@
                 document.getElementById("system-block").style.display =
                     type === "system" ? "block" : "none";
 
-                // Show / hide Random block
-                document.getElementById("random-block").style.display =
-                    type === "random" ? "block" : "none";
-
-                // Show / hide Description at bottom for Character (also hide for Random)
+                // Show / hide Description at bottom for Character
                 const descGrp = document.getElementById("description-group");
-                if (descGrp) descGrp.style.display = (type === "character" || type === "lore" || type === "species" || type === "system" || type === "random") ? "none" : "block";
+                if (descGrp) descGrp.style.display = (type === "character" || type === "lore" || type === "species" || type === "system") ? "none" : "block";
 
                 // Show / hide Species XP group based on Level System availability
                 updateSpeciesXpVisibility();
@@ -6237,6 +5964,12 @@
                     residentSelections = [];
                     renderSublocTags("custom");
                     renderSublocTags("custom-resident");
+                }
+
+                // Show/hide Location Tags for Building and Custom
+                const locationTagsGroup = document.getElementById("location-tags-group");
+                if (locationTagsGroup) {
+                    locationTagsGroup.style.display = (sub === "building" || sub === "custom") ? "block" : "none";
                 }
             }
 
@@ -6393,6 +6126,8 @@
                 document.getElementById("f-location-sub").value = "";
                 document.getElementById("f-building-sub").value = "";
                 curseTags = [];
+                locationTags = [];
+                renderGenericTags("location");
                 transportDestinationId = null;
                 onBuildingSubChange();
                 resetSpawnCheck();
@@ -7039,12 +6774,16 @@
                GENERIC TAGS (Races, Lore)
             ───────────────────────────────────────── */
             function addGenericTag(type) {
-                const inputId = type === "race" ? "f-race-tag-input" : "f-lore-tag-input";
+                const inputId = type === "race" ? "f-race-tag-input" :
+                               type === "lore" ? "f-lore-tag-input" :
+                               "f-location-tag-input";
                 const input = document.getElementById(inputId);
                 const tag = input.value.trim();
                 if (!tag) return;
 
-                let tagArray = type === "race" ? raceTags : loreTags;
+                let tagArray = type === "race" ? raceTags :
+                               type === "lore" ? loreTags :
+                               locationTags;
                 if (tagArray.length >= 10) {
                     showToast("Maximum 10 tags allowed.", "rgba(180, 60, 60, 0.9)");
                     return;
@@ -7060,15 +6799,22 @@
 
             function removeGenericTag(type, tag) {
                 if (type === "race") raceTags = raceTags.filter((t) => t !== tag);
-                else loreTags = loreTags.filter((t) => t !== tag);
+                else if (type === "lore") loreTags = loreTags.filter((t) => t !== tag);
+                else locationTags = locationTags.filter((t) => t !== tag);
                 renderGenericTags(type);
             }
 
             function renderGenericTags(type) {
-                const containerId = type === "race" ? "race-tags-container" : "lore-tags-container";
-                const countId = type === "race" ? "race-tag-count" : "lore-tag-count";
+                const containerId = type === "race" ? "race-tags-container" :
+                                    type === "lore" ? "lore-tags-container" :
+                                    "location-tags-container";
+                const countId = type === "race" ? "race-tag-count" :
+                                type === "lore" ? "lore-tag-count" :
+                                "location-tag-count";
                 const container = document.getElementById(containerId);
-                const tagArray = type === "race" ? raceTags : loreTags;
+                const tagArray = type === "race" ? raceTags :
+                                 type === "lore" ? loreTags :
+                                 locationTags;
 
                 if (!container) return;
                 container.innerHTML = "";
@@ -8379,17 +8125,6 @@
                             ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
                             ...(type === "location" && prev.distances && Object.keys(prev.distances).length ? { distances: prev.distances } : {}),
                             ...(species && Object.keys(species).length ? { species } : {}),
-                            ...(racialCivilization && Object.keys(racialCivilization).length ? { racialCivilization } : {}),
-                            population,
-                            transportDestinations: transportDestinationsData,
-                            events: zivilEventsData,
-                            residents,
-                            tags: type === "race" ? [...raceTags] : (cards[idx].tags || []),
-                            relations: type === "character" ? [...relationSelections] : [],
-                            secrets: type === "character" ? [...secretSelections] : [],
-                            skillId: type === "character" ? (selectedSkillId || "") : (cards[idx].skillId || ""),
-                            skillName: type === "character" ? ((getCards().find(c => c.id === selectedSkillId) || {}).title || "") : (cards[idx].skillName || ""),
-                            nameGenerator,
                             lore,
                             loreText,
                             loreMode,
