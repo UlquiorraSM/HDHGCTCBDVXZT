@@ -1929,6 +1929,8 @@
                     const row2 = document.createElement("div");
                     row2.style.cssText = "display:flex; gap:0; border-radius:8px; overflow:hidden;";
 
+                    const isOfficial = c.official === true;
+
                     const editBtn = document.createElement("button");
                     editBtn.textContent = "Edit";
                     editBtn.className = "menu-button";
@@ -1937,32 +1939,41 @@
                     editBtn.style.borderTopLeftRadius = "8px";
                     editBtn.style.borderBottomLeftRadius = "8px";
 
-                    const downloadBtn = document.createElement("button");
-                    downloadBtn.textContent = "📥";
-                    downloadBtn.className = "menu-button";
-                    downloadBtn.title = "Download character (.json)";
-                    downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
-                    downloadBtn.onclick = () => { downloadCharacter(c); };
-                    const uploadBtn = document.createElement("button");
-                    uploadBtn.textContent = "☁️";
-                    uploadBtn.className = "menu-button";
-                    uploadBtn.title = "Upload character as URL";
-                    uploadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(120,110,200,0.75); border-radius:0;";
-                    uploadBtn.onclick = () => { uploadCharacterToUniverse(c); };
-
-                    const deleteBtn = document.createElement("button");
-                    deleteBtn.textContent = "🗑️";
-                    deleteBtn.className = "menu-button";
-                    deleteBtn.title = "Delete character";
-                    deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,0.7); border-radius:0;";
-                    deleteBtn.onclick = () => { deleteCharacter(c.id); };
-                    deleteBtn.style.borderTopRightRadius = "8px";
-                    deleteBtn.style.borderBottomRightRadius = "8px";
-
                     row2.appendChild(editBtn);
-                    row2.appendChild(downloadBtn);
-                    row2.appendChild(uploadBtn);
-                    row2.appendChild(deleteBtn);
+
+                    // Only show Download, URL, Delete for non-official characters
+                    if (!isOfficial) {
+                        const downloadBtn = document.createElement("button");
+                        downloadBtn.textContent = "📥";
+                        downloadBtn.className = "menu-button";
+                        downloadBtn.title = "Download character (.json)";
+                        downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
+                        downloadBtn.onclick = () => { downloadCharacter(c); };
+
+                        const uploadBtn = document.createElement("button");
+                        uploadBtn.textContent = "☁️";
+                        uploadBtn.className = "menu-button";
+                        uploadBtn.title = "Upload character as URL";
+                        uploadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(120,110,200,0.75); border-radius:0;";
+                        uploadBtn.onclick = () => { uploadCharacterToUniverse(c); };
+
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.textContent = "🗑️";
+                        deleteBtn.className = "menu-button";
+                        deleteBtn.title = "Delete character";
+                        deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,0.7); border-radius:0;";
+                        deleteBtn.onclick = () => { deleteCharacter(c.id); };
+                        deleteBtn.style.borderTopRightRadius = "8px";
+                        deleteBtn.style.borderBottomRightRadius = "8px";
+
+                        row2.appendChild(downloadBtn);
+                        row2.appendChild(uploadBtn);
+                        row2.appendChild(deleteBtn);
+                    } else {
+                        // For official characters, round the right corners of Edit button
+                        editBtn.style.borderTopRightRadius = "8px";
+                        editBtn.style.borderBottomRightRadius = "8px";
+                    }
                     
                     actions.appendChild(row1);
                     actions.appendChild(row2);
@@ -2867,6 +2878,9 @@
 
                     const btnRow2 = document.createElement("div");
                     btnRow2.style.cssText = "display:flex; gap:0; border-radius:8px; overflow:hidden; margin-top:6px;";
+
+                    const isOfficial = c.official === true;
+
                     const editBtn = document.createElement("button");
                     editBtn.textContent = "Edit";
                     editBtn.className = "menu-button";
@@ -2874,29 +2888,39 @@
                     editBtn.onclick = () => { editCharacter(c.id); };
                     editBtn.style.borderTopLeftRadius = "8px";
                     editBtn.style.borderBottomLeftRadius = "8px";
-                    const downloadBtn = document.createElement("button");
-                    downloadBtn.textContent = "📥";
-                    downloadBtn.className = "menu-button";
-                    downloadBtn.title = "Download character (.json)";
-                    downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
-                    downloadBtn.onclick = () => { downloadCharacter(c); };
-                    const deleteBtn = document.createElement("button");
-                    deleteBtn.textContent = "🗑️";
-                    deleteBtn.className = "menu-button";
-                    deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,0.7); border-radius:0;";
-                    deleteBtn.onclick = () => {
-                        if (!confirm("Character wirklich löschen?")) return;
-                        const items = getStandaloneCharacters().filter(x => x.id !== c.id);
-                        localStorage.setItem(STANDALONE_CHARS_KEY, JSON.stringify(items));
-                        renderCharactersView(document.getElementById("characters-list"), document.getElementById("no-characters-hint"), "");
-                        renderAllCharacters();
-                    };
-                    deleteBtn.style.borderTopRightRadius = "8px";
-                    deleteBtn.style.borderBottomRightRadius = "8px";
 
                     btnRow2.appendChild(editBtn);
-                    btnRow2.appendChild(downloadBtn);
-                    btnRow2.appendChild(deleteBtn);
+
+                    // Only show Download and Delete for non-official characters
+                    if (!isOfficial) {
+                        const downloadBtn = document.createElement("button");
+                        downloadBtn.textContent = "📥";
+                        downloadBtn.className = "menu-button";
+                        downloadBtn.title = "Download character (.json)";
+                        downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90,160,90,0.7); border-radius:0;";
+                        downloadBtn.onclick = () => { downloadCharacter(c); };
+
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.textContent = "🗑️";
+                        deleteBtn.className = "menu-button";
+                        deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(150,40,40,0.7); border-radius:0;";
+                        deleteBtn.onclick = () => {
+                            if (!confirm("Character wirklich löschen?")) return;
+                            const items = getStandaloneCharacters().filter(x => x.id !== c.id);
+                            localStorage.setItem(STANDALONE_CHARS_KEY, JSON.stringify(items));
+                            renderCharactersView(document.getElementById("characters-list"), document.getElementById("no-characters-hint"), "");
+                            renderAllCharacters();
+                        };
+                        deleteBtn.style.borderTopRightRadius = "8px";
+                        deleteBtn.style.borderBottomRightRadius = "8px";
+
+                        btnRow2.appendChild(downloadBtn);
+                        btnRow2.appendChild(deleteBtn);
+                    } else {
+                        // For official characters, round the right corners of Edit button
+                        editBtn.style.borderTopRightRadius = "8px";
+                        editBtn.style.borderBottomRightRadius = "8px";
+                    }
 
                     card.appendChild(name);
                     card.appendChild(btnRow);
