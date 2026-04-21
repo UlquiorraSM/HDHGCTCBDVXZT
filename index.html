@@ -488,14 +488,30 @@
 
                 #all-worlds-grid .world-card .menu-button,
                 #all-characters-grid .world-card .menu-button {
-                    padding: 5px 3px !important;
-                    font-size: 10px !important;
+                    padding: 6px 4px !important;
+                    font-size: 11px !important;
+                    min-width: 0 !important;
+                    flex: 1 1 auto !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
                 }
 
                 #all-worlds-grid .world-card .menu-button:first-child,
                 #all-characters-grid .world-card .menu-button:first-child {
-                    font-size: 14px !important;
-                    padding: 5px 6px !important;
+                    font-size: 12px !important;
+                    padding: 8px 4px !important;
+                    flex: 1 1 100% !important;
+                    font-weight: 600 !important;
+                }
+
+                /* Button container for proper layout */
+                #all-worlds-grid .world-card > div:last-child,
+                #all-characters-grid .world-card > div:last-child {
+                    display: flex !important;
+                    flex-wrap: wrap !important;
+                    gap: 3px !important;
+                    justify-content: center !important;
                 }
             }
 
