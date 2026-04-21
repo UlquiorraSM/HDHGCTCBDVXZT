@@ -464,6 +464,41 @@
                 height: auto !important;
                 aspect-ratio: 1 / 1;
             }
+
+            /* Mobile responsive for All Worlds and All Characters */
+            @media (max-width: 768px) {
+                #all-worlds-grid,
+                #all-characters-grid {
+                    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                    gap: 8px !important;
+                }
+
+                #all-worlds-grid .world-card,
+                #all-characters-grid .world-card {
+                    padding: 10px !important;
+                    min-height: 120px !important;
+                    aspect-ratio: 1 / 1.2 !important;
+                }
+
+                #all-worlds-grid .world-card > div:first-child,
+                #all-characters-grid .world-card > div:first-child {
+                    font-size: 12px !important;
+                    line-height: 1.2 !important;
+                }
+
+                #all-worlds-grid .world-card .menu-button,
+                #all-characters-grid .world-card .menu-button {
+                    padding: 5px 3px !important;
+                    font-size: 10px !important;
+                }
+
+                #all-worlds-grid .world-card .menu-button:first-child,
+                #all-characters-grid .world-card .menu-button:first-child {
+                    font-size: 14px !important;
+                    padding: 5px 6px !important;
+                }
+            }
+
             html, body { -ms-overflow-style: none; scrollbar-width: none; }
             html::-webkit-scrollbar { display: none; }
             body::-webkit-scrollbar { display: none; }
