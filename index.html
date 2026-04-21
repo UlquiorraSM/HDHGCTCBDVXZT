@@ -465,7 +465,7 @@
                 aspect-ratio: 1 / 1;
             }
 
-            /* Mobile responsive for All Worlds and All Characters */
+            /* Mobile responsive for All Worlds, All Characters and Player Characters */
             @media (max-width: 768px) {
                 #all-worlds-grid,
                 #all-characters-grid {
@@ -508,6 +508,49 @@
                 /* Button container for proper layout */
                 #all-worlds-grid .world-card > div:last-child,
                 #all-characters-grid .world-card > div:last-child {
+                    display: flex !important;
+                    flex-wrap: wrap !important;
+                    gap: 3px !important;
+                    justify-content: center !important;
+                }
+
+                /* Player Characters mobile grid (same as All Characters) */
+                #players-list {
+                    display: grid !important;
+                    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                    gap: 8px !important;
+                    padding: 10px !important;
+                    overflow-x: visible !important;
+                    flex-direction: unset !important;
+                }
+                #players-list .world-card {
+                    width: auto !important;
+                    min-width: 0 !important;
+                    max-width: none !important;
+                    padding: 10px !important;
+                    min-height: 120px !important;
+                    aspect-ratio: 1 / 1.2 !important;
+                }
+                #players-list .world-card > div:first-child {
+                    font-size: 12px !important;
+                    line-height: 1.2 !important;
+                }
+                #players-list .world-card .menu-button {
+                    padding: 6px 4px !important;
+                    font-size: 11px !important;
+                    min-width: 0 !important;
+                    flex: 1 1 auto !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                }
+                #players-list .world-card .menu-button:first-child {
+                    font-size: 12px !important;
+                    padding: 8px 4px !important;
+                    flex: 1 1 100% !important;
+                    font-weight: 600 !important;
+                }
+                #players-list .world-card > div:last-child {
                     display: flex !important;
                     flex-wrap: wrap !important;
                     gap: 3px !important;
@@ -1833,6 +1876,7 @@
             const STANDALONE_CHARS_KEY = "storyki_standalone_characters";
             const CHARACTER_FAVORITES_KEY = "storyki_character_favorites";
             const WORLD_FAVORITES_KEY = "storyki_world_favorites";
+            const PLAYER_FAVORITES_KEY = "storyki_player_favorites";
 
             function getCharacterFavorites() {
                 try {
@@ -1860,15 +1904,45 @@
                     favorites.push(charId);
                 }
                 setCharacterFavorites(favorites);
-                return idx < 0; // true if now favorited
+                return idx < 0;
             }
 
-            function getWorldFavorites() {
+            function closeAllCharactersMenu() {
+                document.getElementById("all-characters-menu").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("all-characters-menu").style.display = "none";
+                    document.getElementById("main-menu").style.display = "flex";
+                    setTimeout(() => { document.getElementById("main-menu").style.opacity = "1"; }, 50);
+                }, 200);
+            }
+
+            function getPlayerFavorites() {
                 try {
-                    return JSON.parse(localStorage.getItem(WORLD_FAVORITES_KEY) || "[]");
+                    return JSON.parse(localStorage.getItem(PLAYER_FAVORITES_KEY) || "[]");
                 } catch {
                     return [];
                 }
+            }
+
+            function setPlayerFavorites(favorites) {
+                localStorage.setItem(PLAYER_FAVORITES_KEY, JSON.stringify(favorites));
+            }
+
+            function isPlayerFavorite(playerId) {
+                const favorites = getPlayerFavorites();
+                return favorites.includes(playerId);
+            }
+
+            function togglePlayerFavorite(playerId) {
+                const favorites = getPlayerFavorites();
+                const idx = favorites.indexOf(playerId);
+                if (idx >= 0) {
+                    favorites.splice(idx, 1);
+                } else {
+                    favorites.push(playerId);
+                }
+                setPlayerFavorites(favorites);
+                return idx < 0;
             }
 
             function setWorldFavorites(favorites) {
@@ -2386,6 +2460,26 @@
                         actionsDiv.className = "player-actions";
                         actionsDiv.style.cssText = "display: flex; flex-direction: row; gap: 4px; min-width: 120px;";
 
+                        // Favorite star button
+                        const isFav = isPlayerFavorite(p.id);
+                        const starBtn = document.createElement("button");
+                        starBtn.innerHTML = isFav ? "&#9733;" : "&#9734;";
+                        starBtn.className = "menu-button";
+                        starBtn.title = isFav ? "Remove from favorites" : "Add to favorites";
+                        starBtn.style.cssText = isFav
+                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
+                            : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                        starBtn.onclick = () => {
+                            const nowFav = togglePlayerFavorite(p.id);
+                            starBtn.innerHTML = nowFav ? "&#9733;" : "&#9734;";
+                            starBtn.title = nowFav ? "Remove from favorites" : "Add to favorites";
+                            starBtn.style.cssText = nowFav
+                                ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
+                                : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                            renderPlayerCharacters();
+                        };
+                        actionsDiv.appendChild(starBtn);
+
                         const editBtn = document.createElement("button");
                         editBtn.textContent = "✏️";
                         editBtn.style.cssText = "padding: 8px; font-size: 14px; flex: 1; background: rgba(100,100,100,0.7); color:#fff; border:none; border-radius: 6px; cursor:pointer;";
@@ -2446,6 +2540,26 @@
 
                         const actions = document.createElement("div");
                         actions.style.cssText = "display:flex; gap:4px; width:100%; margin-top: auto; border-radius:8px; overflow:hidden;";
+
+                        // Favorite star button
+                        const isFavDesktop = isPlayerFavorite(p.id);
+                        const starBtnDesktop = document.createElement("button");
+                        starBtnDesktop.innerHTML = isFavDesktop ? "&#9733;" : "&#9734;";
+                        starBtnDesktop.className = "menu-button";
+                        starBtnDesktop.title = isFavDesktop ? "Remove from favorites" : "Add to favorites";
+                        starBtnDesktop.style.cssText = isFavDesktop
+                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
+                            : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                        starBtnDesktop.onclick = () => {
+                            const nowFav = togglePlayerFavorite(p.id);
+                            starBtnDesktop.innerHTML = nowFav ? "&#9733;" : "&#9734;";
+                            starBtnDesktop.title = nowFav ? "Remove from favorites" : "Add to favorites";
+                            starBtnDesktop.style.cssText = nowFav
+                                ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
+                                : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                            renderPlayerCharacters();
+                        };
+                        actions.appendChild(starBtnDesktop);
 
                         const editBtn = document.createElement("button");
                         editBtn.textContent = "Edit";
@@ -2958,14 +3072,14 @@
                     starBtn.className = "menu-button";
                     starBtn.title = isFav ? "Remove from favorites" : "Add to favorites";
                     starBtn.style.cssText = isFav
-                        ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; border: none;"
+                        ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
                         : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
                     starBtn.onclick = () => {
                         const nowFav = toggleWorldFavorite(s.id);
                         starBtn.innerHTML = nowFav ? "&#9733;" : "&#9734;";
                         starBtn.title = nowFav ? "Remove from favorites" : "Add to favorites";
                         starBtn.style.cssText = nowFav
-                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; border: none;"
+                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
                             : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
                         // Re-render to sort favorites to top
                         renderAllWorlds();
@@ -3136,14 +3250,14 @@
                     starBtn.className = "menu-button";
                     starBtn.title = isFav ? "Remove from favorites" : "Add to favorites";
                     starBtn.style.cssText = isFav
-                        ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; border: none;"
+                        ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
                         : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
                     starBtn.onclick = () => {
                         const nowFav = toggleCharacterFavorite(c.id);
                         starBtn.innerHTML = nowFav ? "&#9733;" : "&#9734;";
                         starBtn.title = nowFav ? "Remove from favorites" : "Add to favorites";
                         starBtn.style.cssText = nowFav
-                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; border: none;"
+                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
                             : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
                         // Re-render to sort favorites to top
                         renderAllCharacters();
