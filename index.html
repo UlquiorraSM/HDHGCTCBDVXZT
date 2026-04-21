@@ -1759,6 +1759,36 @@
             }
             
             const STANDALONE_CHARS_KEY = "storyki_standalone_characters";
+            const CHARACTER_FAVORITES_KEY = "storyki_character_favorites";
+
+            function getCharacterFavorites() {
+                try {
+                    return JSON.parse(localStorage.getItem(CHARACTER_FAVORITES_KEY) || "[]");
+                } catch {
+                    return [];
+                }
+            }
+
+            function setCharacterFavorites(favorites) {
+                localStorage.setItem(CHARACTER_FAVORITES_KEY, JSON.stringify(favorites));
+            }
+
+            function isCharacterFavorite(charId) {
+                const favorites = getCharacterFavorites();
+                return favorites.includes(charId);
+            }
+
+            function toggleCharacterFavorite(charId) {
+                const favorites = getCharacterFavorites();
+                const idx = favorites.indexOf(charId);
+                if (idx >= 0) {
+                    favorites.splice(idx, 1);
+                } else {
+                    favorites.push(charId);
+                }
+                setCharacterFavorites(favorites);
+                return idx < 0; // true if now favorited
+            }
 
             function getStandaloneCharacters() {
                 try {
@@ -2925,7 +2955,14 @@
                     });
                 }
                 
-                chars.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+                // Sort: favorites first, then by title
+                const favorites = getCharacterFavorites();
+                chars.sort((a, b) => {
+                    const aFav = favorites.includes(a.id) ? 1 : 0;
+                    const bFav = favorites.includes(b.id) ? 1 : 0;
+                    if (aFav !== bFav) return bFav - aFav; // favorites first
+                    return (a.title || "").localeCompare(b.title || "");
+                });
 
                 chars.forEach(c => {
                     const card = document.createElement("div");
@@ -2940,10 +2977,32 @@
 
                     const btnRow = document.createElement("div");
                     btnRow.style.cssText = "display:flex; gap:6px; justify-content:center; margin-top:auto;";
+                    
+                    // Favorite star button
+                    const isFav = isCharacterFavorite(c.id);
+                    const starBtn = document.createElement("button");
+                    starBtn.innerHTML = isFav ? "&#9733;" : "&#9734;"; // filled or empty star
+                    starBtn.className = "menu-button";
+                    starBtn.title = isFav ? "Remove from favorites" : "Add to favorites";
+                    starBtn.style.cssText = isFav
+                        ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; border: none;"
+                        : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                    starBtn.onclick = () => {
+                        const nowFav = toggleCharacterFavorite(c.id);
+                        starBtn.innerHTML = nowFav ? "&#9733;" : "&#9734;";
+                        starBtn.title = nowFav ? "Remove from favorites" : "Add to favorites";
+                        starBtn.style.cssText = nowFav
+                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%); color: #fff; border: none;"
+                            : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                        // Re-render to sort favorites to top
+                        renderAllCharacters();
+                    };
+                    btnRow.appendChild(starBtn);
+                    
                     const selectBtn = document.createElement("button");
                     selectBtn.textContent = "Select";
                     selectBtn.className = "menu-button";
-                    selectBtn.style.cssText = "padding:8px 6px; font-size:12px; min-width:0; width:100%;";
+                    selectBtn.style.cssText = "padding:8px 6px; font-size:12px; min-width:0; flex:1;";
                     selectBtn.onclick = () => { openCharacterStories(c.id); };
                     btnRow.appendChild(selectBtn);
 
