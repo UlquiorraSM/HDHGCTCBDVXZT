@@ -123,6 +123,55 @@
                 background: rgba(255, 255, 255, 0.2);
             }
 
+            .genre-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 10px;
+                min-height: 40px;
+                padding: 8px;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .genre-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 20px;
+                font-size: 13px;
+                color: #fff;
+                cursor: default;
+            }
+
+            .genre-tag .remove {
+                cursor: pointer;
+                opacity: 0.7;
+                transition: opacity 0.2s;
+            }
+
+            .genre-tag .remove:hover {
+                opacity: 1;
+            }
+
+            .genre-input-wrapper {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
+            .genre-input-wrapper input {
+                flex: 1;
+            }
+
+            .genre-input-wrapper button {
+                padding: 12px 20px;
+                white-space: nowrap;
+            }
+
             .world-select {
                 margin-bottom: 24px;
             }
@@ -176,6 +225,15 @@
             <div class="form-group">
                 <label for="charBackgroundUrl">Background URL (Optional)</label>
                 <input type="text" id="charBackgroundUrl" placeholder="https://example.com/background.jpg" />
+            </div>
+
+            <div class="form-group">
+                <label>Genres (Tags)</label>
+                <div class="genre-input-wrapper">
+                    <input type="text" id="charGenreInput" placeholder="Enter genre and press Add or Enter..." />
+                    <button type="button" class="btn-secondary" onclick="addGenreTag()">Add</button>
+                </div>
+                <div id="genreContainer" class="genre-container"></div>
             </div>
 
             <div class="button-group">
@@ -257,6 +315,56 @@
             }
 
             let _editCharId = null;
+            let _currentGenres = [];
+
+            function addGenreTag() {
+                const input = document.getElementById("charGenreInput");
+                const container = document.getElementById("genreContainer");
+                const value = input.value.trim();
+                
+                if (!value) return;
+                
+                // Check for duplicates
+                if (_currentGenres.includes(value)) {
+                    alert("Genre already added!");
+                    return;
+                }
+                
+                _currentGenres.push(value);
+                renderGenreTags();
+                input.value = "";
+                input.focus();
+            }
+
+            function removeGenreTag(genre) {
+                _currentGenres = _currentGenres.filter(g => g !== genre);
+                renderGenreTags();
+            }
+
+            function renderGenreTags() {
+                const container = document.getElementById("genreContainer");
+                container.innerHTML = "";
+                
+                _currentGenres.forEach(genre => {
+                    const tag = document.createElement("span");
+                    tag.className = "genre-tag";
+                    tag.innerHTML = `${genre} <span class="remove" onclick="removeGenreTag('${genre.replace(/'/g, "\\'")}')">&times;</span>`;
+                    container.appendChild(tag);
+                });
+            }
+
+            // Allow Enter key to add genre
+            document.addEventListener("DOMContentLoaded", () => {
+                const genreInput = document.getElementById("charGenreInput");
+                if (genreInput) {
+                    genreInput.addEventListener("keypress", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            addGenreTag();
+                        }
+                    });
+                }
+            });
 
             function saveCharacter() {
                 const name = document.getElementById("charName").value.trim();
@@ -288,6 +396,7 @@
                     chars[idx].coverUrl = coverUrl || null;
                     chars[idx].backgroundUrl = backgroundUrl || null;
                     chars[idx].description = `${generally}\n\nAppearance: ${appearance}\n\nPersonality: ${personality}`.trim();
+                    chars[idx].genres = [..._currentGenres];
                     chars[idx].updatedAt = Date.now();
                     setStandaloneCharacters(chars);
                     alert(`Character "${name}" updated successfully!`);
@@ -304,6 +413,7 @@
                         coverUrl: coverUrl || null,
                         backgroundUrl: backgroundUrl || null,
                         description: `${generally}\n\nAppearance: ${appearance}\n\nPersonality: ${personality}`.trim(),
+                        genres: [..._currentGenres],
                         createdAt: Date.now(),
                         isStandalone: true
                     };
@@ -332,6 +442,9 @@
                         document.getElementById("charPersonality").value = char.personality || "";
                         document.getElementById("charCoverUrl").value = char.coverUrl || "";
                         document.getElementById("charBackgroundUrl").value = char.backgroundUrl || "";
+                        // Load genres
+                        _currentGenres = char.genres && Array.isArray(char.genres) ? [...char.genres] : [];
+                        renderGenreTags();
                         // Update button text
                         document.querySelector(".btn-primary").textContent = "Update Character";
                         // Update title

@@ -702,6 +702,36 @@
                     activeChar?.personality
                 ].filter(Boolean).join("; ");
 
+                // Build relationship description
+                let relationText = "";
+                if (settings.relation) {
+                    const relType = settings.relation.type || "unknown";
+                    const relSubtype = settings.relation.subtype;
+                    
+                    if (relType === "family" && relSubtype) {
+                        // For family relationships, describe from character's perspective
+                        const relationMap = {
+                            "sibling": "The player is your sibling (brother/sister).",
+                            "child": "The player is your parent (you are their child).",
+                            "parent": "The player is your child (you are their parent).",
+                            "grandchild": "The player is your grandparent (you are their grandchild).",
+                            "grandparent": "The player is your grandchild (you are their grandparent).",
+                            "cousin": "The player is your cousin.",
+                            "aunt_uncle": "The player is your niece/nephew (you are their aunt/uncle).",
+                            "niece_nephew": "The player is your aunt/uncle (you are their niece/nephew)."
+                        };
+                        relationText = relationMap[relSubtype] || `The player is your family (${relSubtype}).`;
+                    } else if (relType === "friend") {
+                        relationText = "The player is your friend.";
+                    } else if (relType === "enemy") {
+                        relationText = "The player is your enemy.";
+                    } else if (relType === "known") {
+                        relationText = "You know the player, but you are not close.";
+                    } else {
+                        relationText = "You do not know the player yet.";
+                    }
+                }
+
                 return `[SYSTEM INSTRUCTIONS]
 You are ${activeChar?.title || "the AI character"}, having a conversation with ${playerName} (the user).
 
@@ -710,6 +740,7 @@ Current time: ${currentDate.day}.${currentDate.month}.${currentDate.year} ${curr
 PLAYER (User):
 - Name: ${playerName}
 - Description: ${playerDesc}
+${relationText ? "- Relationship: " + relationText : ""}
 
 YOU (The Character):
 - Name: ${activeChar?.title || "Character"}
@@ -723,6 +754,7 @@ RULES:
 5. To set specific time/date in narration, write {15}.{3}.{2024} for date or 14:30 for time.
 6. Close all quotation marks properly.
 7. Be descriptive and engaging.
+8. ACT ACCORDING TO THE RELATIONSHIP described above (talk to family members as family, enemies as enemies, etc.).
 
 OUTPUT FORMAT:
 Provide ONLY your response as the character. No narrator prefixes or meta commentary.
