@@ -2413,16 +2413,27 @@
                         };
                         actionsDiv.appendChild(starBtn);
 
-                        // Select button
-                        const selectBtn = document.createElement("button");
-                        selectBtn.textContent = "Select";
-                        selectBtn.className = "menu-button";
-                        selectBtn.style.cssText = "padding:8px 4px; font-size:12px; min-width:0; flex:1 1 100%; font-weight:600;";
-                        selectBtn.onclick = (e) => {
+                        // Edit button
+                        const editBtn = document.createElement("button");
+                        editBtn.textContent = "Edit";
+                        editBtn.className = "menu-button";
+                        editBtn.style.cssText = "padding:8px 4px; font-size:12px; min-width:0; flex:1 1 auto; font-weight:600;";
+                        editBtn.onclick = (e) => {
                             e.stopPropagation();
-                            selectPlayerAndPlay(p);
+                            editPlayerCharacter(p.id);
                         };
-                        actionsDiv.appendChild(selectBtn);
+                        actionsDiv.appendChild(editBtn);
+
+                        // Delete button
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.textContent = "Delete";
+                        deleteBtn.className = "menu-button";
+                        deleteBtn.style.cssText = "padding:8px 4px; font-size:12px; min-width:0; flex:1 1 auto; font-weight:600; background:rgba(200,50,50,0.7);";
+                        deleteBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            deletePlayerCharacter(p.id);
+                        };
+                        actionsDiv.appendChild(deleteBtn);
 
                         card.appendChild(actionsDiv);
                     } else {
