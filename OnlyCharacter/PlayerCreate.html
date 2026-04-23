@@ -315,18 +315,20 @@
                     const players = getPlayerCharacters();
                     const player = players.find(p => p.id === editId);
                     if (player) {
-                        // Fill form with existing data
-                        document.getElementById("charName").value = player.title || "";
-                        document.getElementById("charGenerally").value = player.generally || "";
-                        document.getElementById("charAppearance").value = player.appearance || "";
-                        document.getElementById("charCoverUrl").value = player.coverUrl || "";
+                        // Fill form with existing data - ensure values are strings
+                        document.getElementById("charName").value = String(player.title || "");
+                        document.getElementById("charGenerally").value = String(player.generally || "");
+                        document.getElementById("charAppearance").value = String(player.appearance || "");
+                        document.getElementById("charCoverUrl").value = String(player.coverUrl || "");
                         // Update button text
                         document.querySelector(".btn-primary").textContent = "Update Player";
                         // Update title
                         document.querySelector("h1").textContent = "Edit Player";
+                    } else {
+                        alert("Player not found! The player may have been deleted.");
+                        sessionStorage.removeItem("storyki_edit_player_id");
+                        _editPlayerId = null;
                     }
-                    // Clear the edit ID so we don't keep editing mode after this session
-                    sessionStorage.removeItem("storyki_edit_player_id");
                 }
                 
                 document.body.style.opacity = "1";
