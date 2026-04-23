@@ -2378,63 +2378,68 @@
                             card.style.background = `linear-gradient(135deg, rgba(100,100,100,0.8) 0%, rgba(80,80,80,0.8) 100%)`;
                         }
 
-                        // Header with name
-                        const headerDiv = document.createElement("div");
-                        headerDiv.style.cssText = "width:100%; text-align:center; margin-bottom:auto;";
+                        // Cover as full background (remove header, cover is background)
+                        card.style.backgroundSize = "cover";
+                        card.style.backgroundPosition = "center";
 
-                        const nameDiv = document.createElement("div");
-                        nameDiv.textContent = p.title || p.name || "Unnamed Player";
-                        nameDiv.style.cssText = "color:#fff; font-weight:700; font-size:12px; line-height:1.2; text-shadow:0 2px 8px rgba(0,0,0,0.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
-                        headerDiv.appendChild(nameDiv);
-                        card.appendChild(headerDiv);
+                        // Name overlay at top
+                        const nameOverlay = document.createElement("div");
+                        nameOverlay.textContent = p.title || p.name || "Unnamed Player";
+                        nameOverlay.style.cssText = "width:100%; text-align:center; color:#fff; font-weight:700; font-size:12px; line-height:1.2; text-shadow:0 2px 8px rgba(0,0,0,0.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:auto;";
+                        card.appendChild(nameOverlay);
 
-                        // Actions container
+                        // Actions container at bottom
                         const actionsDiv = document.createElement("div");
-                        actionsDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:3px; width:100%; justify-content:center; margin-top:auto;";
+                        actionsDiv.style.cssText = "display:flex; gap:6px; width:100%; margin-top:auto; align-items:flex-end;";
 
-                        // Favorite star button
+                        // Left side: Edit button
+                        const editBtn = document.createElement("button");
+                        editBtn.textContent = "Edit";
+                        editBtn.className = "menu-button";
+                        editBtn.style.cssText = "padding:8px 8px; font-size:11px; flex:1; font-weight:600; background:rgba(100,100,100,0.85);";
+                        editBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            editPlayerCharacter(p);
+                        };
+                        actionsDiv.appendChild(editBtn);
+
+                        // Right side container for Favorite and Delete
+                        const rightActions = document.createElement("div");
+                        rightActions.style.cssText = "display:flex; flex-direction:column; gap:4px; flex:1;";
+
+                        // Favorite star button (above Delete)
                         const isFav = isPlayerFavorite(p.id);
                         const starBtn = document.createElement("button");
                         starBtn.innerHTML = isFav ? "&#9733;" : "&#9734;";
                         starBtn.className = "menu-button";
                         starBtn.title = isFav ? "Remove from favorites" : "Add to favorites";
                         starBtn.style.cssText = isFav
-                            ? "padding:6px 4px; font-size:11px; min-width:0; flex:1 1 auto; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
-                            : "padding:6px 4px; font-size:11px; min-width:0; flex:1 1 auto; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                            ? "padding:6px 8px; font-size:14px; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
+                            : "padding:6px 8px; font-size:14px; background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3);";
                         starBtn.onclick = (e) => {
                             e.stopPropagation();
                             const nowFav = togglePlayerFavorite(p.id);
                             starBtn.innerHTML = nowFav ? "&#9733;" : "&#9734;";
                             starBtn.title = nowFav ? "Remove from favorites" : "Add to favorites";
                             starBtn.style.cssText = nowFav
-                                ? "padding:6px 4px; font-size:11px; min-width:0; flex:1 1 auto; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
-                                : "padding:6px 4px; font-size:11px; min-width:0; flex:1 1 auto; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                                ? "padding:6px 8px; font-size:14px; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
+                                : "padding:6px 8px; font-size:14px; background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3);";
                             renderPlayerCharacters();
                         };
-                        actionsDiv.appendChild(starBtn);
+                        rightActions.appendChild(starBtn);
 
-                        // Edit button
-                        const editBtn = document.createElement("button");
-                        editBtn.textContent = "Edit";
-                        editBtn.className = "menu-button";
-                        editBtn.style.cssText = "padding:8px 4px; font-size:12px; min-width:0; flex:1 1 auto; font-weight:600;";
-                        editBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            editPlayerCharacter(p.id);
-                        };
-                        actionsDiv.appendChild(editBtn);
-
-                        // Delete button
+                        // Delete button (trash emoji)
                         const deleteBtn = document.createElement("button");
-                        deleteBtn.textContent = "Delete";
+                        deleteBtn.innerHTML = "&#128465;";
                         deleteBtn.className = "menu-button";
-                        deleteBtn.style.cssText = "padding:8px 4px; font-size:12px; min-width:0; flex:1 1 auto; font-weight:600; background:rgba(200,50,50,0.7);";
+                        deleteBtn.style.cssText = "padding:6px 8px; font-size:14px; background:rgba(200,50,50,0.85); color:#fff;";
                         deleteBtn.onclick = (e) => {
                             e.stopPropagation();
                             deletePlayerCharacter(p.id);
                         };
-                        actionsDiv.appendChild(deleteBtn);
+                        rightActions.appendChild(deleteBtn);
 
+                        actionsDiv.appendChild(rightActions);
                         card.appendChild(actionsDiv);
                     } else {
                         // Desktop layout: vertical card
