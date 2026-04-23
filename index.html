@@ -528,10 +528,8 @@
                     min-width: 0 !important;
                     max-width: none !important;
                     padding: 10px !important;
-                    min-height: auto !important;
-                    height: auto !important;
-                    aspect-ratio: auto !important;
-                    overflow: visible !important;
+                    min-height: 120px !important;
+                    aspect-ratio: 1 / 1.2 !important;
                 }
                 #players-list .world-card > div:first-child {
                     font-size: 12px !important;
@@ -2374,50 +2372,25 @@
                             overflow: hidden;
                         `;
 
-                        // Cover image (left)
-                        const coverDiv = document.createElement("div");
-                        coverDiv.className = "player-cover";
                         if (coverUrl) {
-                            coverDiv.style.cssText = `
-                                width: 80px;
-                                height: 80px;
-                                border-radius: 8px;
-                                flex-shrink: 0;
-                                background-image: url("${coverUrl}");
-                                background-size: cover;
-                                background-position: center;
-                                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                            `;
+                            card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.6), rgba(10,10,15,.8)), url("${coverUrl}")`;
                         } else {
-                            coverDiv.style.cssText = `
-                                width: 80px;
-                                height: 80px;
-                                border-radius: 8px;
-                                flex-shrink: 0;
-                                background: linear-gradient(135deg, rgba(120,120,120,0.6) 0%, rgba(100,100,100,0.6) 100%);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-size: 32px;
-                                color: rgba(255,255,255,0.5);
-                            `;
-                            coverDiv.textContent = "👤";
+                            card.style.background = `linear-gradient(135deg, rgba(100,100,100,0.8) 0%, rgba(80,80,80,0.8) 100%)`;
                         }
 
-                        // Info (center)
-                        const infoDiv = document.createElement("div");
-                        infoDiv.className = "player-info";
-                        infoDiv.style.cssText = "flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0;";
+                        // Header with name
+                        const headerDiv = document.createElement("div");
+                        headerDiv.style.cssText = "width:100%; text-align:center; margin-bottom:auto;";
 
-                        const name = document.createElement("div");
-                        name.textContent = p.title || p.name || "Unnamed Player";
-                        name.style.cssText = "color:#fff; font-weight:700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
-                        infoDiv.appendChild(name);
+                        const nameDiv = document.createElement("div");
+                        nameDiv.textContent = p.title || p.name || "Unnamed Player";
+                        nameDiv.style.cssText = "color:#fff; font-weight:700; font-size:12px; line-height:1.2; text-shadow:0 2px 8px rgba(0,0,0,0.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;";
+                        headerDiv.appendChild(nameDiv);
+                        card.appendChild(headerDiv);
 
-                        // Actions (right)
+                        // Actions container
                         const actionsDiv = document.createElement("div");
-                        actionsDiv.className = "player-actions";
-                        actionsDiv.style.cssText = "display: flex; flex-direction: row; gap: 4px; min-width: 120px;";
+                        actionsDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:3px; width:100%; justify-content:center; margin-top:auto;";
 
                         // Favorite star button
                         const isFav = isPlayerFavorite(p.id);
@@ -2426,40 +2399,31 @@
                         starBtn.className = "menu-button";
                         starBtn.title = isFav ? "Remove from favorites" : "Add to favorites";
                         starBtn.style.cssText = isFav
-                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
-                            : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
-                        starBtn.onclick = () => {
+                            ? "padding:6px 4px; font-size:11px; min-width:0; flex:1 1 auto; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
+                            : "padding:6px 4px; font-size:11px; min-width:0; flex:1 1 auto; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                        starBtn.onclick = (e) => {
+                            e.stopPropagation();
                             const nowFav = togglePlayerFavorite(p.id);
                             starBtn.innerHTML = nowFav ? "&#9733;" : "&#9734;";
                             starBtn.title = nowFav ? "Remove from favorites" : "Add to favorites";
                             starBtn.style.cssText = nowFav
-                                ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
-                                : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
+                                ? "padding:6px 4px; font-size:11px; min-width:0; flex:1 1 auto; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
+                                : "padding:6px 4px; font-size:11px; min-width:0; flex:1 1 auto; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
                             renderPlayerCharacters();
                         };
                         actionsDiv.appendChild(starBtn);
 
-                        const editBtn = document.createElement("button");
-                        editBtn.textContent = "✏️";
-                        editBtn.style.cssText = "padding: 8px; font-size: 14px; flex: 1; background: rgba(100,100,100,0.7); color:#fff; border:none; border-radius: 6px; cursor:pointer;";
-                        editBtn.onclick = () => { editPlayerCharacter(p); };
+                        // Select button
+                        const selectBtn = document.createElement("button");
+                        selectBtn.textContent = "Select";
+                        selectBtn.className = "menu-button";
+                        selectBtn.style.cssText = "padding:8px 4px; font-size:12px; min-width:0; flex:1 1 100%; font-weight:600;";
+                        selectBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            selectPlayerAndPlay(p);
+                        };
+                        actionsDiv.appendChild(selectBtn);
 
-                        const downloadBtn = document.createElement("button");
-                        downloadBtn.textContent = "📥";
-                        downloadBtn.style.cssText = "padding: 8px; font-size: 14px; flex: 1; background: rgba(76,175,80,0.7); color:#fff; border:none; border-radius: 6px; cursor:pointer;";
-                        downloadBtn.onclick = () => { downloadPlayerCharacter(p); };
-
-                        const deleteBtn = document.createElement("button");
-                        deleteBtn.textContent = "🗑️";
-                        deleteBtn.style.cssText = "padding: 8px; font-size: 14px; flex: 1; background: rgba(244,67,54,0.7); color:#fff; border:none; border-radius: 6px; cursor:pointer;";
-                        deleteBtn.onclick = () => { deletePlayerCharacter(p.id); };
-
-                        actionsDiv.appendChild(editBtn);
-                        actionsDiv.appendChild(downloadBtn);
-                        actionsDiv.appendChild(deleteBtn);
-
-                        card.appendChild(coverDiv);
-                        card.appendChild(infoDiv);
                         card.appendChild(actionsDiv);
                     } else {
                         // Desktop layout: vertical card
