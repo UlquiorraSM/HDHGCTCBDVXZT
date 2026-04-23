@@ -2882,13 +2882,15 @@
                     const deadHereNPCs = [];
                     const mentionedNPCs = [];
 
-                    // Process residents
-                    residentIds.forEach(id => {
+                    // Process all present NPCs and residents (combine both sets)
+                    const allRelevantIds = new Set([...presentSet, ...residentIds]);
+                    allRelevantIds.forEach(id => {
                         const c = cards.find(card => card.genre === "character" && card.id === id);
                         if (!c) return;
 
                         const isDead = (c.status || "Alive") === "Dead";
                         const isPresent = presentSet.has(id);
+                        const isResident = residentIds.has(id);
 
                         // Check school schedule - if at school, not present here
                         const sched = scheduledByNpc.get(c.id);
@@ -2901,7 +2903,7 @@
                             }
                         } else if (isPresent && !atSchool) {
                             presentNPCs.push(c);
-                        } else {
+                        } else if (isResident) {
                             // Resident but not present (could be elsewhere)
                             residentNPCs.push(c);
                         }
