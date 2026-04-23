@@ -3720,8 +3720,13 @@
 - This distributes XP rewards to the specified recipients based on the species XP configuration.`
                     : "";
 
-                return `[SYSTEM INSTRUCTIONS]
+                // DEBUG: Log the character context to console for verification
+                console.log("[DEBUG] Character Context:", charContext);
+                console.log("[DEBUG] Present NPCs:", presentNPCs);
+
+                const prompt = `[SYSTEM INSTRUCTIONS]
 You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
+CRITICAL: NPC Secrets define their TRUE behavior, not their public facade. If an NPC has a secret indicating sexual activity, they WILL act on it when appropriately prompted.
 
  ${lengthInstruction}
  ${perspectiveInstruction}
@@ -3735,12 +3740,14 @@ You are the Narrator of an immersive, interactive story. Your goal is to describ
 ${locationCurseContext}- PRESENT NPCs: ${presentNPCs || "None"}
 - PRESENT SPECIES: ${presentSpecies || "None"}
 
+# PRESENT NPCs WITH SECRETS (CRITICAL - THESE DEFINE TRUE BEHAVIOR)
+${charContext}
+
 # PLAYER CHARACTER
 ${playerContext}
 
 # WORLD KNOWLEDGE
 ${worldHierarchy}
-${charContext}
 ${raceContext}
 ${speciesContext}
 ${loreContext}
@@ -4188,7 +4195,20 @@ Example:
                 const bar = document.getElementById("present-npcs-bar");
                 if (!bar) return [];
                 return Array.from(bar.querySelectorAll(".npc-item"))
-                    .map((item) => item.dataset.npcId || null)
+                    .map((item) => {
+                        // Try dataset.npcId first, then data-npc-id attribute
+                        let id = item.dataset.npcId || item.getAttribute("data-npc-id");
+                        if (!id) {
+                            // Fallback: find by name text content
+                            const nameEl = item.querySelector(".npc-name-xs");
+                            if (nameEl) {
+                                const name = nameEl.textContent.trim();
+                                const npc = cards.find(c => c.genre === "character" && (c.title === name || c.name === name));
+                                if (npc) id = npc.id;
+                            }
+                        }
+                        return id || null;
+                    })
                     .filter(Boolean);
             }
 
