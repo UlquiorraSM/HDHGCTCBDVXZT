@@ -1179,16 +1179,28 @@
             const NSFW_BLOCKED_TOKEN = "__NSFW_BLOCKED__";
             const NSFW_BLOCKED_TEXT = "The generated message contained offensive content which has been blocked due to your NSWF block.";
 
-            // Storage Helper (Session storage + persistent settings fallback)
+            // Storage Helper (Persistent localStorage for settings, sessionStorage for everything else)
             const Storage = {
                 get: (key) => {
                     if (key === SETTINGS_KEY) {
-                        return localStorage.getItem(key) || sessionStorage.getItem(key);
+                        return localStorage.getItem(key);
                     }
                     return sessionStorage.getItem(key);
                 },
-                set: (key, val) => sessionStorage.setItem(key, val),
-                remove: (key) => sessionStorage.removeItem(key),
+                set: (key, val) => {
+                    if (key === SETTINGS_KEY) {
+                        localStorage.setItem(key, val);
+                    } else {
+                        sessionStorage.setItem(key, val);
+                    }
+                },
+                remove: (key) => {
+                    if (key === SETTINGS_KEY) {
+                        localStorage.removeItem(key);
+                    } else {
+                        sessionStorage.removeItem(key);
+                    }
+                },
                 clear: () => sessionStorage.clear()
             };
 
