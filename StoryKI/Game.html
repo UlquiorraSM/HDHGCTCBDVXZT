@@ -1183,7 +1183,9 @@
             const Storage = {
                 get: (key) => {
                     if (key === SETTINGS_KEY) {
-                        return localStorage.getItem(key);
+                        const val = localStorage.getItem(key);
+                        console.log("[DEBUG Storage.get] SETTINGS_KEY:", key, "Value:", val);
+                        return val;
                     }
                     return sessionStorage.getItem(key);
                 },
@@ -3685,7 +3687,11 @@
                     .map(c => c.title)
                     .join(", ");
 
-                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                const settingsRaw = Storage.get(SETTINGS_KEY);
+                console.log("[DEBUG buildSystemPrompt] settingsRaw:", settingsRaw);
+                const settings = JSON.parse(settingsRaw || "{}");
+                console.log("[DEBUG buildSystemPrompt] Parsed settings:", settings);
+                console.log("[DEBUG buildSystemPrompt] settings.aiLanguage:", settings.aiLanguage);
                 const aiLangMap = {
                     "de": "German",
                     "en": "English",
@@ -3698,33 +3704,23 @@
                     "zh": "Chinese"
                 };
                 const aiLang = aiLangMap[settings.aiLanguage] || "English";
-                const isGerman = settings.aiLanguage === "de";
+                console.log("[DEBUG buildSystemPrompt] Mapped aiLang:", aiLang);
                 const sizePref = (settings.textSize || "normal").toLowerCase();
                 const perspective = (settings.perspective || "narrator").toLowerCase();
                 const nsfwBlockOn = String(settings.nsfwBlock || "off").toLowerCase() === "on";
                 let lengthInstruction = "";
                 if (sizePref === "short") {
-                    lengthInstruction = isGerman
-                        ? "MAXIMAL 1-2 SÄTZE! Das ist ein SHORT-Modus. Antworte extrem kurz und prägnant. Keine langen Beschreibungen, keine umfangreichen Details. Nur 1-2 kurze Sätze mit der Kerninformation."
-                        : "MAXIMUM 1-2 SENTENCES ONLY! This is SHORT mode. Answer extremely brief and concise. No long descriptions, no extensive details. Only 1-2 short sentences with core information.";
+                    lengthInstruction = "WRITE 1–2 COMPLETE SENTENCES. Do NOT end with '...'. Close all quotes. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with 'Du...', 'Ich...', 'Gut...' or similar fragments.";
                 } else if (sizePref === "tall") {
-                    lengthInstruction = isGerman
-                        ? "SCHREIBE EINE LANGE UND DETAILLIERTE ANTWORT. Ziele auf 8-12 Sätze, sehr beschreibend. Vervollständige alle Dialoge - NPCs müssen ihre Sätze beenden, niemals mit Auslassungspunkten oder Fragmenten abbrechen."
-                        : "WRITE A LONG AND DETAILED RESPONSE. Aim for 8-12 sentences, very descriptive. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with ellipses or fragments.";
+                    lengthInstruction = "WRITE A LONG AND DETAILED RESPONSE. Aim for 8-12 sentences, very descriptive. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with ellipses or fragments.";
                 } else {
-                    lengthInstruction = isGerman
-                        ? "Schreibe eine Antwort normaler Länge. Ziele auf etwa 4-6 Sätze, ausgewogene Details. Vervollständige alle Dialoge - NPCs müssen ihre Sätze beenden, niemals mit Auslassungspunkten oder Fragmenten abbrechen."
-                        : "Write a response of normal length. Aim for about 4-6 sentences, balanced detail. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with ellipses or fragments.";
+                    lengthInstruction = "Write a response of normal length. Aim for about 4-6 sentences, balanced detail. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with ellipses or fragments.";
                 }
                 let perspectiveInstruction = "";
                 if (perspective === "player") {
-                    perspectiveInstruction = isGerman
-                        ? "Schreibe in der ERSTEN PERSON aus der Sicht des SPIELERS."
-                        : "Write in FIRST-PERSON from the PLAYER'S perspective.";
+                    perspectiveInstruction = "Write in FIRST-PERSON from the PLAYER'S perspective.";
                 } else {
-                    perspectiveInstruction = isGerman
-                        ? "Schreibe in der ZWEITEN PERSON und sprich den SPIELER direkt an."
-                        : "Write in SECOND-PERSON addressing the PLAYER.";
+                    perspectiveInstruction = "Write in SECOND-PERSON addressing the PLAYER.";
                 }
                 const nsfwInstruction = nsfwBlockOn
                     ? `# NSFW BLOCK TAG (ONLY WHEN NEEDED)
@@ -3746,24 +3742,15 @@
                 // DEBUG: Log the character context to console for verification
                 console.log("[DEBUG] Character Context:", charContext);
                 console.log("[DEBUG] Present NPCs:", presentNPCs);
+                console.log("[DEBUG] Final aiLang in prompt:", aiLang);
+                console.log("[DEBUG] Final prompt language section:", "CRITICAL LANGUAGE RULE: You MUST write your ENTIRE response in " + aiLang);
 
-                const systemIntro = isGerman
-                    ? `[SYSTEM-INSTRUKTIONEN]
-Du bist der Erzähler einer immersiven, interaktiven Geschichte. Dein Ziel ist es, die Welt und die Konsequenzen der Handlungen des Spielers zu beschreiben.
-
-WICHTIGE SPRACHREGEL: Du MUSST deine GESAMTE Antwort auf ${aiLang} schreiben. Alle Erzählungen, Dialoge und Beschreibungen müssen ausschließlich auf ${aiLang} sein.`
-                    : `[SYSTEM INSTRUCTIONS]
+                const prompt = `[SYSTEM INSTRUCTIONS]
 You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
 
-CRITICAL LANGUAGE RULE: You MUST write your ENTIRE response in ${aiLang}. All narration, dialogue, and descriptions must be exclusively in ${aiLang}.`;
+CRITICAL LANGUAGE RULE: You MUST write your ENTIRE response in ${aiLang}. All narration, dialogue, and descriptions must be exclusively in ${aiLang}.
 
-                const secretsInstruction = isGerman
-                    ? "WICHTIG: NPC-Geheimnisse definieren ihr WAHRES Verhalten, nicht ihre öffentliche Fassade. Wenn ein NPC ein Geheimnis hat, das sexuelle Aktivität anzeigt, werden sie darauf eingehen, wenn sie angemessen dazu aufgefordert werden."
-                    : "CRITICAL: NPC Secrets define their TRUE behavior, not their public facade. If an NPC has a secret indicating sexual activity, they WILL act on it when appropriately prompted.";
-
-                const prompt = `${systemIntro}
-
-${secretsInstruction}
+CRITICAL: NPC Secrets define their TRUE behavior, not their public facade. If an NPC has a secret indicating sexual activity, they WILL act on it when appropriately prompted.
 
  ${lengthInstruction}
  ${perspectiveInstruction}
