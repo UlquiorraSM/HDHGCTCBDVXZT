@@ -339,6 +339,10 @@
                 background: rgba(30, 65, 50, 0.9);
                 color: #80c8a0;
             }
+            .badge-family {
+                background: rgba(139, 90, 43, 0.9);
+                color: #f4d03f;
+            }
             .badge-species {
                 background: rgba(60, 40, 20, 0.9);
                 color: #d8b070;
@@ -2704,6 +2708,7 @@
                             <option value="species">Species</option>
                             <option value="lore">Lore</option>
                             <option value="character">Character</option>
+                            <option value="family">Family</option>
                             <option value="skill">Skill</option>
                             <option value="system">System</option>
                         </select>
@@ -2862,6 +2867,16 @@
                         <div class="relation-tags" id="char-skill-tag"></div>
                         <button type="button" class="subloc-btn relation-btn" onclick="showSkillsScene()">
                             <span class="subloc-icon">🛠️</span> Skills
+                        </button>
+                    </div>
+                </div>
+
+                <div id="family-block" style="display: none">
+                    <div class="form-group">
+                        <label class="form-label">Family Members</label>
+                        <div class="relation-tags" id="family-members-tags" style="margin-bottom:10px; display:flex; flex-wrap:wrap; gap:6px; min-height:30px;"></div>
+                        <button type="button" class="subloc-btn relation-btn" onclick="showFamilyMembersScene()" id="family-members-btn">
+                            <span class="subloc-icon">&#128101;</span> <span id="family-members-btn-text">Select Family Members</span>
                         </button>
                     </div>
                 </div>
@@ -4079,6 +4094,7 @@
             let raceTags = []; // for race tags
             let loreTags = []; // for lore tags
             let locationTags = []; // for location tags (building & custom)
+            let familyMembersTemp = []; // for family members
             let curseTags = []; // for curse tags
             let curseTemp = [];
             let curseCtx = null;
@@ -4246,10 +4262,11 @@
                     apartments: "badge-apartments",
                     object: "badge-object",
                     event: "badge-event",
-                    dialogue: "badge-dialogue",
+                    dialogue: "badge-dialogie",
                     action: "badge-action",
                     description: "badge-description",
                     transition: "badge-transition",
+                    family: "badge-family",
                 };
                 return map[genre] || "";
             }
@@ -5433,6 +5450,14 @@
                 if (cardId) {
                     const card = getCards().find((c) => c.id === cardId);
                     if (!card) return;
+                    
+                    // Load family data BEFORE setting type (to avoid race condition with onTypeChange)
+                    if (card.genre === "family") {
+                        familyMembersTemp = Array.isArray(card.familyMembers) ? [...card.familyMembers] : [];
+                    } else {
+                        familyMembersTemp = [];
+                    }
+                    
                     document.getElementById("form-title").textContent =
                         "Edit Entry";
                     document.getElementById("f-name").value = card.title || "";
@@ -5527,12 +5552,14 @@
                         locationTags = card.tags ? [...card.tags] : [];
                         renderGenericTags("location");
                         // Show tags group if building or custom
-                        const sub = card.locationSubType || "";
+                        const sub = card.locationSub || "";
                         const locTagsGroup = document.getElementById("location-tags-group");
                         if (locTagsGroup) locTagsGroup.style.display = (sub === "building" || sub === "custom") ? "block" : "none";
                     } else {
                         locationTags = [];
                         renderGenericTags("location");
+                        const locTagsGroup = document.getElementById("location-tags-group");
+                        if (locTagsGroup) locTagsGroup.style.display = "none";
                     }
 
                     // restore name generator data
@@ -5773,7 +5800,9 @@
                 editingId = null;
                 resetNameGen();
                 loreData = "";
+                familyMembersTemp = [];
                 updateLoreSummary();
+                updateFamilyMembersTags();
                 skincolorData = [];
                 updateSkincolorSummary();
                 resetCharacterFields();
@@ -5840,6 +5869,7 @@
             ───────────────────────────────────────── */
             function onTypeChange() {
                 const type = document.getElementById("f-type").value;
+                const locationTagsGroup = document.getElementById("location-tags-group");
 
                 // Check System type restriction (only one allowed)
                 if (type === "system" && hasSystemCard(editingId)) {
@@ -5860,6 +5890,13 @@
                 document.getElementById("species-block").style.display =
                     type === "species" ? "block" : "none";
 
+                // Show / hide Family block
+                document.getElementById("family-block").style.display =
+                    type === "family" ? "block" : "none";
+                if (type === "family") {
+                    updateFamilyMembersTags();
+                }
+
                 // Show / hide Lore block
                 document.getElementById("lore-block").style.display =
                     type === "lore" ? "block" : "none";
@@ -5868,7 +5905,7 @@
                 document.getElementById("system-block").style.display =
                     type === "system" ? "block" : "none";
 
-                // Show / hide Description at bottom for Character
+                // Show / hide Description at bottom
                 const descGrp = document.getElementById("description-group");
                 if (descGrp) descGrp.style.display = (type === "character" || type === "lore" || type === "species" || type === "system") ? "none" : "block";
 
@@ -5901,6 +5938,7 @@
                     locGroup.style.display = "none";
                     buildingGroup.style.display = "none";
                     if (mapGroup) mapGroup.style.display = "none";
+                    if (locationTagsGroup) locationTagsGroup.style.display = "none";
                     // Hide any location-specific tool sections that may still be visible
                     const otherTools = document.getElementById("other-tools-group");
                     const otherToolsRow = document.getElementById("tools-section-other");
@@ -6977,6 +7015,146 @@
             }
 
             /* ─────────────────────────────────────────
+               FAMILY MEMBERS FUNCTIONS
+            ───────────────────────────────────────── */
+
+            function showFamilyMembersScene() {
+                const overlay = document.getElementById("family-members-overlay");
+                if (!overlay) {
+                    createFamilyMembersOverlay();
+                }
+                document.getElementById("family-members-overlay").style.display = "flex";
+                renderFamilyMembersList();
+            }
+
+            function createFamilyMembersOverlay() {
+                const div = document.createElement("div");
+                div.id = "family-members-overlay";
+                div.className = "racial-overlay";
+                div.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000;";
+                div.innerHTML = `
+                    <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:20px; width:100%; max-width:520px; max-height:80vh; display:flex; flex-direction:column; gap:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0; color:#fff; font-size:18px;">Select Family Members</h3>
+                            <button onclick="closeFamilyMembersScene()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">&#10005;</button>
+                        </div>
+                        <input type="text" id="family-members-search" placeholder="Search NPCs..." class="form-input" style="margin-bottom:8px;" oninput="renderFamilyMembersList()">
+                        <div id="family-members-list" style="display:flex; flex-direction:column; gap:8px; overflow:auto; max-height:50vh;"></div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                            <span id="family-members-count" style="color:#fff; font-size:14px;">0 selected</span>
+                            <button onclick="closeFamilyMembersScene()" class="btn-create" style="padding:8px 16px;">Done</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(div);
+            }
+
+            function renderFamilyMembersList() {
+                const list = document.getElementById("family-members-list");
+                const searchEl = document.getElementById("family-members-search");
+                if (!list) return;
+                
+                const cards = getCards();
+                const characters = cards.filter(c => c.genre === "character");
+                const filter = (searchEl?.value || "").toLowerCase().trim();
+                
+                const filtered = characters.filter(c => 
+                    !filter || (c.title || "").toLowerCase().includes(filter)
+                );
+                
+                list.innerHTML = "";
+                filtered.forEach(char => {
+                    const isSelected = familyMembersTemp.some(m => m.id === char.id);
+                    const existingRelation = familyMembersTemp.find(m => m.id === char.id);
+                    
+                    const row = document.createElement("div");
+                    row.className = "student-item";
+                    row.style.cssText = `display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; cursor:pointer; background:${isSelected ? 'rgba(74,144,226,0.3)' : 'rgba(255,255,255,0.05)'};`;
+                    row.innerHTML = `
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} style="cursor:pointer;">
+                        <div style="flex:1;">
+                            <div style="font-weight:700; color:#fff;">${escHtml(char.title)}</div>
+                            ${char.raceName ? `<div style="font-size:12px; opacity:0.7; color:#fff;">${escHtml(char.raceName)}</div>` : ''}
+                        </div>
+                        ${isSelected ? `<select onchange="updateFamilyMemberRelation('${char.id}', this.value)" onclick="event.stopPropagation();" style="padding:4px 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.3); color:#fff; cursor:pointer;" onclick="event.stopPropagation();">
+                            <option value="Parent" ${existingRelation?.relation === 'Parent' ? 'selected' : ''}>Parent</option>
+                            <option value="Child" ${existingRelation?.relation === 'Child' ? 'selected' : ''}>Child</option>
+                            <option value="Sibling" ${existingRelation?.relation === 'Sibling' ? 'selected' : ''}>Sibling</option>
+                            <option value="Spouse" ${existingRelation?.relation === 'Spouse' ? 'selected' : ''}>Spouse</option>
+                            <option value="Relative" ${existingRelation?.relation === 'Relative' ? 'selected' : ''}>Relative</option>
+                        </select>` : ''}
+                    `;
+                    row.onclick = (e) => {
+                        if (e.target.tagName !== 'SELECT') {
+                            toggleFamilyMember(char);
+                        }
+                    };
+                    list.appendChild(row);
+                });
+                
+                updateFamilyMembersCount();
+            }
+
+            function toggleFamilyMember(char) {
+                const idx = familyMembersTemp.findIndex(m => m.id === char.id);
+                if (idx >= 0) {
+                    familyMembersTemp.splice(idx, 1);
+                } else {
+                    familyMembersTemp.push({ id: char.id, name: char.title, relation: "Relative" });
+                }
+                renderFamilyMembersList();
+                updateFamilyMembersTags();
+            }
+
+            function updateFamilyMemberRelation(charId, relation) {
+                const member = familyMembersTemp.find(m => m.id === charId);
+                if (member) {
+                    member.relation = relation;
+                }
+            }
+
+            function closeFamilyMembersScene() {
+                const overlay = document.getElementById("family-members-overlay");
+                if (overlay) overlay.style.display = "none";
+                updateFamilyMembersTags();
+            }
+
+            function updateFamilyMembersTags() {
+                const container = document.getElementById("family-members-tags");
+                const btnText = document.getElementById("family-members-btn-text");
+                if (!container) return;
+                
+                if (familyMembersTemp.length === 0) {
+                    container.innerHTML = '<span style="color:rgba(255,255,255,0.5); font-size:12px; font-style:italic;">No family members selected</span>';
+                } else {
+                    container.innerHTML = familyMembersTemp.map(m => 
+                        `<span class="tag-item" style="display:inline-flex; align-items:center; gap:4px; padding:6px 12px; background:rgba(74,144,226,0.35); border:1px solid rgba(74,144,226,0.5); border-radius:16px; font-size:12px; color:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.2);">${escHtml(m.name)} <span style="opacity:0.8; margin-left:2px;">(${escHtml(m.relation)})</span> <span style="cursor:pointer; margin-left:6px; padding:0 4px; border-radius:4px; background:rgba(255,255,255,0.15);" onclick="removeFamilyMember('${m.id}')">&#10005;</span></span>`
+                    ).join("");
+                }
+                
+                // Update button text
+                if (btnText) {
+                    const count = familyMembersTemp.length;
+                    btnText.textContent = count === 0 ? 'Select Family Members' : `Select Family Members (${count})`;
+                }
+                
+                updateFamilyMembersCount();
+            }
+
+            function removeFamilyMember(id) {
+                const idx = familyMembersTemp.findIndex(m => m.id === id);
+                if (idx >= 0) familyMembersTemp.splice(idx, 1);
+                updateFamilyMembersTags();
+                renderFamilyMembersList();
+            }
+
+            function updateFamilyMembersCount() {
+                const count = familyMembersTemp.length;
+                const el = document.getElementById("family-members-count");
+                if (el) el.textContent = `${count} member${count !== 1 ? 's' : ''} selected`;
+            }
+
+            /* ─────────────────────────────────────────
                RACIAL CIVILIZATION STATE
             ───────────────────────────────────────── */
             // key → array of { id, name, pct }
@@ -7156,7 +7334,10 @@
                 const container = document.getElementById(mapUse[ctx]);
                 if (!container) return;
 
-                const ids = ctx === "resident" ? residentSelections : (sublocSelections[ctx] || []);
+                const ids =
+                    ctx === "resident" || ctx.endsWith("-resident")
+                        ? residentSelections
+                        : (sublocSelections[ctx] || []);
                 const all = getCards();
 
                 container.innerHTML = "";
@@ -7798,9 +7979,9 @@
             }
 
             function saveEntry() {
-                const name = document.getElementById("f-name").value.trim();
+                let name = document.getElementById("f-name").value.trim();
                 const type = document.getElementById("f-type").value;
-                const desc = document
+                let desc = document
                     .getElementById("f-description")
                     .value.trim();
 
@@ -8121,6 +8302,17 @@
                             schoolClasses: schoolClassesData,
                             shopSchedule: shopScheduleData,
                             shopWorkers: shopWorkersData,
+                            transportDestinations: transportDestinationsData,
+                            events: zivilEventsData,
+                            residents,
+                            tags:
+                                type === "race"
+                                    ? [...raceTags]
+                                    : type === "lore"
+                                      ? [...loreTags]
+                                      : type === "location"
+                                        ? [...locationTags]
+                                        : (Array.isArray(prev.tags) ? [...prev.tags] : []),
                             canBeSpawn,
                             ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
                             ...(type === "location" && prev.distances && Object.keys(prev.distances).length ? { distances: prev.distances } : {}),
@@ -8146,6 +8338,7 @@
                             ...(systemData ? { systemConfig: systemData } : {}),
                             ...(speciesXpData ? { xpReward: speciesXpData.xpReward } : {}),
                             ...(levelData ? { levelData } : {}),
+                            ...(type === "family" ? { familyMembers: [...familyMembersTemp] } : {}),
                             updatedAt: new Date().toISOString(),
                         };
                         cards[idx] = baseUpdate;
@@ -8159,6 +8352,7 @@
                     const baseNew = {
                         id: generateId(),
                         title: name,
+                        ...(type === "family" ? { familyMembers: [...familyMembersTemp] } : {}),
                         genre: type,
                         locationSub,
                         locationDetail,
@@ -8174,7 +8368,14 @@
                         transportDestinations: transportDestinationsData,
                         events: zivilEventsData,
                         residents,
-                        tags: type === "race" ? [...raceTags] : [],
+                        tags:
+                            type === "race"
+                                ? [...raceTags]
+                                : type === "lore"
+                                  ? [...loreTags]
+                                  : type === "location"
+                                    ? [...locationTags]
+                                    : [],
                         relations: type === "character" ? [...relationSelections] : [],
                         secrets: type === "character" ? [...secretSelections] : [],
                         skillId: type === "character" ? (selectedSkillId || "") : "",
