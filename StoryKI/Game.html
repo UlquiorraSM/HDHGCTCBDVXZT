@@ -1063,6 +1063,9 @@
                     <button class="act-btn btn-move" id="move-btn">
                         → Move to...
                     </button>
+                    <button class="act-btn btn-edit" id="dev-present-btn" title="Developer Present NPC Debug">
+                        Dev
+                    </button>
                     <button class="act-btn btn-travel" id="travel-btn" style="display:none;">
                         🚂 Travel
                     </button>
@@ -1158,6 +1161,18 @@
                     <button id="back-popup-cancel" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">Back</button>
                     <button id="back-popup-save" style="flex:1; padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;">Save</button>
                     <button id="back-popup-delete" style="flex:1; padding:10px; border-radius:10px; background:#b04040; color:#fff; border:none; font-weight:700; cursor:pointer;">Delete</button>
+                </div>
+            </div>
+        </div>
+        <div id="dev-present-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.82); display:none; align-items:center; justify-content:center; z-index:3100; backdrop-filter:blur(8px);">
+            <div style="background:rgba(26,26,32,.96); border:1px solid rgba(255,255,255,.15); border-radius:14px; width:min(92vw,700px); max-height:80vh; display:flex; flex-direction:column; overflow:hidden;">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.12);">
+                    <div style="color:#fff; font-weight:700;">Dev - Present NPCs</div>
+                    <button id="dev-present-close" style="width:30px; height:30px; border-radius:50%; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.08); color:#fff; cursor:pointer;">×</button>
+                </div>
+                <div style="padding:12px 14px; color:rgba(255,255,255,.85); display:flex; flex-direction:column; gap:10px;">
+                    <div id="dev-present-meta" style="font-size:12px; color:rgba(255,255,255,.65);"></div>
+                    <pre id="dev-present-content" style="margin:0; padding:10px; border-radius:10px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.1); color:#d7ecff; font-size:12px; line-height:1.45; white-space:pre-wrap; overflow:auto;"></pre>
                 </div>
             </div>
         </div>
@@ -2977,12 +2992,16 @@
                         residentNPCs.forEach((c) => {
                             const sched = scheduledByNpc.get(c.id);
                             let location = "Unknown location";
+                            const secrets = readSecrets(c);
+                            const knownSecrets = readKnownSecrets(c);
                             if (sched) {
                                 const schoolCard = cards.find(card => card.id === sched.schoolId);
                                 location = schoolCard ? `At ${schoolCard.title} (School)` : "At school";
                             }
                             contextLines.push(`- ${c.title} (${c.raceName || "Character"})${c.description ? ` - ${c.description.substring(0, 50)}...` : ""}`);
                             contextLines.push(`  Currently: ${location}`);
+                            if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
+                            if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
                         });
                         contextLines.push("");
                     }
@@ -3003,7 +3022,11 @@
                         contextLines.push("## MENTIONED (Referenced in Recent Story)\n");
                         contextLines.push("These NPCs were mentioned recently but are elsewhere.\n");
                         mentionedNPCs.forEach((c) => {
+                            const secrets = readSecrets(c);
+                            const knownSecrets = readKnownSecrets(c);
                             contextLines.push(`- ${c.title} (${c.raceName || "Character"}) - Not present here`);
+                            if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
+                            if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
                         });
                         contextLines.push("");
                     }
@@ -3029,7 +3052,11 @@
                             knownElsewhere.forEach((c) => {
                                 const rel = activeChar.relations.find(r => r.targetId === c.id);
                                 const relText = rel ? (rel.relation === "Family" ? rel.familySub : rel.relation) : "Known";
+                                const secrets = readSecrets(c);
+                                const knownSecrets = readKnownSecrets(c);
                                 contextLines.push(`- ${c.title} (${c.raceName || "Character"}) - ${relText}`);
+                                if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
+                                if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
                             });
                             contextLines.push("");
                         }
@@ -3073,16 +3100,22 @@
                 try {
                     const cards = getCards();
                     // Filter lore cards with mode "always"
-                    const loreCards = cards.filter((c) => c.genre === "lore" && c.loreMode === "always");
+                    const loreCards = cards.filter((c) => {
+                        if (c.genre !== "lore") return false;
+                        const mode = String(c.loreMode || "always").toLowerCase();
+                        return mode === "always";
+                    });
                     if (loreCards.length === 0) return "";
 
                     let context = "\nWORLD LORE (Always Active):\n";
                     loreCards.forEach((l) => {
                         context += `- ${l.title}\n`;
                         if (l.description) context += `  ${l.description}\n`;
-                        if (l.loreData) context += `  Details: ${l.loreData}\n`;
-                        if (l.loreTags && l.loreTags.length > 0) {
-                            context += `  Tags: ${l.loreTags.join(", ")}\n`;
+                        const loreDetails = String(l.loreText || l.loreData || "").trim();
+                        const loreTags = Array.isArray(l.tags) ? l.tags : (Array.isArray(l.loreTags) ? l.loreTags : []);
+                        if (loreDetails) context += `  Details: ${loreDetails}\n`;
+                        if (loreTags.length > 0) {
+                            context += `  Tags: ${loreTags.join(", ")}\n`;
                         }
                     });
                     return context;
@@ -3718,7 +3751,7 @@
                 const scheduleInfo = computeSchoolPresenceNow();
                 const scheduleContext = scheduleInfo.context || "";
                 const shopContext = computeShopPresenceNow();
-                const presentNPCs = Array.from(document.querySelectorAll('.npc-name-xs')).map(el => el.textContent).join(", ");
+                const presentNPCs = getPresentNpcNames().join(", ");
                 const presentSpecies = getPresentSpeciesCards().map(s => s.title).join(", ");
                 
                 const cards = getCards();
@@ -4261,10 +4294,54 @@ Example:
                 bar.classList.add("visible");
             }
 
+            function derivePresentNpcIdsFromWorld() {
+                try {
+                    if (!currentLocationId) return [];
+                    const cards = getCards();
+                    const currentLoc = cards.find((c) => c.id === currentLocationId);
+                    if (!currentLoc) return [];
+
+                    const ancestors = [];
+                    let current = currentLoc;
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const ancestorIds = new Set(ancestors.map((a) => a.id));
+                    const scheduleNow = computeSchoolPresenceNow();
+                    const scheduledByNpc = scheduleNow.byNpc || new Map();
+
+                    const residentIds = new Set();
+                    ancestors.forEach((loc) => {
+                        if (Array.isArray(loc.residents)) {
+                            loc.residents.forEach((id) => residentIds.add(id));
+                        }
+                    });
+
+                    const result = [];
+                    residentIds.forEach((id) => {
+                        const c = cards.find((card) => card.genre === "character" && card.id === id);
+                        if (!c) return;
+                        if ((c.status || "Alive") === "Dead") return;
+                        const sched = scheduledByNpc.get(c.id);
+                        const atSchoolElsewhere = sched && !ancestorIds.has(sched.schoolId);
+                        if (!atSchoolElsewhere) result.push(c.id);
+                    });
+                    return result;
+                } catch (e) {
+                    console.warn("derivePresentNpcIdsFromWorld failed", e);
+                    return [];
+                }
+            }
+
             function getPresentNpcIds() {
                 const bar = document.getElementById("present-npcs-bar");
-                if (!bar) return [];
-                return Array.from(bar.querySelectorAll(".npc-item"))
+                const cards = getCards();
+                const ids = bar ? Array.from(bar.querySelectorAll(".npc-item"))
                     .map((item) => {
                         // Try dataset.npcId first, then data-npc-id attribute
                         let id = item.dataset.npcId || item.getAttribute("data-npc-id");
@@ -4279,7 +4356,61 @@ Example:
                         }
                         return id || null;
                     })
-                    .filter(Boolean);
+                    .filter(Boolean) : [];
+                if (ids.length > 0) return ids;
+                return derivePresentNpcIdsFromWorld();
+            }
+
+            function getPresentNpcNames() {
+                const ids = getPresentNpcIds();
+                if (ids.length === 0) return [];
+                const cards = getCards();
+                return ids
+                    .map((id) => cards.find((c) => c.genre === "character" && c.id === id))
+                    .filter(Boolean)
+                    .map((c) => c.title || c.id);
+            }
+
+            function buildPresentNpcDebugSnapshot() {
+                const cards = getCards();
+                const bar = document.getElementById("present-npcs-bar");
+                const uiIds = bar
+                    ? Array.from(bar.querySelectorAll(".npc-item"))
+                        .map((item) => item.dataset.npcId || item.getAttribute("data-npc-id") || null)
+                        .filter(Boolean)
+                    : [];
+                const resolvedIds = getPresentNpcIds();
+                const source = uiIds.length > 0 ? "ui-bar" : "world-fallback";
+                const lines = [];
+                resolvedIds.forEach((id, idx) => {
+                    const npc = cards.find((c) => c.genre === "character" && c.id === id);
+                    const name = npc ? (npc.title || npc.firstName || npc.id) : id;
+                    const status = npc ? (npc.status || "Alive") : "Unknown";
+                    lines.push(`${idx + 1}. ${name} [${id}] | status=${status}`);
+                });
+                if (lines.length === 0) lines.push("(none)");
+                return {
+                    source,
+                    uiCount: uiIds.length,
+                    resolvedCount: resolvedIds.length,
+                    lines
+                };
+            }
+
+            function openDevPresentPopup() {
+                const overlay = document.getElementById("dev-present-overlay");
+                const content = document.getElementById("dev-present-content");
+                const meta = document.getElementById("dev-present-meta");
+                if (!overlay || !content || !meta) return;
+                const snap = buildPresentNpcDebugSnapshot();
+                meta.textContent = `source=${snap.source} | uiCount=${snap.uiCount} | resolvedCount=${snap.resolvedCount} | location=${currentLocationId || "none"}`;
+                content.textContent = snap.lines.join("\n");
+                overlay.style.display = "flex";
+            }
+
+            function closeDevPresentPopup() {
+                const overlay = document.getElementById("dev-present-overlay");
+                if (overlay) overlay.style.display = "none";
             }
 
             function addNpcMemoriesFromNarration(text, anchorTs = null) {
@@ -5197,6 +5328,7 @@ Example:
                 setStatus(false);
                 lockAllButtons(); // Lock buttons during retry
                 appendTypingIndicator();
+                try { updatePresentNPCs(); } catch {}
 
                 const systemInst = buildSystemPrompt();
                 
@@ -5256,6 +5388,7 @@ Example:
                 setStatus(false);
                 lockAllButtons(); // Lock buttons during continue
                 appendTypingIndicator();
+                try { updatePresentNPCs(); } catch {}
 
                 const systemInst = buildSystemPrompt();
 
@@ -5333,6 +5466,7 @@ Example:
                         rollbackAnchoredChangesByTs(removed.timestamp);
                     }
                     rollbackToLastWorldState();
+                    try { updatePresentNPCs(); } catch {}
                     showToast("Message deleted.", "rgba(180, 60, 60, 0.85)");
                     
                     // Re-extract date from remaining last user message
@@ -5379,7 +5513,7 @@ Example:
                 if (saveBtn) saveBtn.style.display = "inline-flex";
                 if (cancelBtn) cancelBtn.style.display = "inline-flex";
                 // Lock other action buttons
-                ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','travel-btn'].forEach(id => {
+                ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','dev-present-btn','travel-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = true; b.classList.add('locked'); }
                 });
@@ -5410,7 +5544,7 @@ Example:
                 const cancelBtn = document.getElementById("edit-cancel-btn");
                 if (saveBtn) saveBtn.style.display = "none";
                 if (cancelBtn) cancelBtn.style.display = "none";
-                ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn'].forEach(id => {
+                ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','dev-present-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = false; b.classList.remove('locked'); }
                 });
@@ -5457,7 +5591,7 @@ Example:
                     showToast("Message deleted.", "rgba(180, 60, 60, 0.85)");
                 }
                 // Unlock buttons
-                ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','travel-btn'].forEach(id => {
+                ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','dev-present-btn','travel-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = false; b.classList.remove('locked'); }
                 });
@@ -5599,6 +5733,14 @@ Example:
             document.getElementById("move-btn").onclick = (e) => {
                 e.stopPropagation();
                 toggleMoveDropdown();
+            };
+            document.getElementById("dev-present-btn").onclick = (e) => {
+                e.stopPropagation();
+                openDevPresentPopup();
+            };
+            document.getElementById("dev-present-close").onclick = closeDevPresentPopup;
+            document.getElementById("dev-present-overlay").onclick = (e) => {
+                if (e.target && e.target.id === "dev-present-overlay") closeDevPresentPopup();
             };
 
             // Close dropdown when clicking outside
@@ -6160,7 +6302,7 @@ Example:
                BUTTON LOCKING DURING GENERATION
             ═══════════════════════════════════════ */
             function lockAllButtons() {
-                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn', 'move-btn', 'travel-btn'];
+                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn', 'move-btn', 'dev-present-btn', 'travel-btn'];
                 buttons.forEach(btnId => {
                     const btn = document.getElementById(btnId);
                     if (btn) {
@@ -6174,7 +6316,7 @@ Example:
             }
 
             function unlockAllButtons() {
-                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn', 'move-btn', 'travel-btn'];
+                const buttons = ['retry-btn', 'edit-btn', 'continue-btn', 'erase-btn', 'move-btn', 'dev-present-btn', 'travel-btn'];
                 buttons.forEach(btnId => {
                     const btn = document.getElementById(btnId);
                     if (btn) {
