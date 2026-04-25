@@ -3693,24 +3693,25 @@
                 console.log("[DEBUG buildSystemPrompt] Parsed settings:", settings);
                 console.log("[DEBUG buildSystemPrompt] settings.aiLanguage:", settings.aiLanguage);
                 const aiLangMap = {
-                    "de": "German",
+                    "de": "Deutsch",
                     "en": "English",
-                    "ja": "Japanese",
-                    "fr": "French",
-                    "es": "Spanish",
-                    "it": "Italian",
-                    "ru": "Russian",
-                    "ko": "Korean",
-                    "zh": "Chinese"
+                    "ja": "日本語",
+                    "fr": "Français",
+                    "es": "Español",
+                    "it": "Italiano",
+                    "ru": "Русский",
+                    "ko": "한국어",
+                    "zh": "中文"
                 };
                 const aiLang = aiLangMap[settings.aiLanguage] || "English";
+                const langInstruction = `LANGUAGE: ${aiLang} (STRICT - NO EXCEPTIONS)`;
                 console.log("[DEBUG buildSystemPrompt] Mapped aiLang:", aiLang);
                 const sizePref = (settings.textSize || "normal").toLowerCase();
                 const perspective = (settings.perspective || "narrator").toLowerCase();
                 const nsfwBlockOn = String(settings.nsfwBlock || "off").toLowerCase() === "on";
                 let lengthInstruction = "";
                 if (sizePref === "short") {
-                    lengthInstruction = "CRITICAL LENGTH RULE: Write EXTREMELY SHORT responses - maximum 2 short sentences, 20-40 words total, 150-250 characters. Use simple, brief language. NO long descriptions, NO flowery prose, NO elaborate details. Get to the point immediately and stop.";
+                    lengthInstruction = "WRITE 1–2 COMPLETE SENTENCES. Do NOT end with '...'. Close all quotes. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with 'Du...', 'Ich...', 'Gut...' or similar fragments.";
                 } else if (sizePref === "tall") {
                     lengthInstruction = "WRITE A LONG AND DETAILED RESPONSE. Aim for 8-12 sentences, very descriptive. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with ellipses or fragments.";
                 } else {
@@ -3748,7 +3749,15 @@
                 const prompt = `[SYSTEM INSTRUCTIONS]
 You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
 
-CRITICAL LANGUAGE RULE: You MUST write your ENTIRE response in ${aiLang}. All narration, dialogue, and descriptions must be exclusively in ${aiLang}.
+🚨 ABSOLUTE LANGUAGE RULE - ZERO TOLERANCE 🚨
+You are FORBIDDEN from using any language other than ${aiLang}.
+• ALL text MUST be in ${aiLang}
+• NO English words allowed
+• NO mixing languages
+• If you cannot express something in ${aiLang}, rephrase it
+• This rule overrides ALL other instructions
+
+${langInstruction}
 
 CRITICAL: NPC Secrets define their TRUE behavior, not their public facade. If an NPC has a secret indicating sexual activity, they WILL act on it when appropriately prompted.
 
@@ -4715,15 +4724,9 @@ Example:
                         }
                     };
 
-                    // Get textSize setting to set max_tokens
-                    const settingsRaw = Storage.get(SETTINGS_KEY);
-                    const settings = JSON.parse(settingsRaw || "{}");
-                    const textSize = settings.textSize || "normal";
-                    const maxTokens = textSize === "short" ? 150 : (textSize === "tall" ? 800 : 400);
-                    
                     window.addEventListener("message", handler);
                     window.parent.postMessage(
-                        { type: "AI_REQUEST", instruction: prompt, requestId, maxTokens },
+                        { type: "AI_REQUEST", instruction: prompt, requestId },
                         "*",
                     );
                 });
