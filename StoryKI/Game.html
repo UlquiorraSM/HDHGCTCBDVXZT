@@ -3677,6 +3677,22 @@
                 }
             }
 
+            function buildTextSizeLockLine() {
+                try {
+                    const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                    const size = (settings.textSize || "normal").toLowerCase();
+                    if (size === "short") {
+                        return "[OUTPUT LENGTH LOCK]\nText size is SHORT. Write ONLY 1-2 complete sentences. Hard cap: 260 characters (excluding control tags). Stop immediately after sentence 2.";
+                    }
+                    if (size === "tall") {
+                        return "[OUTPUT LENGTH LOCK]\nText size is TALL. Write 8-12 complete sentences. Hard cap: 2600 characters (excluding control tags). Keep detail high.";
+                    }
+                    return "[OUTPUT LENGTH LOCK]\nText size is NORMAL. Write 4-6 complete sentences. Hard cap: 1200 characters (excluding control tags).";
+                } catch {
+                    return "[OUTPUT LENGTH LOCK]\nText size is NORMAL. Write 4-6 complete sentences. Hard cap: 1200 characters (excluding control tags).";
+                }
+            }
+
             function buildSystemPrompt() {
                 const d = activeChar?.startingDate || {};
                 const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
@@ -3726,12 +3742,13 @@
                 const nsfwBlockOn = String(settings.nsfwBlock || "off").toLowerCase() === "on";
                 let lengthInstruction = "";
                 if (sizePref === "short") {
-                    lengthInstruction = "WRITE 1–2 COMPLETE SENTENCES. Do NOT end with '...'. Close all quotes. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with 'Du...', 'Ich...', 'Gut...' or similar fragments.";
+                    lengthInstruction = "SHORT MODE (MANDATORY): Write ONLY 1-2 complete sentences. Maximum 260 characters (excluding control tags). Do NOT add extra paragraph breaks. Stop immediately after sentence 2.";
                 } else if (sizePref === "tall") {
-                    lengthInstruction = "WRITE A LONG AND DETAILED RESPONSE. Aim for 8-12 sentences, very descriptive. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with ellipses or fragments.";
+                    lengthInstruction = "TALL MODE (MANDATORY): Write 8-12 complete sentences with high detail. Maximum 2600 characters (excluding control tags).";
                 } else {
-                    lengthInstruction = "Write a response of normal length. Aim for about 4-6 sentences, balanced detail. COMPLETE all spoken dialogue - NPCs must finish their sentences, never trail off with ellipses or fragments.";
+                    lengthInstruction = "NORMAL MODE (MANDATORY): Write 4-6 complete sentences with balanced detail. Maximum 1200 characters (excluding control tags).";
                 }
+                lengthInstruction += " Close all quotes. COMPLETE all spoken dialogue; never end spoken lines as fragments.";
                 let perspectiveInstruction = "";
                 if (perspective === "player") {
                     perspectiveInstruction = "Write in FIRST-PERSON from the PLAYER'S perspective.";
@@ -3894,6 +3911,7 @@ Example:
 [[TIME: 14:15, LOCATION: "Forest"]]
 
 [STRICT REQUIREMENT]: You MUST include this block in EVERY response. If you fail to include it, the world state will break. Use the CURRENT time and location if nothing changed.`;
+                return prompt;
             }
 
             function buildPlayerContext() {
@@ -4751,15 +4769,22 @@ Example:
                 });
             }
 
-            async function askAIWithRetry(prompt) {
-                while (true) {
+            async function askAIWithRetry(prompt, maxAttempts = 4) {
+                if (typeof prompt !== "string" || !prompt.trim()) {
+                    throw new Error("Invalid AI prompt: empty or non-string instruction.");
+                }
+                let lastErr = null;
+                for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                     try {
                         return await askAI(prompt);
                     } catch (err) {
-                        console.warn("AI Request failed, retrying in 2 seconds...", err);
+                        lastErr = err;
+                        if (attempt >= maxAttempts) break;
+                        console.warn(`AI Request failed (attempt ${attempt}/${maxAttempts}), retrying in 2 seconds...`, err);
                         await new Promise((resolve) => setTimeout(resolve, 2000));
                     }
                 }
+                throw new Error(`AI request failed after ${maxAttempts} attempts: ${String(lastErr || "unknown error")}`);
             }
 
             function buildHistoryLines(limitFirst = 15) {
@@ -4889,7 +4914,7 @@ Example:
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
                     const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n\nNarrator:";
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
@@ -4898,13 +4923,13 @@ Example:
                     if (cleanResponse === NSFW_BLOCKED_TOKEN) {
                         finalText = NSFW_BLOCKED_TEXT;
                     } else {
-                        finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
+                        finalText = uniqueSentences(cleanResponse);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n\nNarrator:";
+                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                             const response2 = await askAIWithRetry(finalPrompt2);
                             const clean2 = processAICommands(response2);
-                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(applyTextSizeLimit(clean2));
+                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
                     appendBubble("ai", finalText);
@@ -5017,7 +5042,7 @@ Example:
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
                     const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n\nNarrator:";
+                    const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
@@ -5026,13 +5051,13 @@ Example:
                     if (cleanResponse === NSFW_BLOCKED_TOKEN) {
                         finalText = NSFW_BLOCKED_TEXT;
                     } else {
-                        finalText = uniqueSentences(applyTextSizeLimit(cleanResponse));
+                        finalText = uniqueSentences(cleanResponse);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n\nNarrator:";
+                            const finalPrompt2 = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                             const response2 = await askAIWithRetry(finalPrompt2);
                             const clean2 = processAICommands(response2);
-                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(applyTextSizeLimit(clean2));
+                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
                     appendBubble("ai", finalText);
@@ -5187,7 +5212,7 @@ Example:
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
                     const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n\nNarrator:";
+                    const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
@@ -5196,13 +5221,13 @@ Example:
                     if (cleanR === NSFW_BLOCKED_TOKEN) {
                         finalText = NSFW_BLOCKED_TEXT;
                     } else {
-                        finalText = uniqueSentences(applyTextSizeLimit(cleanR));
+                        finalText = uniqueSentences(cleanR);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n\nNarrator:";
+                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                             const r2 = await askAIWithRetry(finalPrompt2);
                             const clean2 = processAICommands(r2);
-                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(applyTextSizeLimit(clean2));
+                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
                     appendBubble("ai", finalText);
@@ -5238,7 +5263,7 @@ Example:
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory.slice(-10);
                     const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n\nNarrator:";
+                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
@@ -5247,13 +5272,13 @@ Example:
                     if (cleanR === NSFW_BLOCKED_TOKEN) {
                         finalText = NSFW_BLOCKED_TEXT;
                     } else {
-                        finalText = uniqueSentences(applyTextSizeLimit(cleanR));
+                        finalText = uniqueSentences(cleanR);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n\nNarrator:";
+                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                             const r2 = await askAIWithRetry(finalPrompt2);
                             const clean2 = processAICommands(r2);
-                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(applyTextSizeLimit(clean2));
+                            finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
                     appendBubble("ai", finalText);
