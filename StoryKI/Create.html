@@ -2879,6 +2879,18 @@
                             <span class="subloc-icon">&#128101;</span> <span id="family-members-btn-text">Select Family Members</span>
                         </button>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Spawn Location</label>
+                        <select class="form-select" id="f-family-spawn-location">
+                            <option value="">Select spawn location...</option>
+                        </select>
+                        <div id="family-spawn-selected" style="margin-top:8px; display:none;">
+                            <span class="tag-item" style="display:inline-flex; align-items:center; gap:4px; padding:6px 12px; background:rgba(80,180,120,0.3); border:1px solid rgba(80,180,120,0.5); border-radius:16px; font-size:12px; color:#fff;">
+                                <span id="family-spawn-name"></span>
+                                <span style="cursor:pointer; margin-left:6px; padding:0 4px; border-radius:4px; background:rgba(255,255,255,0.15);" onclick="clearFamilySpawnLocation()">&#10005;</span>
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="species-block" style="display: none">
@@ -3625,7 +3637,7 @@
         ══════════════════════════════ -->
         <div id="relations-view" style="display: none;">
             <nav class="top-nav">
-                <button class="nav-back-btn" onclick="showFormView()" title="Back">
+                <button class="nav-back-btn" onclick="confirmRelations()" title="Back">
                     ←
                 </button>
                 <span class="nav-title">CHARACTER RELATIONS</span>
@@ -3666,7 +3678,7 @@
 
                 <!-- Actions -->
                 <div class="form-actions">
-                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
+                    <button class="btn-cancel" onclick="confirmRelations()">← Back</button>
                     <button class="btn-save" onclick="confirmRelations()">Done</button>
                 </div>
             </div>
@@ -5454,6 +5466,17 @@
                     // Load family data BEFORE setting type (to avoid race condition with onTypeChange)
                     if (card.genre === "family") {
                         familyMembersTemp = Array.isArray(card.familyMembers) ? [...card.familyMembers] : [];
+                        // Populate spawn locations first, then load saved value
+                        populateFamilySpawnLocations();
+                        if (card.spawnLocationId) {
+                            setTimeout(() => {
+                                const spawnSelect = document.getElementById("f-family-spawn-location");
+                                if (spawnSelect) {
+                                    spawnSelect.value = card.spawnLocationId;
+                                    updateFamilySpawnDisplay();
+                                }
+                            }, 0);
+                        }
                     } else {
                         familyMembersTemp = [];
                     }
@@ -5895,6 +5918,7 @@
                     type === "family" ? "block" : "none";
                 if (type === "family") {
                     updateFamilyMembersTags();
+                    populateFamilySpawnLocations();
                 }
 
                 // Show / hide Lore block
@@ -7154,6 +7178,55 @@
                 if (el) el.textContent = `${count} member${count !== 1 ? 's' : ''} selected`;
             }
 
+            // Family Spawn Location functions
+            function populateFamilySpawnLocations() {
+                const select = document.getElementById("f-family-spawn-location");
+                if (!select) return;
+                
+                const cards = getCards();
+                const spawnLocs = cards.filter(c => 
+                    c.genre === "location" && c.canBeSpawn === true
+                );
+                
+                select.innerHTML = '<option value="">Select spawn location...</option>';
+                spawnLocs.forEach(loc => {
+                    const opt = document.createElement("option");
+                    opt.value = loc.id;
+                    opt.textContent = loc.title;
+                    select.appendChild(opt);
+                });
+                
+                // Add change handler
+                select.onchange = () => {
+                    updateFamilySpawnDisplay();
+                };
+            }
+            
+            function updateFamilySpawnDisplay() {
+                const select = document.getElementById("f-family-spawn-location");
+                const display = document.getElementById("family-spawn-selected");
+                const nameSpan = document.getElementById("family-spawn-name");
+                if (!select || !display || !nameSpan) return;
+                
+                const locId = select.value;
+                if (locId) {
+                    const cards = getCards();
+                    const loc = cards.find(c => c.id === locId);
+                    nameSpan.textContent = loc ? loc.title : "";
+                    display.style.display = "block";
+                    select.style.display = "none";
+                } else {
+                    display.style.display = "none";
+                    select.style.display = "block";
+                }
+            }
+            
+            function clearFamilySpawnLocation() {
+                const select = document.getElementById("f-family-spawn-location");
+                if (select) select.value = "";
+                updateFamilySpawnDisplay();
+            }
+
             /* ─────────────────────────────────────────
                RACIAL CIVILIZATION STATE
             ───────────────────────────────────────── */
@@ -8338,7 +8411,9 @@
                             ...(systemData ? { systemConfig: systemData } : {}),
                             ...(speciesXpData ? { xpReward: speciesXpData.xpReward } : {}),
                             ...(levelData ? { levelData } : {}),
+                            relations: type === "character" ? [...relationSelections] : [],
                             ...(type === "family" ? { familyMembers: [...familyMembersTemp] } : {}),
+                            ...(type === "family" ? { spawnLocationId: document.getElementById("f-family-spawn-location")?.value || "" } : {}),
                             updatedAt: new Date().toISOString(),
                         };
                         cards[idx] = baseUpdate;
@@ -8353,6 +8428,7 @@
                         id: generateId(),
                         title: name,
                         ...(type === "family" ? { familyMembers: [...familyMembersTemp] } : {}),
+                        ...(type === "family" ? { spawnLocationId: document.getElementById("f-family-spawn-location")?.value || "" } : {}),
                         genre: type,
                         locationSub,
                         locationDetail,
