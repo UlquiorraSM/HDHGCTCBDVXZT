@@ -4932,8 +4932,8 @@ Example:
                 return String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
             }
 
-            // Build context for cards whose tags match words in the player's message
-            // Matches Race cards and Location cards (Building/Custom subtypes only)
+            // Build context for cards whose tags match words in the player's message.
+            // Supports Race, Location (Building/Custom) and Character cards.
             function buildTagMatchedContext(playerText) {
                 if (!playerText) return "";
                 const text = _normalizeText(playerText);
@@ -4941,41 +4941,81 @@ Example:
                 if (words.length === 0) return "";
 
                 const cards = getCards();
-                const matchedCards = [];
+                const matched = [];
 
-                // Filter for Race and Location (Building/Custom) cards with tags
+                const getRelationToPlayer = (npc) => {
+                    if (!npc || !activeChar || !Array.isArray(activeChar.relations)) return "Stranger (Unknown)";
+                    const npcName = _normalizeText(npc.title || "");
+                    const rel = activeChar.relations.find((r) => {
+                        if (!r) return false;
+                        if (r.targetId && r.targetId === npc.id) return true;
+                        const targetName = _normalizeText(r.targetName || "");
+                        return npcName && targetName && targetName === npcName;
+                    });
+                    if (!rel) return "Stranger (Unknown)";
+                    if (rel.relation === "Family") return rel.familySub || "Family";
+                    return rel.relation || "Stranger (Unknown)";
+                };
+
+                // Filter for Race, Location (Building/Custom) and Character cards with tags.
                 const taggableCards = cards.filter(c => {
                     if (c.genre === "race" && Array.isArray(c.tags) && c.tags.length > 0) return true;
                     if (c.genre === "location" && Array.isArray(c.tags) && c.tags.length > 0) {
-                        const sub = c.locationSubType || "";
+                        const sub = c.locationSub || c.locationSubType || "";
                         return sub === "building" || sub === "custom";
                     }
+                    if (c.genre === "character" && Array.isArray(c.tags) && c.tags.length > 0) return true;
                     return false;
                 });
 
                 // Find matches
                 for (const card of taggableCards) {
                     const cardTags = (card.tags || []).map(t => _normalizeText(t));
+                    const matchedTags = [];
                     for (const tag of cardTags) {
                         if (tag.length < 2) continue;
                         // Check if any word in the message contains this tag or vice versa
                         for (const word of words) {
                             if (word.includes(tag) || tag.includes(word)) {
-                                matchedCards.push(card);
+                                matchedTags.push(tag);
                                 break;
                             }
                         }
-                        if (matchedCards.includes(card)) break;
+                    }
+                    if (matchedTags.length > 0) {
+                        matched.push({
+                            card,
+                            tags: [...new Set(matchedTags)],
+                        });
                     }
                 }
 
-                if (matchedCards.length === 0) return "";
+                if (matched.length === 0) return "";
 
                 // Build context string
                 let result = "\n### MENTIONED TOPICS ###\n";
-                matchedCards.forEach(card => {
-                    const desc = (card.description || "").substring(0, 200);
-                    result += `- ${card.title}${desc ? ": " + desc : ""}\n`;
+                matched.forEach(({ card, tags }) => {
+                    const displayTags = tags.map((t) => `"${t}"`).join(", ");
+                    if (card.genre === "character") {
+                        const secrets = readSecrets(card);
+                        const knownSecrets = readKnownSecrets(card);
+                        const relation = getRelationToPlayer(card);
+                        result += `- NPC: ${card.title || card.id} [ID: ${card.id}] (matched tags: ${displayTags})\n`;
+                        if (card.raceName) result += `  Race: ${card.raceName}\n`;
+                        if (card.gender) result += `  Gender: ${card.gender}\n`;
+                        if (card.age) result += `  Age: ${card.age}\n`;
+                        if (card.appearance) result += `  Appearance: ${card.appearance}\n`;
+                        if (card.personality) result += `  Personality: ${card.personality}\n`;
+                        if (card.description) result += `  Description: ${String(card.description).substring(0, 240)}\n`;
+                        result += `  Relation to Player: ${relation}\n`;
+                        result += `  Secrets: ${secrets.length ? secrets.join(" | ") : "None"}\n`;
+                        if (knownSecrets.length) {
+                            result += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
+                        }
+                    } else {
+                        const desc = (card.description || "").substring(0, 200);
+                        result += `- ${card.title}${desc ? ": " + desc : ""} (matched tags: ${displayTags})\n`;
+                    }
                 });
                 return result;
             }
@@ -5038,6 +5078,7 @@ Example:
                 lockAllButtons(); // Lock all buttons during generation
 
                 const typing = appendTypingIndicator();
+                try { updatePresentNPCs(); } catch {}
 
                 const systemInst = buildSystemPrompt();
 
@@ -5165,6 +5206,7 @@ Example:
                 lockAllButtons(); // Lock buttons during generation
 
                 const typing = appendTypingIndicator();
+                try { updatePresentNPCs(); } catch {}
 
                 const systemInst = buildSystemPrompt();
                 const tagMatchedContext = buildTagMatchedContext(text);

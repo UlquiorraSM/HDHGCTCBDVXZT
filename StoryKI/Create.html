@@ -2732,6 +2732,21 @@
                             placeholder="Describe the character's personality..."
                         ></textarea>
                     </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label class="form-label" style="font-size: 12px; color: rgba(255,255,255,0.4);">Tags (Bullet points for AI, max 10)</label>
+                        <div class="item-tag-container" id="character-tags-container"></div>
+                        <div class="item-tag-input-wrapper">
+                            <input
+                                type="text"
+                                class="form-input"
+                                id="f-character-tag-input"
+                                placeholder="Add a tag and press Enter..."
+                                onkeydown="if(event.key === 'Enter') addGenericTag('character')"
+                            />
+                            <button type="button" class="subloc-btn" onclick="addGenericTag('character')" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
+                        </div>
+                        <div class="item-tag-count" id="character-tag-count">0 / 10 tags</div>
+                    </div>
                     <div class="form-two-col">
                         <div class="form-group">
                             <label class="form-label">Age</label>
@@ -4106,6 +4121,7 @@
             let raceTags = []; // for race tags
             let loreTags = []; // for lore tags
             let locationTags = []; // for location tags (building & custom)
+            let characterTags = []; // for character tags
             let familyMembersTemp = []; // for family members
             let curseTags = []; // for curse tags
             let curseTemp = [];
@@ -5531,8 +5547,12 @@
                         // restore secrets
                         secretSelections = Array.isArray(card.secrets) ? [...card.secrets] : [];
                         renderSecretTags();
+                        characterTags = card.tags ? [...card.tags] : [];
+                        renderGenericTags("character");
                     } else {
                         resetCharacterFields();
+                        characterTags = [];
+                        renderGenericTags("character");
                     }
 
                     // restore species data
@@ -5862,6 +5882,8 @@
                 renderRelationTags();
                 secretSelections = [];
                 renderSecretTags();
+                characterTags = [];
+                renderGenericTags("character");
             }
             function onCharStatusChange() {
                 const val = document.getElementById("f-char-status").value;
@@ -6833,19 +6855,21 @@
             }
 
             /* ─────────────────────────────────────────
-               GENERIC TAGS (Races, Lore)
+               GENERIC TAGS (Race, Lore, Location, Character)
             ───────────────────────────────────────── */
             function addGenericTag(type) {
                 const inputId = type === "race" ? "f-race-tag-input" :
                                type === "lore" ? "f-lore-tag-input" :
-                               "f-location-tag-input";
+                               type === "location" ? "f-location-tag-input" :
+                               "f-character-tag-input";
                 const input = document.getElementById(inputId);
                 const tag = input.value.trim();
                 if (!tag) return;
 
                 let tagArray = type === "race" ? raceTags :
                                type === "lore" ? loreTags :
-                               locationTags;
+                               type === "location" ? locationTags :
+                               characterTags;
                 if (tagArray.length >= 10) {
                     showToast("Maximum 10 tags allowed.", "rgba(180, 60, 60, 0.9)");
                     return;
@@ -6862,21 +6886,25 @@
             function removeGenericTag(type, tag) {
                 if (type === "race") raceTags = raceTags.filter((t) => t !== tag);
                 else if (type === "lore") loreTags = loreTags.filter((t) => t !== tag);
-                else locationTags = locationTags.filter((t) => t !== tag);
+                else if (type === "location") locationTags = locationTags.filter((t) => t !== tag);
+                else characterTags = characterTags.filter((t) => t !== tag);
                 renderGenericTags(type);
             }
 
             function renderGenericTags(type) {
                 const containerId = type === "race" ? "race-tags-container" :
                                     type === "lore" ? "lore-tags-container" :
-                                    "location-tags-container";
+                                    type === "location" ? "location-tags-container" :
+                                    "character-tags-container";
                 const countId = type === "race" ? "race-tag-count" :
                                 type === "lore" ? "lore-tag-count" :
-                                "location-tag-count";
+                                type === "location" ? "location-tag-count" :
+                                "character-tag-count";
                 const container = document.getElementById(containerId);
                 const tagArray = type === "race" ? raceTags :
                                  type === "lore" ? loreTags :
-                                 locationTags;
+                                 type === "location" ? locationTags :
+                                 characterTags;
 
                 if (!container) return;
                 container.innerHTML = "";
@@ -8385,6 +8413,8 @@
                                       ? [...loreTags]
                                       : type === "location"
                                         ? [...locationTags]
+                                        : type === "character"
+                                          ? [...characterTags]
                                         : (Array.isArray(prev.tags) ? [...prev.tags] : []),
                             canBeSpawn,
                             ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
@@ -8451,6 +8481,8 @@
                                   ? [...loreTags]
                                   : type === "location"
                                     ? [...locationTags]
+                                    : type === "character"
+                                      ? [...characterTags]
                                     : [],
                         relations: type === "character" ? [...relationSelections] : [],
                         secrets: type === "character" ? [...secretSelections] : [],
