@@ -1,1986 +1,435 @@
-<!doctype html>
-<html lang="de">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>StoryKI - Character Creator</title>
-        <link rel="prefetch" href="../index.html" />
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-                scrollbar-width: none;
-                -ms-overflow-style: none;
-            }
-            *::-webkit-scrollbar {
-                display: none;
-            }
-            html,
-            body {
-                width: 100%;
-                height: 100%;
-                overflow: hidden;
-                font-family: "Segoe UI", Arial, sans-serif;
-            }
-            body {
-                background: #0a0a0a;
-                color: #fff;
-                opacity: 0;
-                transition: opacity 0.4s ease-in-out;
-            }
-            body::before {
-                content: "";
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.72);
-                z-index: 0;
-            }
-
-            /* ─── Background ─── */
-            #bg-layer {
-                position: fixed;
-                inset: 0;
-                background-size: cover;
-                background-position: center;
-                background-attachment: fixed;
-                z-index: -1;
-                filter: blur(2px) brightness(0.4);
-            }
-
-            /* ─── App Shell ─── */
-            #app {
-                position: relative;
-                z-index: 1;
-                display: flex;
-                flex-direction: column;
-                height: 100vh;
-                align-items: center;
-            }
-
-            /* ════════════════════════════════════
-               TOP NAV
-            ════════════════════════════════════ */
-            .top-nav {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                padding: 18px 24px 12px 24px;
-                width: 100%;
-                max-width: 900px;
-                flex-shrink: 0;
-            }
-            .nav-back-btn {
-                width: 38px;
-                height: 38px;
-                border-radius: 50%;
-                border: 2px solid rgba(255, 255, 255, 0.25);
-                background: rgba(30, 30, 30, 0.7);
-                color: #fff;
-                font-size: 16px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition:
-                    background 0.2s,
-                    border-color 0.2s;
-                flex-shrink: 0;
-            }
-            .nav-back-btn:hover {
-                background: rgba(60, 60, 60, 0.9);
-                border-color: rgba(255, 255, 255, 0.5);
-            }
-            .nav-title {
-                flex: 1;
-                font-size: 13px;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-                color: rgba(255, 255, 255, 0.5);
-                padding: 7px 4px;
-            }
-            .nav-count {
-                width: 38px;
-                height: 38px;
-                border-radius: 50%;
-                background: rgba(60, 60, 60, 0.85);
-                color: rgba(255, 255, 255, 0.8);
-                font-size: 13px;
-                font-weight: 700;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                border: 2px solid rgba(255, 255, 255, 0.12);
-            }
-
-            /* ════════════════════════════════════
-               SCROLL AREA
-            ════════════════════════════════════ */
-            .page-scroll {
-                flex: 1;
-                overflow-y: auto;
-                width: 100%;
-                max-width: 900px;
-                padding: 0 24px 40px 24px;
-            }
-
-            /* ─── Page Title ─── */
-            .page-title-row {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                margin-bottom: 32px;
-                flex-wrap: wrap;
-            }
-            .page-title-row h1 {
-                font-size: 26px;
-                font-weight: 700;
-                color: #fff;
-                margin: 0;
-                flex: 1;
-                min-width: 0;
-            }
-            .page-title-badge {
-                padding: 4px 13px;
-                border-radius: 6px;
-                background: rgba(40, 60, 100, 0.9);
-                border: 1.5px solid rgba(80, 120, 200, 0.4);
-                color: #88aaee;
-                font-size: 12px;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-                flex-shrink: 0;
-            }
-
-            /* ════════════════════════════════════
-               FORM SECTIONS
-            ════════════════════════════════════ */
-            .section {
-                background: rgba(20, 20, 20, 0.88);
-                border: 1.5px solid rgba(255, 255, 255, 0.08);
-                border-radius: 12px;
-                padding: 24px 22px 20px 22px;
-                margin-bottom: 18px;
-            }
-            .section-title {
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 0.08em;
-                text-transform: uppercase;
-                color: rgba(255, 255, 255, 0.4);
-                margin-bottom: 16px;
-            }
-
-            /* ─── Form Elements ─── */
-            .form-group {
-                margin-bottom: 16px;
-            }
-            .form-group:last-child {
-                margin-bottom: 0;
-            }
-            .form-label {
-                display: block;
-                font-size: 12px;
-                font-weight: 700;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
-                color: rgba(255, 255, 255, 0.45);
-                margin-bottom: 8px;
-            }
-            .form-input,
-            .form-select {
-                width: 100%;
-                padding: 13px 16px;
-                background: rgba(14, 14, 14, 0.9);
-                border: 1.5px solid rgba(255, 255, 255, 0.1);
-                border-radius: 9px;
-                color: #fff;
-                font-size: 14px;
-                outline: none;
-                transition: border-color 0.2s;
-                -webkit-appearance: none;
-                appearance: none;
-                font-family: inherit;
-            }
-            .form-input::placeholder {
-                color: rgba(255, 255, 255, 0.25);
-            }
-            .form-input:focus,
-            .form-select:focus {
-                border-color: rgba(255, 255, 255, 0.32);
-                background: rgba(18, 18, 18, 0.95);
-            }
-            .form-select option {
-                background: #1a1a1a;
-                color: #fff;
-            }
-            .two-col {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 14px;
-            }
-            @media (max-width: 580px) {
-                .two-col {
-                    grid-template-columns: 1fr;
-                }
-            }
-
-            /* ─── Race Card Preview ─── */
-            .race-preview {
-                display: none;
-                margin-top: 12px;
-                padding: 14px 16px;
-                background: rgba(50, 38, 10, 0.5);
-                border: 1.5px solid rgba(180, 130, 40, 0.3);
-                border-radius: 9px;
-                gap: 10px;
-                flex-direction: column;
-            }
-            .race-preview.visible {
-                display: flex;
-            }
-            .race-preview-name {
-                font-size: 15px;
-                font-weight: 700;
-                color: #f0cc70;
-            }
-            .race-preview-lore {
-                font-size: 12px;
-                color: rgba(255, 255, 255, 0.5);
-                line-height: 1.6;
-                max-height: 80px;
-                overflow: hidden;
-                position: relative;
-            }
-            .race-preview-lore::after {
-                content: "";
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 28px;
-                background: linear-gradient(transparent, rgba(50, 38, 10, 0.5));
-            }
-
-            /* ─── Gender Toggle ─── */
-            .gender-toggle {
-                display: flex;
-                gap: 8px;
-            }
-            .gender-btn {
-                flex: 1;
-                padding: 11px 0;
-                border-radius: 9px;
-                border: 1.5px solid rgba(255, 255, 255, 0.1);
-                background: rgba(14, 14, 14, 0.9);
-                color: rgba(255, 255, 255, 0.5);
-                font-size: 13px;
-                font-weight: 700;
-                cursor: pointer;
-                transition:
-                    background 0.2s,
-                    border-color 0.2s,
-                    color 0.2s;
-                letter-spacing: 0.03em;
-            }
-            .gender-btn:hover {
-                background: rgba(35, 35, 35, 0.95);
-                color: rgba(255, 255, 255, 0.8);
-            }
-            .gender-btn.active-male {
-                background: rgba(40, 80, 140, 0.55);
-                border-color: rgba(80, 140, 220, 0.55);
-                color: #88b8f0;
-            }
-            .gender-btn.active-female {
-                background: rgba(140, 40, 80, 0.55);
-                border-color: rgba(220, 80, 140, 0.55);
-                color: #f088b8;
-            }
-
-            /* ─── Spawn Card List ─── */
-            .spawn-list {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-            .spawn-item {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                padding: 14px 16px;
-                background: rgba(28, 28, 28, 0.88);
-                border: 1.5px solid rgba(255, 255, 255, 0.07);
-                border-radius: 10px;
-                cursor: pointer;
-                transition:
-                    background 0.2s,
-                    border-color 0.2s;
-            }
-            .spawn-item:hover {
-                background: rgba(42, 42, 42, 0.95);
-                border-color: rgba(255, 255, 255, 0.15);
-            }
-            .spawn-item.selected {
-                border-color: rgba(80, 200, 100, 0.55);
-                background: rgba(20, 50, 25, 0.6);
-            }
-            .spawn-radio {
-                width: 18px;
-                height: 18px;
-                border-radius: 50%;
-                border: 2px solid rgba(255, 255, 255, 0.25);
-                background: rgba(14, 14, 14, 0.9);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                transition:
-                    border-color 0.2s,
-                    background 0.2s;
-            }
-            .spawn-item.selected .spawn-radio {
-                border-color: rgba(80, 200, 100, 0.9);
-                background: rgba(50, 160, 70, 0.9);
-            }
-            .spawn-radio-dot {
-                width: 7px;
-                height: 7px;
-                border-radius: 50%;
-                background: #fff;
-                display: none;
-            }
-            .spawn-item.selected .spawn-radio-dot {
-                display: block;
-            }
-            .spawn-item-info {
-                flex: 1;
-            }
-            .spawn-item-name {
-                font-size: 14px;
-                font-weight: 700;
-                color: #fff;
-                margin-bottom: 3px;
-            }
-            .spawn-item-detail {
-                font-size: 11px;
-                color: rgba(255, 255, 255, 0.38);
-                font-family: monospace;
-            }
-            .spawn-item-badge {
-                font-size: 10px;
-                font-weight: 700;
-                letter-spacing: 0.07em;
-                padding: 3px 9px;
-                border-radius: 5px;
-                background: rgba(50, 160, 70, 0.2);
-                color: rgba(80, 200, 100, 0.85);
-                border: 1px solid rgba(80, 200, 100, 0.25);
-            }
-            .spawn-empty {
-                text-align: center;
-                padding: 30px 16px;
-                color: rgba(255, 255, 255, 0.3);
-                font-size: 13px;
-            }
-
-            /* ─── Name Roll Preview ─── */
-            .name-roll-row {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                margin-top: 10px;
-            }
-            .name-roll-btn {
-                padding: 8px 16px;
-                border-radius: 8px;
-                border: 1.5px solid rgba(255, 255, 255, 0.12);
-                background: rgba(35, 35, 35, 0.9);
-                color: rgba(255, 255, 255, 0.7);
-                font-size: 12px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: background 0.2s;
-                white-space: nowrap;
-            }
-            .name-roll-btn:hover {
-                background: rgba(55, 55, 55, 0.95);
-                color: #fff;
-            }
-            .name-roll-hint {
-                font-size: 11px;
-                color: rgba(255, 255, 255, 0.28);
-                font-style: italic;
-            }
-
-            /* ─── Summary Preview ─── */
-            .summary-card {
-                display: none;
-                background: rgba(14, 14, 14, 0.9);
-                border: 1.5px solid rgba(255, 255, 255, 0.1);
-                border-radius: 10px;
-                padding: 18px 18px;
-                margin-top: 14px;
-                gap: 10px;
-                flex-direction: column;
-            }
-            .summary-card.visible {
-                display: flex;
-            }
-            .summary-row {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            .summary-key {
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
-                color: rgba(255, 255, 255, 0.35);
-                min-width: 80px;
-            }
-            .summary-val {
-                font-size: 13px;
-                font-weight: 600;
-                color: #fff;
-            }
-            .summary-val.green {
-                color: #80d890;
-            }
-            .summary-val.gold {
-                color: #d4a840;
-            }
-            .summary-val.blue {
-                color: #88b8f0;
-            }
-            .summary-val.pink {
-                color: #f088b8;
-            }
-
-            /* ─── Action Buttons ─── */
-            .form-actions {
-                display: flex;
-                gap: 12px;
-                margin-top: 8px;
-            }
-            .btn-cancel {
-                padding: 12px 26px;
-                border-radius: 9px;
-                border: 1.5px solid rgba(255, 255, 255, 0.15);
-                background: transparent;
-                color: rgba(255, 255, 255, 0.65);
-                font-size: 13px;
-                font-weight: 600;
-                cursor: pointer;
-                transition:
-                    background 0.2s,
-                    color 0.2s;
-            }
-            .btn-cancel:hover {
-                background: rgba(255, 255, 255, 0.07);
-                color: #fff;
-            }
-            .btn-create {
-                padding: 12px 32px;
-                border-radius: 9px;
-                border: 1.5px solid rgba(80, 200, 100, 0.4);
-                background: rgba(30, 90, 45, 0.9);
-                color: #fff;
-                font-size: 13px;
-                font-weight: 700;
-                cursor: pointer;
-                transition: background 0.2s;
-            }
-            .btn-create:hover {
-                background: rgba(40, 120, 60, 0.99);
-            }
-
-            /* ─── Toast ─── */
-            .toast {
-                position: fixed;
-                bottom: 28px;
-                left: 50%;
-                transform: translateX(-50%) translateY(80px);
-                background: rgba(40, 140, 80, 0.95);
-                color: #fff;
-                padding: 13px 26px;
-                border-radius: 9px;
-                font-size: 14px;
-                font-weight: 600;
-                z-index: 2000;
-                opacity: 0;
-                transition:
-                    transform 0.3s ease,
-                    opacity 0.3s ease;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-                white-space: nowrap;
-            }
-            .toast.show {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
-
-            /* ─── Main View ─── */
-            #main-view {
-                display: flex;
-                flex-direction: column;
-                height: 100vh;
-                align-items: center;
-                position: relative;
-                z-index: 1;
-            }
-
-            /* ─── Relation Button & Picker ─── */
-            .subloc-btn {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                margin-top: 10px;
-                padding: 9px 18px;
-                border-radius: 8px;
-                border: 1.5px solid rgba(255, 255, 255, 0.15);
-                background: rgba(28, 28, 28, 0.85);
-                color: rgba(255, 255, 255, 0.8);
-                font-size: 13px;
-                font-weight: 600;
-                cursor: pointer;
-                transition:
-                    background 0.2s,
-                    border-color 0.2s;
-            }
-            .subloc-btn:hover {
-                background: rgba(50, 50, 50, 0.95);
-                border-color: rgba(255, 255, 255, 0.3);
-            }
-            .subloc-btn.relation-btn {
-                background: rgba(80, 50, 110, 0.6);
-                border-color: rgba(160, 100, 220, 0.3);
-                margin-top: 14px;
-            }
-            .subloc-btn.relation-btn:hover {
-                background: rgba(100, 60, 140, 0.8);
-                border-color: rgba(160, 100, 220, 0.5);
-            }
-            .subloc-icon {
-                font-size: 15px;
-            }
-
-            .relation-tags {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 8px;
-                margin-top: 10px;
-            }
-            .relation-tag {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                padding: 5px 12px;
-                border-radius: 6px;
-                background: rgba(80, 50, 110, 0.4);
-                border: 1.5px solid rgba(160, 100, 220, 0.2);
-                color: rgba(255, 255, 255, 0.85);
-                font-size: 12px;
-                font-weight: 600;
-            }
-
-            /* ─── Relations Scene ─── */
-            #relations-view {
-                position: fixed;
-                inset: 0;
-                display: flex;
-                flex-direction: column;
-                z-index: 1000;
-            }
-            #relations-view .page-scroll {
-                flex: 1;
-                overflow-y: auto;
-                width: 100%;
-                max-width: 900px;
-                padding: 0 24px 40px 24px;
-                margin: 0 auto;
-            }
-            #relations-view .nav-title {
-                flex: 1;
-                font-size: 13px;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-                color: rgba(255, 255, 255, 0.5);
-                padding: 7px 4px;
-                text-align: center;
-            }
-            /* ─── Skills Scene (same layout) ─── */
-            #skills-view {
-                position: fixed;
-                inset: 0;
-                display: flex;
-                flex-direction: column;
-                z-index: 1000;
-            }
-            #skills-view .page-scroll {
-                flex: 1;
-                overflow-y: auto;
-                max-width: 1000px;
-                margin: 0 auto;
-                padding: 0 24px 40px 24px;
-            }
-            #skills-view .nav-title {
-                flex: 1;
-                font-size: 13px;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-                color: rgba(255, 255, 255, 0.5);
-                padding: 7px 4px;
-                text-align: center;
-            }
-            .relation-rows {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-            }
-            .relation-pills {
-                display: flex;
-                gap: 6px;
-                flex-wrap: wrap;
-            }
-            .relation-pill {
-                padding: 7px 10px;
-                border-radius: 8px;
-                border: 1px solid rgba(255,255,255,0.12);
-                background: rgba(22,22,28,0.7);
-                color: rgba(255,255,255,0.85);
-                font-size: 12px;
-                font-weight: 700;
-                cursor: pointer;
-                user-select: none;
-                transition: background .2s, border-color .2s, color .2s;
-            }
-            .relation-pill.active {
-                background: rgba(80,140,220,0.85);
-                border-color: rgba(120,180,255,0.6);
-                color: #fff;
-            }
-
-            /* ─── NPC Setup Scene ─── */
-            #npc-setup-view {
-                position: fixed;
-                inset: 0;
-                display: flex;
-                flex-direction: column;
-                z-index: 1000;
-            }
-            #npc-setup-view .page-scroll {
-                flex: 1;
-                overflow-y: auto;
-                width: 100%;
-                max-width: 900px;
-                padding: 0 24px 40px 24px;
-                margin: 0 auto;
-            }
-            .relation-row {
-                background: rgba(35, 35, 45, 0.6);
-                border: 1px solid rgba(255, 255, 255, 0.06);
-                border-radius: 12px;
-                padding: 14px;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }
-            .relation-row-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-            }
-            .relation-target-name {
-                font-weight: 700;
-                font-size: 14px;
-                color: rgba(255, 255, 255, 0.9);
-            }
-            .relation-row-remove {
-                background: none;
-                border: none;
-                color: rgba(255, 80, 80, 0.6);
-                cursor: pointer;
-                font-size: 14px;
-                transition: color 0.2s;
-            }
-            .relation-row-remove:hover {
-                color: rgba(255, 80, 80, 0.9);
-            }
-            .relation-controls {
-                display: flex;
-                gap: 8px;
-                flex-wrap: wrap;
-            }
-            .relation-select {
-                flex: 1;
-                min-width: 120px;
-                background: rgba(15, 15, 20, 0.8);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 8px;
-                color: #fff;
-                padding: 8px 10px;
-                font-size: 13px;
-                outline: none;
-            }
-
-            @media (max-width: 600px) {
-                .page-scroll, .form-scroll { padding: 0 14px 28px 14px; max-width: 94vw; }
-                .form-two-col { display: flex; flex-direction: column; gap: 10px; }
-                .form-group { width: 100%; }
-                .form-input, .form-select, .form-textarea { width: 100%; font-size: 14px; }
-                .top-nav { padding: 8px 10px; }
-                .nav-back-btn { width: 34px; height: 34px; }
-                .relation-row { padding: 12px; }
-                .relation-target-name { font-size: 13px; }
-                .relation-select { font-size: 13px; }
-                .student-list { max-height: 200px; }
-            }
-        </style>
-    </head>
-    <body>
-        <div id="bg-layer"></div>
-
-        <!-- ══════════════════════════════
-             RELATIONS SCENE
-        ══════════════════════════════ -->
-        <div id="relations-view" style="display: none;">
-            <nav class="top-nav">
-                <button class="nav-back-btn" onclick="showCharacterCreateScene()" title="Back">
-                    ←
-                </button>
-                <span class="nav-title">CHARACTER RELATIONS</span>
-                <div class="nav-count" id="relations-count">0</div>
-            </nav>
-
-            <div class="page-scroll">
-                <div class="page-title-row">
-                    <h1>Manage Relations</h1>
-                    <span class="page-title-badge">RELATIONS</span>
-                </div>
-
-                <!-- Add Relations Section -->
-                <div class="section">
-                    <div class="section-title">Add Relations</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoryKI - Character Creation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1f;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .app-container {
+            max-width: 900px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .screen {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .screen.active { display: flex; }
+        
+        /* Top Navigation */
+        .top-nav {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-back-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+            margin-right: 12px;
+        }
+        .nav-title {
+            flex: 1;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.7);
+        }
+        .nav-count {
+            background: #4a90e2;
+            color: #fff;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 24px;
+            text-align: center;
+        }
+        
+        /* Page Content */
+        .page-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .page-subtitle {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 24px;
+        }
+        
+        /* Menu Cards */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .menu-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .menu-card:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+        .menu-card-icon {
+            font-size: 40px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+        }
+        .menu-card-content {
+            flex: 1;
+        }
+        .menu-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .menu-card-desc {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+        }
+        
+        /* Form Styles */
+        .section {
+            margin-bottom: 24px;
+        }
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 12px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 6px;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .form-select {
+            background: rgba(30,35,45,0.9);
+            cursor: pointer;
+        }
+        .form-select option {
+            background: rgba(30,35,45,1);
+            color: #fff;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+        
+        /* Lists */
+        .item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .item-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .item-card:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: #4a90e2;
+        }
+        .item-card-title {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .item-card-subtitle {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255,255,255,0.4);
+        }
+        
+        /* Family Info Box */
+        .family-info {
+            background: rgba(139,90,43,0.15);
+            border: 1px solid rgba(139,90,43,0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .family-info-title {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 4px;
+        }
+        .family-info-value {
+            font-weight: 600;
+            color: #f4d03f;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 14px 24px;
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: #4a90e2;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #3a7bc8;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        .btn-gold {
+            background: rgba(139,90,43,0.9);
+            color: #f4d03f;
+        }
+        .btn-gold:hover {
+            background: rgba(139,90,43,1);
+        }
+        .btn-full {
+            width: 100%;
+        }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .btn-group .btn {
+            flex: 1;
+        }
+        
+        /* Inheritance Notice */
+        .inheritance-notice {
+            background: rgba(74,144,226,0.1);
+            border: 1px solid rgba(74,144,226,0.3);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+        }
+        .inheritance-notice strong {
+            color: #4a90e2;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- ═══════════════════════════════════════════════════════════════
+             SCREEN 1: CHOOSE YOUR PROTAGONIST (Main Menu)
+        ═══════════════════════════════════════════════════════════════ -->
+        <div id="screen-main-menu" class="screen active">
+            <div class="top-nav">
+                <button class="nav-back-btn" onclick="goToIndex()">←</button>
+                <span class="nav-title">StoryKI</span>
+            </div>
+            <div class="page-content">
+                <h1 class="page-title">Choose Your Protagonist</h1>
+                <p class="page-subtitle">How would you like to begin your story?</p>
+                
+                <div class="menu-grid" id="main-menu-grid">
+                    <!-- Born in a Family - only shown if families exist -->
+                    <div class="menu-card" id="menu-family-born" onclick="showFamilySelection()" style="display:none;">
+                        <div class="menu-card-icon">👨‍👩‍👧‍👦</div>
+                        <div class="menu-card-content">
+                            <div class="menu-card-title">Born in a Family</div>
+                            <div class="menu-card-desc">Start as a member of an established family with inherited history and relations</div>
+                        </div>
+                    </div>
                     
+                    <!-- Create New Character - always shown -->
+                    <div class="menu-card" id="menu-create-new" onclick="showCreateCharacter()">
+                        <div class="menu-card-icon">✨</div>
+                        <div class="menu-card-content">
+                            <div class="menu-card-title">Create a New Character</div>
+                            <div class="menu-card-desc">Build your protagonist from scratch with full customization</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Play Existing Character - only shown if playable characters exist -->
+                    <div class="menu-card" id="menu-play-existing" onclick="showPlayableCharacters()" style="display:none;">
+                        <div class="menu-card-icon">🎭</div>
+                        <div class="menu-card-content">
+                            <div class="menu-card-title">Play Existing Character</div>
+                            <div class="menu-card-desc">Continue the story as a character you've already created</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ═══════════════════════════════════════════════════════════════
+             SCREEN 2: CREATE NEW CHARACTER
+        ═══════════════════════════════════════════════════════════════ -->
+        <div id="screen-create-character" class="screen">
+            <div class="top-nav">
+                <button class="nav-back-btn" onclick="backToMainMenu()">←</button>
+                <span class="nav-title">Create Character</span>
+            </div>
+            <div class="page-content">
+                <h1 class="page-title">Create Your Character</h1>
+                <p class="page-subtitle">Design your protagonist from scratch</p>
+                
+                <div class="section">
+                    <div class="section-title">Basic Information</div>
                     <div class="form-group">
-                        <label class="form-label">Select NPC</label>
-                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
-                            <input type="text" class="form-input" id="relation-add-search" placeholder="Search NPC..." style="flex:1;" />
-                            <select class="form-select" id="relation-location-filter" style="min-width:220px;">
-                                <option value="">All locations</option>
+                        <label class="form-label">Name *</label>
+                        <input type="text" class="form-input" id="new-char-name" placeholder="Enter character name...">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Age</label>
+                            <input type="number" class="form-input" id="new-char-age" placeholder="25">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Gender</label>
+                            <select class="form-select" id="new-char-gender">
+                                <option value="">Select...</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
                             </select>
                         </div>
-                        <select class="form-select" id="relation-add-select">
-                            <option value="">Select NPC to add relation...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button class="btn-create" onclick="relationAddRow()">+ Add Relation</button>
                     </div>
                 </div>
-
-                <!-- Current Relations -->
+                
                 <div class="section">
-                    <div class="section-title">Current Relations</div>
-                    <input type="text" class="form-input" id="relation-rows-search" placeholder="Filter current relations..." style="margin-bottom:8px;" />
-                    <div class="relation-rows" id="relation-rows">
-                        <!-- filled dynamically -->
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="section">
-                    <div class="form-actions">
-                        <button class="btn-cancel" onclick="showCharacterCreateScene()">← Back</button>
-                        <button class="btn-create" onclick="confirmRelations()">Done</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══════════════════════════════
-             SKILLS SCENE
-        ══════════════════════════════ -->
-        <div id="skills-view" style="display: none;">
-            <nav class="top-nav">
-                <button class="nav-back-btn" onclick="hideSkillsScene()" title="Back">
-                    ←
-                </button>
-                <span class="nav-title">CHARACTER SKILLS</span>
-                <div class="nav-count" id="skills-count">0</div>
-            </nav>
-
-            <div class="page-scroll">
-                <div class="page-title-row">
-                    <h1>Choose Skills</h1>
-                    <span class="page-title-badge">SKILLS</span>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Available Skills</div>
-                    <input type="text" class="form-input" id="skills-search" placeholder="Search skills..." style="margin-bottom:10px;">
-                    <div id="skills-list" class="relation-rows"></div>
-                </div>
-
-                <div class="section">
-                    <div class="form-actions">
-                        <button class="btn-cancel" onclick="hideSkillsScene()">← Back</button>
-                        <button class="btn-create" onclick="confirmSkills()">Done</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══════════════════════════════
-             CHARACTER CREATE VIEW
-        ══════════════════════════════ -->
-        <div id="main-view">
-            <nav class="top-nav">
-                <button class="nav-back-btn" onclick="goBack()" title="Back">
-                    &#8592;
-                </button>
-                <span class="nav-title">NEW CHARACTER</span>
-                <div class="nav-count" id="create-count">0</div>
-            </nav>
-
-            <div class="page-scroll">
-                <div class="page-title-row">
-                    <h1 id="create-title">Create Character</h1>
-                    <span class="page-title-badge">CHARACTER</span>
-                </div>
-
-                <!-- ── IDENTITY ── -->
-                <div class="section">
-                    <div class="section-title">Identity</div>
-
-                    <!-- Race -->
+                    <div class="section-title">Appearance *</div>
                     <div class="form-group">
-                        <label class="form-label">Race</label>
-                        <select
-                            class="form-select"
-                            id="c-race"
-                            onchange="onRaceChange()"
-                        >
-                            <option value="">Human (Default)</option>
-                        </select>
+                        <textarea class="form-textarea" id="new-char-appearance" placeholder="Describe your character's appearance..."></textarea>
                     </div>
-
-                    <!-- Gender -->
-                    <div class="form-group">
-                        <label class="form-label">Gender</label>
-                        <div class="gender-toggle">
-                            <button
-                                class="gender-btn active-male"
-                                id="btn-male"
-                                onclick="setGender('male')"
-                            >
-                                &#9794; Male
-                            </button>
-                            <button
-                                class="gender-btn"
-                                id="btn-female"
-                                onclick="setGender('female')"
-                            >
-                                &#9792; Female
-                            </button>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Birth Date</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Day</label>
+                            <input type="number" class="form-input" id="new-char-day" min="1" max="31" placeholder="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Month</label>
+                            <select class="form-select" id="new-char-month">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Year</label>
+                            <input type="number" class="form-input" id="new-char-year" placeholder="2000">
                         </div>
                     </div>
-
-                    <!-- Name -->
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Relations</div>
+                    <div id="new-char-relation-tags" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+                    <button type="button" class="btn btn-secondary" onclick="showRelationsScene()" style="width:100%;">
+                        <span style="margin-right:8px;">👥</span> Manage Relations
+                    </button>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Story Setup</div>
                     <div class="form-group">
-                        <label class="form-label">Name</label>
-                        <div class="two-col">
-                            <div>
-                                <input
-                                    type="text"
-                                    class="form-input"
-                                    id="c-firstname"
-                                    placeholder="First name..."
-                                    oninput="updateSummary()"
-                                />
-                            </div>
-                            <div>
-                                <input
-                                    type="text"
-                                    class="form-input"
-                                    id="c-lastname"
-                                    placeholder="Last name..."
-                                    oninput="updateSummary()"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Appearance -->
-                    <div class="form-group">
-                        <label class="form-label">Appearance</label>
-                        <textarea
-                            class="form-input"
-                            id="c-appearance"
-                            placeholder="Describe the character's appearance (hair, eyes, body, outfit, style)…"
-                            rows="3"
-                            style="resize: vertical; min-height: 72px;"
-                        ></textarea>
-                    </div>
-                    
-                    <!-- Age & Birthdate -->
-                    <div class="form-group">
-                        <label class="form-label">Age & Birthdate</label>
-                        <div class="two-col">
-                            <div>
-                                <input
-                                    type="number"
-                                    class="form-input"
-                                    id="c-age"
-                                    placeholder="Age"
-                                    min="0"
-                                    style="text-align:center;"
-                                />
-                            </div>
-                            <div style="display:flex; gap:8px;">
-                                <input
-                                    type="number"
-                                    class="form-input"
-                                    id="c-birth-day"
-                                    placeholder="Day"
-                                    min="1"
-                                    max="31"
-                                    style="width:70px; text-align:center;"
-                                />
-                                <select class="form-input" id="c-birth-month" style="flex:1;">
-                                    <option value="1">Jan</option>
-                                    <option value="2">Feb</option>
-                                    <option value="3">Mar</option>
-                                    <option value="4">Apr</option>
-                                    <option value="5">May</option>
-                                    <option value="6">Jun</option>
-                                    <option value="7">Jul</option>
-                                    <option value="8">Aug</option>
-                                    <option value="9">Sep</option>
-                                    <option value="10">Oct</option>
-                                    <option value="11">Nov</option>
-                                    <option value="12">Dec</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Date & Time -->
-                    <div class="form-group" style="margin-top: 24px;">
                         <label class="form-label">Starting Date & Time</label>
-                        <div class="two-col">
-                            <div style="display: flex; gap: 8px;">
-                                <input
-                                    type="number"
-                                    class="form-input"
-                                    id="c-day"
-                                    placeholder="DD"
-                                    min="1"
-                                    max="31"
-                                    value="1"
-                                    style="width: 70px; text-align: center; padding-left: 4px; padding-right: 4px;"
-                                />
-                                <select class="form-input" id="c-month" style="flex: 1; padding-left: 8px; padding-right: 8px;">
-                                    <option value="1">Jan</option>
-                                    <option value="2">Feb</option>
-                                    <option value="3">Mar</option>
-                                    <option value="4">Apr</option>
-                                    <option value="5">May</option>
-                                    <option value="6">Jun</option>
-                                    <option value="7">Jul</option>
-                                    <option value="8">Aug</option>
-                                    <option value="9">Sep</option>
-                                    <option value="10">Oct</option>
-                                    <option value="11">Nov</option>
-                                    <option value="12">Dec</option>
-                                </select>
-                                <input
-                                    type="number"
-                                    class="form-input"
-                                    id="c-year"
-                                    placeholder="YYYY"
-                                    value="1983"
-                                    style="width: 90px; text-align: center; padding-left: 4px; padding-right: 4px;"
-                                />
-                            </div>
-                            <div>
-                                <input
-                                    type="time"
-                                    class="form-input"
-                                    id="c-time"
-                                    value="00:00"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Relations -->
-                    <div class="form-group" style="margin-top: 24px;">
-                        <label class="form-label">Relations</label>
-                        <div class="relation-tags" id="char-relation-tags"></div>
-                        <button type="button" class="subloc-btn relation-btn" onclick="showRelationsScene()">
-                            <span class="subloc-icon">&#128101;</span> Relations
-                        </button>
-                    </div>
-                    <!-- Skills (visible only if at least one Skill exists) -->
-                    <div class="form-group" id="skills-block" style="margin-top: 14px; display: none;">
-                        <label class="form-label">Skills</label>
-                        <div class="relation-tags" id="char-skill-tags"></div>
-                        <button type="button" class="subloc-btn relation-btn" onclick="showSkillsScene()">
-                            <span class="subloc-icon">🛠️</span> Skills
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ── SPAWN LOCATION ── -->
-                <div class="section">
-                    <div class="section-title">Spawn Location</div>
-                    <div style="text-align:center; font-size:12px; opacity:.7; margin:4px 0 10px 0;">Double-click to set the spawn point.</div>
-                    <div class="spawn-list" id="spawn-list">
-                        <div class="spawn-empty" id="spawn-empty">
-                            No spawn locations available.<br />
-                            <span style="font-size: 11px; opacity: 0.6"
-                                >Add Locations with "Can be Spawn" checked in
-                                the World Creator.</span
-                            >
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ── SUMMARY ── -->
-                <div class="section">
-                    <div class="section-title">Summary</div>
-                    <div class="summary-card visible" id="summary-card">
-                        <div class="summary-row">
-                            <span class="summary-key">Name</span>
-                            <span class="summary-val" id="sum-name">—</span>
-                        </div>
-                        <div class="summary-row">
-                            <span class="summary-key">Race</span>
-                            <span class="summary-val gold" id="sum-race"
-                                >—</span
-                            >
-                        </div>
-                        <div class="summary-row">
-                            <span class="summary-key">Gender</span>
-                            <span class="summary-val" id="sum-gender">—</span>
-                        </div>
-                        <div class="summary-row">
-                            <span class="summary-key">Spawn</span>
-                            <span class="summary-val green" id="sum-spawn"
-                                >—</span
-                            >
-                        </div>
-                    </div>
-
-                    <!-- Story Introduction -->
-                    <div class="form-group" style="margin-top: 20px;">
-                        <label class="form-label">Story Introduction</label>
-                        <textarea
-                            class="form-input"
-                            id="c-introduction"
-                            placeholder="Enter an introduction for your story... This will appear at the beginning of your adventure."
-                            rows="4"
-                            style="resize: vertical; min-height: 100px;"
-                        ></textarea>
-                        <div style="font-size: 11px; color: rgba(255, 255, 255, 0.3); margin-top: 6px;">
-                            This text will be displayed when your story begins ingame
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button class="btn-cancel" onclick="goBack()">
-                            ← Back
-                        </button>
-                        <button
-                            class="btn-create"
-                            id="btn-create-char"
-                            onclick="startGame()"
-                        >
-                            Play ▶
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── TOAST ── -->
-        <div class="toast" id="toast"></div>
-
-        <script>
-            /* ═══════════════════════════════════════
-               CONSTANTS & STATE
-            ═══════════════════════════════════════ */
-            const CARDS_KEY = "storyki_storycards";
-            const CHARS_KEY = "storyki_characters";
-            const SETTINGS_KEY = "storyki_settings";
-
-            // Storage Helper (Non-persistent session storage)
-            const Storage = {
-                get: (key) => sessionStorage.getItem(key),
-                set: (key, val) => sessionStorage.setItem(key, val),
-                remove: (key) => sessionStorage.removeItem(key),
-                clear: () => sessionStorage.clear()
-            };
-
-            let selectedGender = "male";
-            let selectedSpawnId = null;
-            let selectedNPCId = null; // when playing as existing NPC
-
-            /* ═══════════════════════════════════════
-               BACKGROUND
-            ═══════════════════════════════════════ */
-            function loadBackground() {
-                // Read settings from localStorage (where settings.html saves them)
-                const raw = localStorage.getItem(SETTINGS_KEY);
-                const url = raw
-                    ? JSON.parse(raw).backgroundUrl ||
-                      "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp"
-                    : "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
-                const el = document.getElementById("bg-layer");
-                if (el) {
-                    el.style.backgroundImage = `url(${url})`;
-                    el.style.backgroundSize = "cover";
-                    el.style.backgroundPosition = "center";
-                }
-            }
-
-            /* ═══════════════════════════════════════
-               DATA HELPERS
-            ═══════════════════════════════════════ */
-            function getCards() {
-                return JSON.parse(Storage.get(CARDS_KEY) || "[]");
-            }
-
-            function getCharacters() {
-                return JSON.parse(Storage.get(CHARS_KEY) || "[]");
-            }
-
-            function saveCharacters(chars) {
-                Storage.set(CHARS_KEY, JSON.stringify(chars));
-            }
-
-            function readBirthdate(entity) {
-                if (!entity || typeof entity !== "object") return null;
-                const raw = entity.birthdate || entity.birthDate || entity.birthday || null;
-                if (!raw || typeof raw !== "object") return null;
-                const day = parseInt(raw.day, 10) || null;
-                const month = parseInt(raw.month, 10) || null;
-                if (!day || !month) return null;
-                return { day, month };
-            }
-
-            function generateId() {
-                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-                let id = "";
-                for (let i = 0; i < 12; i++) {
-                    if (i > 0 && i % 4 === 0) id += "-";
-                    id += chars.charAt(
-                        Math.floor(Math.random() * chars.length),
-                    );
-                }
-                return id;
-            }
-
-            function escHtml(str) {
-                return (str || "")
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;");
-            }
-
-            /* ─────────────────────────────────────────
-               RELATION STATE & SCENE MANAGEMENT
-            ───────────────────────────────────────── */
-            let relationSelections = [];
-            let relationPickerTemp = [];
-            let relationRowsFilter = "";
-
-            // Skills
-            let skillSelections = []; // array of skill IDs
-            let skillPickerTemp = [];
-
-            function relationRebuildSelect(filterText = "") {
-                const sel = document.getElementById("relation-add-select");
-                if (!sel) return;
-                const cards = getCards();
-                const locFilter = (document.getElementById("relation-location-filter") || {}).value || "";
-                const locResidents = new Set(
-                    locFilter
-                        ? ((cards.find(c => c.id === locFilter) || {}).residents || [])
-                        : []
-                );
-                const allChars = cards.filter((c) => c.genre === "character");
-                const excludeIds = new Set(
-                    [...relationSelections, ...relationPickerTemp]
-                        .map((r) => r.targetId)
-                        .filter(Boolean),
-                );
-                const q = (filterText || "").toLowerCase().trim();
-                sel.innerHTML = `<option value="">Select NPC to add relation...</option>`;
-                allChars.forEach((c) => {
-                    if (excludeIds.has(c.id)) return;
-                    if (locFilter && !locResidents.has(c.id)) return;
-                    if (q && !((c.title || "").toLowerCase().includes(q)))
-                        return;
-                    const opt = document.createElement("option");
-                    opt.value = c.id;
-                    opt.textContent = c.title;
-                    sel.appendChild(opt);
-                });
-            }
-
-            function showRelationsScene() {
-                relationPickerTemp = relationSelections.map((r) => ({ ...r }));
-                
-                relationRebuildSelect("");
-                const search = document.getElementById("relation-add-search");
-                if (search) {
-                    search.value = "";
-                    search.oninput = () => relationRebuildSelect(search.value);
-                }
-                const locSel = document.getElementById("relation-location-filter");
-                if (locSel) {
-                    buildRelationLocationFilter();
-                    locSel.onchange = () => relationRebuildSelect(search ? search.value : "");
-                }
-                const rowsSearch = document.getElementById("relation-rows-search");
-                if (rowsSearch) {
-                    rowsSearch.value = "";
-                    rowsSearch.oninput = () => {
-                        relationRowsFilter = (rowsSearch.value || "").toLowerCase().trim();
-                        renderRelationPickerRows();
-                    };
-                }
-
-                document.getElementById("relations-count").textContent = relationPickerTemp.length;
-                document.getElementById("main-view").style.display = "none";
-                document.getElementById("relations-view").style.display = "flex";
-                renderRelationPickerRows();
-            }
-
-            function showCharacterCreateScene() {
-                // Show main scene, hide relations scene
-                document.getElementById("relations-view").style.display = "none";
-                document.getElementById("main-view").style.display = "flex";
-                relationPickerTemp = [];
-            }
-
-            function confirmRelations() {
-                relationSelections = relationPickerTemp.map((r) => ({ ...r }));
-                renderRelationTags();
-                showCharacterCreateScene();
-            }
-
-            function relationAddRow() {
-                const sel = document.getElementById("relation-add-select");
-                const id = sel.value;
-                if (!id) return;
-                if (relationPickerTemp.find((r) => r.targetId === id)) {
-                    showToast("Relation already added.", "#c04040");
-                    return;
-                }
-                const card = getCards().find((c) => c.id === id);
-                if (!card) return;
-                relationPickerTemp.push({
-                    targetId: id,
-                    targetName: card.title,
-                    relation: "Unknown",
-                    familySub: "",
-                });
-                sel.value = "";
-                document.getElementById("relations-count").textContent = relationPickerTemp.length;
-                renderRelationPickerRows();
-                const search = document.getElementById("relation-add-search");
-                relationRebuildSelect(search ? search.value : "");
-            }
-            function buildRelationLocationFilter() {
-                const locSel = document.getElementById("relation-location-filter");
-                if (!locSel) return;
-                const cards = getCards();
-                const locs = cards
-                    .filter(c => 
-                        c.genre === "location" &&
-                        c.locationSub === "custom" &&
-                        Array.isArray(c.residents) && c.residents.length > 0
-                    )
-                    .sort((a,b) => (a.title||"").localeCompare(b.title||""));
-                const prev = locSel.value;
-                locSel.innerHTML = `<option value="">All locations</option>`;
-                locs.forEach(l => {
-                    const opt = document.createElement("option");
-                    opt.value = l.id;
-                    opt.textContent = l.title;
-                    locSel.appendChild(opt);
-                });
-                if (prev && locs.some(l => l.id === prev)) locSel.value = prev;
-            }
-
-            function renderRelationPickerRows() {
-                const container = document.getElementById("relation-rows");
-                container.innerHTML = "";
-
-                const list = relationPickerTemp
-                    .filter(r => !relationRowsFilter || ((r.targetName || "").toLowerCase().includes(relationRowsFilter)))
-                    .sort((a,b) => (a.targetName || "").localeCompare(b.targetName || ""));
-                
-                list.forEach((row) => {
-                    const div = document.createElement("div");
-                    div.className = "relation-row";
-                    const isFamily = row.relation === "Family";
-                    const cardsAll = getCards();
-                    const target = cardsAll.find(c => c.id === row.targetId) || {};
-                    const origIndex = relationPickerTemp.findIndex(r => r.targetId === row.targetId);
-                    if (origIndex < 0) return;
-
-                    const tg = (target.gender || "").toLowerCase();
-                    const sa = parseInt(document.getElementById("c-age").value) || 0;
-                    const ta = typeof target.age === "number" ? target.age : 0;
-                    let familyOptions = tg === "female"
-                        ? ["Mother","Daughter","Sister","Half-Sister","Grandmother","Granddaughter","Aunt","Niece","Step-Mother","Step-Daughter","Step-Sister","Cousin"]
-                        : (tg === "male"
-                            ? ["Father","Son","Brother","Half-Brother","Grandfather","Grandson","Uncle","Nephew","Step-Father","Step-Son","Step-Brother","Cousin"]
-                            : ["Mother","Father","Son","Daughter","Brother","Sister","Half-Brother","Half-Sister","Grandfather","Grandmother","Grandson","Granddaughter","Uncle","Aunt","Nephew","Niece","Step-Father","Step-Mother","Step-Son","Step-Daughter","Step-Brother","Step-Sister","Cousin"]);
-                    if (sa > 0 && ta > 0 && ta !== sa) {
-                        const parentRoles = new Set(["Mother","Father","Step-Mother","Step-Father"]);
-                        const childRoles = new Set(["Daughter","Son","Step-Daughter","Step-Son"]);
-                        const grandparentRoles = new Set(["Grandmother","Grandfather"]);
-                        const grandchildRoles = new Set(["Granddaughter","Grandson"]);
-                        if (ta < sa) {
-                            familyOptions = familyOptions.filter(r => !parentRoles.has(r) && !grandparentRoles.has(r));
-                        } else if (ta > sa) {
-                            familyOptions = familyOptions.filter(r => !childRoles.has(r) && !grandchildRoles.has(r));
-                        }
-                    }
-                    const famOptsHtml = [`<option value="">Select family role...</option>`]
-                        .concat(familyOptions.map(opt => `<option value="${opt}" ${row.familySub === opt ? "selected" : ""}>${opt}</option>`))
-                        .join("");
-
-                    div.innerHTML = `
-                        <div class="relation-row-header">
-                            <span class="relation-target-name">${escHtml(row.targetName)}</span>
-                            <button class="relation-row-remove" onclick="relationRemoveRow(${origIndex})">Remove</button>
-                        </div>
-                        <div class="relation-controls">
-                            <div class="relation-pills">
-                                <button type="button" class="relation-pill ${row.relation === "Unknown" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Unknown')">Unknown</button>
-                                <button type="button" class="relation-pill ${row.relation === "Friends" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Friends')">Friends</button>
-                                <button type="button" class="relation-pill ${row.relation === "Lover" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Lover')">Lover</button>
-                                <button type="button" class="relation-pill ${row.relation === "Spouse" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Spouse')">Spouse</button>
-                                <button type="button" class="relation-pill ${row.relation === "Family" ? "active": ""}" onclick="relationUpdateType(${origIndex}, 'Family')">Family</button>
-                            </div>
-                            <select class="relation-select" onchange="relationUpdateType(${origIndex}, this.value)">
-                                <option value="">More types…</option>
-                                <option value="Acquaintance" ${row.relation === "Acquaintance" ? "selected" : ""}>Acquaintance</option>
-                                <option value="Enemy" ${row.relation === "Enemy" ? "selected" : ""}>Enemy</option>
-                                <option value="Rival" ${row.relation === "Rival" ? "selected" : ""}>Rival</option>
-                                <option value="Ally" ${row.relation === "Ally" ? "selected" : ""}>Ally</option>
-                                <option value="Colleague" ${row.relation === "Colleague" ? "selected" : ""}>Colleague</option>
-                                <option value="Classmate" ${row.relation === "Classmate" ? "selected" : ""}>Classmate</option>
-                                <option value="Mentor" ${row.relation === "Mentor" ? "selected" : ""}>Mentor</option>
-                                <option value="Student" ${row.relation === "Student" ? "selected" : ""}>Student</option>
-                                <option value="Boss" ${row.relation === "Boss" ? "selected" : ""}>Boss</option>
-                                <option value="Employee" ${row.relation === "Employee" ? "selected" : ""}>Employee</option>
-                                <option value="Neighbor" ${row.relation === "Neighbor" ? "selected" : ""}>Neighbor</option>
-                                <option value="Ex-Lover" ${row.relation === "Ex-Lover" ? "selected" : ""}>Ex-Lover</option>
-                                <option value="Boyfriend" ${row.relation === "Boyfriend" ? "selected" : ""}>Boyfriend</option>
-                                <option value="Girlfriend" ${row.relation === "Girlfriend" ? "selected" : ""}>Girlfriend</option>
-                                <option value="Fiancé" ${row.relation === "Fiancé" ? "selected" : ""}>Fiancé</option>
-                                <option value="Fiancée" ${row.relation === "Fiancée" ? "selected" : ""}>Fiancée</option>
-                            </select>
-                            <select class="relation-select family-sub-select" 
-                                style="display: ${isFamily ? "block" : "none"}"
-                                onchange="relationUpdateFamilySub(${origIndex}, this.value)">
-                                ${famOptsHtml}
-                            </select>
-                        </div>
-                    `;
-                    container.appendChild(div);
-                });
-            }
-
-            function relationUpdateType(idx, val) {
-                relationPickerTemp[idx].relation = val;
-                if (val !== "Family") {
-                    relationPickerTemp[idx].familySub = "";
-                }
-                renderRelationPickerRows();
-            }
-
-            function relationUpdateFamilySub(idx, val) {
-                relationPickerTemp[idx].familySub = val;
-            }
-
-            function relationRemoveRow(idx) {
-                relationPickerTemp.splice(idx, 1);
-                document.getElementById("relations-count").textContent = relationPickerTemp.length;
-                renderRelationPickerRows();
-                const search = document.getElementById("relation-add-search");
-                relationRebuildSelect(search ? search.value : "");
-            }
-
-            function renderRelationTags() {
-                const container = document.getElementById("char-relation-tags");
-                if (!container) return;
-                container.innerHTML = "";
-                relationSelections.forEach((rel) => {
-                    const tag = document.createElement("div");
-                    tag.className = "relation-tag";
-                    let label = rel.relation;
-                    if (rel.relation === "Family" && rel.familySub) {
-                        label = rel.familySub;
-                    }
-                    tag.innerHTML = `<span>${escHtml(rel.targetName)}: ${label}</span>`;
-                    container.appendChild(tag);
-                });
-            }
-
-            function renderSkillTags() {
-                const wrap = document.getElementById("char-skill-tags");
-                if (!wrap) return;
-                wrap.innerHTML = "";
-                if (!skillSelections.length) return;
-                const all = getCards();
-                skillSelections.forEach(id => {
-                    const sk = all.find(c => c.id === id);
-                    if (!sk) return;
-                    const tag = document.createElement("div");
-                    tag.className = "relation-tag";
-                    tag.innerHTML = `<span>${escHtml(sk.title)}</span>`;
-                    wrap.appendChild(tag);
-                });
-            }
-
-            function showSkillsScene() {
-                const skills = getCards().filter(c => c.genre === "skill");
-                document.getElementById("skills-count").textContent = skills.length;
-                skillPickerTemp = [...skillSelections];
-                const input = document.getElementById("skills-search");
-                if (input) input.value = "";
-                renderSkillsList("");
-                if (input) input.oninput = () => renderSkillsList(input.value.trim().toLowerCase());
-                document.getElementById("main-view").style.display = "none";
-                document.getElementById("skills-view").style.display = "flex";
-            }
-            function hideSkillsScene() {
-                document.getElementById("skills-view").style.display = "none";
-                document.getElementById("relations-view").style.display = "none";
-                document.getElementById("main-view").style.display = "flex";
-            }
-            function toggleSkill(id, checked) {
-                if (checked) {
-                    if (!skillPickerTemp.includes(id)) skillPickerTemp.push(id);
-                } else {
-                    skillPickerTemp = skillPickerTemp.filter(x => x !== id);
-                }
-            }
-            function confirmSkills() {
-                skillSelections = [...skillPickerTemp];
-                renderSkillTags();
-                hideSkillsScene();
-            }
-
-            function renderSkillsList(filter) {
-                const list = document.getElementById("skills-list");
-                if (!list) return;
-                const skills = getCards().filter(c => c.genre === "skill");
-                list.innerHTML = "";
-                skills
-                    .filter(sk => {
-                        if (!filter) return true;
-                        const t = (sk.title || "").toLowerCase();
-                        const d = (sk.description || "").toLowerCase();
-                        return t.includes(filter) || d.includes(filter);
-                    })
-                    .forEach((sk) => {
-                        const row = document.createElement("div");
-                        row.className = "relation-row";
-                        row.innerHTML = `
-                            <div class="relation-row-header">
-                                <span class="relation-target-name">${escHtml(sk.title)}</span>
-                                <input type="checkbox" ${skillPickerTemp.includes(sk.id) ? "checked" : ""} onchange="toggleSkill('${sk.id}', this.checked)" />
-                            </div>
-                            ${sk.description ? `<div style="opacity:.8; font-size:13px;">${escHtml(sk.description)}</div>` : ""}
-                        `;
-                        list.appendChild(row);
-                    });
-            }
-
-            /* Spawn locations = location cards with canBeSpawn = true (building or custom) */
-            function getSpawnBuildings() {
-                return getCards().filter((c) =>
-                    c.genre === "location" &&
-                    (c.locationSub === "building" || c.locationSub === "custom") &&
-                    c.canBeSpawn === true
-                );
-            }
-            let spawnFolderOpen = {};
-            function findParentLocation(id) {
-                const cards = getCards();
-                return cards.find(c => c.genre === "location" && c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(id))) || null;
-            }
-
-            /* Race cards */
-            function getRaceCards() {
-                return getCards().filter((c) => c.genre === "race");
-            }
-
-            function ccIsLeapYear(y) {
-                y = parseInt(y, 10) || 0;
-                return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
-            }
-            function ccDaysInMonth(m, y) {
-                m = parseInt(m, 10) || 1;
-                if (!y) return m === 2 ? 29 : (m === 4 || m === 6 || m === 9 || m === 11 ? 30 : 31);
-                y = parseInt(y, 10) || 1983;
-                if (m === 2) return ccIsLeapYear(y) ? 29 : 28;
-                if (m === 4 || m === 6 || m === 9 || m === 11) return 30;
-                return 31;
-            }
-            function ccUpdateDayMax(dayId, monthId, yearId) {
-                const dayEl = document.getElementById(dayId);
-                const monthEl = document.getElementById(monthId);
-                if (!dayEl || !monthEl) return;
-                const m = parseInt(monthEl.value || "1", 10);
-                const y = yearId ? parseInt((document.getElementById(yearId)?.value || "1983"), 10) : undefined;
-                const max = ccDaysInMonth(m, y);
-                dayEl.max = String(max);
-                const cur = parseInt(dayEl.value || "1", 10);
-                if (cur > max) dayEl.value = String(max);
-                if (cur < 1) dayEl.value = "1";
-            }
-
-            /* ═══════════════════════════════════════
-               INIT FORM
-            ═══════════════════════════════════════ */
-            function initForm() {
-                // If there are playable NPCs, offer selection first
-                try {
-                    const playable = getCards().filter(c => c.genre === "character" && c.isPlayable);
-                    if (playable.length > 0) {
-                        openPlayableChoice(playable);
-                    }
-                } catch {}
-
-                // Populate race dropdown
-                const raceSelect = document.getElementById("c-race");
-                raceSelect.innerHTML = `<option value="">Human (Default)</option>`;
-                getRaceCards().forEach((r) => {
-                    const opt = document.createElement("option");
-                    opt.value = r.id;
-                    opt.textContent = r.title;
-                    raceSelect.appendChild(opt);
-                });
-
-                setGender("male");
-                renderSpawnList(null);
-                updateSummary();
-
-                // Initialize introduction field
-                document.getElementById("c-introduction").value = "";
-                
-                // Enter in Vorname -> focus Nachname
-                const fnEl = document.getElementById("c-firstname");
-                const lnEl = document.getElementById("c-lastname");
-                const appEl = document.getElementById("c-appearance");
-                const ageEl = document.getElementById("c-age");
-                const birthDayEl = document.getElementById("c-birth-day");
-                if (fnEl && lnEl) {
-                    fnEl.addEventListener("keydown", (e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault();
-                            lnEl.focus();
-                            try { lnEl.select(); } catch {}
-                        }
-                    });
-                }
-                if (lnEl && appEl) {
-                    lnEl.addEventListener("keydown", (e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault();
-                            appEl.focus();
-                            try { appEl.select(); } catch {}
-                        }
-                    });
-                }
-                if (appEl && ageEl) {
-                    appEl.addEventListener("keydown", (e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault();
-                            ageEl.focus();
-                            try { ageEl.select(); } catch {}
-                        }
-                    });
-                }
-                if (ageEl && birthDayEl) {
-                    ageEl.addEventListener("keydown", (e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault();
-                            birthDayEl.focus();
-                            try { birthDayEl.select(); } catch {}
-                        }
-                    });
-                }
-
-                const birthMonthEl = document.getElementById("c-birth-month");
-                if (birthMonthEl && birthDayEl) {
-                    birthMonthEl.addEventListener("change", () => ccUpdateDayMax("c-birth-day", "c-birth-month", null));
-                    ccUpdateDayMax("c-birth-day", "c-birth-month", null);
-                }
-                const cMonthEl = document.getElementById("c-month");
-                const cYearEl = document.getElementById("c-year");
-                const cDayEl = document.getElementById("c-day");
-                if (cMonthEl && cDayEl) {
-                    cMonthEl.addEventListener("change", () => ccUpdateDayMax("c-day", "c-month", "c-year"));
-                }
-                if (cYearEl && cDayEl) {
-                    cYearEl.addEventListener("change", () => ccUpdateDayMax("c-day", "c-month", "c-year"));
-                }
-                if (cMonthEl && cDayEl) {
-                    ccUpdateDayMax("c-day", "c-month", "c-year");
-                }
-
-                document.getElementById("create-count").textContent =
-                    getCharacters().length;
-
-                // Show Skills button only if at least one Skill exists
-                const skills = getCards().filter(c => c.genre === "skill");
-                const skillBlock = document.getElementById("skills-block");
-                if (skillBlock) skillBlock.style.display = skills.length > 0 ? "block" : "none";
-            }
-
-            /* ─── Race Change ─── */
-            function onRaceChange() {
-                updateSummary();
-            }
-
-            /* ─── Gender ─── */
-            function setGender(g) {
-                selectedGender = g;
-                document.getElementById("btn-male").className =
-                    "gender-btn" + (g === "male" ? " active-male" : "");
-                document.getElementById("btn-female").className =
-                    "gender-btn" + (g === "female" ? " active-female" : "");
-                updateSummary();
-            }
-
-            /* Roll Name removed */
-
-            /* ─── Spawn List ─── */
-            function renderSpawnList(selectedId) {
-                return renderSpawnListInto("spawn-list", "spawn-empty", selectedId);
-            }
-
-            // Generic renderer to target different containers (used for NPC setup overlay)
-            function renderSpawnListInto(listId, emptyId, selectedId) {
-                const container = document.getElementById("spawn-list");
-                const emptyEl = document.getElementById("spawn-empty");
-                const listContainer = document.getElementById(listId) || container;
-                const emptyPlaceholder = document.getElementById(emptyId) || emptyEl;
-                const spawns = getSpawnBuildings();
-
-                Array.from(listContainer.querySelectorAll(".spawn-item")).forEach(el => el.remove());
-
-                if (spawns.length === 0) {
-                    if (emptyPlaceholder) emptyPlaceholder.style.display = "block";
-                    return;
-                }
-                if (emptyPlaceholder) emptyPlaceholder.style.display = "none";
-
-                const folders = new Map(); // folderId -> { card, children: [] }
-                const rootSpawnIds = new Set(); // Track which spawns are roots (no parent)
-
-                // First pass: identify all spawns that have a parent
-                spawns.forEach(s => {
-                    const parent = findParentLocation(s.id);
-                    if (parent) {
-                        // This spawn has a parent - add it as child
-                        const folderId = parent.id;
-                        if (!folders.has(folderId)) folders.set(folderId, { card: parent, children: [] });
-                        folders.get(folderId).children.push(s);
-                    } else {
-                        // No parent - mark as root
-                        rootSpawnIds.add(s.id);
-                    }
-                });
-
-                // Second pass: add root spawns as folders (only if not already a folder from being a parent)
-                spawns.forEach(s => {
-                    if (rootSpawnIds.has(s.id) && !folders.has(s.id)) {
-                        folders.set(s.id, { card: s, children: [] });
-                    }
-                });
-
-                const folderArr = Array.from(folders.values()).sort((a,b) => {
-                    const at = (a.card.title || "").toLowerCase();
-                    const bt = (b.card.title || "").toLowerCase();
-                    return at.localeCompare(bt);
-                });
-
-                folderArr.forEach(({ card: fcard, children }) => {
-                    const fid = fcard.id;
-                    const isFolderSelected = selectedId === fid;
-                    const fRow = document.createElement("div");
-                    fRow.className = "spawn-item" + (isFolderSelected ? " selected" : "");
-                    fRow.innerHTML = `
-                        <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
-                        <div class="spawn-item-info">
-                            <div class="spawn-item-name">📁 ${escHtml(fcard.title || "—")}</div>
-                            <div class="spawn-item-detail">${escHtml((fcard.locationDetail || fcard.locationSub || "").toUpperCase())}</div>
-                        </div>
-                        <span class="spawn-item-badge">FOLDER</span>
-                    `;
-                    fRow.addEventListener("click", (e) => {
-                        e.stopPropagation();
-                        spawnFolderOpen[fid] = !spawnFolderOpen[fid];
-                        renderSpawnListInto(listId, emptyId, selectedId);
-                    });
-                    fRow.addEventListener("dblclick", (e) => {
-                        e.stopPropagation();
-                        // Only allow selection if the folder itself is a spawn location
-                        const isFolderSpawn = spawns.some(s => s.id === fid);
-                        if (!isFolderSpawn) return; // Folder is just a parent, not a spawn
-                        if (selectedSpawnId === fid) selectedSpawnId = null;
-                        else selectedSpawnId = fid;
-                        renderSpawnListInto(listId, emptyId, selectedSpawnId);
-                        updateSummary();
-                    });
-                    listContainer.appendChild(fRow);
-
-                    if (spawnFolderOpen[fid]) {
-                        const childArr = children.slice().sort((a,b) => (a.title||"").localeCompare(b.title||""));
-                        childArr.forEach(b => {
-                            const selected = selectedId === b.id;
-                            const item = document.createElement("div");
-                            item.className = "spawn-item" + (selected ? " selected" : "");
-                            item.dataset.id = b.id;
-                            const detail = (b.locationDetail || b.locationSub || "").toUpperCase() || "LOCATION";
-                            item.innerHTML = `
-                                <div class="spawn-radio"><div class="spawn-radio-dot"></div></div>
-                                <div class="spawn-item-info">
-                                    <div class="spawn-item-name">${escHtml(b.title || "—")}</div>
-                                    <div class="spawn-item-detail">${detail}</div>
-                                </div>
-                                <span class="spawn-item-badge">SPAWN</span>
-                            `;
-                            item.style.marginLeft = "24px";
-                            item.addEventListener("dblclick", (e) => {
-                                e.stopPropagation();
-                                if (selectedSpawnId === b.id) selectedSpawnId = null;
-                                else selectedSpawnId = b.id;
-                                renderSpawnListInto(listId, emptyId, selectedSpawnId);
-                                updateSummary();
-                            });
-                            listContainer.appendChild(item);
-                        });
-                    }
-                });
-            }
-
-            /* ─── Summary ─── */
-            function updateSummary() {
-                const fn = document.getElementById("c-firstname").value.trim();
-                const ln = document.getElementById("c-lastname").value.trim();
-                const fullName = [fn, ln].filter(Boolean).join(" ") || "—";
-
-                const raceId = document.getElementById("c-race").value;
-                const raceCard = raceId
-                    ? getCards().find((c) => c.id === raceId)
-                    : null;
-                const raceName = raceCard ? raceCard.title : "Human";
-
-                const spawnCard = selectedSpawnId
-                    ? getCards().find((c) => c.id === selectedSpawnId)
-                    : null;
-                const spawnName = spawnCard ? spawnCard.title : "—";
-
-                document.getElementById("sum-name").textContent = fullName;
-                document.getElementById("sum-race").textContent = raceName;
-
-                const genderEl = document.getElementById("sum-gender");
-                genderEl.textContent =
-                    selectedGender === "female" ? "♀ Female" : "♂ Male";
-                genderEl.className =
-                    "summary-val " +
-                    (selectedGender === "female" ? "pink" : "blue");
-
-                document.getElementById("sum-spawn").textContent = spawnName;
-                renderRelationTags();
-            }
-
-            /* ─── Save & Start Game ─── */
-            function startGame() {
-                const fn = document.getElementById("c-firstname").value.trim();
-                const ln = document.getElementById("c-lastname").value.trim();
-                const raceId = document.getElementById("c-race").value;
-                const appearance = document.getElementById("c-appearance").value.trim();
-                const age = parseInt(document.getElementById("c-age").value) || 0;
-                const birthDay = parseInt(document.getElementById("c-birth-day").value) || null;
-                const birthMonth = parseInt(document.getElementById("c-birth-month").value) || null;
-
-                const dayRaw = document.getElementById("c-day").value;
-                const monthRaw = document.getElementById("c-month").value;
-                const yearRaw = document.getElementById("c-year").value;
-                const day = parseInt(dayRaw);
-                const month = parseInt(monthRaw);
-                const year = parseInt(yearRaw);
-                const time = document.getElementById("c-time").value || "00:00";
-                const introduction = document.getElementById("c-introduction").value.trim();
-
-                if (!fn) {
-                    showToast("Please enter a first name.", "#c04040");
-                    return;
-                }
-                if (!ln) {
-                    showToast("Please enter a last name.", "#c04040");
-                    return;
-                }
-                if (!appearance) {
-                    showToast("Please enter an appearance.", "#c04040");
-                    return;
-                }
-                if (!age || age <= 0) {
-                    showToast("Please enter a valid age.", "#c04040");
-                    return;
-                }
-                if (!birthDay || !birthMonth) {
-                    showToast("Please set a birthdate (day and month).", "#c04040");
-                    return;
-                }
-                if (!selectedSpawnId) {
-                    showToast("Please choose a spawn location.", "#c04040");
-                    return;
-                }
-                if (!day || !month || !year) {
-                    showToast("Please set a starting date (day, month, year).", "#c04040");
-                    return;
-                }
-                if (!introduction) {
-                    showToast("Please enter a story introduction.", "#c04040");
-                    return;
-                }
-
-                const raceCard = raceId ? getCards().find((c) => c.id === raceId) : null;
-                const chars = getCharacters();
-                const newChar = {
-                    id: generateId(),
-                    genre: "character",
-                    title: [fn, ln].filter(Boolean).join(" "),
-                    firstName: fn,
-                    lastName: ln,
-                    raceId: raceId || null,
-                    raceName: raceCard ? raceCard.title : "Human",
-                    gender: selectedGender,
-                    spawnId: selectedSpawnId || null,
-                    appearance,
-                    age,
-                    birthdate: (birthDay && birthMonth) ? { day: birthDay, month: birthMonth } : null,
-                    relations: [...relationSelections],
-                    skills: [...skillSelections],
-                    startingDate: { day, month, year, time },
-                    introduction: introduction,
-                    isPlayable: true,
-                    status: "Alive",
-                    createdAt: new Date().toISOString(),
-                };
-                chars.push(newChar);
-                saveCharacters(chars);
-
-                // Navigate directly to game
-                document.body.style.opacity = "0";
-                setTimeout(() => {
-                    window.location.href = "Game.html";
-                }, 400);
-            }
-
-            /* ═══════════════════════════════════════
-               NAVIGATION
-            ═══════════════════════════════════════ */
-            function goBack() {
-                document.body.style.opacity = "0";
-                setTimeout(() => {
-                    window.location.href = "../index.html";
-                }, 400);
-            }
-
-            /* ═══════════════════════════════════════
-               TOAST
-            ═══════════════════════════════════════ */
-            function showToast(msg, bg = "rgba(40,140,80,0.95)") {
-                const t = document.getElementById("toast");
-                t.textContent = msg;
-                t.style.background = bg;
-                t.classList.add("show");
-                clearTimeout(t._timer);
-                t._timer = setTimeout(() => t.classList.remove("show"), 2500);
-            }
-
-            /* ═══════════════════════════════════════
-               INIT
-            ═══════════════════════════════════════ */
-            window.addEventListener("load", () => {
-                loadBackground();
-                setInterval(loadBackground, 2000);
-                initForm();
-                setTimeout(() => {
-                    document.body.style.opacity = "1";
-                }, 100);
-            });
-        </script>
-        
-        <!-- Overlay: Choose Playable NPC or New Character -->
-        <div id="playable-choice-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:4000;">
-            <div style="background:rgba(30,30,35,.95); border:1px solid rgba(255,255,255,.12); border-radius:20px; padding:24px; width:100%; max-width:520px; display:flex; flex-direction:column; gap:16px;">
-                <div style="color:#fff; font-weight:700; text-align:center; font-size:18px;">Choose Your Protagonist</div>
-                
-                <div id="playable-list" style="display:none; flex-direction:column; gap:8px; max-height:40vh; overflow:auto;"></div>
-                
-                <div style="display:flex; gap:10px; margin-top:6px;">
-                    <button id="existing-character-btn" onclick="showPlayableList()" style="flex:1; padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;">Existing Character</button>
-                    <button onclick="closePlayableChoice()" style="flex:1; padding:10px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; border:none; font-weight:700; cursor:pointer;">New Character</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- ══════════════════════════════
-             NPC SETUP VIEW (Scene)
-        ══════════════════════════════ -->
-        <div id="npc-setup-view" style="display: none;">
-            <nav class="top-nav">
-                <button class="nav-back-btn" onclick="goBack()" title="Back">
-                    &#8592;
-                </button>
-                <span class="nav-title">NPC SETUP</span>
-                <div class="nav-count" style="visibility:hidden;">0</div>
-            </nav>
-            <div class="page-scroll">
-                <div class="page-title-row">
-                    <h1>NPC Setup</h1>
-                    <span class="page-title-badge">PLAY AS NPC</span>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Spawn Location</div>
-                    <div style="text-align:center; font-size:12px; opacity:.7; margin:4px 0 10px 0;">Double-click to set the spawn point.</div>
-                    <div class="spawn-list" id="npc-spawn-list">
-                        <div class="spawn-empty" id="npc-spawn-empty">
-                            No spawn locations available.<br />
-                            <span style="font-size: 11px; opacity: 0.6">Add Locations with "Can be Spawn" checked in the World Creator.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Starting Date & Time</div>
-                    <div class="two-col">
-                        <div style="display:flex; gap:8px;">
-                            <input type="number" class="form-input" id="npc-day" placeholder="DD" min="1" max="31" style="width:70px; text-align:center;">
-                            <select class="form-input" id="npc-month" style="flex:1;">
+                        <div class="form-row">
+                            <input type="number" class="form-input" id="new-char-start-day" placeholder="DD" min="1" max="31">
+                            <select class="form-select" id="new-char-start-month">
                                 <option value="1">Jan</option>
                                 <option value="2">Feb</option>
                                 <option value="3">Mar</option>
@@ -1994,136 +443,921 @@
                                 <option value="11">Nov</option>
                                 <option value="12">Dec</option>
                             </select>
-                            <input type="number" class="form-input" id="npc-year" placeholder="YYYY" style="width:90px; text-align:center;">
-                        </div>
-                        <div>
-                            <input type="time" class="form-input" id="npc-time" value="00:00">
+                            <input type="number" class="form-input" id="new-char-start-year" placeholder="YYYY">
+                            <input type="time" class="form-input" id="new-char-start-time" value="08:00">
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Story Introduction</label>
+                        <textarea class="form-textarea" id="new-char-introduction" placeholder="Enter your story introduction..."></textarea>
+                    </div>
                 </div>
-
-                <div class="section">
-                    <div class="section-title">Story Introduction (Optional)</div>
-                    <textarea class="form-input" id="npc-introduction" rows="4" style="resize:vertical; min-height:100px;" placeholder="Enter an introduction for your story..."></textarea>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="backToMainMenu()">Back</button>
+                    <button class="btn btn-primary" onclick="createAndPlayNewCharacter()">Create & Play ▶</button>
                 </div>
-
-                <div class="section">
-                    <div class="form-actions">
-                        <button class="btn-cancel" onclick="cancelNPCSetup()">← Back</button>
-                        <button class="btn-create" onclick="confirmNPCSetup()">Play ▶</button>
+            </div>
+        </div>
+        
+        <!-- ═══════════════════════════════════════════════════════════════
+             SCREEN 3: PLAY EXISTING CHARACTER
+        ═══════════════════════════════════════════════════════════════ -->
+        <div id="screen-play-character" class="screen">
+            <div class="top-nav">
+                <button class="nav-back-btn" onclick="backToMainMenu()">←</button>
+                <span class="nav-title">Play Character</span>
+            </div>
+            <div class="page-content">
+                <h1 class="page-title">Select Character to Play</h1>
+                <p class="page-subtitle">Choose from your existing playable characters</p>
+                
+                <div id="playable-characters-list" class="item-list">
+                    <!-- Dynamically populated -->
+                </div>
+                
+                <div id="play-character-setup" style="display:none;">
+                    <div class="section" style="margin-top: 24px;">
+                        <div class="section-title">Selected Character</div>
+                        <div id="selected-char-info" class="item-card" style="cursor:default;">
+                            <div class="item-card-title" id="selected-char-name"></div>
+                            <div class="item-card-subtitle" id="selected-char-details"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-title">Story Introduction (Optional)</div>
+                        <textarea class="form-textarea" id="play-char-introduction" placeholder="Enter an introduction for your story..."></textarea>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-title">Spawn Location</div>
+                        <div id="play-char-spawn-list" class="item-list">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="backToPlayableList()">Back</button>
+                        <button class="btn btn-primary" onclick="playExistingCharacter()">Play ▶</button>
                     </div>
                 </div>
             </div>
         </div>
         
-        <script>
-            function openPlayableChoice(playable) {
-                const list = document.getElementById("playable-list");
-                const existingBtn = document.getElementById("existing-character-btn");
-                list.innerHTML = "";
-                playable.forEach(npc => {
-                    const btn = document.createElement("button");
-                    btn.textContent = `Play as ${npc.title}`;
-                    btn.style.cssText = "padding:10px; border-radius:10px; background:#4a90e2; color:#fff; border:none; font-weight:700; cursor:pointer;";
-                    btn.onclick = () => openNPCSetup(npc.id);
-                    list.appendChild(btn);
-                });
-                list.style.display = "none";
-                if (existingBtn) existingBtn.style.display = playable.length > 0 ? "inline-block" : "none";
-                document.getElementById("playable-choice-overlay").style.display = "flex";
-            }
-            function showPlayableList() {
-                const list = document.getElementById("playable-list");
-                if (!list) return;
-                list.style.display = "flex";
-            }
-            function closePlayableChoice() {
-                document.getElementById("playable-choice-overlay").style.display = "none";
-            }
-            function openNPCSetup(npcId) {
-                selectedNPCId = npcId;
-                closePlayableChoice();
-                // Reset selection and render spawn list into NPC overlay
-                selectedSpawnId = null;
-                renderSpawnListInto("npc-spawn-list", "npc-spawn-empty", null);
-                // Defaults for date/time
-                document.getElementById("npc-day").value = "1";
-                document.getElementById("npc-month").value = "1";
-                document.getElementById("npc-year").value = "1983";
-                document.getElementById("npc-time").value = "00:00";
-                document.getElementById("npc-introduction").value = "";
-                const nMonth = document.getElementById("npc-month");
-                const nYear = document.getElementById("npc-year");
-                if (nMonth) nMonth.onchange = () => ccUpdateDayMax("npc-day", "npc-month", "npc-year");
-                if (nYear) nYear.onchange = () => ccUpdateDayMax("npc-day", "npc-month", "npc-year");
-                ccUpdateDayMax("npc-day", "npc-month", "npc-year");
-                // Scene switch: hide main, show npc setup
-                document.getElementById("main-view").style.display = "none";
-                document.getElementById("relations-view").style.display = "none";
-                document.getElementById("npc-setup-view").style.display = "flex";
-            }
-            function cancelNPCSetup() {
-                document.getElementById("npc-setup-view").style.display = "none";
-                // Show playable choice again
-                // Back to playable choice list
-                try {
-                    const playable = getCards().filter(c => c.genre === "character" && c.isPlayable);
-                    if (playable.length > 0) openPlayableChoice(playable);
-                } catch {}
-            }
-            function confirmNPCSetup() {
-                if (!selectedNPCId) return;
-                const cards = getCards();
-                const npc = cards.find(c => c.id === selectedNPCId);
-                if (!npc) return;
+        <!-- ═══════════════════════════════════════════════════════════════
+             SCREEN 4: BORN IN A FAMILY
+        ═══════════════════════════════════════════════════════════════ -->
+        <div id="screen-family-born" class="screen">
+            <div class="top-nav">
+                <button class="nav-back-btn" onclick="backToMainMenu()">←</button>
+                <span class="nav-title">Family Born</span>
+            </div>
+            <div class="page-content">
+                <h1 class="page-title">Born in a Family</h1>
+                <p class="page-subtitle">Start your journey as part of an established family</p>
+                
+                <!-- Step 1: Select Family -->
+                <div id="family-select-step">
+                    <div class="section">
+                        <div class="section-title">Select Your Family</div>
+                        <div id="family-list" class="item-list">
+                            <!-- Dynamically populated -->
+                        </div>
+                        <div id="family-empty" class="empty-state" style="display:none;">
+                            <p>No families available.</p>
+                            <p style="font-size:12px; margin-top:8px;">Create families with members in the World Creator first.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Create Family Character -->
+                <div id="family-char-create-step" style="display:none;">
+                    <div class="inheritance-notice">
+                        <strong>Inherited from Family:</strong> Introduction, Relations, Starting Date/Time, and Spawn Location will be automatically set from your chosen family.
+                    </div>
+                    
+                    <div class="family-info">
+                        <div class="family-info-title">Selected Family</div>
+                        <div class="family-info-value" id="selected-family-display">-</div>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-title">Character Name *</div>
+                        <div class="form-group">
+                            <input type="text" class="form-input" id="family-char-firstname" placeholder="First Name...">
+                        </div>
+                        <div style="font-size:12px; opacity:0.8; margin-top:6px;">
+                            Last Name is inherited automatically from the selected family.
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-title">Basic Information</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Age</label>
+                                <input type="number" class="form-input" id="family-char-age" placeholder="25">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Gender</label>
+                                <select class="form-select" id="family-char-gender">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-title">Birth Date</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Day</label>
+                                <input type="number" class="form-input" id="family-char-day" min="1" max="31" placeholder="1">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Month</label>
+                                <select class="form-select" id="family-char-month">
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-title">Appearance *</div>
+                        <textarea class="form-textarea" id="family-char-appearance" placeholder="Describe your character's appearance..."></textarea>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="backToFamilySelect()">Back</button>
+                        <button class="btn btn-gold" onclick="createFamilyBornCharacter()">Create & Play ▶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ═══════════════════════════════════════════════════════════════
+             RELATIONS SCREEN
+        ═══════════════════════════════════════════════════════════════ -->
+        <div id="screen-relations" class="screen">
+            <div class="top-nav">
+                <button class="nav-back-btn" onclick="hideRelationsScene()">←</button>
+                <span class="nav-title">Character Relations</span>
+                <div class="nav-count" id="relations-count">0</div>
+            </div>
+            <div class="page-content">
+                <h1 class="page-title">Manage Relations</h1>
+                <p class="page-subtitle">Define relationships with other characters</p>
+                
+                <div class="section">
+                    <div class="section-title">Add Relation</div>
+                    <div class="form-group">
+                        <label class="form-label">Select NPC</label>
+                        <select class="form-select" id="relation-add-select">
+                            <option value="">Select a character...</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="flex:1;">
+                            <label class="form-label">Relation Type</label>
+                            <select class="form-select" id="relation-add-type" onchange="onRelationTypeChange()">
+                                <option value="">Select...</option>
+                                <option value="Unknown">Unknown</option>
+                                <option value="Known">Known</option>
+                                <option value="Friend">Friend</option>
+                                <option value="Lover">Lover</option>
+                                <option value="Family">Family</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="family-subtype-container" style="flex:1; display:none;">
+                            <label class="form-label">Family Relation</label>
+                            <select class="form-select" id="relation-family-subtype">
+                                <option value="">Select...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-full" onclick="relationAddRow()">Add Relation</button>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Current Relations</div>
+                    <div id="relation-rows" class="item-list">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="hideRelationsScene()">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmRelations()">Done</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ═════════════════════════════════════════════════════════════════
+        // NAVIGATION & VIEW MANAGEMENT
+        // ═════════════════════════════════════════════════════════════════
+        
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
 
-                if (!selectedSpawnId) {
-                    showToast("Please choose a spawn location.", "#c04040");
-                    return;
+        function goToIndex() {
+            window.location.href = '../index.html';
+        }
+        
+        function backToMainMenu() {
+            showScreen('screen-main-menu');
+        }
+        
+        // ═════════════════════════════════════════════════════════════════
+        // SCREEN 1: MAIN MENU
+        // ═════════════════════════════════════════════════════════════════
+        
+        function showFamilySelection() {
+            loadFamilyList();
+            showScreen('screen-family-born');
+            document.getElementById('family-select-step').style.display = 'block';
+            document.getElementById('family-char-create-step').style.display = 'none';
+        }
+        
+        function showCreateCharacter() {
+            showScreen('screen-create-character');
+        }
+        
+        function showPlayableCharacters() {
+            loadPlayableCharacters();
+            showScreen('screen-play-character');
+            document.getElementById('play-character-setup').style.display = 'none';
+        }
+        
+        // ═════════════════════════════════════════════════════════════════
+        // SCREEN 2: CREATE NEW CHARACTER
+        // ═════════════════════════════════════════════════════════════════
+        
+        function createAndPlayNewCharacter() {
+            const name = document.getElementById('new-char-name').value.trim();
+            const appearance = document.getElementById('new-char-appearance').value.trim();
+            
+            if (!name) {
+                alert('Please enter a name.');
+                return;
+            }
+            if (!appearance) {
+                alert('Please describe the appearance.');
+                return;
+            }
+            
+            const newChar = {
+                id: 'char_' + Date.now(),
+                title: name,
+                genre: 'character',
+                description: appearance,
+                age: parseInt(document.getElementById('new-char-age').value) || null,
+                gender: document.getElementById('new-char-gender').value || 'Unknown',
+                birthdate: {
+                    day: parseInt(document.getElementById('new-char-day').value) || 1,
+                    month: parseInt(document.getElementById('new-char-month').value) || 1,
+                    year: parseInt(document.getElementById('new-char-year').value) || new Date().getFullYear()
+                },
+                startingDate: {
+                    day: parseInt(document.getElementById('new-char-start-day').value) || 1,
+                    month: parseInt(document.getElementById('new-char-start-month').value) || 1,
+                    year: parseInt(document.getElementById('new-char-start-year').value) || new Date().getFullYear(),
+                    time: document.getElementById('new-char-start-time').value || '08:00'
+                },
+                introduction: document.getElementById('new-char-introduction').value.trim(),
+                relations: newCharRelations.map(r => ({ ...r })),
+                playable: true,
+                createdAt: new Date().toISOString()
+            };
+            
+            // Save character
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            cards.push(newChar);
+            sessionStorage.setItem('storyki_storycards', JSON.stringify(cards));
+            
+            // Store for game
+            sessionStorage.setItem('storyki_selected_char', JSON.stringify({
+                charId: newChar.id,
+                mode: 'new'
+            }));
+            
+            window.location.href = 'Game.html';
+        }
+        
+        // ═════════════════════════════════════════════════════════════════
+        // SCREEN 3: PLAY EXISTING CHARACTER
+        // ═════════════════════════════════════════════════════════════════
+        
+        let selectedPlayableCharId = null;
+        let selectedPlayableChar = null;
+        
+        function loadPlayableCharacters() {
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            const playable = cards.filter(c => {
+                const isCharacter = c.genre === 'character';
+                const playStatus = c.playable || c.isPlayable;
+                const isPlayable = playStatus === true || playStatus === 'true' || playStatus === 1 || playStatus === '1';
+                return isCharacter && isPlayable;
+            });
+            
+            const list = document.getElementById('playable-characters-list');
+            
+            if (playable.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <p>No playable characters found.</p>
+                        <p style="font-size:12px; margin-top:8px;">Create a character first or check the "Playable" option.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = playable.map(char => `
+                <div class="item-card" onclick="selectPlayableCharacter('${char.id}')">
+                    <div class="item-card-title">${escapeHtml(char.title)}</div>
+                    <div class="item-card-subtitle">
+                        ${char.age ? 'Age: ' + char.age : ''} 
+                        ${char.gender ? '• ' + char.gender : ''}
+                        ${char.description ? '<br>' + escapeHtml(char.description.substring(0, 60)) + '...' : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function selectPlayableCharacter(charId) {
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            const char = cards.find(c => c.id === charId);
+            
+            if (!char) return;
+            
+            selectedPlayableCharId = charId;
+            selectedPlayableChar = char;
+            
+            document.getElementById('selected-char-name').textContent = char.title;
+            document.getElementById('selected-char-details').innerHTML = 
+                (char.age ? 'Age: ' + char.age : '') + 
+                (char.gender ? ' • Gender: ' + char.gender : '');
+            
+            document.getElementById('play-character-setup').style.display = 'block';
+            document.getElementById('playable-characters-list').style.display = 'none';
+            
+            // Load spawn locations
+            loadSpawnLocations('play-char-spawn-list', char.spawnLocationId);
+        }
+        
+        function backToPlayableList() {
+            document.getElementById('play-character-setup').style.display = 'none';
+            document.getElementById('playable-characters-list').style.display = 'flex';
+            selectedPlayableCharId = null;
+            selectedPlayableChar = null;
+        }
+        
+        function playExistingCharacter() {
+            if (!selectedPlayableCharId || !selectedPlayableChar) {
+                alert('Please select a character.');
+                return;
+            }
+            
+            const introduction = document.getElementById('play-char-introduction').value.trim();
+            
+            // Update character with optional introduction
+            if (introduction) {
+                const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+                const charIndex = cards.findIndex(c => c.id === selectedPlayableCharId);
+                if (charIndex >= 0) {
+                    cards[charIndex].introduction = introduction;
+                    sessionStorage.setItem('storyki_storycards', JSON.stringify(cards));
                 }
-                const day = parseInt(document.getElementById("npc-day").value) || 1;
-                const month = parseInt(document.getElementById("npc-month").value) || 1;
-                const year = parseInt(document.getElementById("npc-year").value) || 1983;
-                const time = document.getElementById("npc-time").value || "00:00";
-                const intro = document.getElementById("npc-introduction").value.trim();
-
-                const chars = getCharacters();
-                const nameParts = (npc.title || "").split(" ");
-                const firstName = (npc.firstName || nameParts.shift() || "Player").trim();
-                const lastName = (npc.lastName || nameParts.join(" ")).trim();
-
-                const newChar = {
-                    id: npc.id || generateId(),
-                    genre: "character",
-                    title: (npc.title || `${firstName} ${lastName}`.trim()).trim(),
-                    firstName,
-                    lastName,
-                    raceId: npc.raceId || null,
-                    raceName: npc.raceName || "",
-                    gender: npc.gender || "male",
-                    appearance: npc.appearance || "",
-                    age: typeof npc.age === "number" ? npc.age : (parseInt(npc.age) || 0),
-                    birthdate: readBirthdate(npc),
-                    spawnId: selectedSpawnId,
-                    relations: JSON.parse(JSON.stringify(npc.relations || [])),
-                    skills: JSON.parse(JSON.stringify(npc.skills || [])),
-                    startingDate: { day, month, year, time },
-                    introduction: intro,
-                    isPlayable: true,
-                    status: npc.status || "Alive",
-                    createdAt: new Date().toISOString(),
-                };
-                chars.push(newChar);
-                saveCharacters(chars);
-
-                // Remove NPC from cards (player takes over)
-                const filtered = cards.filter(c => c.id !== selectedNPCId);
-                Storage.set(CARDS_KEY, JSON.stringify(filtered));
-
-                document.getElementById("npc-setup-view").style.display = "none";
-                document.body.style.opacity = "0";
-                setTimeout(() => { window.location.href = "Game.html"; }, 400);
             }
-        </script>
-    </body>
+            
+            sessionStorage.setItem('storyki_selected_char', JSON.stringify({
+                charId: selectedPlayableCharId,
+                mode: 'existing',
+                introduction: introduction
+            }));
+            
+            window.location.href = 'Game.html';
+        }
+        
+        // ═════════════════════════════════════════════════════════════════
+        // SCREEN 4: BORN IN A FAMILY
+        // ═════════════════════════════════════════════════════════════════
+        
+        let selectedFamilyId = null;
+        let selectedFamilyData = null;
+
+        function deriveFamilyLastName(familyTitle) {
+            const raw = String(familyTitle || '').trim();
+            if (!raw) return '';
+            return raw
+                .replace(/\s+(family|familie)\s*$/i, '')
+                .trim();
+        }
+
+        function mapFamilyMembersToRelations(familyMembers) {
+            if (!Array.isArray(familyMembers)) return [];
+            const out = [];
+            familyMembers.forEach((m) => {
+                if (!m || !m.id) return;
+                const relRaw = String(m.relation || '').trim();
+                let relation = 'Family';
+                let familySub = '';
+                if (relRaw === 'Spouse') {
+                    relation = 'Spouse';
+                } else if (relRaw === 'Parent' || relRaw === 'Child' || relRaw === 'Sibling' || relRaw === 'Relative') {
+                    relation = 'Family';
+                    familySub = relRaw;
+                } else if (relRaw) {
+                    relation = 'Family';
+                    familySub = relRaw;
+                } else {
+                    relation = 'Family';
+                    familySub = 'Relative';
+                }
+                out.push({
+                    targetId: m.id,
+                    targetName: m.name || m.id,
+                    relation,
+                    familySub
+                });
+            });
+            return out;
+        }
+        
+        function loadFamilyList() {
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            console.log('[DEBUG loadFamilyList] Total cards:', cards.length);
+            
+            // Show all families (Born in a Family should appear if any family exists)
+            const families = cards.filter(c => {
+                return c.genre === 'family';
+            });
+            
+            console.log('[DEBUG loadFamilyList] Families found:', families.length);
+            
+            const list = document.getElementById('family-list');
+            const empty = document.getElementById('family-empty');
+            
+            if (families.length === 0) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            
+            empty.style.display = 'none';
+            list.innerHTML = families.map(family => `
+                <div class="item-card" onclick="selectFamilyForCharacter('${family.id}')">
+                    <div class="item-card-title">${escapeHtml(family.title)}</div>
+                    <div class="item-card-subtitle">
+                        ${(Array.isArray(family.familyMembers) ? family.familyMembers.length : 0)} family members
+                        ${family.introduction ? '<br>' + escapeHtml(family.introduction.substring(0, 80)) + '...' : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function selectFamilyForCharacter(familyId) {
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            const family = cards.find(c => c.id === familyId);
+            
+            if (!family) return;
+            
+            selectedFamilyId = familyId;
+            selectedFamilyData = family;
+            
+            document.getElementById('selected-family-display').textContent = family.title;
+            document.getElementById('family-char-firstname').value = '';
+            document.getElementById('family-char-age').value = '';
+            document.getElementById('family-char-gender').value = 'Male';
+            document.getElementById('family-char-day').value = '';
+            document.getElementById('family-char-month').value = '1';
+            document.getElementById('family-char-appearance').value = '';
+            
+            document.getElementById('family-select-step').style.display = 'none';
+            document.getElementById('family-char-create-step').style.display = 'block';
+        }
+        
+        function backToFamilySelect() {
+            document.getElementById('family-select-step').style.display = 'block';
+            document.getElementById('family-char-create-step').style.display = 'none';
+            selectedFamilyId = null;
+            selectedFamilyData = null;
+        }
+        
+        function createFamilyBornCharacter() {
+            const firstName = document.getElementById('family-char-firstname').value.trim();
+            const appearance = document.getElementById('family-char-appearance').value.trim();
+            const age = parseInt(document.getElementById('family-char-age').value) || null;
+            const gender = document.getElementById('family-char-gender').value || 'Male';
+            const birthDay = parseInt(document.getElementById('family-char-day').value) || 1;
+            const birthMonth = parseInt(document.getElementById('family-char-month').value) || 1;
+            
+            if (!firstName) {
+                alert('Please enter a first name.');
+                return;
+            }
+            if (!appearance) {
+                alert('Please describe the appearance.');
+                return;
+            }
+            if (!selectedFamilyData) {
+                alert('Please select a family first.');
+                return;
+            }
+
+            const familyLastName = deriveFamilyLastName(selectedFamilyData.title);
+            const fullName = [firstName, familyLastName].filter(Boolean).join(' ').trim();
+            const inheritedRelations = mapFamilyMembersToRelations(selectedFamilyData.familyMembers || []);
+            const inheritedStartDate = selectedFamilyData.startDate || {
+                day: 1, month: 1, year: new Date().getFullYear(), time: '08:00'
+            };
+            const inheritedSpawnId = selectedFamilyData.spawnLocationId || null;
+            const inheritedRaceId = selectedFamilyData.familyRaceId || '';
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            const inheritedRaceName = selectedFamilyData.familyRaceName ||
+                ((cards.find(c => c.id === inheritedRaceId) || {}).title || '');
+            
+            // Create character with inherited family data
+            const newChar = {
+                id: 'char_' + Date.now(),
+                firstName: firstName,
+                lastName: familyLastName,
+                name: fullName,
+                title: fullName || firstName,
+                genre: 'character',
+                description: appearance,
+                appearance: appearance,
+                age: age,
+                gender: gender,
+                birthdate: { day: birthDay, month: birthMonth },
+                familyId: selectedFamilyId,
+                playable: true,
+                isPlayable: true,
+                raceId: inheritedRaceId,
+                raceName: inheritedRaceName,
+                // Inherited from family
+                introduction: selectedFamilyData.introduction || '',
+                startingDate: inheritedStartDate,
+                relations: inheritedRelations,
+                spawnLocationId: inheritedSpawnId,
+                spawnId: inheritedSpawnId,
+                currentLocationId: inheritedSpawnId,
+                createdAt: new Date().toISOString()
+            };
+            
+            // Save character
+            cards.push(newChar);
+            sessionStorage.setItem('storyki_storycards', JSON.stringify(cards));
+            
+            // Clear old chat history so introduction is shown as first message
+            sessionStorage.removeItem('storyki_storylog');
+            
+            // Store for game with full family context
+            sessionStorage.setItem('storyki_selected_char', JSON.stringify({
+                charId: newChar.id,
+                mode: 'family-born',
+                isFamilyBorn: true,
+                familyData: {
+                    id: selectedFamilyData.id,
+                    title: selectedFamilyData.title,
+                    introduction: selectedFamilyData.introduction,
+                    startDate: inheritedStartDate,
+                    memberRelations: inheritedRelations,
+                    spawnLocationId: inheritedSpawnId,
+                    familyRaceId: inheritedRaceId,
+                    familyRaceName: inheritedRaceName
+                }
+            }));
+            
+            window.location.href = 'Game.html';
+        }
+        
+        // ═════════════════════════════════════════════════════════════════
+        // UTILITIES
+        // ═════════════════════════════════════════════════════════════════
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function loadSpawnLocations(containerId, selectedId) {
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            const locations = cards.filter(c => 
+                c.genre === 'location' && 
+                (c.canBeSpawn || c.canbespawn)
+            );
+            
+            const container = document.getElementById(containerId);
+            
+            if (locations.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="padding: 20px;">
+                        <p style="font-size:12px;">No spawn locations available.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = locations.map(loc => `
+                <div class="item-card ${loc.id === selectedId ? 'selected' : ''}" 
+                     onclick="selectSpawnLocation('${loc.id}')"
+                     style="${loc.id === selectedId ? 'border-color: #4a90e2;' : ''}">
+                    <div class="item-card-title">${escapeHtml(loc.title)}</div>
+                    <div class="item-card-subtitle">Double-click to set as spawn</div>
+                </div>
+            `).join('');
+        }
+        
+        function selectSpawnLocation(locId) {
+            // Can be implemented if needed
+            console.log('Selected spawn:', locId);
+        }
+        
+        // ═════════════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ═════════════════════════════════════════════════════════════════
+        
+        function updateMainMenuVisibility() {
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            console.log('[DEBUG] Total cards:', cards.length);
+            console.log('[DEBUG] Cards:', cards.map(c => ({ genre: c.genre, title: c.title })));
+            
+            // Check for families (any)
+            const allFamilies = cards.filter(c => c.genre === 'family');
+            console.log('[DEBUG] All families (any):', allFamilies.length);
+            
+            const families = allFamilies;
+            console.log('[DEBUG] Families shown in menu:', families.length);
+            console.log('[DEBUG] Families data:', families.map(f => ({ 
+                id: f.id, 
+                title: f.title, 
+                hasFamilyMembers: !!f.familyMembers,
+                familyMembersLength: f.familyMembers?.length || 0 
+            })));
+            
+            const familyCard = document.getElementById('menu-family-born');
+            if (familyCard) {
+                familyCard.style.display = families.length > 0 ? 'flex' : 'none';
+                console.log('[DEBUG] Family card display set to:', familyCard.style.display);
+            }
+            
+            // Check for playable characters
+            const allCharacters = cards.filter(c => c.genre === 'character');
+            console.log('[DEBUG] All characters:', allCharacters.length);
+            console.log('[DEBUG] Character details:', allCharacters.map(c => ({ 
+                id: c.id, 
+                title: c.title, 
+                playable: c.playable,
+                playableType: typeof c.playable
+            })));
+            
+            // Handle both playable and isPlayable field names (Create.html uses isPlayable)
+            const playableChars = cards.filter(c => {
+                const isCharacter = c.genre === 'character';
+                // Check both field names: playable and isPlayable
+                const playStatus = c.playable || c.isPlayable;
+                const isPlayable = playStatus === true || playStatus === 'true' || playStatus === 1 || playStatus === '1';
+                console.log(`[DEBUG] ${c.title}: genre=${c.genre}, playable=${c.playable}, isPlayable=${c.isPlayable}, result=${isPlayable}`);
+                return isCharacter && isPlayable;
+            });
+            console.log('[DEBUG] Playable characters found:', playableChars.length);
+            
+            const playExistingCard = document.getElementById('menu-play-existing');
+            if (playExistingCard) {
+                playExistingCard.style.display = playableChars.length > 0 ? 'flex' : 'none';
+                console.log('[DEBUG] Play Existing card display set to:', playExistingCard.style.display);
+            }
+        }
+        
+        // ═════════════════════════════════════════════════════════════════
+        // RELATIONS MANAGEMENT
+        // ═════════════════════════════════════════════════════════════════
+        
+        let relationPickerTemp = []; // Temporary storage for relations being edited
+        let newCharRelations = []; // Final relations for new character
+        
+        function showRelationsScene() {
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            const characters = cards.filter(c => c.genre === 'character');
+            
+            // Populate NPC select
+            const select = document.getElementById('relation-add-select');
+            select.innerHTML = '<option value="">Select a character...</option>' + 
+                characters.map(c => `<option value="${c.id}">${escapeHtml(c.title)}</option>`).join('');
+            
+            // Copy current relations to temp
+            relationPickerTemp = newCharRelations.map(r => ({ ...r }));
+            
+            renderRelationRows();
+            showScreen('screen-relations');
+        }
+        
+        function hideRelationsScene() {
+            showScreen('screen-create-character');
+            relationPickerTemp = [];
+        }
+        
+        function confirmRelations() {
+            // Save temp to final
+            newCharRelations = relationPickerTemp.map(r => ({ ...r }));
+            
+            // Update tags display
+            renderRelationTags();
+            
+            showScreen('screen-create-character');
+        }
+        
+        function onRelationTypeChange() {
+            const typeSelect = document.getElementById('relation-add-type');
+            const familyContainer = document.getElementById('family-subtype-container');
+            const familySelect = document.getElementById('relation-family-subtype');
+            const npcSelect = document.getElementById('relation-add-select');
+            
+            if (typeSelect.value === 'Family') {
+                // Get selected NPC's gender
+                const npcId = npcSelect.value;
+                const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+                const npc = cards.find(c => c.id === npcId);
+                
+                // Check gender (case-insensitive) - check both 'gender' and 'sex' fields
+                const genderValue = (npc?.gender || npc?.sex || '').toLowerCase();
+                const isFemale = genderValue === 'female' || genderValue === 'f';
+                
+                console.log('[DEBUG] NPC:', npc?.title, 'gender:', npc?.gender, 'sex:', npc?.sex, 'isFemale:', isFemale);
+                
+                // Populate family subtypes based on gender
+                const maleOptions = [
+                    { value: 'Father', label: 'Father' },
+                    { value: 'Brother', label: 'Brother' },
+                    { value: 'Son', label: 'Son' },
+                    { value: 'Grandfather', label: 'Grandfather' },
+                    { value: 'Grandson', label: 'Grandson' },
+                    { value: 'Uncle', label: 'Uncle' },
+                    { value: 'Nephew', label: 'Nephew' },
+                    { value: 'Cousin', label: 'Cousin' }
+                ];
+                
+                const femaleOptions = [
+                    { value: 'Mother', label: 'Mother' },
+                    { value: 'Sister', label: 'Sister' },
+                    { value: 'Daughter', label: 'Daughter' },
+                    { value: 'Grandmother', label: 'Grandmother' },
+                    { value: 'Granddaughter', label: 'Granddaughter' },
+                    { value: 'Aunt', label: 'Aunt' },
+                    { value: 'Niece', label: 'Niece' },
+                    { value: 'Cousin', label: 'Cousin' }
+                ];
+                
+                const options = isFemale ? femaleOptions : maleOptions;
+                familySelect.innerHTML = '<option value="">Select...</option>' +
+                    options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+                
+                familyContainer.style.display = 'block';
+            } else {
+                familyContainer.style.display = 'none';
+                familySelect.value = '';
+            }
+        }
+        
+        // Also update family options when NPC changes
+        document.getElementById('relation-add-select').addEventListener('change', function() {
+            const typeSelect = document.getElementById('relation-add-type');
+            if (typeSelect.value === 'Family') {
+                onRelationTypeChange();
+            }
+        });
+        
+        function renderRelationRows() {
+            const container = document.getElementById('relation-rows');
+            const count = document.getElementById('relations-count');
+            
+            count.textContent = relationPickerTemp.length;
+            
+            if (relationPickerTemp.length === 0) {
+                container.innerHTML = '<div class="empty-state">No relations yet. Add some!</div>';
+                return;
+            }
+            
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            
+            container.innerHTML = relationPickerTemp.map((rel, index) => {
+                const target = cards.find(c => c.id === rel.targetId);
+                const displayRelation = rel.familySub ? `${rel.relation} (${rel.familySub})` : rel.relation;
+                return `
+                    <div class="item-card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div class="item-card-title">${escapeHtml(target?.title || 'Unknown')}</div>
+                            <div class="item-card-subtitle">${escapeHtml(displayRelation)}</div>
+                        </div>
+                        <button onclick="relationRemoveRow(${index})" style="background:none; border:none; color:#c04040; font-size:18px; cursor:pointer;">×</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function relationAddRow() {
+            const select = document.getElementById('relation-add-select');
+            const typeSelect = document.getElementById('relation-add-type');
+            const familySubSelect = document.getElementById('relation-family-subtype');
+            
+            const targetId = select.value;
+            const relation = typeSelect.value;
+            const familySub = familySubSelect.value;
+            
+            if (!targetId || !relation) {
+                alert('Please select both a character and relation type.');
+                return;
+            }
+            
+            // Check for family sub-type requirement
+            if (relation === 'Family' && !familySub) {
+                alert('Please select a family relation type.');
+                return;
+            }
+            
+            // Check for duplicates
+            if (relationPickerTemp.find(r => r.targetId === targetId)) {
+                alert('Relation with this character already exists.');
+                return;
+            }
+            
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            const target = cards.find(c => c.id === targetId);
+            
+            const newRelation = {
+                targetId: targetId,
+                targetName: target?.title || 'Unknown',
+                relation: relation
+            };
+            
+            // Add family sub-type if applicable
+            if (relation === 'Family' && familySub) {
+                newRelation.familySub = familySub;
+            }
+            
+            relationPickerTemp.push(newRelation);
+            
+            // Reset selects
+            select.value = '';
+            typeSelect.value = '';
+            familySubSelect.value = '';
+            document.getElementById('family-subtype-container').style.display = 'none';
+            
+            renderRelationRows();
+        }
+        
+        function relationRemoveRow(index) {
+            relationPickerTemp.splice(index, 1);
+            renderRelationRows();
+        }
+        
+        function renderRelationTags() {
+            const container = document.getElementById('new-char-relation-tags');
+            
+            if (newCharRelations.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = newCharRelations.map(rel => {
+                const displayText = rel.familySub ? `${rel.targetName}: ${rel.relation} (${rel.familySub})` : `${rel.targetName}: ${rel.relation}`;
+                return `
+                    <span style="background:rgba(74,144,226,0.2); border:1px solid rgba(74,144,226,0.4); border-radius:20px; padding:6px 12px; font-size:12px; color:#4a90e2;">
+                        ${escapeHtml(displayText)}
+                    </span>
+                `;
+            }).join('');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default dates
+            const now = new Date();
+            document.getElementById('new-char-start-day').value = now.getDate();
+            document.getElementById('new-char-start-month').value = now.getMonth() + 1;
+            document.getElementById('new-char-start-year').value = now.getFullYear();
+            
+            // Update main menu visibility based on available data
+            updateMainMenuVisibility();
+        });
+    </script>
+</body>
 </html>

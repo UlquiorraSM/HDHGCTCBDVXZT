@@ -1242,13 +1242,26 @@
                 if (!raw || typeof raw !== "object") return null;
                 const day = parseInt(raw.day, 10) || null;
                 const month = parseInt(raw.month, 10) || null;
+                const year = parseInt(raw.year, 10) || null;
                 if (!day || !month) return null;
-                return { day, month };
+                return year ? { day, month, year } : { day, month };
             }
 
             function readBirthdate(entity) {
                 if (!entity || typeof entity !== "object") return null;
                 return normalizeBirthdate(entity.birthdate || entity.birthDate || entity.birthday || null);
+            }
+
+            function ensurePlayerBirthYearFromAge(char) {
+                if (!char || typeof char !== "object") return;
+                const bd = readBirthdate(char);
+                if (!bd || !bd.day || !bd.month) return;
+                if (bd.year) return;
+                const ageNum = parseInt(char.age, 10);
+                const startYear = parseInt(char?.startingDate?.year, 10);
+                if (!Number.isFinite(ageNum) || ageNum < 0) return;
+                if (!Number.isFinite(startYear) || startYear <= 0) return;
+                char.birthdate = { day: bd.day, month: bd.month, year: startYear - ageNum };
             }
 
             function formatBirthdate(bd) {
@@ -2032,8 +2045,8 @@
                         if (!c || c.status === "Dead") continue;
                         const bd = readBirthdate(c);
                         if (!bd || (!bd.day && !bd.month)) continue;
-                        if (!c.birthdate || c.birthdate.day !== bd.day || c.birthdate.month !== bd.month) {
-                            c.birthdate = { day: bd.day, month: bd.month };
+                        if (!c.birthdate || c.birthdate.day !== bd.day || c.birthdate.month !== bd.month || ((bd.year || null) !== (parseInt(c.birthdate.year, 10) || null))) {
+                            c.birthdate = bd.year ? { day: bd.day, month: bd.month, year: bd.year } : { day: bd.day, month: bd.month };
                             changed = true;
                         }
                         if (typeof c.age !== "number") continue;
@@ -2059,8 +2072,8 @@
                     if (!activeChar) return;
                     const bd = readBirthdate(activeChar);
                     if (!bd || (!bd.day && !bd.month)) return;
-                    if (!activeChar.birthdate || activeChar.birthdate.day !== bd.day || activeChar.birthdate.month !== bd.month) {
-                        activeChar.birthdate = { day: bd.day, month: bd.month };
+                    if (!activeChar.birthdate || activeChar.birthdate.day !== bd.day || activeChar.birthdate.month !== bd.month || ((bd.year || null) !== (parseInt(activeChar.birthdate.year, 10) || null))) {
+                        activeChar.birthdate = bd.year ? { day: bd.day, month: bd.month, year: bd.year } : { day: bd.day, month: bd.month };
                     }
                     if (typeof activeChar.age !== "number") return;
                     if (!activeChar._ageCheck || typeof activeChar._ageCheck !== "object") {
@@ -2232,8 +2245,61 @@
             /* ═══════════════════════════════════════
                CHARACTER LOAD
             ═══════════════════════════════════════ */
+            function buildRuntimeCharacterFromCard(card) {
+                if (!card) return null;
+                const title = String(card.title || card.name || "").trim();
+                const parts = title ? title.split(/\s+/) : [];
+                const firstName = (card.firstName || parts[0] || "Unknown").trim();
+                const lastName = (card.lastName || parts.slice(1).join(" ") || "").trim();
+                const spawnId = card.currentLocationId || card.spawnId || card.spawnLocationId || "";
+                let raceName = card.raceName || "";
+                if (!raceName && card.raceId) {
+                    const raceCard = getCards().find(c => c.genre === "race" && c.id === card.raceId);
+                    if (raceCard) raceName = raceCard.title || "";
+                }
+                if (!raceName) raceName = "Unknown Race";
+                const startingDate = (card.startingDate && typeof card.startingDate === "object")
+                    ? { ...card.startingDate }
+                    : { day: 1, month: 1, year: 1983, time: "08:00" };
+
+                return {
+                    id: card.id,
+                    genre: "character",
+                    firstName,
+                    lastName,
+                    name: card.name || [firstName, lastName].filter(Boolean).join(" ").trim(),
+                    title: card.title || [firstName, lastName].filter(Boolean).join(" ").trim() || "Unknown",
+                    raceId: card.raceId || null,
+                    raceName,
+                    gender: card.gender || "",
+                    age: typeof card.age === "number" ? card.age : (parseInt(card.age, 10) || 0),
+                    birthdate: readBirthdate(card),
+                    appearance: card.appearance || card.description || "",
+                    relations: JSON.parse(JSON.stringify(card.relations || [])),
+                    skills: JSON.parse(JSON.stringify(card.skills || [])),
+                    status: card.status || "Alive",
+                    isPlayable: true,
+                    spawnId,
+                    spawnLocationId: card.spawnLocationId || spawnId,
+                    currentLocationId: card.currentLocationId || spawnId,
+                    startingDate,
+                    introduction: card.introduction || "",
+                    familyId: card.familyId || null,
+                    createdAt: card.createdAt || Date.now(),
+                    updatedAt: Date.now()
+                };
+            }
+
             function loadLatestCharacter() {
                 try {
+                    const selectedData = JSON.parse(sessionStorage.getItem("storyki_selected_char") || "null");
+                    if (selectedData && selectedData.charId) {
+                        const cards = getCards();
+                        const selectedCard = cards.find(c => c && c.genre === "character" && c.id === selectedData.charId);
+                        if (selectedCard) {
+                            return buildRuntimeCharacterFromCard(selectedCard);
+                        }
+                    }
                     const chars = JSON.parse(Storage.get(CHARS_KEY) || "[]");
                     if (!Array.isArray(chars) || chars.length === 0) return null;
                     // Prefer playable characters
@@ -2260,6 +2326,79 @@
                     .replace(/'/g, '&#039;');
             }
 
+            function loadFamilyBornData(char) {
+                try {
+                    const selectedData = JSON.parse(sessionStorage.getItem("storyki_selected_char") || "null");
+                    if (!selectedData || !selectedData.isFamilyBorn) return;
+                    
+                    console.log("[FamilyBorn] Loading family data...", selectedData);
+                    // Family-born should always start with a fresh log so family intro becomes first message.
+                    try {
+                        chatHistory = [];
+                        Storage.remove(LOG_KEY);
+                    } catch {}
+                    
+                    // Apply family data to character
+                    if (selectedData.familyData) {
+                        const family = selectedData.familyData;
+                        
+                        // Force family introduction as opening message for born-in-family flow.
+                        if (typeof family.introduction === "string") {
+                            char.introduction = family.introduction;
+                        }
+                        
+                        // Set start date/time from family
+                        if (family.startDate) {
+                            char.startingDate = family.startDate;
+                            if (family.startDate.time) {
+                                char.startTime = family.startDate.time;
+                            }
+                        }
+                        ensurePlayerBirthYearFromAge(char);
+                        
+                        // Set relations from family
+                        const inheritedRelations = Array.isArray(family.memberRelations)
+                            ? family.memberRelations
+                            : (Array.isArray(family.relations) ? family.relations : []);
+                        if (inheritedRelations.length > 0) {
+                            char.relations = [...inheritedRelations];
+                        }
+                        
+                        // Set spawn location from family
+                        if (family.spawnLocationId) {
+                            char.spawnId = family.spawnLocationId;
+                            char.spawnLocationId = family.spawnLocationId;
+                            char.currentLocationId = family.spawnLocationId;
+                        }
+                        // Set race from family if available
+                        if (family.familyRaceId) {
+                            char.raceId = family.familyRaceId;
+                        }
+                        if (family.familyRaceName) {
+                            char.raceName = family.familyRaceName;
+                        } else if (family.familyRaceId) {
+                            const raceCard = getCards().find(c => c.genre === "race" && c.id === family.familyRaceId);
+                            if (raceCard) char.raceName = raceCard.title || char.raceName;
+                        }
+                        
+                        console.log("[FamilyBorn] Applied family data:", {
+                            introduction: char.introduction,
+                            startingDate: char.startingDate,
+                            relations: char.relations?.length,
+                            spawnLocationId: char.spawnLocationId,
+                            raceId: char.raceId,
+                            raceName: char.raceName
+                        });
+                    }
+                    
+                    // Clear the sessionStorage to prevent re-applying on refresh
+                    sessionStorage.removeItem("storyki_selected_char");
+                    
+                } catch (e) {
+                    console.error("[FamilyBorn] Error loading family data:", e);
+                }
+            }
+
             function applyCharacter(ch) {
                 if (!ch) return;
                 activeChar = ch;
@@ -2280,12 +2419,13 @@
                     }
                     const bd = readBirthdate(ch);
                     if (bd) {
-                        ch.birthdate = { day: bd.day, month: bd.month };
+                        ch.birthdate = bd.year ? { day: bd.day, month: bd.month, year: bd.year } : { day: bd.day, month: bd.month };
                     } else {
                         const sourceCard = getCards().find(c => c.genre === "character" && c.id === ch.id);
                         const sourceBd = readBirthdate(sourceCard);
-                        if (sourceBd) ch.birthdate = { day: sourceBd.day, month: sourceBd.month };
+                        if (sourceBd) ch.birthdate = sourceBd.year ? { day: sourceBd.day, month: sourceBd.month, year: sourceBd.year } : { day: sourceBd.day, month: sourceBd.month };
                     }
+                    ensurePlayerBirthYearFromAge(ch);
                     if (ch.isPlayable !== true) ch.isPlayable = true;
                     // Initialize discoveredLocations for backwards compatibility
                     if (!Array.isArray(ch.discoveredLocations)) {
@@ -2347,6 +2487,7 @@
                         }
                     }
                 } catch {}
+                try { ensurePlayerBirthYearFromAge(activeChar); } catch {}
 
                 // Time & Location
                 updateHeaderTime();
@@ -3954,7 +4095,7 @@ Example:
                 const gender = activeChar.gender || "";
                 const age = activeChar.age ? `${activeChar.age}` : "";
                 const bdObj = readBirthdate(activeChar);
-                if (bdObj) activeChar.birthdate = { day: bdObj.day, month: bdObj.month };
+                if (bdObj) activeChar.birthdate = bdObj.year ? { day: bdObj.day, month: bdObj.month, year: bdObj.year } : { day: bdObj.day, month: bdObj.month };
                 const bd = formatBirthdate(bdObj);
                 const app = activeChar.appearance || "";
                 let lines = [];
@@ -6455,7 +6596,10 @@ Example:
 
                 const char = loadLatestCharacter();
                 if (char) {
+                    // Load Family Born data if available
+                    loadFamilyBornData(char);
                     applyCharacter(char);
+                    
                     clearExpiredLocationEvents();
                     try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                     loadStoryLog();

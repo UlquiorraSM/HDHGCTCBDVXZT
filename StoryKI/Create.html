@@ -2895,6 +2895,12 @@
                         </button>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Family Race</label>
+                        <select class="form-select" id="f-family-race">
+                            <option value="">Select race...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Spawn Location</label>
                         <select class="form-select" id="f-family-spawn-location">
                             <option value="">Select spawn location...</option>
@@ -3282,12 +3288,49 @@
                 </div>
 
                 <div class="form-group" id="description-group">
-                    <label class="form-label">Description</label>
+                    <label class="form-label" id="description-label">Description</label>
                     <textarea
                         class="form-textarea"
                         id="f-description"
                         placeholder="Describe this entry..."
                     ></textarea>
+                </div>
+
+                <!-- Family Introduction & Date (Family only) -->
+                <div id="family-intro-section" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">Introduction</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-family-introduction"
+                            placeholder="Enter family introduction..."
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Starting Date</label>
+                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                            <input type="number" class="form-input" id="f-family-day" placeholder="DD" min="1" max="31" style="width:60px; text-align:center;">
+                            <select class="form-input" id="f-family-month" style="flex:1;">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                            <input type="number" class="form-input" id="f-family-year" placeholder="YYYY" style="width:80px; text-align:center;">
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="time" class="form-input" id="f-family-time" style="width:120px;">
+                            <span style="font-size:12px; opacity:0.6;">Starting Time</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Location Tags (Building & Custom only) -->
@@ -4156,6 +4199,18 @@
             }
             function populateRaceSelect() {
                 const sel = document.getElementById("f-char-race");
+                if (!sel) return;
+                const races = getRaceCards();
+                sel.innerHTML = `<option value="">Select race...</option>`;
+                races.forEach(r => {
+                    const opt = document.createElement("option");
+                    opt.value = r.id;
+                    opt.textContent = r.title || r.id;
+                    sel.appendChild(opt);
+                });
+            }
+            function populateFamilyRaceSelect() {
+                const sel = document.getElementById("f-family-race");
                 if (!sel) return;
                 const races = getRaceCards();
                 sel.innerHTML = `<option value="">Select race...</option>`;
@@ -5482,7 +5537,13 @@
                     // Load family data BEFORE setting type (to avoid race condition with onTypeChange)
                     if (card.genre === "family") {
                         familyMembersTemp = Array.isArray(card.familyMembers) ? [...card.familyMembers] : [];
-                        // Populate spawn locations first, then load saved value
+                        populateFamilyRaceSelect();
+                        if (card.familyRaceId) {
+                            setTimeout(() => {
+                                const familyRaceEl = document.getElementById("f-family-race");
+                                if (familyRaceEl) familyRaceEl.value = card.familyRaceId;
+                            }, 0);
+                        }
                         populateFamilySpawnLocations();
                         if (card.spawnLocationId) {
                             setTimeout(() => {
@@ -5492,6 +5553,19 @@
                                     updateFamilySpawnDisplay();
                                 }
                             }, 0);
+                        }
+                        // Load introduction and start date
+                        const introEl = document.getElementById("f-family-introduction");
+                        const dayEl = document.getElementById("f-family-day");
+                        const monthEl = document.getElementById("f-family-month");
+                        const yearEl = document.getElementById("f-family-year");
+                        const timeEl = document.getElementById("f-family-time");
+                        if (introEl) introEl.value = card.introduction || "";
+                        if (card.startDate) {
+                            if (dayEl) dayEl.value = card.startDate.day || "";
+                            if (monthEl) monthEl.value = card.startDate.month || "1";
+                            if (yearEl) yearEl.value = card.startDate.year || "";
+                            if (timeEl) timeEl.value = card.startDate.time || "08:00";
                         }
                     } else {
                         familyMembersTemp = [];
@@ -5847,6 +5921,19 @@
                 updateLoreSummary();
                 updateFamilyMembersTags();
                 skincolorData = [];
+                // Reset family fields
+                const introEl = document.getElementById("f-family-introduction");
+                const dayEl = document.getElementById("f-family-day");
+                const monthEl = document.getElementById("f-family-month");
+                const yearEl = document.getElementById("f-family-year");
+                const timeEl = document.getElementById("f-family-time");
+                if (introEl) introEl.value = "";
+                if (dayEl) dayEl.value = "";
+                if (monthEl) monthEl.value = "1";
+                if (yearEl) yearEl.value = "";
+                if (timeEl) timeEl.value = "08:00";
+                const familyRaceEl = document.getElementById("f-family-race");
+                if (familyRaceEl) familyRaceEl.value = "";
                 updateSkincolorSummary();
                 resetCharacterFields();
                 raceTags = [];
@@ -5940,6 +6027,7 @@
                     type === "family" ? "block" : "none";
                 if (type === "family") {
                     updateFamilyMembersTags();
+                    populateFamilyRaceSelect();
                     populateFamilySpawnLocations();
                 }
 
@@ -5953,7 +6041,18 @@
 
                 // Show / hide Description at bottom
                 const descGrp = document.getElementById("description-group");
-                if (descGrp) descGrp.style.display = (type === "character" || type === "lore" || type === "species" || type === "system") ? "none" : "block";
+                const familyIntro = document.getElementById("family-intro-section");
+                const descLabel = document.getElementById("description-label");
+                if (descGrp) {
+                    if (type === "family") {
+                        descGrp.style.display = "none";
+                        if (familyIntro) familyIntro.style.display = "block";
+                    } else {
+                        descGrp.style.display = (type === "character" || type === "lore" || type === "species" || type === "system") ? "none" : "block";
+                        if (familyIntro) familyIntro.style.display = "none";
+                        if (descLabel) descLabel.textContent = "Description";
+                    }
+                }
 
                 // Show / hide Species XP group based on Level System availability
                 updateSpeciesXpVisibility();
@@ -8236,6 +8335,14 @@
                     type === "character" && raceId
                         ? ((getCards().find(c => c.id === raceId) || {}).title || "")
                         : "";
+                const familyRaceId =
+                    type === "family"
+                        ? (document.getElementById("f-family-race")?.value || "")
+                        : "";
+                const familyRaceName =
+                    type === "family" && familyRaceId
+                        ? ((getCards().find(c => c.id === familyRaceId) || {}).title || "")
+                        : "";
                 const status =
                     type === "character"
                         ? (document.getElementById("f-char-status").value || "Alive")
@@ -8444,6 +8551,10 @@
                             relations: type === "character" ? [...relationSelections] : [],
                             ...(type === "family" ? { familyMembers: [...familyMembersTemp] } : {}),
                             ...(type === "family" ? { spawnLocationId: document.getElementById("f-family-spawn-location")?.value || "" } : {}),
+                            ...(type === "family" ? { familyRaceId: familyRaceId } : {}),
+                            ...(type === "family" ? { familyRaceName: familyRaceName } : {}),
+                            ...(type === "family" ? { introduction: document.getElementById("f-family-introduction")?.value || "" } : {}),
+                            ...(type === "family" ? { startDate: { day: parseInt(document.getElementById("f-family-day")?.value) || 1, month: parseInt(document.getElementById("f-family-month")?.value) || 1, year: parseInt(document.getElementById("f-family-year")?.value) || new Date().getFullYear(), time: document.getElementById("f-family-time")?.value || "08:00" } } : {}),
                             updatedAt: new Date().toISOString(),
                         };
                         cards[idx] = baseUpdate;
@@ -8459,6 +8570,10 @@
                         title: name,
                         ...(type === "family" ? { familyMembers: [...familyMembersTemp] } : {}),
                         ...(type === "family" ? { spawnLocationId: document.getElementById("f-family-spawn-location")?.value || "" } : {}),
+                        ...(type === "family" ? { familyRaceId: familyRaceId } : {}),
+                        ...(type === "family" ? { familyRaceName: familyRaceName } : {}),
+                        ...(type === "family" ? { introduction: document.getElementById("f-family-introduction")?.value || "" } : {}),
+                        ...(type === "family" ? { startDate: { day: parseInt(document.getElementById("f-family-day")?.value) || 1, month: parseInt(document.getElementById("f-family-month")?.value) || 1, year: parseInt(document.getElementById("f-family-year")?.value) || new Date().getFullYear(), time: document.getElementById("f-family-time")?.value || "08:00" } } : {}),
                         genre: type,
                         locationSub,
                         locationDetail,
