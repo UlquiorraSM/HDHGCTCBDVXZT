@@ -1099,6 +1099,8 @@
             const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
             console.log('[DEBUG] Total cards:', cards.length);
             console.log('[DEBUG] Cards:', cards.map(c => ({ genre: c.genre, title: c.title })));
+            const systemCard = cards.find(c => c.genre === 'system');
+            const allowCreateNewCharacter = systemCard?.systemConfig?.createNewCharacterEnabled !== false;
             
             // Check for families (any)
             const allFamilies = cards.filter(c => c.genre === 'family');
@@ -1117,6 +1119,11 @@
             if (familyCard) {
                 familyCard.style.display = families.length > 0 ? 'flex' : 'none';
                 console.log('[DEBUG] Family card display set to:', familyCard.style.display);
+            }
+            const createNewCard = document.getElementById('menu-create-new');
+            if (createNewCard) {
+                createNewCard.style.display = allowCreateNewCharacter ? 'flex' : 'none';
+                console.log('[DEBUG] Create New Character card display set to:', createNewCard.style.display);
             }
             
             // Check for playable characters

@@ -3001,6 +3001,13 @@
                 <div id="system-block" style="display: none">
                     <div class="form-group">
                         <label class="form-label">System Settings</label>
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:10px 12px; border:1px solid rgba(255,255,255,.1); border-radius:10px; background:rgba(255,255,255,.03);">
+                            <span style="color:#fff; font-size:13px;">Create new Character</span>
+                            <label class="switch" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="checkbox" id="system-create-character-enabled" checked>
+                                <span style="color:rgba(255,255,255,.7); font-size:12px;">Enabled</span>
+                            </label>
+                        </div>
                         <div class="tools-row" id="system-level-btn-row">
                             <button
                                 type="button"
@@ -6517,15 +6524,18 @@
                 const type = document.getElementById("f-type").value;
                 if (type !== "system") return null;
 
+                const createNewCharacterEnabled = document.getElementById("system-create-character-enabled")?.checked !== false;
                 const levelSystemEnabled = document.getElementById("level-system-enabled").checked;
                 if (!levelSystemEnabled) {
                     return {
-                        levelSystemEnabled: false
+                        levelSystemEnabled: false,
+                        createNewCharacterEnabled
                     };
                 }
 
                 return {
                     levelSystemEnabled: true,
+                    createNewCharacterEnabled,
                     levelMin: parseInt(document.getElementById("level-min").value) || 1,
                     levelMax: parseInt(document.getElementById("level-max").value) || 100,
                     expBase: parseInt(document.getElementById("exp-base").value) || 100,
@@ -6537,12 +6547,17 @@
                 if (card.genre !== "system") return;
 
                 // Reset UI
+                const createBtnToggle = document.getElementById("system-create-character-enabled");
+                if (createBtnToggle) createBtnToggle.checked = true;
                 document.getElementById("level-system-enabled").checked = false;
                 document.getElementById("level-minmax-section").style.display = "none";
                 document.getElementById("exp-settings-section").style.display = "none";
 
                 // Get systemConfig from card
                 const config = card.systemConfig;
+                if (createBtnToggle) {
+                    createBtnToggle.checked = config?.createNewCharacterEnabled !== false;
+                }
                 if (config && config.levelSystemEnabled) {
                     document.getElementById("level-system-enabled").checked = true;
                     document.getElementById("level-minmax-section").style.display = "block";
