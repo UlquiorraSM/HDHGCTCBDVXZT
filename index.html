@@ -4023,6 +4023,15 @@
                             set("loreText", card.loreText);
                             set("loreMode", card.loreMode);
                             set("tags", card.tags);
+                        } else if (g === "family") {
+                            set("familyMembers", Array.isArray(card.familyMembers) ? card.familyMembers : []);
+                            set("spawnLocationId", card.spawnLocationId);
+                            set("familyRaceId", card.familyRaceId);
+                            set("familyRaceName", card.familyRaceName);
+                            set("introduction", card.introduction);
+                            set("startDate", card.startDate);
+                        } else if (g === "system") {
+                            set("systemConfig", card.systemConfig);
                         } else if (g === "character") {
                             set("firstName", card.firstName);
                             set("lastName", card.lastName);
@@ -4256,6 +4265,15 @@
                         set("loreText", card.loreText);
                         set("loreMode", card.loreMode);
                         set("tags", card.tags);
+                    } else if (g === "family") {
+                        set("familyMembers", Array.isArray(card.familyMembers) ? card.familyMembers : []);
+                        set("spawnLocationId", card.spawnLocationId);
+                        set("familyRaceId", card.familyRaceId);
+                        set("familyRaceName", card.familyRaceName);
+                        set("introduction", card.introduction);
+                        set("startDate", card.startDate);
+                    } else if (g === "system") {
+                        set("systemConfig", card.systemConfig);
                     } else if (g === "character") {
                         set("firstName", card.firstName);
                         set("lastName", card.lastName);
