@@ -2092,11 +2092,27 @@
                BACKGROUND
             ═══════════════════════════════════════ */
             function loadBackground() {
-                const raw = Storage.get(SETTINGS_KEY);
-                let url = raw
-                    ? JSON.parse(raw).backgroundUrl ||
-                      "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp"
-                    : "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
+                const fallback = "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
+                let url = fallback;
+                // Priority 1: global settings background
+                try {
+                    const raw = Storage.get(SETTINGS_KEY);
+                    const settingsBg = raw ? (JSON.parse(raw).backgroundUrl || "") : "";
+                    if (typeof settingsBg === "string" && settingsBg.trim()) {
+                        url = settingsBg.trim();
+                    }
+                } catch {}
+                // Priority 2: world configured background URL (index -> Configure World)
+                try {
+                    const selectedWorldId = Storage.get(SELECTED_WORLD_ID_KEY);
+                    const scenarios = getScenariosLocal();
+                    const world = scenarios.find((s) => !s.worldId && s.id === selectedWorldId);
+                    const worldBg = world?.data?.settings?.backgroundUrl || "";
+                    if (typeof worldBg === "string" && worldBg.trim()) {
+                        url = worldBg.trim();
+                    }
+                } catch {}
+                // Priority 3: current location background
                 try {
                     if (currentLocationId) {
                         const cards = getCards();

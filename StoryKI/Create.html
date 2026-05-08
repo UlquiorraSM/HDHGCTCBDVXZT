@@ -3306,6 +3306,14 @@
                 <!-- Family Introduction & Date (Family only) -->
                 <div id="family-intro-section" style="display:none;">
                     <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-family-description"
+                            placeholder="Enter family description..."
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Introduction</label>
                         <textarea
                             class="form-textarea"
@@ -5562,11 +5570,13 @@
                             }, 0);
                         }
                         // Load introduction and start date
+                        const descEl = document.getElementById("f-family-description");
                         const introEl = document.getElementById("f-family-introduction");
                         const dayEl = document.getElementById("f-family-day");
                         const monthEl = document.getElementById("f-family-month");
                         const yearEl = document.getElementById("f-family-year");
                         const timeEl = document.getElementById("f-family-time");
+                        if (descEl) descEl.value = card.description || "";
                         if (introEl) introEl.value = card.introduction || "";
                         if (card.startDate) {
                             if (dayEl) dayEl.value = card.startDate.day || "";
@@ -5929,11 +5939,13 @@
                 updateFamilyMembersTags();
                 skincolorData = [];
                 // Reset family fields
+                const descEl = document.getElementById("f-family-description");
                 const introEl = document.getElementById("f-family-introduction");
                 const dayEl = document.getElementById("f-family-day");
                 const monthEl = document.getElementById("f-family-month");
                 const yearEl = document.getElementById("f-family-year");
                 const timeEl = document.getElementById("f-family-time");
+                if (descEl) descEl.value = "";
                 if (introEl) introEl.value = "";
                 if (dayEl) dayEl.value = "";
                 if (monthEl) monthEl.value = "1";
@@ -8199,6 +8211,9 @@
                 let desc = document
                     .getElementById("f-description")
                     .value.trim();
+                if (type === "family") {
+                    desc = document.getElementById("f-family-description")?.value.trim() || "";
+                }
 
                 if (!name || !type) {
                     showToast("Please fill in Name and Type.", "#c04040");
