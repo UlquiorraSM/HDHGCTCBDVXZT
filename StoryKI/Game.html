@@ -6620,13 +6620,14 @@ Example:
 
                 const char = loadLatestCharacter();
                 if (char) {
+                    // Load story log FIRST so loadFamilyBornData can check for existing progress
+                    loadStoryLog();
                     // Load Family Born data if available
                     loadFamilyBornData(char);
                     applyCharacter(char);
                     
                     clearExpiredLocationEvents();
                     try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
-                    loadStoryLog();
                     // Restore any pending message from previous session
                     restorePendingInput();
                     // Restore relations layout preference

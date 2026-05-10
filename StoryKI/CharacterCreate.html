@@ -1063,9 +1063,14 @@
                 createdAt: new Date().toISOString()
             };
             
-            // Save character
+            // Save character to storycards
             cards.push(newChar);
             sessionStorage.setItem('storyki_storycards', JSON.stringify(cards));
+            
+            // Also save to characters list for rejoin (so loadLatestCharacter can find it)
+            const chars = JSON.parse(sessionStorage.getItem('storyki_characters') || '[]');
+            chars.push(newChar);
+            sessionStorage.setItem('storyki_characters', JSON.stringify(chars));
             
             // Clear old chat history so introduction is shown as first message
             sessionStorage.removeItem('storyki_storylog');
