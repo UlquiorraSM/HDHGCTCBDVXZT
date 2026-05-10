@@ -2347,15 +2347,23 @@
                     const selectedData = JSON.parse(sessionStorage.getItem("storyki_selected_char") || "null");
                     if (!selectedData || !selectedData.isFamilyBorn) return;
                     
-                    console.log("[FamilyBorn] Loading family data...", selectedData);
-                    // Family-born should always start with a fresh log so family intro becomes first message.
-                    try {
-                        chatHistory = [];
-                        Storage.remove(LOG_KEY);
-                    } catch {}
+                    // Check if this is a fresh start or a reload with existing progress
+                    const existingLog = Storage.get(LOG_KEY);
+                    const hasExistingProgress = existingLog && JSON.parse(existingLog).length > 0;
                     
-                    // Apply family data to character
-                    if (selectedData.familyData) {
+                    console.log("[FamilyBorn] Loading family data...", selectedData, "hasExistingProgress:", hasExistingProgress);
+                    
+                    // Only clear chat history for fresh starts (no existing progress)
+                    if (!hasExistingProgress) {
+                        // Family-born should always start with a fresh log so family intro becomes first message.
+                        try {
+                            chatHistory = [];
+                            Storage.remove(LOG_KEY);
+                        } catch {}
+                    }
+                    
+                    // Apply family data to character only on first load
+                    if (!hasExistingProgress && selectedData.familyData) {
                         const family = selectedData.familyData;
                         
                         // Force family introduction as opening message for born-in-family flow.
