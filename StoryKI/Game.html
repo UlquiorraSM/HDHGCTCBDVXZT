@@ -1702,13 +1702,22 @@
                 if (!d.year) d.year = 1983;
                 if (!d.time) d.time = "00:00";
 
-                const tagPattern = /\[\[(.*?)\]\]/g;
+                const tagPattern = /\[\[([\s\S]*?)\]\]/g;
                 let match;
                 let timeChanged = false;
                 let locationChanged = false;
                 let npcDeathsChanged = false;
                 // Reset pending memory targets for this response
                 window._pendingMemoryTargets = [];
+                const sanitizeTagValue = (v) => {
+                    if (v == null) return "";
+                    let out = String(v);
+                    out = out.replace(/\]\]\s*\[\[[\s\S]*$/g, "");
+                    out = out.replace(/\]\][\s\S]*$/g, "");
+                    out = out.trim();
+                    out = out.replace(/^["']+/, "").replace(/["']+$/, "");
+                    return out.trim();
+                };
 
                 while ((match = tagPattern.exec(text)) !== null) {
                     const content = match[1].trim();
@@ -1883,7 +1892,7 @@
 
                         const locKV = part.match(/^(Location|Loc)\s*:\s*["']?(.+?)["']?$/i);
                         if (locKV) {
-                            const locName = locKV[2].trim();
+                            const locName = sanitizeTagValue(locKV[2]);
                             updateLocation(locName);
                             locationChanged = true;
                             continue;
@@ -1900,11 +1909,10 @@
                     }
                 }
 
-                // Parse final metadata block [[TIME: HH:MM, LOCATION: "Exact Name"]]
-                const metaMatch = text.match(/\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})\s*,\s*LOCATION\s*:\s*["']?(.+?)["']?\s*\]\]\s*$/i);
+                const metaMatch = text.match(/\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})(?:\s*,\s*LOCATION\s*:\s*["']?(.+?)["']?)?\s*\]\]\s*$/i);
                 if (metaMatch) {
                     const tStr = metaMatch[1];
-                    const locStr = metaMatch[2];
+                    const locStr = sanitizeTagValue(metaMatch[2]);
                     if (/^\d{1,2}:\d{2}$/.test(tStr)) {
                         d.time = tStr;
                         timeChanged = true;
@@ -1934,7 +1942,7 @@
                     updatePresentNPCs();
                 }
 
-                return text.replace(/\[\[.*?\]\]/g, "").replace(/\s+/g, " ").trim();
+                return text.replace(/\[\[[\s\S]*?\]\]/g, "").replace(/\s+/g, " ").trim();
             }
 
             function handleCommand(key, val) {
@@ -5527,6 +5535,20 @@ Example:
                 
                 const presentNpcIds = getPresentNpcIds();
                 const cards = getCards();
+                const d = activeChar?.startingDate || {};
+                const curTime = d.time || "00:00";
+                const curLocName = (document.getElementById("header-location")?.textContent || "Unknown Location").trim();
+                const lastStoryLines = chatHistory
+                    .slice(-5)
+                    .map(e => {
+                        if (!e) return "";
+                        if (typeof e === "string") return e;
+                        const sender = e.sender || "Unknown";
+                        const t = (e.text || "").trim();
+                        return `${sender}: ${t}`;
+                    })
+                    .filter(Boolean)
+                    .join("\n");
                 
                 // Build validation prompt
                 const presentNpcInfo = presentNpcIds.map(id => {
@@ -5541,16 +5563,22 @@ Example:
 ${narrationText}
 
 # CURRENT CONTEXT:
+- Current Time: ${curTime}
+- Current Location: ${curLocName}
 - Present NPCs: ${presentNpcInfo || "None"}
 - Player said: "${playerInput || "N/A"}"
+- Last 5 Story Log messages (most recent context):
+${lastStoryLines || "(empty)"}
 
 # YOUR TASK:
 Check if the narration has these tags and if they are CORRECT:
 
-1. **[[TIME: HH:MM, LOCATION: "Name"]]** - MUST exist at the END
-   - Format must be EXACT: [[TIME: 14:15, LOCATION: "Forest"]]
+1. **[[TIME: HH:MM]]** - MUST exist at the END (FINAL TAG)
+   - Format must be EXACT: [[TIME: 14:15]]
    - Time must be valid (00:00-23:59)
-   - Location must match current location
+   - If the narration changed the location, include LOCATION in the FINAL tag like:
+     [[TIME: 14:15, LOCATION: "Forest"]]
+   - If LOCATION equals Current Location, REMOVE the LOCATION part (do not output it)
 
 2. **[[Memory: ID1,ID2,ID3]]** - Should exist if NPCs acted
    - IDs must be from Present NPCs list above
@@ -5568,6 +5596,9 @@ Check if the narration has these tags and if they are CORRECT:
 - DO NOT change the narration text itself, ONLY the tags
 - DO NOT add new narrative content
 - Return the COMPLETE text with corrected tags
+- Every tag must be a complete separate block: [[...]] (never merge tags)
+- Put all non-TIME tags BEFORE the final [[TIME: ...]] tag
+- Close all quotes and close all brackets correctly
 
 # RESPONSE:
 Return ONLY the corrected narration with tags. No explanations.`;
@@ -5588,7 +5619,14 @@ Return ONLY the corrected narration with tags. No explanations.`;
                         console.warn("[Validation] No TIME tag found in validation response, using original");
                         return narrationText;
                     }
-                    
+                    try {
+                        const normLoc = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+                        const curNorm = normLoc(curLocName);
+                        cleaned = cleaned.replace(/\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})\s*,\s*LOCATION\s*:\s*["']?([^\]\r\n]+?)["']?\s*\]\]/ig, (m, time, loc) => {
+                            if (normLoc(loc) === curNorm) return `[[TIME: ${time}]]`;
+                            return m;
+                        });
+                    } catch {}
                     return cleaned;
                 } catch (e) {
                     console.error("[Validation] Error during validation", e);
@@ -5691,7 +5729,6 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
-                    removeTypingIndicator();
                     
                     // ═════════════════════════════════════════════════════════════════
                     // VALIDATION PHASE: Second AI checks and fixes tags BEFORE processing
@@ -5722,10 +5759,24 @@ Return ONLY the corrected narration with tags. No explanations.`;
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
                             const finalPrompt2 = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                             const response2 = await askAIWithRetry(finalPrompt2);
-                            const clean2 = processAICommands(response2);
+                            let validatedResponse2 = response2;
+                            const hasNsfwTag2 = response2 && /\[\[\s*NSFW\s*\]\]/i.test(response2);
+                            if (response2 && !hasNsfwTag2) {
+                                try {
+                                    const validated2 = await validateAndFixNarration(response2, text);
+                                    if (validated2 && validated2 !== response2) {
+                                        console.log("[Validation] Duplicate-avoidance text was corrected by validation AI");
+                                        validatedResponse2 = validated2;
+                                    }
+                                } catch (validationErr) {
+                                    console.warn("[Validation] Duplicate-avoidance validation failed, using original text", validationErr);
+                                }
+                            }
+                            const clean2 = processAICommands(validatedResponse2);
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
+                    removeTypingIndicator();
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
                     if (finalText !== NSFW_BLOCKED_TEXT) {
@@ -5739,6 +5790,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     // No error bubble displayed to user
                     console.error("Message failed even with retries (unexpected)", err);
                 } finally {
+                    removeTypingIndicator();
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
@@ -5882,7 +5934,6 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
-                    removeTypingIndicator();
                     let validatedResponse = r;
                     const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
                     if (r && !hasNsfwTag) {
@@ -5923,6 +5974,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
+                    removeTypingIndicator();
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
                     if (finalText !== NSFW_BLOCKED_TEXT) {
@@ -5934,6 +5986,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     // No error bubble displayed to user
                     console.error("Retry failed even with retries (unexpected)", e);
                 } finally {
+                    removeTypingIndicator();
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
@@ -5960,7 +6013,6 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
-                    removeTypingIndicator();
                     let validatedResponse = r;
                     const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
                     if (r && !hasNsfwTag) {
@@ -6001,6 +6053,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
+                    removeTypingIndicator();
                     appendBubble("ai", finalText);
                     const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
                     if (finalText !== NSFW_BLOCKED_TEXT) {
@@ -6012,6 +6065,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     // No error bubble displayed to user
                     console.error("Continue failed even with retries (unexpected)", e);
                 } finally {
+                    removeTypingIndicator();
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
