@@ -397,6 +397,43 @@
                 margin-top: -8px;
             }
 
+            .retry-switcher {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 6px;
+                padding: 6px 10px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                user-select: none;
+            }
+            .retry-switcher-btn {
+                width: 28px;
+                height: 22px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: rgba(255, 255, 255, 0.06);
+                color: rgba(255, 255, 255, 0.85);
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 800;
+            }
+            .retry-switcher-btn:disabled {
+                opacity: 0.35;
+                cursor: default;
+            }
+            .retry-switcher-count {
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+                color: rgba(255, 255, 255, 0.55);
+                min-width: 52px;
+                text-align: center;
+            }
+
             .msg-sender {
                 font-size: 10px;
                 font-weight: 700;
@@ -1537,7 +1574,7 @@
                 }
             }
 
-            function addToStoryLog(sender, text, tsOverride = null) {
+            function addToStoryLog(sender, text, tsOverride = null, extra = null) {
                 const d = activeChar?.startingDate || {};
                 const day = String(d.day || 1).padStart(2, "0");
                 const mon = String(d.month || 1).padStart(2, "0");
@@ -1555,7 +1592,8 @@
                     time: tm,
                     location: loc,
                     timestamp: tsOverride || Date.now(),
-                    ...(levelData ? { levelData: { ...levelData } } : {})
+                    ...(levelData ? { levelData: { ...levelData } } : {}),
+                    ...(extra && typeof extra === "object" ? extra : {})
                 };
 
                 chatHistory.push(entry);
@@ -5635,6 +5673,148 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 }
             }
 
+            let _retryVariantSession = null;
+            function _removeRetrySwitcherUI() {
+                try {
+                    document.querySelectorAll(".retry-switcher").forEach(el => el.remove());
+                } catch {}
+            }
+            function clearRetryVariantSession() {
+                _retryVariantSession = null;
+                _removeRetrySwitcherUI();
+            }
+            function _getLastNarratorEntryIndex() {
+                for (let i = chatHistory.length - 1; i >= 0; i--) {
+                    const e = chatHistory[i];
+                    if (e && typeof e === "object" && e.sender === "Narrator") return i;
+                }
+                return -1;
+            }
+            function _getRetrySlotKey() {
+                const narrIdx = _getLastNarratorEntryIndex();
+                if (narrIdx <= 0) return null;
+                for (let i = narrIdx - 1; i >= 0; i--) {
+                    const e = chatHistory[i];
+                    if (e && typeof e === "object" && e.sender !== "Narrator") return e.timestamp || null;
+                }
+                return null;
+            }
+            function _getLastNarratorRowEl() {
+                const messagesEl = document.getElementById("messages");
+                if (!messagesEl) return null;
+                const rows = Array.from(messagesEl.querySelectorAll(".msg-row.ai")).filter(r => r && r.id !== "typing-row");
+                return rows.length ? rows[rows.length - 1] : null;
+            }
+            function _buildFallbackRawFromEntry(entry) {
+                const t = String(entry?.text || "").trim();
+                const time = String(entry?.time || "00:00").trim();
+                const loc = String(entry?.location || "").trim();
+                if (loc) return `${t}\n\n[[TIME: ${time}, LOCATION: "${loc}"]]`;
+                return `${t}\n\n[[TIME: ${time}]]`;
+            }
+            function ensureRetryVariantSessionForLatestNarrator() {
+                const narrIdx = _getLastNarratorEntryIndex();
+                if (narrIdx === -1) return null;
+                const entry = chatHistory[narrIdx];
+                const slotKey = _getRetrySlotKey();
+                if (!slotKey) return null;
+                if (_retryVariantSession && _retryVariantSession.slotKey !== slotKey) {
+                    clearRetryVariantSession();
+                }
+                if (!_retryVariantSession) {
+                    _retryVariantSession = { slotKey, variants: [], selectedIndex: 0 };
+                }
+                const existing = _retryVariantSession.variants.some(v => v && v.ts === entry.timestamp);
+                if (!existing) {
+                    const rawAi = entry.rawAi ? String(entry.rawAi) : _buildFallbackRawFromEntry(entry);
+                    _retryVariantSession.variants.push({ ts: entry.timestamp, rawAi, displayText: String(entry.text || "") });
+                    _retryVariantSession.selectedIndex = _retryVariantSession.variants.length - 1;
+                }
+                return _retryVariantSession;
+            }
+            function addRetryVariant(ts, rawAi, displayText) {
+                if (!_retryVariantSession) return;
+                const exists = _retryVariantSession.variants.some(v => v && v.ts === ts);
+                if (!exists) {
+                    _retryVariantSession.variants.push({ ts, rawAi: String(rawAi || ""), displayText: String(displayText || "") });
+                }
+                _retryVariantSession.selectedIndex = Math.max(0, _retryVariantSession.variants.findIndex(v => v && v.ts === ts));
+            }
+            async function applyRetryVariantIndex(newIndex) {
+                if (isBusy) return;
+                if (!_retryVariantSession) return;
+                const total = _retryVariantSession.variants.length;
+                if (total < 2) return;
+                if (newIndex < 0 || newIndex >= total) return;
+                const target = _retryVariantSession.variants[newIndex];
+                if (!target) return;
+                const narrIdx = _getLastNarratorEntryIndex();
+                if (narrIdx === -1) return;
+                const currentEntry = chatHistory[narrIdx];
+                const currentTs = currentEntry?.timestamp;
+                isBusy = true;
+                setSendDisabled(true);
+                setStatus(false);
+                lockAllButtons();
+                try {
+                    const messagesEl = document.getElementById("messages");
+                    const row = _getLastNarratorRowEl();
+                    if (row) row.remove();
+                    if (currentTs) rollbackAnchoredChangesByTs(currentTs);
+                    chatHistory.splice(narrIdx, 1);
+                    saveStoryLog();
+                    rollbackToLastWorldState();
+                    currentNarrationTs = target.ts;
+                    const clean = processAICommands(target.rawAi);
+                    const finalText = clean === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : String(target.displayText || "");
+                    appendBubble("ai", finalText);
+                    const ts = addToStoryLog("Narrator", finalText, target.ts, { rawAi: String(target.rawAi || "") });
+                    if (finalText !== NSFW_BLOCKED_TEXT) {
+                        addNpcMemoriesFromPending(finalText, ts);
+                        addLocationMemoryFromNarration(finalText, ts);
+                        try { extractAndTrackMentionedNpcs(finalText); } catch {}
+                    }
+                    _retryVariantSession.selectedIndex = newIndex;
+                    updateRetrySwitcherUI();
+                } catch (e) {
+                    console.error("applyRetryVariantIndex failed", e);
+                } finally {
+                    currentNarrationTs = null;
+                    isBusy = false;
+                    setSendDisabled(false);
+                    setStatus(true);
+                    unlockAllButtons();
+                }
+            }
+            function updateRetrySwitcherUI() {
+                _removeRetrySwitcherUI();
+                if (!_retryVariantSession) return;
+                const total = _retryVariantSession.variants.length;
+                if (total < 2) return;
+                const row = _getLastNarratorRowEl();
+                if (!row) return;
+                const bar = document.createElement("div");
+                bar.className = "retry-switcher";
+                const left = document.createElement("button");
+                left.className = "retry-switcher-btn";
+                left.textContent = "‹";
+                const right = document.createElement("button");
+                right.className = "retry-switcher-btn";
+                right.textContent = "›";
+                const count = document.createElement("div");
+                count.className = "retry-switcher-count";
+                const idx = _retryVariantSession.selectedIndex;
+                count.textContent = `${idx + 1}/${total}`;
+                left.disabled = idx <= 0;
+                right.disabled = idx >= total - 1;
+                left.onclick = (e) => { e.stopPropagation(); applyRetryVariantIndex(idx - 1); };
+                right.onclick = (e) => { e.stopPropagation(); applyRetryVariantIndex(idx + 1); };
+                bar.appendChild(left);
+                bar.appendChild(count);
+                bar.appendChild(right);
+                row.appendChild(bar);
+            }
+
             let _pendingPreUserDividerLabel = null;
             async function sendMessage() {
                 // Execute any pending travel BEFORE sending the message
@@ -5649,6 +5829,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 const text = inputEl.value.trim();
                 if (isEditing) { showToast("Finish editing with Save or Cancel.", "rgba(180,60,60,0.85)"); return; }
                 if (!text || isBusy) return;
+                clearRetryVariantSession();
 
                 // Time set command: any H:MM or HH:MM token without quotes triggers time change
                 const timeCmd = (text.includes('"') || text.includes("'")) ? null : (text.match(/\b([01]?\d|2[0-3]):([0-5]?\d)\b/));
@@ -5750,6 +5931,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     
                     // Now process the validated response (this removes the tags)
                     let cleanResponse = processAICommands(validatedResponse);
+                    let rawAiUsed = validatedResponse;
                     
                     let finalText = "";
                     if (cleanResponse === NSFW_BLOCKED_TOKEN) {
@@ -5774,12 +5956,13 @@ Return ONLY the corrected narration with tags. No explanations.`;
                                 }
                             }
                             const clean2 = processAICommands(validatedResponse2);
+                            rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
                     removeTypingIndicator();
                     appendBubble("ai", finalText);
-                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs, { rawAi: String(rawAiUsed || "") });
                     if (finalText !== NSFW_BLOCKED_TEXT) {
                         addNpcMemoriesFromPending(finalText, ts);
                         addLocationMemoryFromNarration(finalText, ts);
@@ -5880,6 +6063,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     showToast("🔒 The first message is protected.", "rgba(180, 60, 60, 0.85)");
                     return;
                 }
+                ensureRetryVariantSessionForLatestNarrator();
                 
                 // Remove last AI message from DOM and history
                 aiRows[aiRows.length - 1].remove();
@@ -5948,6 +6132,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                             console.warn("[Validation] Retry validation failed, using original text", validationErr);
                         }
                     }
+                    let rawAiUsed = validatedResponse;
                     const cleanR = processAICommands(validatedResponse);
                     let finalText = "";
                     if (cleanR === NSFW_BLOCKED_TOKEN) {
@@ -5972,12 +6157,15 @@ Return ONLY the corrected narration with tags. No explanations.`;
                                 }
                             }
                             const clean2 = processAICommands(validatedResponse2);
+                            rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
                     removeTypingIndicator();
                     appendBubble("ai", finalText);
-                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs, { rawAi: String(rawAiUsed || "") });
+                    addRetryVariant(currentNarrationTs, rawAiUsed, finalText);
+                    updateRetrySwitcherUI();
                     if (finalText !== NSFW_BLOCKED_TEXT) {
                         addNpcMemoriesFromPending(finalText, ts);
                         addLocationMemoryFromNarration(finalText, ts);
@@ -5998,6 +6186,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
 
             document.getElementById("continue-btn").onclick = async () => {
                 if (isBusy) return;
+                clearRetryVariantSession();
                 isBusy = true;
                 setSendDisabled(true);
                 setStatus(false);
@@ -6027,6 +6216,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                             console.warn("[Validation] Continue validation failed, using original text", validationErr);
                         }
                     }
+                    let rawAiUsed = validatedResponse;
                     const cleanR = processAICommands(validatedResponse);
                     let finalText = "";
                     if (cleanR === NSFW_BLOCKED_TOKEN) {
@@ -6051,12 +6241,13 @@ Return ONLY the corrected narration with tags. No explanations.`;
                                 }
                             }
                             const clean2 = processAICommands(validatedResponse2);
+                            rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
                     removeTypingIndicator();
                     appendBubble("ai", finalText);
-                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs, { rawAi: String(rawAiUsed || "") });
                     if (finalText !== NSFW_BLOCKED_TEXT) {
                         addNpcMemoriesFromPending(finalText, ts);
                         addLocationMemoryFromNarration(finalText, ts);
@@ -6077,6 +6268,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
 
             document.getElementById("erase-btn").onclick = () => {
                 if (isBusy) return;
+                clearRetryVariantSession();
                 const messagesEl = document.getElementById("messages");
                 const rows = Array.from(messagesEl.querySelectorAll(".msg-row"));
                 if (!rows.length) return;
