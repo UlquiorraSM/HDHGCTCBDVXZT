@@ -8579,6 +8579,7 @@
                             ...(speciesXpData ? { xpReward: speciesXpData.xpReward } : {}),
                             ...(levelData ? { levelData } : {}),
                             relations: type === "character" ? [...relationSelections] : [],
+                            secrets: type === "character" ? [...secretSelections] : [],
                             ...(type === "family" ? { familyMembers: [...familyMembersTemp] } : {}),
                             ...(type === "family" ? { spawnLocationId: document.getElementById("f-family-spawn-location")?.value || "" } : {}),
                             ...(type === "family" ? { familyRaceId: familyRaceId } : {}),
@@ -8856,6 +8857,7 @@
                         if (card.isPlayable === true) set("isPlayable", true);
                         if (card.birthdate && (card.birthdate.day || card.birthdate.month)) set("birthdate", card.birthdate);
                         set("pfpUrl", card.pfpUrl);
+                        set("tags", card.tags);
                         set("relations", card.relations);
                         set("secrets", card.secrets);
                         set("skillId", card.skillId);
