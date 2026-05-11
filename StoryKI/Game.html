@@ -1712,7 +1712,7 @@
 
                 while ((match = tagPattern.exec(text)) !== null) {
                     const content = match[1].trim();
-                    // Handle NPC memory ID list tags: [[Memory:ID1:Common,ID2:Important]]
+                    // Handle NPC memory ID list tags: [[Memory:ID1,ID2,ID3]]
                     const memIdList = content.match(/^Memory\s*:\s*(.+)$/i);
                     if (memIdList) {
                         try {
@@ -1720,11 +1720,11 @@
                             const items = payload.split(/,\s*/).map(s => s.trim()).filter(Boolean);
                             const targets = [];
                             items.forEach(it => {
-                                const m = it.match(/^([A-Za-z0-9\-]+)\s*:\s*(Common|Important)$/i);
+                                // Support both new format (ID only) and legacy format (ID:Level)
+                                const m = it.match(/^([A-Za-z0-9\-]+)(?::\s*(Common|Important))?$/i);
                                 if (m) {
                                     const id = m[1].trim();
-                                    const level = (m[2] || "Common").toLowerCase() === "important" ? "Important" : "Common";
-                                    targets.push({ id, level });
+                                    targets.push({ id });
                                 }
                             });
                             window._pendingMemoryTargets = targets;
@@ -3034,7 +3034,7 @@
                 });
             }
 
-            function buildSmartCharacterContext() {
+            function buildSmartCharacterContext(playerInput = null) {
                 try {
                     const cards = getCards();
                     if (!currentLocationId) return "";
@@ -3138,13 +3138,32 @@
                             
                             // Include recent memories for present NPCs
                             if (c.memories && c.memories.length > 0) {
+                                // Get relevant memories based on player input
+                                let relevantMems = [];
+                                if (playerInput) {
+                                    const { keywords } = extractPlayerSpeechKeywords(playerInput);
+                                    const { dateFilters, dayFilters } = parseDateReferences(playerInput);
+                                    relevantMems = searchMemoriesForNpc(c, keywords, dateFilters, dayFilters);
+                                }
+                                
+                                // Always show last 3 memories as fallback
                                 const recentMems = c.memories.slice(-3);
-                                contextLines.push(`  Recent Memories:`);
-                                recentMems.forEach(m => {
-                                    const txt = m.text || m;
-                                    const lvl = m.level || "Common";
-                                    contextLines.push(`    [${lvl}] ${txt.substring(0, 80)}${txt.length > 80 ? "..." : ""}`);
-                                });
+                                
+                                if (relevantMems.length > 0) {
+                                    contextLines.push(`  RELEVANT MEMORIES (matching your question):`);
+                                    relevantMems.forEach(m => {
+                                        const txt = m.text || m;
+                                        const dateInfo = m.date || '';
+                                        contextLines.push(`    [${dateInfo}] ${txt.substring(0, 100)}${txt.length > 100 ? "..." : ""}`);
+                                    });
+                                } else if (recentMems.length > 0) {
+                                    contextLines.push(`  Recent Memories:`);
+                                    recentMems.forEach(m => {
+                                        const txt = m.text || m;
+                                        const dateInfo = m.date || '';
+                                        contextLines.push(`    [${dateInfo}] ${txt.substring(0, 80)}${txt.length > 80 ? "..." : ""}`);
+                                    });
+                                }
                             }
                             contextLines.push("");
                         });
@@ -3235,8 +3254,8 @@
             }
 
             // Legacy function - kept for compatibility
-            function buildCharacterContext() {
-                return buildSmartCharacterContext();
+            function buildCharacterContext(playerInput = null) {
+                return buildSmartCharacterContext(playerInput);
             }
 
             function buildRaceContext() {
@@ -3891,7 +3910,7 @@
                 }
             }
 
-            function buildSystemPrompt() {
+            function buildSystemPrompt(playerInput = null) {
                 const d = activeChar?.startingDate || {};
                 const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
                 const curTime = d.time || "00:00";
@@ -3901,7 +3920,7 @@
                 const curLocName = document.getElementById("header-location")?.textContent || "Unknown Location";
                 
                 const worldHierarchy = buildSmartLocationContext();
-                const charContext = buildCharacterContext();
+                const charContext = buildCharacterContext(playerInput);
                 const raceContext = buildRaceContext();
                 const speciesContext = buildSpeciesPresenceContext();
                 const playerContext = buildPlayerContext();
@@ -4067,12 +4086,11 @@ Your entire output must be in ${aiLang} - no exceptions.
 # NPC MEMORY TAGS (MANDATORY WHEN PRESENT NPCs ACT)
 - Whenever any PRESENT NPC performs an explicit action in your narration:
   - Append a single NPC memory tag BEFORE the final metadata block.
-  - Use 'Common' for everyday actions; use 'Important' for significant events (kissed, slept together, fought, confessed, etc.).
 - Syntax (IDs only; the narration will be auto-summarized for each NPC):
-  [[Memory: ID1:Common,ID2:Important,ID3:Common]]
-  - IDs are character IDs of the NPCs that acted
-  - Level: Common or Important
+  [[Memory: ID1,ID2,ID3]]
+  - IDs are character IDs of the NPCs that acted or were involved
   - A short summary (1-2 sentences) of your narration will be stored as each NPC's memory
+  - Memory includes the date, time, and location automatically
 
 # NPC DEATH TAGS (MANDATORY WHEN A RESIDENT NPC DIES)
 - If a resident NPC truly dies in the scene, append a death tag BEFORE the final metadata block.
@@ -4590,7 +4608,6 @@ Example:
                     date: dateStr,
                     time: timeStr,
                     location: loc,
-                    level: "Common",
                     dayCount: _worldDayCount(d),
                     text: String(text || "").slice(0, 800),
                     logTs: anchorTs || null
@@ -4629,6 +4646,218 @@ Example:
                 return summary;
             }
 
+            // ═════════════════════════════════════════════════════════════════
+            // NEW MEMORY SYSTEM - Keyword & Date Based Search
+            // ═════════════════════════════════════════════════════════════════
+            
+            // German to English day names mapping
+            const DAY_NAME_MAP = {
+                'montag': 'monday', 'monday': 'monday',
+                'dienstag': 'tuesday', 'tuesday': 'tuesday',
+                'mittwoch': 'wednesday', 'wednesday': 'wednesday',
+                'donnerstag': 'thursday', 'thursday': 'thursday',
+                'freitag': 'friday', 'friday': 'friday',
+                'samstag': 'saturday', 'saturday': 'saturday',
+                'sonntag': 'sunday', 'sunday': 'sunday',
+                'mo': 'monday', 'di': 'tuesday', 'mi': 'wednesday',
+                'do': 'thursday', 'fr': 'friday', 'sa': 'saturday', 'so': 'sunday'
+            };
+            
+            // German month names
+            const MONTH_NAME_MAP = {
+                'januar': 1, 'january': 1, 'jan': 1,
+                'februar': 2, 'february': 2, 'feb': 2,
+                'märz': 3, 'march': 3, 'mär': 3, 'mar': 3,
+                'april': 4, 'apr': 4,
+                'mai': 5, 'may': 5,
+                'juni': 6, 'june': 6, 'jun': 6,
+                'juli': 7, 'july': 7, 'jul': 7,
+                'august': 8, 'aug': 8,
+                'september': 9, 'sep': 9, 'sept': 9,
+                'oktober': 10, 'october': 10, 'okt': 10, 'oct': 10,
+                'november': 11, 'nov': 11,
+                'dezember': 12, 'december': 12, 'dez': 12, 'dec': 12
+            };
+            
+            // Extract keywords from player speech (text in quotes)
+            function extractPlayerSpeechKeywords(input) {
+                const keywords = new Set();
+                
+                // Extract text in quotes (both "..." and "...")
+                const quoteMatches = input.match(/[""]([^"""]+)[""]|[""]([^""]+)[""]/g);
+                if (!quoteMatches) return { keywords: [], dateFilters: [], dayFilters: [] };
+                
+                const speechText = quoteMatches.map(m => m.replace(/["""]/g, '')).join(' ').toLowerCase();
+                
+                // Extract significant words (3+ chars, not common words)
+                const stopWords = new Set(['haben', 'have', 'ich', 'i', 'du', 'you', 'bin', 'am', 'ist', 'is', 'sind', 'are', 'war', 'was', 'waren', 'were', 'ein', 'eine', 'a', 'an', 'the', 'der', 'die', 'das', 'und', 'and', 'oder', 'or', 'aber', 'but', 'nicht', 'not', 'noch', 'still', 'nochmal', 'again', 'mal', 'time', 'was', 'what', 'wie', 'how', 'wo', 'where', 'wann', 'when', 'warum', 'why', 'wer', 'who', 'welche', 'which', 'mein', 'my', 'dein', 'your', 'sein', 'his', 'ihr', 'her', 'unser', 'our', 'euer', 'your', 'ihnen', 'them', 'uns', 'us', 'ihm', 'him', 'ihr', 'her', 'es', 'it', 'dies', 'this', 'das', 'that', 'jener', 'that', 'diese', 'these', 'jene', 'those', 'hier', 'here', 'dort', 'there', 'jetzt', 'now', 'dann', 'then', 'heute', 'today', 'gestern', 'yesterday', 'morgen', 'tomorrow']);
+                
+                const words = speechText.split(/\s+/);
+                words.forEach(word => {
+                    const w = word.toLowerCase().trim();
+                    if (w.length >= 3 && !stopWords.has(w) && !/^\d+$/.test(w)) {
+                        keywords.add(w);
+                    }
+                });
+                
+                return { 
+                    keywords: Array.from(keywords),
+                    dateFilters: [],
+                    dayFilters: []
+                };
+            }
+            
+            // Parse date references from player input (e.g., "14.2", "14.02.2008", "Samstag", "Saturday")
+            function parseDateReferences(input) {
+                const dateFilters = []; // { day, month, year } or null for any
+                const dayFilters = [];  // day names like 'monday', 'saturday'
+                
+                const lowerInput = input.toLowerCase();
+                
+                // Check for day names (Samstag, Saturday, etc.)
+                Object.entries(DAY_NAME_MAP).forEach(([german, english]) => {
+                    if (lowerInput.includes(german)) {
+                        dayFilters.push(english);
+                    }
+                });
+                
+                // Check for date patterns: 14.2, 14.02, 14.2.2008, 14.02.2008
+                const datePattern1 = /\b(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?\b/g;
+                let match;
+                while ((match = datePattern1.exec(input)) !== null) {
+                    const day = parseInt(match[1]);
+                    const month = parseInt(match[2]);
+                    const year = match[3] ? parseInt(match[3]) : null;
+                    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+                        dateFilters.push({ day, month, year: year ? (year < 100 ? 2000 + year : year) : null });
+                    }
+                }
+                
+                // Check for month names (Januar, January, etc.)
+                Object.entries(MONTH_NAME_MAP).forEach(([name, monthNum]) => {
+                    if (lowerInput.includes(name)) {
+                        // Extract day number before month name if present
+                        const dayMatch = lowerInput.match(new RegExp(`(\\d{1,2})\\.?\\s*${name}`));
+                        if (dayMatch) {
+                            dateFilters.push({ day: parseInt(dayMatch[1]), month: monthNum, year: null });
+                        }
+                    }
+                });
+                
+                return { dateFilters, dayFilters };
+            }
+            
+            // Get weekday name from date
+            function getWeekdayFromDate(dateStr) {
+                try {
+                    const parts = dateStr.split('.');
+                    if (parts.length < 3) return null;
+                    const day = parseInt(parts[0]);
+                    const month = parseInt(parts[1]) - 1;
+                    const year = parseInt(parts[2]);
+                    const date = new Date(year, month, day);
+                    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                    return weekdays[date.getDay()];
+                } catch {
+                    return null;
+                }
+            }
+            
+            // Search memories by keywords and date filters
+            function searchMemoriesForNpc(npc, keywords, dateFilters, dayFilters) {
+                if (!Array.isArray(npc.memories) || npc.memories.length === 0) return [];
+                if (keywords.length === 0 && dateFilters.length === 0 && dayFilters.length === 0) return [];
+                
+                const relevantMemories = [];
+                
+                npc.memories.forEach(mem => {
+                    const memText = (mem.text || '').toLowerCase();
+                    const memDate = mem.date || '';
+                    const memDayName = getWeekdayFromDate(memDate);
+                    
+                    let score = 0;
+                    
+                    // Check keyword matches (at least one keyword must match)
+                    let keywordMatches = 0;
+                    keywords.forEach(kw => {
+                        if (memText.includes(kw)) {
+                            keywordMatches++;
+                            score += 2;
+                        }
+                    });
+                    
+                    // Check date filters
+                    dateFilters.forEach(df => {
+                        const memParts = memDate.split('.');
+                        if (memParts.length >= 2) {
+                            const memDay = parseInt(memParts[0]);
+                            const memMonth = parseInt(memParts[1]);
+                            const memYear = memParts[2] ? parseInt(memParts[2]) : null;
+                            
+                            if (df.day === memDay && df.month === memMonth) {
+                                score += 5;
+                                if (df.year && df.year === memYear) {
+                                    score += 3;
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Check day name filters
+                    dayFilters.forEach(dayName => {
+                        if (memDayName === dayName) {
+                            score += 4;
+                        }
+                    });
+                    
+                    // If keywords provided, require at least one match
+                    // If only date/day filters, require at least one match
+                    if (keywords.length > 0 && keywordMatches === 0) {
+                        return; // Skip if keywords provided but none matched
+                    }
+                    if (keywords.length === 0 && dateFilters.length === 0 && dayFilters.length === 0) {
+                        return; // Skip if no filters at all
+                    }
+                    
+                    if (score > 0) {
+                        relevantMemories.push({ ...mem, _score: score });
+                    }
+                });
+                
+                // Sort by score descending, then by date (most recent first)
+                relevantMemories.sort((a, b) => {
+                    if (b._score !== a._score) return b._score - a._score;
+                    return (b.dayCount || 0) - (a.dayCount || 0);
+                });
+                
+                return relevantMemories.slice(0, 10); // Return top 10 most relevant
+            }
+            
+            // Get relevant memories for active NPCs based on player input
+            function getRelevantMemoriesForInput(playerInput, presentNpcIds) {
+                const { keywords } = extractPlayerSpeechKeywords(playerInput);
+                const { dateFilters, dayFilters } = parseDateReferences(playerInput);
+                
+                if (keywords.length === 0 && dateFilters.length === 0 && dayFilters.length === 0) {
+                    return new Map(); // No relevant filters
+                }
+                
+                const cards = getCards();
+                const result = new Map();
+                
+                presentNpcIds.forEach(npcId => {
+                    const npc = cards.find(c => c.genre === "character" && c.id === npcId);
+                    if (!npc) return;
+                    
+                    const relevantMems = searchMemoriesForNpc(npc, keywords, dateFilters, dayFilters);
+                    if (relevantMems.length > 0) {
+                        result.set(npcId, relevantMems);
+                    }
+                });
+                
+                return result;
+            }
+
             function addNpcMemoriesFromPending(narrativeText, anchorTs = null) {
                 const targets = Array.isArray(window._pendingMemoryTargets) ? window._pendingMemoryTargets : [];
                 if (targets.length === 0) return;
@@ -4642,7 +4871,7 @@ Example:
                 const memorySummary = extractMemorySummary(narrativeText);
                 
                 let changed = false;
-                targets.forEach(({ id, level }) => {
+                targets.forEach(({ id }) => {
                     const npc = cards.find(c => c.genre === "character" && c.id === id);
                     if (!npc) return;
                     if (!Array.isArray(npc.memories)) npc.memories = [];
@@ -4650,7 +4879,6 @@ Example:
                         date: dateStr,
                         time: timeStr,
                         location: locName,
-                        level: (level || "Common"),
                         dayCount: _worldDayCount(d),
                         text: memorySummary,
                         logTs: anchorTs || null
@@ -4713,7 +4941,6 @@ Example:
                     date: dateStr,
                     time: timeStr,
                     location: locName,
-                    level: hasLocState ? "Important" : "Common",
                     dayCount: _worldDayCount(d),
                     text: String(relevantText || "").slice(0, 300), // Shorter for location
                     logTs: anchorTs || null
@@ -4851,12 +5078,15 @@ Example:
                 cards.forEach((c) => {
                     if (c.genre !== "character" || !Array.isArray(c.memories)) return;
                     const before = c.memories.length;
+                    // Keep memories from last 30 days, max 100 per NPC
                     c.memories = c.memories.filter((m) => {
-                        if ((m.level || "Common") !== "Common") return true;
                         const mc = parseCount(m);
                         if (mc == null) return true;
-                        return mc > (nowCount - 10);
+                        return mc > (nowCount - 30);
                     });
+                    if (c.memories.length > 100) {
+                        c.memories = c.memories.slice(-100);
+                    }
                     if (c.memories.length !== before) changed = true;
                 });
                 if (changed) {
@@ -5288,6 +5518,84 @@ Example:
                 }
             }
 
+            // ═════════════════════════════════════════════════════════════════
+            // VALIDATION AI - Checks and fixes tags before sending to user
+            // ═════════════════════════════════════════════════════════════════
+            async function validateAndFixNarration(narrationText, playerInput) {
+                // Skip validation if text is too short or has no potential tags
+                if (!narrationText || narrationText.length < 50) return narrationText;
+                
+                const presentNpcIds = getPresentNpcIds();
+                const cards = getCards();
+                
+                // Build validation prompt
+                const presentNpcInfo = presentNpcIds.map(id => {
+                    const npc = cards.find(c => c.genre === "character" && c.id === id);
+                    if (!npc) return null;
+                    return `${npc.title} [ID: ${npc.id}]`;
+                }).filter(Boolean).join(", ");
+                
+                const validationPrompt = `You are a VALIDATION AI. Your ONLY job is to check and fix control tags in the narration below.
+
+# NARRATION TO VALIDATE:
+${narrationText}
+
+# CURRENT CONTEXT:
+- Present NPCs: ${presentNpcInfo || "None"}
+- Player said: "${playerInput || "N/A"}"
+
+# YOUR TASK:
+Check if the narration has these tags and if they are CORRECT:
+
+1. **[[TIME: HH:MM, LOCATION: "Name"]]** - MUST exist at the END
+   - Format must be EXACT: [[TIME: 14:15, LOCATION: "Forest"]]
+   - Time must be valid (00:00-23:59)
+   - Location must match current location
+
+2. **[[Memory: ID1,ID2,ID3]]** - Should exist if NPCs acted
+   - IDs must be from Present NPCs list above
+   - Remove any :Common or :Important suffixes (old format)
+   - Only include IDs of NPCs that actually acted or were involved
+
+3. **[[LocState:key=value]]** - Check if location state changed
+   - Only add if something physical changed (door broken, item placed, etc.)
+
+4. **[[Death:ID|Cause]]** - Only if an NPC died
+
+# RULES:
+- If tags are MISSING or WRONG, add/fix them
+- If tags are CORRECT, return the text UNCHANGED
+- DO NOT change the narration text itself, ONLY the tags
+- DO NOT add new narrative content
+- Return the COMPLETE text with corrected tags
+
+# RESPONSE:
+Return ONLY the corrected narration with tags. No explanations.`;
+
+                try {
+                    const validatedResponse = await askAIWithRetry(validationPrompt);
+                    if (!validatedResponse) return narrationText;
+                    
+                    // Clean the response
+                    let cleaned = validatedResponse.trim();
+                    
+                    // Remove any markdown code blocks
+                    cleaned = cleaned.replace(/^```[\s\S]*?\n([\s\S]*?)\n?```$/g, '$1');
+                    cleaned = cleaned.replace(/^```\n?|```$/g, '');
+                    
+                    // Ensure we have a valid metadata block
+                    if (!cleaned.includes("[[TIME:")) {
+                        console.warn("[Validation] No TIME tag found in validation response, using original");
+                        return narrationText;
+                    }
+                    
+                    return cleaned;
+                } catch (e) {
+                    console.error("[Validation] Error during validation", e);
+                    return narrationText;
+                }
+            }
+
             let _pendingPreUserDividerLabel = null;
             async function sendMessage() {
                 // Execute any pending travel BEFORE sending the message
@@ -5373,7 +5681,7 @@ Example:
                 const typing = appendTypingIndicator();
                 try { updatePresentNPCs(); } catch {}
 
-                const systemInst = buildSystemPrompt();
+                const systemInst = buildSystemPrompt(text);
                 const tagMatchedContext = buildTagMatchedContext(text);
 
                 try {
@@ -5384,7 +5692,23 @@ Example:
                     
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
-                    const cleanResponse = processAICommands(response);
+                    let cleanResponse = processAICommands(response);
+                    
+                    // ═════════════════════════════════════════════════════════════════
+                    // VALIDATION PHASE: Second AI checks and fixes tags before sending
+                    // ═════════════════════════════════════════════════════════════════
+                    if (cleanResponse !== NSFW_BLOCKED_TOKEN) {
+                        try {
+                            const validatedText = await validateAndFixNarration(cleanResponse, text);
+                            if (validatedText && validatedText !== cleanResponse) {
+                                console.log("[Validation] Text was corrected by validation AI");
+                                cleanResponse = validatedText;
+                            }
+                        } catch (validationErr) {
+                            console.warn("[Validation] Validation failed, using original text", validationErr);
+                        }
+                    }
+                    
                     let finalText = "";
                     if (cleanResponse === NSFW_BLOCKED_TOKEN) {
                         finalText = NSFW_BLOCKED_TEXT;
@@ -5537,14 +5861,14 @@ Example:
                 appendTypingIndicator();
                 try { updatePresentNPCs(); } catch {}
 
-                const systemInst = buildSystemPrompt();
-                
-                // Get last user message text for tag matching (reuse lastUserEntry from above)
+                // Get last user message text for memory search and tag matching
                 const lastUserText = lastUserEntry 
                     ? (typeof lastUserEntry === 'string' 
                         ? lastUserEntry.substring(lastUserEntry.indexOf(':') + 1).trim()
                         : lastUserEntry.text)
                     : "";
+                
+                const systemInst = buildSystemPrompt(lastUserText);
                 const tagMatchedContext = buildTagMatchedContext(lastUserText);
 
                 try {
