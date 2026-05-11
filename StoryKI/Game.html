@@ -1235,8 +1235,7 @@
             const Storage = {
                 get: (key) => {
                     if (key === SETTINGS_KEY) {
-                        const val = localStorage.getItem(key);
-                        console.log("[DEBUG Storage.get] SETTINGS_KEY:", key, "Value:", val);
+                        const val = sessionStorage.getItem(key) ?? localStorage.getItem(key);
                         return val;
                     }
                     return sessionStorage.getItem(key);
@@ -1244,6 +1243,7 @@
                 set: (key, val) => {
                     if (key === SETTINGS_KEY) {
                         localStorage.setItem(key, val);
+                        sessionStorage.setItem(key, val);
                     } else {
                         sessionStorage.setItem(key, val);
                     }
@@ -1251,6 +1251,7 @@
                 remove: (key) => {
                     if (key === SETTINGS_KEY) {
                         localStorage.removeItem(key);
+                        sessionStorage.removeItem(key);
                     } else {
                         sessionStorage.removeItem(key);
                     }
@@ -1780,6 +1781,13 @@
 
             function isHardcoreModeEnabled() {
                 try {
+                    const storyId = Storage.get(CURRENT_STORY_ID_KEY);
+                    if (storyId) {
+                        const story = getScenariosLocal().find((x) => x.id === storyId);
+                        if (story?.data?.settings?.hardcoreMode != null) {
+                            return String(story.data.settings.hardcoreMode).toLowerCase() === "on";
+                        }
+                    }
                     const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
                     return String(settings.hardcoreMode || "off").toLowerCase() === "on";
                 } catch {
@@ -1792,10 +1800,26 @@
                 ['retry-btn', 'edit-btn', 'erase-btn'].forEach((id) => {
                     const btn = document.getElementById(id);
                     if (!btn) return;
-                    btn.style.display = "none";
+                    btn.hidden = true;
+                    btn.style.setProperty("display", "none", "important");
                     btn.disabled = true;
                     btn.classList.add('locked');
                 });
+            }
+
+            function isOpeningNarrationProtected() {
+                try {
+                    const messagesEl = document.getElementById("messages");
+                    if (!messagesEl) return !!isFirstMessageProtected;
+                    const aiRows = messagesEl.querySelectorAll(".msg-row.ai");
+                    if (aiRows.length !== 1) return false;
+                    const narratorEntries = chatHistory.filter(
+                        (e) => e && typeof e === "object" && e.sender === "Narrator",
+                    );
+                    return !!isFirstMessageProtected || narratorEntries.length <= 1;
+                } catch {
+                    return !!isFirstMessageProtected;
+                }
             }
 
             function processAICommands(text) {
@@ -2257,6 +2281,13 @@
             function computeSig(cards, chars, log, settings, worldId) {
                 return JSON.stringify({ w: worldId, c: cards.length, ch: chars.length, l: log.length, s: Object.keys(settings || {}).length });
             }
+            function mergeStorySettingsForSave(baseSettings, existingStorySettings) {
+                const merged = { ...(baseSettings || {}) };
+                const existing = existingStorySettings || {};
+                if (existing.coverUrl != null) merged.coverUrl = existing.coverUrl;
+                if (existing.hardcoreMode != null) merged.hardcoreMode = existing.hardcoreMode;
+                return merged;
+            }
             function ensureStoryRecord() {
                 const worldId = Storage.get(SELECTED_WORLD_ID_KEY);
                 if (!worldId) return null;
@@ -2269,6 +2300,8 @@
                 let storyId = getCurrentStoryId();
                 let story = storyId ? scenarios.find(x => x.id === storyId) : null;
                 if (!story) {
+                    const world = scenarios.find((x) => !x.worldId && x.id === worldId);
+                    const mergedStorySettings = mergeStorySettingsForSave(settings, world?.data?.settings);
                     const id = Math.random().toString(36).slice(2, 10);
                     let name = "Story " + new Date().toLocaleString();
                     if (chars.length > 0) {
@@ -2282,9 +2315,9 @@
                         name,
                         createdAt: Date.now(),
                         updatedAt: Date.now(),
-                        signature: computeSig(cards, chars, log, settings, worldId),
+                        signature: computeSig(cards, chars, log, mergedStorySettings, worldId),
                         official: false,
-                        data: { cards, characters: chars, log, settings, anchoredWorldChanges }
+                        data: { cards, characters: chars, log, settings: mergedStorySettings, anchoredWorldChanges }
                     };
                     scenarios.push(story);
                     setScenariosLocal(scenarios);
@@ -2310,9 +2343,10 @@
                 if (!story) return;
                 const idx = scenarios.findIndex(x => x.id === story.id);
                 if (idx === -1) return;
+                const mergedStorySettings = mergeStorySettingsForSave(settings, scenarios[idx].data?.settings);
                 scenarios[idx].updatedAt = Date.now();
-                scenarios[idx].data = { cards, characters: chars, log, settings, anchoredWorldChanges };
-                scenarios[idx].signature = computeSig(cards, chars, log, settings, worldId);
+                scenarios[idx].data = { cards, characters: chars, log, settings: mergedStorySettings, anchoredWorldChanges };
+                scenarios[idx].signature = computeSig(cards, chars, log, mergedStorySettings, worldId);
                 if (!scenarios[idx].official) {
                     if (chars.length > 0) {
                         const mainChar = chars[0];
@@ -6160,6 +6194,10 @@ Return ONLY the corrected narration with tags. No explanations.`;
 
             document.getElementById("retry-btn").onclick = async () => {
                 if (isBusy) return;
+                if (isHardcoreModeEnabled()) {
+                    showToast("Hardcore Mode is active.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
                 
                 // Check if we're trying to retry the first message
                 const messagesEl = document.getElementById("messages");
@@ -6168,7 +6206,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 if (!aiRows.length) return;
                 
                 // If this is the first AI message and it's protected, show lock icon
-                if (isFirstMessageProtected && aiRows.length === 1) {
+                if (isOpeningNarrationProtected() && aiRows.length === 1) {
                     showToast("🔒 The first message is protected.", "rgba(180, 60, 60, 0.85)");
                     return;
                 }
@@ -6379,6 +6417,10 @@ Return ONLY the corrected narration with tags. No explanations.`;
 
             document.getElementById("erase-btn").onclick = () => {
                 if (isBusy) return;
+                if (isHardcoreModeEnabled()) {
+                    showToast("Hardcore Mode is active.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
                 clearRetryVariantSession();
                 const messagesEl = document.getElementById("messages");
                 const rows = Array.from(messagesEl.querySelectorAll(".msg-row"));
@@ -6386,7 +6428,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 const lastRow = rows[rows.length - 1];
                 
                 // Check if this is the first AI message and it's protected
-                if (isFirstMessageProtected && lastRow.classList.contains("ai") && messagesEl.querySelectorAll(".msg-row.ai").length === 1) {
+                if (lastRow.classList.contains("ai") && isOpeningNarrationProtected()) {
                     showToast("🔒 The first message is protected.", "rgba(180, 60, 60, 0.85)");
                     return;
                 }
@@ -6430,6 +6472,10 @@ Return ONLY the corrected narration with tags. No explanations.`;
 
             document.getElementById("edit-btn").onclick = () => {
                 if (isBusy) return;
+                if (isHardcoreModeEnabled()) {
+                    showToast("Hardcore Mode is active.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
                 const messagesEl = document.getElementById("messages");
                 const rows = Array.from(messagesEl.querySelectorAll(".msg-row"));
                 if (!rows.length) return;
@@ -6503,39 +6549,12 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 input.value = "";
                 input.style.height = "auto";
                 exitEditModeUI();
-                
-                // Check if this is the first AI message and it's protected
-                const aiRows = messagesEl.querySelectorAll(".msg-row.ai");
-                if (isFirstMessageProtected && aiRows.length === 1 && lastRow.classList.contains("ai")) {
-                    showToast("🔒 The first message is protected.", "rgba(180, 60, 60, 0.85)");
-                    return;
-                }
-                
-                lastRow.remove();
-
-                if (chatHistory.length > 0) {
-                    const removed = chatHistory.pop();
-                    // Also remove any pre-divider linked to this user message
-                    try {
-                        if (removed && typeof removed === 'object' && removed.sender !== "Narrator") {
-                            const ts = removed.timestamp;
-                            const linked = document.querySelector(`.chat-divider[data-linked-ts="${ts}"]`);
-                            if (linked) linked.remove();
-                        }
-                    } catch {}
-                    saveStoryLog();
-                    // Roll back world state to last remaining entry after deletion
-                    if (removed && typeof removed !== 'string' && removed.sender === "Narrator") {
-                        rollbackAnchoredChangesByTs(removed.timestamp);
-                    }
-                    rollbackToLastWorldState();
-                    showToast("Message deleted.", "rgba(180, 60, 60, 0.85)");
-                }
-                // Unlock buttons
                 ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','dev-present-btn','travel-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = false; b.classList.remove('locked'); }
                 });
+                try { applyHardcoreModeUI(); } catch {}
+                showToast("Edit cancelled.");
             };
 
             /* ═══════════════════════════════════════
