@@ -5692,22 +5692,26 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     
                     const response = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
-                    let cleanResponse = processAICommands(response);
                     
                     // ═════════════════════════════════════════════════════════════════
-                    // VALIDATION PHASE: Second AI checks and fixes tags before sending
+                    // VALIDATION PHASE: Second AI checks and fixes tags BEFORE processing
                     // ═════════════════════════════════════════════════════════════════
-                    if (cleanResponse !== NSFW_BLOCKED_TOKEN) {
+                    let validatedResponse = response;
+                    const hasNsfwTag = response && /\[\[\s*NSFW\s*\]\]/i.test(response);
+                    if (response && !hasNsfwTag) {
                         try {
-                            const validatedText = await validateAndFixNarration(cleanResponse, text);
-                            if (validatedText && validatedText !== cleanResponse) {
+                            const validated = await validateAndFixNarration(response, text);
+                            if (validated && validated !== response) {
                                 console.log("[Validation] Text was corrected by validation AI");
-                                cleanResponse = validatedText;
+                                validatedResponse = validated;
                             }
                         } catch (validationErr) {
                             console.warn("[Validation] Validation failed, using original text", validationErr);
                         }
                     }
+                    
+                    // Now process the validated response (this removes the tags)
+                    let cleanResponse = processAICommands(validatedResponse);
                     
                     let finalText = "";
                     if (cleanResponse === NSFW_BLOCKED_TOKEN) {
@@ -5879,7 +5883,20 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
-                    const cleanR = processAICommands(r);
+                    let validatedResponse = r;
+                    const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
+                    if (r && !hasNsfwTag) {
+                        try {
+                            const validated = await validateAndFixNarration(r, lastUserText);
+                            if (validated && validated !== r) {
+                                console.log("[Validation] Retry text was corrected by validation AI");
+                                validatedResponse = validated;
+                            }
+                        } catch (validationErr) {
+                            console.warn("[Validation] Retry validation failed, using original text", validationErr);
+                        }
+                    }
+                    const cleanR = processAICommands(validatedResponse);
                     let finalText = "";
                     if (cleanR === NSFW_BLOCKED_TOKEN) {
                         finalText = NSFW_BLOCKED_TEXT;
@@ -5889,7 +5906,20 @@ Return ONLY the corrected narration with tags. No explanations.`;
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
                             const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                             const r2 = await askAIWithRetry(finalPrompt2);
-                            const clean2 = processAICommands(r2);
+                            let validatedResponse2 = r2;
+                            const hasNsfwTag2 = r2 && /\[\[\s*NSFW\s*\]\]/i.test(r2);
+                            if (r2 && !hasNsfwTag2) {
+                                try {
+                                    const validated2 = await validateAndFixNarration(r2, lastUserText);
+                                    if (validated2 && validated2 !== r2) {
+                                        console.log("[Validation] Retry duplicate-avoidance text was corrected by validation AI");
+                                        validatedResponse2 = validated2;
+                                    }
+                                } catch (validationErr) {
+                                    console.warn("[Validation] Retry duplicate-avoidance validation failed, using original text", validationErr);
+                                }
+                            }
+                            const clean2 = processAICommands(validatedResponse2);
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
@@ -5931,7 +5961,20 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     
                     const r = await askAIWithRetry(finalPrompt);
                     removeTypingIndicator();
-                    const cleanR = processAICommands(r);
+                    let validatedResponse = r;
+                    const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
+                    if (r && !hasNsfwTag) {
+                        try {
+                            const validated = await validateAndFixNarration(r, "");
+                            if (validated && validated !== r) {
+                                console.log("[Validation] Continue text was corrected by validation AI");
+                                validatedResponse = validated;
+                            }
+                        } catch (validationErr) {
+                            console.warn("[Validation] Continue validation failed, using original text", validationErr);
+                        }
+                    }
+                    const cleanR = processAICommands(validatedResponse);
                     let finalText = "";
                     if (cleanR === NSFW_BLOCKED_TOKEN) {
                         finalText = NSFW_BLOCKED_TEXT;
@@ -5941,7 +5984,20 @@ Return ONLY the corrected narration with tags. No explanations.`;
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
                             const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                             const r2 = await askAIWithRetry(finalPrompt2);
-                            const clean2 = processAICommands(r2);
+                            let validatedResponse2 = r2;
+                            const hasNsfwTag2 = r2 && /\[\[\s*NSFW\s*\]\]/i.test(r2);
+                            if (r2 && !hasNsfwTag2) {
+                                try {
+                                    const validated2 = await validateAndFixNarration(r2, "");
+                                    if (validated2 && validated2 !== r2) {
+                                        console.log("[Validation] Continue duplicate-avoidance text was corrected by validation AI");
+                                        validatedResponse2 = validated2;
+                                    }
+                                } catch (validationErr) {
+                                    console.warn("[Validation] Continue duplicate-avoidance validation failed, using original text", validationErr);
+                                }
+                            }
+                            const clean2 = processAICommands(validatedResponse2);
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
