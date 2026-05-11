@@ -1271,6 +1271,38 @@
             let _editIndex = -1;
             let currentNarrationTs = null;
 
+            function _setElDisplay(el, nextDisplay) {
+                if (!el) return;
+                if (el.dataset && el.dataset.prevDisplay == null) {
+                    el.dataset.prevDisplay = el.style.display || "";
+                }
+                el.style.display = nextDisplay;
+            }
+            function _restoreElDisplay(el) {
+                if (!el) return;
+                const prev = el.dataset ? el.dataset.prevDisplay : null;
+                if (prev != null) {
+                    el.style.display = prev;
+                    try { delete el.dataset.prevDisplay; } catch {}
+                } else {
+                    el.style.display = "";
+                }
+            }
+            function enterEditModeUI() {
+                const ids = ['send-btn','retry-btn','continue-btn','erase-btn','edit-btn','move-btn','dev-present-btn','travel-btn'];
+                ids.forEach(id => _setElDisplay(document.getElementById(id), "none"));
+                _setElDisplay(document.getElementById("edit-save-btn"), "inline-flex");
+                _setElDisplay(document.getElementById("edit-cancel-btn"), "inline-flex");
+            }
+            function exitEditModeUI() {
+                const ids = ['send-btn','retry-btn','continue-btn','erase-btn','edit-btn','move-btn','dev-present-btn','travel-btn'];
+                ids.forEach(id => _restoreElDisplay(document.getElementById(id)));
+                _setElDisplay(document.getElementById("edit-save-btn"), "none");
+                _setElDisplay(document.getElementById("edit-cancel-btn"), "none");
+                try { updateTravelButtonVisibility(); } catch {}
+                try { updateMoveButtonVisibility(); } catch {}
+            }
+
             // Pending travel state (delayed until user sends a message)
             let pendingMoveLocationId = null; // For "Move to..."
             let pendingTravel = null; // { destinationId, transportBuildingId, travelTime } for "Travel"
@@ -5313,13 +5345,48 @@ Example:
                 alert(info);
             }
 
-            function askAI(prompt) {
+            const DEFAULT_AI_TIMEOUT_MS = 120000;
+            function _isAiTimeoutError(err) {
+                const s = String(err || "").toLowerCase();
+                return s.includes("zu lange") || s.includes("timeout") || s.includes("stale");
+            }
+            function _compactPromptForTimeout(prompt) {
+                try {
+                    let p = String(prompt || "");
+                    const worldIdx = p.indexOf("\n# WORLD KNOWLEDGE\n");
+                    const rulesIdx = p.indexOf("\n# ROLEPLAY RULES\n");
+                    if (worldIdx !== -1 && rulesIdx !== -1 && rulesIdx > worldIdx) {
+                        p = p.slice(0, worldIdx) + "\n# WORLD KNOWLEDGE\n" + p.slice(rulesIdx);
+                    }
+                    const logMarker = "\n### STORY LOG ###\n";
+                    const logIdx = p.indexOf(logMarker);
+                    const narrIdx = p.lastIndexOf("\n\nNarrator:");
+                    if (logIdx !== -1 && narrIdx !== -1 && narrIdx > logIdx) {
+                        const head = p.slice(0, logIdx + logMarker.length);
+                        const log = p.slice(logIdx + logMarker.length, narrIdx);
+                        const tail = p.slice(narrIdx);
+                        const maxLogChars = 1800;
+                        const kept = log.length > maxLogChars ? log.slice(log.length - maxLogChars) : log;
+                        p = head + kept + tail;
+                    }
+                    const maxTotalChars = 14000;
+                    if (p.length > maxTotalChars) {
+                        const tailKeep = 6000;
+                        p = p.slice(0, maxTotalChars - tailKeep) + p.slice(p.length - tailKeep);
+                    }
+                    return p;
+                } catch {
+                    return String(prompt || "");
+                }
+            }
+
+            function askAI(prompt, timeoutMs = DEFAULT_AI_TIMEOUT_MS) {
                 return new Promise((resolve, reject) => {
                     const requestId = Math.random().toString(36).substring(7);
                     const timeout = setTimeout(() => {
                         window.removeEventListener("message", handler);
                         reject("Die KI hat zu lange gebraucht.");
-                    }, 45000);
+                    }, Math.max(15000, parseInt(timeoutMs, 10) || DEFAULT_AI_TIMEOUT_MS));
 
                     const handler = (event) => {
                         if (event.data.requestId === requestId) {
@@ -5347,12 +5414,16 @@ Example:
                     throw new Error("Invalid AI prompt: empty or non-string instruction.");
                 }
                 let lastErr = null;
+                let effectivePrompt = prompt;
                 for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                     try {
-                        return await askAI(prompt);
+                        return await askAI(effectivePrompt, DEFAULT_AI_TIMEOUT_MS);
                     } catch (err) {
                         lastErr = err;
                         if (attempt >= maxAttempts) break;
+                        if (_isAiTimeoutError(err)) {
+                            effectivePrompt = _compactPromptForTimeout(effectivePrompt);
+                        }
                         console.warn(`AI Request failed (attempt ${attempt}/${maxAttempts}), retrying in 2 seconds...`, err);
                         await new Promise((resolve) => setTimeout(resolve, 2000));
                     }
@@ -6341,11 +6412,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 isEditing = true;
                 _editRow = lastRow;
                 _editIndex = idx;
-                // Show Save / Cancel controls
-                const saveBtn = document.getElementById("edit-save-btn");
-                const cancelBtn = document.getElementById("edit-cancel-btn");
-                if (saveBtn) saveBtn.style.display = "inline-flex";
-                if (cancelBtn) cancelBtn.style.display = "inline-flex";
+                enterEditModeUI();
                 // Lock other action buttons
                 ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','dev-present-btn','travel-btn'].forEach(id => {
                     const b = document.getElementById(id);
@@ -6363,6 +6430,12 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 const entry = chatHistory[_editIndex];
                 if (entry && typeof entry === "object") {
                     entry.text = newText;
+                    try {
+                        if (entry.sender === "Narrator" && entry.timestamp && _retryVariantSession && Array.isArray(_retryVariantSession.variants)) {
+                            const v = _retryVariantSession.variants.find(x => x && x.ts === entry.timestamp);
+                            if (v) v.displayText = newText;
+                        }
+                    } catch {}
                     if (entry.timestamp) {
                         updateMemoriesTextByTs(entry.timestamp, newText);
                     }
@@ -6374,10 +6447,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 _editRow = null;
                 input.value = "";
                 input.style.height = "auto";
-                const saveBtn = document.getElementById("edit-save-btn");
-                const cancelBtn = document.getElementById("edit-cancel-btn");
-                if (saveBtn) saveBtn.style.display = "none";
-                if (cancelBtn) cancelBtn.style.display = "none";
+                exitEditModeUI();
                 ['retry-btn','continue-btn','erase-btn','edit-btn','move-btn','dev-present-btn'].forEach(id => {
                     const b = document.getElementById(id);
                     if (b) { b.disabled = false; b.classList.remove('locked'); }
@@ -6392,10 +6462,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 const input = document.getElementById("user-input");
                 input.value = "";
                 input.style.height = "auto";
-                const saveBtn = document.getElementById("edit-save-btn");
-                const cancelBtn = document.getElementById("edit-cancel-btn");
-                if (saveBtn) saveBtn.style.display = "none";
-                if (cancelBtn) cancelBtn.style.display = "none";
+                exitEditModeUI();
                 
                 // Check if this is the first AI message and it's protected
                 const aiRows = messagesEl.querySelectorAll(".msg-row.ai");
