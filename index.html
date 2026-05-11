@@ -870,6 +870,15 @@
                     <input type="text" id="conf-story-cover" class="conf-input" placeholder="https://...">
                     <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">Small image used as cover on the story card.</div>
                 </div>
+                
+                <div class="conf-group">
+                    <label class="conf-label">Hardcore Mode</label>
+                    <select id="conf-story-hardcore" class="conf-input" style="background:rgba(255,255,255,0.1); color:#fff; cursor:pointer;">
+                        <option value="off" selected style="background:#2a2a3a; color:#fff;">OFF</option>
+                        <option value="on" style="background:#2a2a3a; color:#fff;">ON</option>
+                    </select>
+                    <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">When enabled, Retry, Edit and Erase are hidden ingame.</div>
+                </div>
 
                 <div class="conf-actions">
                     <button class="conf-btn conf-btn-cancel" onclick="closeStoryConf()">Cancel</button>
@@ -3452,6 +3461,8 @@
                 document.getElementById("conf-story-name").value = story.name || "";
                 const coverInput = document.getElementById("conf-story-cover");
                 if (coverInput) coverInput.value = story.data?.settings?.coverUrl || "";
+                const hardcoreInput = document.getElementById("conf-story-hardcore");
+                if (hardcoreInput) hardcoreInput.value = story.data?.settings?.hardcoreMode === "on" ? "on" : "off";
                 document.getElementById("story-conf-overlay").style.display = "flex";
             }
 
@@ -3465,6 +3476,7 @@
                 
                 const newName = document.getElementById("conf-story-name").value.trim();
                 const newCover = (document.getElementById("conf-story-cover")?.value || "").trim();
+                const hardcoreMode = (document.getElementById("conf-story-hardcore")?.value || "off").trim().toLowerCase() === "on" ? "on" : "off";
                 if (!newName) {
                     alert("Bitte einen Namen eingeben.");
                     return;
@@ -3478,6 +3490,7 @@
                     if (!scenarios[idx].data) scenarios[idx].data = {};
                     if (!scenarios[idx].data.settings) scenarios[idx].data.settings = {};
                     scenarios[idx].data.settings.coverUrl = newCover;
+                    scenarios[idx].data.settings.hardcoreMode = hardcoreMode;
                     scenarios[idx].updatedAt = Date.now();
                     setScenarios(scenarios);
                     // Prüfen, ob es eine World-Story oder Character-Story ist
