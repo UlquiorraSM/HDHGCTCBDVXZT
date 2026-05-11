@@ -4317,6 +4317,7 @@ Example:
                 saveActiveCharacter(); // Save the location state
                 try { loadBackground(); } catch {}
                 updateTravelButtonVisibility(); // Show/hide travel button based on transport building
+                updateMoveButtonVisibility();
             }
 
             /* ═══════════════════════════════════════
@@ -5604,7 +5605,7 @@ Check if the narration has these tags and if they are CORRECT:
 Return ONLY the corrected narration with tags. No explanations.`;
 
                 try {
-                    const validatedResponse = await askAIWithRetry(validationPrompt);
+                    const validatedResponse = await askAIWithRetry(validationPrompt, 2);
                     if (!validatedResponse) return narrationText;
                     
                     // Clean the response
@@ -6278,6 +6279,19 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 return siblings.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
             }
 
+            function updateMoveButtonVisibility() {
+                const btn = document.getElementById("move-btn");
+                if (!btn) return;
+                const siblings = getSiblingLocations();
+                if (!siblings.length) {
+                    btn.style.display = "none";
+                    pendingMoveLocationId = null;
+                    closeMoveDropdown();
+                } else {
+                    btn.style.display = "inline-flex";
+                }
+            }
+
             function renderMoveDropdown() {
                 const dropdown = document.getElementById("move-dropdown");
                 if (!dropdown) return;
@@ -6324,6 +6338,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 const dropdown = document.getElementById("move-dropdown");
                 const btn = document.getElementById("move-btn");
                 if (!dropdown || !btn) return;
+                if (btn.style.display === "none") return;
                 const isOpen = dropdown.classList.contains("show");
                 if (isOpen) {
                     dropdown.classList.remove("show");
