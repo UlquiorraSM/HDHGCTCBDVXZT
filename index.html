@@ -3654,11 +3654,20 @@
                         targetStory = scenarios.find(x => x.id === currentStoryId);
                     }
 
+                    const mergeStorySettingsForSave = (baseSettings, existingStorySettings) => {
+                        const merged = { ...(baseSettings || {}) };
+                        const existing = existingStorySettings || {};
+                        if (existing.coverUrl != null) merged.coverUrl = existing.coverUrl;
+                        if (existing.hardcoreMode != null) merged.hardcoreMode = existing.hardcoreMode;
+                        return merged;
+                    };
+
                     if (targetStory) {
                         // Vorhandene Story aktualisieren
+                        const mergedStorySettings = mergeStorySettingsForSave(settings, targetStory.data?.settings);
                         targetStory.updatedAt = Date.now();
                         targetStory.signature = sig;
-                        targetStory.data = { cards, characters: chars, log, settings, anchoredWorldChanges };
+                        targetStory.data = { cards, characters: chars, log, settings: mergedStorySettings, anchoredWorldChanges };
 
                         // Wenn der Charakter-Name im Story-Titel sein soll:
                         if (chars.length > 0 && targetStory.name.startsWith("Story ")) {
