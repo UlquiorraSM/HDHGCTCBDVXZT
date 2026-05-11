@@ -1308,6 +1308,7 @@
                 });
                 try { updateTravelButtonVisibility(); } catch {}
                 try { updateMoveButtonVisibility(); } catch {}
+                try { applyHardcoreModeUI(); } catch {}
             }
 
             // Pending travel state (delayed until user sends a message)
@@ -1766,6 +1767,35 @@
                 } catch {
                     return false;
                 }
+            }
+
+            function isAiCheckEnabled() {
+                try {
+                    const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                    return String(settings.aiCheck || "1") === "2";
+                } catch {
+                    return false;
+                }
+            }
+
+            function isHardcoreModeEnabled() {
+                try {
+                    const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                    return String(settings.hardcoreMode || "off").toLowerCase() === "on";
+                } catch {
+                    return false;
+                }
+            }
+
+            function applyHardcoreModeUI() {
+                if (!isHardcoreModeEnabled()) return;
+                ['retry-btn', 'edit-btn', 'erase-btn'].forEach((id) => {
+                    const btn = document.getElementById(id);
+                    if (!btn) return;
+                    btn.style.display = "none";
+                    btn.disabled = true;
+                    btn.classList.add('locked');
+                });
             }
 
             function processAICommands(text) {
@@ -5993,9 +6023,10 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     // ═════════════════════════════════════════════════════════════════
                     // VALIDATION PHASE: Second AI checks and fixes tags BEFORE processing
                     // ═════════════════════════════════════════════════════════════════
+                    const useAiCheck = isAiCheckEnabled();
                     let validatedResponse = response;
                     const hasNsfwTag = response && /\[\[\s*NSFW\s*\]\]/i.test(response);
-                    if (response && !hasNsfwTag) {
+                    if (useAiCheck && response && !hasNsfwTag) {
                         try {
                             const validated = await validateAndFixNarration(response, text);
                             if (validated && validated !== response) {
@@ -6022,7 +6053,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                             const response2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = response2;
                             const hasNsfwTag2 = response2 && /\[\[\s*NSFW\s*\]\]/i.test(response2);
-                            if (response2 && !hasNsfwTag2) {
+                            if (useAiCheck && response2 && !hasNsfwTag2) {
                                 try {
                                     const validated2 = await validateAndFixNarration(response2, text);
                                     if (validated2 && validated2 !== response2) {
@@ -6197,9 +6228,10 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
+                    const useAiCheck = isAiCheckEnabled();
                     let validatedResponse = r;
                     const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
-                    if (r && !hasNsfwTag) {
+                    if (useAiCheck && r && !hasNsfwTag) {
                         try {
                             const validated = await validateAndFixNarration(r, lastUserText);
                             if (validated && validated !== r) {
@@ -6223,7 +6255,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                             const r2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = r2;
                             const hasNsfwTag2 = r2 && /\[\[\s*NSFW\s*\]\]/i.test(r2);
-                            if (r2 && !hasNsfwTag2) {
+                            if (useAiCheck && r2 && !hasNsfwTag2) {
                                 try {
                                     const validated2 = await validateAndFixNarration(r2, lastUserText);
                                     if (validated2 && validated2 !== r2) {
@@ -6281,9 +6313,10 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const r = await askAIWithRetry(finalPrompt);
+                    const useAiCheck = isAiCheckEnabled();
                     let validatedResponse = r;
                     const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
-                    if (r && !hasNsfwTag) {
+                    if (useAiCheck && r && !hasNsfwTag) {
                         try {
                             const validated = await validateAndFixNarration(r, "");
                             if (validated && validated !== r) {
@@ -6307,7 +6340,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                             const r2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = r2;
                             const hasNsfwTag2 = r2 && /\[\[\s*NSFW\s*\]\]/i.test(r2);
-                            if (r2 && !hasNsfwTag2) {
+                            if (useAiCheck && r2 && !hasNsfwTag2) {
                                 try {
                                     const validated2 = await validateAndFixNarration(r2, "");
                                     if (validated2 && validated2 !== r2) {
@@ -7251,6 +7284,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                         }
                     }
                 });
+                applyHardcoreModeUI();
             }
             function showToast(msg, bg = "rgba(40,140,80,0.95)") {
                 const t = document.getElementById("toast");
@@ -7314,6 +7348,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                INIT
             ═══════════════════════════════════════ */
             window.addEventListener("load", () => {
+                applyHardcoreModeUI();
                 loadBackground();
                 let _bgIntervalId = setInterval(loadBackground, 5000);
                 document.addEventListener("visibilitychange", () => {
