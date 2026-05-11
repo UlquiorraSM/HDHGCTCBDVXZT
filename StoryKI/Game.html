@@ -1299,6 +1299,13 @@
                 ids.forEach(id => _restoreElDisplay(document.getElementById(id)));
                 _setElDisplay(document.getElementById("edit-save-btn"), "none");
                 _setElDisplay(document.getElementById("edit-cancel-btn"), "none");
+                const unlockIds = ['send-btn','retry-btn','continue-btn','erase-btn','edit-btn','move-btn','dev-present-btn','travel-btn','edit-save-btn','edit-cancel-btn'];
+                unlockIds.forEach(id => {
+                    const b = document.getElementById(id);
+                    if (!b) return;
+                    b.disabled = false;
+                    b.classList.remove('locked');
+                });
                 try { updateTravelButtonVisibility(); } catch {}
                 try { updateMoveButtonVisibility(); } catch {}
             }
