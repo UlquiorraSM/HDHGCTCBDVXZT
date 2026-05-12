@@ -1167,10 +1167,17 @@
                 <div id="stats-relations-section" style="display:flex; flex-direction:column; gap:12px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
                         <span style="color:rgba(255,255,255,.5); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Relations</span>
-                        <select id="relations-layout-select" onchange="toggleRelationsLayout()" style="background:rgba(40,40,40,0.9); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; font-size:11px; padding:4px 8px; cursor:pointer;">
-                            <option value="vertical">1x...</option>
-                            <option value="horizontal">2x...</option>
-                        </select>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <select id="relations-filter-select" onchange="toggleRelationsFilter()" style="background:rgba(40,40,40,0.9); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; font-size:11px; padding:4px 8px; cursor:pointer;">
+                                <option value="all">All</option>
+                                <option value="family">Family</option>
+                                <option value="relations">Relations</option>
+                            </select>
+                            <select id="relations-layout-select" onchange="toggleRelationsLayout()" style="background:rgba(40,40,40,0.9); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; font-size:11px; padding:4px 8px; cursor:pointer;">
+                                <option value="vertical">1x...</option>
+                                <option value="horizontal">2x...</option>
+                            </select>
+                        </div>
                     </div>
                     <div id="stats-relations-list" style="display:flex; flex-direction:column; gap:8px;">
                         <!-- Relations will be rendered here -->
@@ -1228,6 +1235,7 @@
             const ANCHORED_WORLD_CHANGES_KEY = "storyki_anchored_world_changes";
             const PENDING_MESSAGE_KEY = "storyki_pending_message";
             const RELATIONS_LAYOUT_KEY = "storyki_relations_layout";
+            const RELATIONS_FILTER_KEY = "storyki_relations_filter";
             const NSFW_BLOCKED_TOKEN = "__NSFW_BLOCKED__";
             const NSFW_BLOCKED_TEXT = "The generated message contained offensive content which has been blocked due to your NSWF block.";
 
@@ -1507,6 +1515,130 @@
                 });
 
                 sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                return true;
+            }
+
+            function getActiveCharDisplayName() {
+                if (!activeChar) return "Player";
+                return [activeChar.firstName, activeChar.lastName].filter(Boolean).join(" ").trim()
+                    || activeChar.title
+                    || "Player";
+            }
+
+            function isFamilyRelationEntry(rel) {
+                return !!rel && String(rel.relation || "").toLowerCase() === "family";
+            }
+
+            function normalizeRelationshipLabel(label) {
+                const value = String(label || "").trim().toLowerCase();
+                if (value === "friend") return "Friend";
+                if (value === "spouse") return "Spouse";
+                if (value === "lover") return "Lover";
+                if (value === "enemy") return "Enemy";
+                return "";
+            }
+
+            function findRelationEntry(relations, targetId, targetName) {
+                if (!Array.isArray(relations)) return null;
+                const normName = _normalizeText(targetName || "");
+                return relations.find((r) => {
+                    if (!r) return false;
+                    if (targetId && r.targetId === targetId) return true;
+                    const relName = _normalizeText(r.targetName || "");
+                    return !!normName && relName === normName;
+                }) || null;
+            }
+
+            function getNpcRelationToPlayer(npc) {
+                if (!npc || !activeChar) return "Stranger (Unknown)";
+                const playerName = getActiveCharDisplayName();
+                const npcName = npc.title || npc.id || "Unknown";
+                const npcSide = findRelationEntry(npc.relations, activeChar.id, playerName);
+                if (npcSide) {
+                    if (npcSide.relation === "Family") return npcSide.familySub || "Family";
+                    if (npcSide.relation) return npcSide.relation;
+                }
+                const playerSide = findRelationEntry(activeChar.relations, npc.id, npcName);
+                if (playerSide) {
+                    if (playerSide.relation === "Family") return playerSide.familySub || "Family";
+                    if (playerSide.relation) return playerSide.relation;
+                }
+                return "Stranger (Unknown)";
+            }
+
+            function setPlayerNpcRelationship(npcId, relationLabel) {
+                if (!activeChar) return false;
+                const npcIdStr = String(npcId || "").trim();
+                const relation = normalizeRelationshipLabel(relationLabel);
+                if (!npcIdStr || !relation) return false;
+                if (activeChar.id && npcIdStr === activeChar.id) return false;
+
+                const cards = getCards();
+                const npc = cards.find((c) => c.genre === "character" && c.id === npcIdStr);
+                if (!npc) return false;
+
+                const playerName = getActiveCharDisplayName();
+                const npcName = npc.title || npc.id || "Unknown";
+
+                if (!Array.isArray(activeChar.relations)) activeChar.relations = [];
+                if (!Array.isArray(npc.relations)) npc.relations = [];
+
+                const playerSide = findRelationEntry(activeChar.relations, npc.id, npcName);
+                const npcSide = findRelationEntry(npc.relations, activeChar.id, playerName);
+                if (isFamilyRelationEntry(playerSide) || isFamilyRelationEntry(npcSide)) return false;
+
+                let changed = false;
+                const applyRelation = (entry, targetId, targetName) => {
+                    if (!entry) return false;
+                    let entryChanged = false;
+                    if (entry.targetId !== targetId) {
+                        entry.targetId = targetId;
+                        entryChanged = true;
+                    }
+                    if ((entry.targetName || "") !== targetName) {
+                        entry.targetName = targetName;
+                        entryChanged = true;
+                    }
+                    if (entry.relation !== relation) {
+                        entry.relation = relation;
+                        entryChanged = true;
+                    }
+                    if (entry.familySub) {
+                        delete entry.familySub;
+                        entryChanged = true;
+                    }
+                    return entryChanged;
+                };
+
+                if (playerSide) {
+                    changed = applyRelation(playerSide, npc.id, npcName) || changed;
+                } else {
+                    activeChar.relations.push({
+                        targetId: npc.id,
+                        targetName: npcName,
+                        relation,
+                    });
+                    changed = true;
+                }
+
+                if (npcSide) {
+                    changed = applyRelation(npcSide, activeChar.id, playerName) || changed;
+                } else {
+                    npc.relations.push({
+                        targetId: activeChar.id,
+                        targetName: playerName,
+                        relation,
+                    });
+                    changed = true;
+                }
+
+                if (!changed) return false;
+
+                activeChar.updatedAt = Date.now();
+                npc.updatedAt = Date.now();
+                sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                saveActiveCharacter();
+                try { renderStatsRelations(); } catch {}
                 return true;
             }
 
@@ -1852,21 +1984,30 @@
 
                 while ((match = tagPattern.exec(text)) !== null) {
                     const content = match[1].trim();
-                    // Handle NPC memory ID list tags: [[Memory:ID1,ID2,ID3]]
+                    // Handle NPC memory tags: [[Memory:NPC_ID|Memory text]]
                     const memIdList = content.match(/^Memory\s*:\s*(.+)$/i);
                     if (memIdList) {
                         try {
                             const payload = memIdList[1].trim();
-                            const items = payload.split(/,\s*/).map(s => s.trim()).filter(Boolean);
                             const targets = [];
-                            items.forEach(it => {
-                                // Support both new format (ID only) and legacy format (ID:Level)
-                                const m = it.match(/^([A-Za-z0-9\-]+)(?::\s*(Common|Important))?$/i);
-                                if (m) {
-                                    const id = m[1].trim();
-                                    targets.push({ id });
-                                }
-                            });
+                            const pairRegex = /([A-Za-z0-9\-]+)\s*\|\s*([\s\S]*?)(?=(?:\s*;\s*[A-Za-z0-9\-]+\s*\|)|$)/g;
+                            let pairMatch;
+                            while ((pairMatch = pairRegex.exec(payload)) !== null) {
+                                const id = pairMatch[1].trim();
+                                const memText = sanitizeTagValue(pairMatch[2]);
+                                if (id && memText) targets.push({ id, text: memText });
+                            }
+                            // Legacy fallback: [[Memory:ID1,ID2,ID3]]
+                            if (targets.length === 0) {
+                                const items = payload.split(/,\s*/).map(s => s.trim()).filter(Boolean);
+                                items.forEach(it => {
+                                    const m = it.match(/^([A-Za-z0-9\-]+)(?::\s*(Common|Important))?$/i);
+                                    if (m) {
+                                        const id = m[1].trim();
+                                        targets.push({ id });
+                                    }
+                                });
+                            }
                             window._pendingMemoryTargets = targets;
                         } catch (e) {
                             console.warn("Memory tag parse failed", e);
@@ -1896,6 +2037,13 @@
                         const npcId = secretRevTag[1].trim();
                         const secretText = secretRevTag[2].trim();
                         addKnownSecret(npcId, secretText, currentNarrationTs);
+                        continue;
+                    }
+                    const relationTag = content.match(/^([A-Za-z0-9\-_]+)\s*:\s*(Friend|Spouse|Lover|Enemy)$/i);
+                    if (relationTag) {
+                        const npcId = relationTag[1].trim();
+                        const relation = relationTag[2].trim();
+                        setPlayerNpcRelationship(npcId, relation);
                         continue;
                     }
                     const parts = content.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
@@ -3295,8 +3443,8 @@
                                     relevantMems = searchMemoriesForNpc(c, keywords, dateFilters, dayFilters);
                                 }
                                 
-                                // Always show last 3 memories as fallback
-                                const recentMems = c.memories.slice(-3);
+                                // Always show last 5 memories as fallback
+                                const recentMems = c.memories.slice(-5);
                                 
                                 if (relevantMems.length > 0) {
                                     contextLines.push(`  RELEVANT MEMORIES (matching your question):`);
@@ -3306,7 +3454,7 @@
                                         contextLines.push(`    [${dateInfo}] ${txt.substring(0, 100)}${txt.length > 100 ? "..." : ""}`);
                                     });
                                 } else if (recentMems.length > 0) {
-                                    contextLines.push(`  Recent Memories:`);
+                                    contextLines.push(`  Last 5 Memories:`);
                                     recentMems.forEach(m => {
                                         const txt = m.text || m;
                                         const dateInfo = m.date || '';
@@ -4234,12 +4382,13 @@ Your entire output must be in ${aiLang} - no exceptions.
 
 # NPC MEMORY TAGS (MANDATORY WHEN PRESENT NPCs ACT)
 - Whenever any PRESENT NPC performs an explicit action in your narration:
-  - Append a single NPC memory tag BEFORE the final metadata block.
-- Syntax (IDs only; the narration will be auto-summarized for each NPC):
-  [[Memory: ID1,ID2,ID3]]
-  - IDs are character IDs of the NPCs that acted or were involved
-  - A short summary (1-2 sentences) of your narration will be stored as each NPC's memory
-  - Memory includes the date, time, and location automatically
+  - Append one NPC memory tag per NPC BEFORE the final metadata block.
+- Syntax:
+  [[Memory: NPC_ID|Short memory text]]
+  - Use the exact NPC character ID
+  - The memory text must be short, clear, and specific, e.g. "Hat Kei gekuesst"
+  - If multiple NPCs need memories, output multiple [[Memory: ...]] tags
+  - Date, time, and location are stored automatically
 
 # NPC DEATH TAGS (MANDATORY WHEN A RESIDENT NPC DIES)
 - If a resident NPC truly dies in the scene, append a death tag BEFORE the final metadata block.
@@ -5017,20 +5166,22 @@ Example:
                 const timeStr = d.time || "00:00";
                 const locName = document.getElementById("header-location")?.textContent || "Unknown Location";
                 
-                // Generate short summary instead of full text
+                // Fallback summary if a legacy memory tag contains IDs only
                 const memorySummary = extractMemorySummary(narrativeText);
                 
                 let changed = false;
-                targets.forEach(({ id }) => {
+                targets.forEach(({ id, text }) => {
                     const npc = cards.find(c => c.genre === "character" && c.id === id);
                     if (!npc) return;
                     if (!Array.isArray(npc.memories)) npc.memories = [];
+                    const memoryText = String(text || "").trim() || memorySummary;
+                    if (!memoryText) return;
                     npc.memories.push({
                         date: dateStr,
                         time: timeStr,
                         location: locName,
                         dayCount: _worldDayCount(d),
-                        text: memorySummary,
+                        text: memoryText,
                         logTs: anchorTs || null
                     });
                     // Keep more entries now since they're shorter (max 500 instead of 200)
@@ -5673,8 +5824,23 @@ Example:
                     const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                     
                     const response = await askAIWithRetry(finalPrompt);
+                    const useAiCheck = isAiCheckEnabled();
+                    let validatedResponse = response;
+                    const hasNsfwTag = response && /\[\[\s*NSFW\s*\]\]/i.test(response);
+                    if (useAiCheck && response && !hasNsfwTag) {
+                        try {
+                            const validated = await validateAndFixNarration(response, "");
+                            if (validated && validated !== response) {
+                                console.log("[Validation] Trigger narration text was corrected by validation AI");
+                                validatedResponse = validated;
+                            }
+                        } catch (validationErr) {
+                            console.warn("[Validation] Trigger narration validation failed, using original text", validationErr);
+                        }
+                    }
                     removeTypingIndicator();
-                    const cleanResponse = processAICommands(response);
+                    let rawAiUsed = validatedResponse;
+                    const cleanResponse = processAICommands(validatedResponse);
                     let finalText = "";
                     if (cleanResponse === NSFW_BLOCKED_TOKEN) {
                         finalText = NSFW_BLOCKED_TEXT;
@@ -5684,12 +5850,26 @@ Example:
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
                             const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
                             const response2 = await askAIWithRetry(finalPrompt2);
-                            const clean2 = processAICommands(response2);
+                            let validatedResponse2 = response2;
+                            const hasNsfwTag2 = response2 && /\[\[\s*NSFW\s*\]\]/i.test(response2);
+                            if (useAiCheck && response2 && !hasNsfwTag2) {
+                                try {
+                                    const validated2 = await validateAndFixNarration(response2, "");
+                                    if (validated2 && validated2 !== response2) {
+                                        console.log("[Validation] Trigger narration duplicate-avoidance text was corrected by validation AI");
+                                        validatedResponse2 = validated2;
+                                    }
+                                } catch (validationErr) {
+                                    console.warn("[Validation] Trigger narration duplicate-avoidance validation failed, using original text", validationErr);
+                                }
+                            }
+                            const clean2 = processAICommands(validatedResponse2);
+                            rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
                     }
                     appendBubble("ai", finalText);
-                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs);
+                    const ts = addToStoryLog("Narrator", finalText, currentNarrationTs, { rawAi: String(rawAiUsed || "") });
                     if (finalText !== NSFW_BLOCKED_TEXT) {
                         addNpcMemoriesFromPending(finalText, ts);
                         addLocationMemoryFromNarration(finalText, ts);
@@ -5708,11 +5888,10 @@ Example:
             }
 
             // ═════════════════════════════════════════════════════════════════
-            // VALIDATION AI - Checks and fixes tags before sending to user
+            // SECOND PASS AI - Repairs narration and commands before sending to user
             // ═════════════════════════════════════════════════════════════════
             async function validateAndFixNarration(narrationText, playerInput) {
-                // Skip validation if text is too short or has no potential tags
-                if (!narrationText || narrationText.length < 50) return narrationText;
+                if (!narrationText || narrationText.length < 12) return narrationText;
                 
                 const presentNpcIds = getPresentNpcIds();
                 const cards = getCards();
@@ -5731,16 +5910,16 @@ Example:
                     .filter(Boolean)
                     .join("\n");
                 
-                // Build validation prompt
+                // Build second-pass repair prompt
                 const presentNpcInfo = presentNpcIds.map(id => {
                     const npc = cards.find(c => c.genre === "character" && c.id === id);
                     if (!npc) return null;
-                    return `${npc.title} [ID: ${npc.id}]`;
+                    return `${npc.title} [ID: ${npc.id}] - Relation to Player: ${getNpcRelationToPlayer(npc)}`;
                 }).filter(Boolean).join(", ");
                 
-                const validationPrompt = `You are a VALIDATION AI. Your ONLY job is to check and fix control tags in the narration below.
+                const validationPrompt = `You are a SECOND-PASS REPAIR AI. Repair the narration below so it is safe to show to the user.
 
-# NARRATION TO VALIDATE:
+# NARRATION TO REPAIR:
 ${narrationText}
 
 # CURRENT CONTEXT:
@@ -5752,37 +5931,56 @@ ${narrationText}
 ${lastStoryLines || "(empty)"}
 
 # YOUR TASK:
-Check if the narration has these tags and if they are CORRECT:
+Repair BOTH the prose and the control tags when needed.
 
-1. **[[TIME: HH:MM]]** - MUST exist at the END (FINAL TAG)
+1. You MAY repair the narration text itself.
+   - Fix obvious broken sentences, malformed punctuation, duplicated fragments, or cut-off dialogue.
+   - ALWAYS close quotation marks, brackets, and parentheses.
+   - If a dialogue line starts with a quote, close that quote.
+   - Keep the same meaning, outcome, tone, and language.
+   - Do NOT invent major new plot facts. Only make minimal repairs needed for a coherent output.
+
+2. You MUST check and repair the control tags:
+
+2a. **[[TIME: HH:MM]]** or **[[TIME: HH:MM, LOCATION: "Place"]]** - MUST exist at the END (FINAL TAG)
    - Format must be EXACT: [[TIME: 14:15]]
    - Time must be valid (00:00-23:59)
    - If the narration changed the location, include LOCATION in the FINAL tag like:
      [[TIME: 14:15, LOCATION: "Forest"]]
-   - If LOCATION equals Current Location, REMOVE the LOCATION part (do not output it)
+   - If LOCATION equals Current Location, you may omit the LOCATION part
 
-2. **[[Memory: ID1,ID2,ID3]]** - Should exist if NPCs acted
-   - IDs must be from Present NPCs list above
-   - Remove any :Common or :Important suffixes (old format)
-   - Only include IDs of NPCs that actually acted or were involved
+2b. **[[Memory: NPC_ID|Short memory text]]** - MUST exist if any PRESENT NPC spoke, acted, reacted, attacked, answered, followed, touched, helped, threatened, kissed, or otherwise interacted with the player or scene
+   - NPC_ID must be from Present NPCs list above
+   - The memory text must be short and explicit, e.g. "Hat Kei gekuesst"
+   - Output one memory tag per NPC that should remember something
+   - You may keep legacy ID-only memory tags only if absolutely necessary, but prefer the explicit text format
 
-3. **[[LocState:key=value]]** - Check if location state changed
+2c. **[[NPC_ID:Friend]]**, **[[NPC_ID:Spouse]]**, **[[NPC_ID:Lover]]**, **[[NPC_ID:Enemy]]**
+   - Add one if the narration/context clearly establishes or updates that relation to the player
+   - ONLY use these four labels
+   - NEVER use them for family members
+   - NEVER output a family tag
+
+2d. **[[LocState:key=value]]** - Check if location state changed
    - Only add if something physical changed (door broken, item placed, etc.)
 
-4. **[[Death:ID|Cause]]** - Only if an NPC died
+2e. **[[Death:ID|Cause]]** - Only if an NPC died
 
-# RULES:
-- If tags are MISSING or WRONG, add/fix them
-- If tags are CORRECT, return the text UNCHANGED
-- DO NOT change the narration text itself, ONLY the tags
-- DO NOT add new narrative content
-- Return the COMPLETE text with corrected tags
-- Every tag must be a complete separate block: [[...]] (never merge tags)
-- Put all non-TIME tags BEFORE the final [[TIME: ...]] tag
-- Close all quotes and close all brackets correctly
+2f. **[[SecretRevelation:NPC_ID|Secret text]]** - Add if a secret was explicitly revealed
+
+3. Tag order rules:
+   - Put all non-TIME tags BEFORE the final [[TIME: ...]] tag
+   - Every tag must be a complete separate block: [[...]]
+   - Never merge multiple commands into one broken tag
+
+4. Output rules:
+   - Return the COMPLETE repaired narration
+   - Keep the response concise and natural
+   - Return ONLY the final repaired narration with tags
+   - No explanations, no bullet list output, no markdown fences
 
 # RESPONSE:
-Return ONLY the corrected narration with tags. No explanations.`;
+Return ONLY the repaired narration with tags.`;
 
                 try {
                     const validatedResponse = await askAIWithRetry(validationPrompt, 2);
@@ -5795,11 +5993,6 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     cleaned = cleaned.replace(/^```[\s\S]*?\n([\s\S]*?)\n?```$/g, '$1');
                     cleaned = cleaned.replace(/^```\n?|```$/g, '');
                     
-                    // Ensure we have a valid metadata block
-                    if (!cleaned.includes("[[TIME:")) {
-                        console.warn("[Validation] No TIME tag found in validation response, using original");
-                        return narrationText;
-                    }
                     try {
                         const normLoc = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
                         const curNorm = normLoc(curLocName);
@@ -5808,7 +6001,28 @@ Return ONLY the corrected narration with tags. No explanations.`;
                             return m;
                         });
                     } catch {}
-                    return cleaned;
+                    try {
+                        const metaRegex = /\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})(?:\s*,\s*LOCATION\s*:\s*["']?([^\]\r\n]+?)["']?)?\s*\]\]/ig;
+                        let lastMeta = null;
+                        let metaMatch;
+                        while ((metaMatch = metaRegex.exec(cleaned)) !== null) {
+                            lastMeta = {
+                                time: metaMatch[1],
+                                loc: (metaMatch[2] || "").trim(),
+                            };
+                        }
+
+                        const withoutMeta = cleaned.replace(metaRegex, "").trim();
+                        const finalTime = lastMeta?.time || curTime;
+                        const finalLoc = (lastMeta?.loc || "").trim();
+                        const metaBlock = finalLoc
+                            ? `[[TIME: ${finalTime}, LOCATION: "${finalLoc}"]]`
+                            : `[[TIME: ${finalTime}]]`;
+                        cleaned = `${withoutMeta}\n\n${metaBlock}`.trim();
+                    } catch {
+                        cleaned = `${String(cleaned || "").trim()}\n\n[[TIME: ${curTime}]]`.trim();
+                    }
+                    return cleaned || narrationText;
                 } catch (e) {
                     console.error("[Validation] Error during validation", e);
                     return narrationText;
@@ -7007,28 +7221,40 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 container.innerHTML = "";
 
                 if (!activeChar || !activeChar.relations || activeChar.relations.length === 0) {
-                    container.innerHTML = '<div class="stats-no-relations">No family relations</div>';
+                    container.innerHTML = '<div class="stats-no-relations">No relations</div>';
                     return;
                 }
 
                 const cards = getCards();
+                const filterSelect = document.getElementById("relations-filter-select");
+                const relationFilter = filterSelect ? filterSelect.value : "all";
+                const familyRelations = activeChar.relations.filter(rel => rel && rel.relation === "Family");
+                const nonFamilyRelations = activeChar.relations.filter(rel => rel && rel.relation && rel.relation !== "Family");
 
-                // Filter only family relations
-                const familyRelations = activeChar.relations.filter(rel => rel.relation === "Family");
+                let visibleRelations = activeChar.relations.filter(Boolean);
+                let emptyLabel = "No relations";
+                if (relationFilter === "family") {
+                    visibleRelations = familyRelations;
+                    emptyLabel = "No family relations";
+                } else if (relationFilter === "relations") {
+                    visibleRelations = nonFamilyRelations;
+                    emptyLabel = "No relations";
+                }
 
-                if (familyRelations.length === 0) {
-                    container.innerHTML = '<div class="stats-no-relations">No family relations</div>';
+                if (visibleRelations.length === 0) {
+                    container.innerHTML = `<div class="stats-no-relations">${emptyLabel}</div>`;
                     return;
                 }
 
-                familyRelations.forEach(rel => {
+                visibleRelations.forEach(rel => {
                     const npc = cards.find(c => c.id === rel.targetId && c.genre === "character");
                     if (!npc) return;
 
                     const item = document.createElement("div");
-                    item.className = "stats-relation-item family";
+                    item.className = `stats-relation-item ${rel.relation === "Family" ? "family" : "relation"}`;
 
                     const npcName = npc.title || "Unknown";
+                    const relationLabel = rel.relation === "Family" ? (rel.familySub || "Family") : (rel.relation || "Relation");
                     
                     // Avatar: either profile picture or nothing
                     let avatarHtml = "";
@@ -7042,7 +7268,7 @@ Return ONLY the corrected narration with tags. No explanations.`;
                         ${avatarHtml}
                         <div class="stats-relation-info">
                             <div class="stats-relation-name">${escHtml(npcName)}</div>
-                            <div class="stats-relation-type">${escHtml(rel.familySub || "Family")}</div>
+                            <div class="stats-relation-type">${escHtml(relationLabel)}</div>
                         </div>
                     `;
                     container.appendChild(item);
@@ -7063,6 +7289,13 @@ Return ONLY the corrected narration with tags. No explanations.`;
                 }
             }
 
+            function toggleRelationsFilter() {
+                const select = document.getElementById("relations-filter-select");
+                if (!select) return;
+                Storage.set(RELATIONS_FILTER_KEY, select.value);
+                renderStatsRelations();
+            }
+
             function restoreRelationsLayout() {
                 const saved = Storage.get(RELATIONS_LAYOUT_KEY);
                 const select = document.getElementById("relations-layout-select");
@@ -7074,6 +7307,14 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     } else {
                         list.classList.remove("horizontal");
                     }
+                }
+            }
+
+            function restoreRelationsFilter() {
+                const saved = Storage.get(RELATIONS_FILTER_KEY);
+                const select = document.getElementById("relations-filter-select");
+                if (saved && select) {
+                    select.value = saved;
                 }
             }
 
@@ -7399,7 +7640,8 @@ Return ONLY the corrected narration with tags. No explanations.`;
                     try { recalcEventOverrides(); updatePresentNPCs(); } catch(e) { console.warn("recalcEventOverrides failed", e); }
                     // Restore any pending message from previous session
                     restorePendingInput();
-                    // Restore relations layout preference
+                    // Restore relations UI preferences
+                    restoreRelationsFilter();
                     restoreRelationsLayout();
                     // Ensure initial age baselines are set
                     try {
