@@ -5869,9 +5869,10 @@ Example:
                 let history = buildHistoryLinesCombined(f, l);
 
                 let maxHistoryLen = MAX_PROMPT_CHARS - prefix.length - suffix.length;
-                while (history.length > Math.max(0, maxHistoryLen) && (f > 0 || l > 0)) {
-                    if (l > 0) l -= 1;
-                    else if (f > 0) f -= 1;
+                const MIN_LAST = 3;
+                while (history.length > Math.max(0, maxHistoryLen) && (f > 0 || l > MIN_LAST)) {
+                    if (f > 0) f -= 1;
+                    else if (l > MIN_LAST) l -= 1;
                     history = buildHistoryLinesCombined(f, l);
                     maxHistoryLen = MAX_PROMPT_CHARS - prefix.length - suffix.length;
                 }
