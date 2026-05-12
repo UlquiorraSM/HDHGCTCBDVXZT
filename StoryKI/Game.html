@@ -1515,6 +1515,7 @@
                 const exists = changes[key].some((entry) => {
                     if (!entry || entry.type !== change.type) return false;
                     if (change.type === "npcDeath") return entry.npcId === change.npcId;
+                    if (change.type === "activeSceneNpcs") return true;
                     if (change.type === "eventExpired") {
                         const sigA = JSON.stringify(change.event || {});
                         const sigB = JSON.stringify(entry.event || {});
@@ -2166,6 +2167,13 @@
                     const activeNpcTag = content.match(/^ActiveNPCs?\s*:\s*(.+)$/i);
                     if (activeNpcTag) {
                         try {
+                            if (currentNarrationTs) {
+                                const prev = getActiveSceneNpcState();
+                                rememberAnchoredWorldChange(currentNarrationTs, {
+                                    type: "activeSceneNpcs",
+                                    previousState: { ids: Array.isArray(prev.ids) ? [...prev.ids] : [], turns: { ...(prev.turns || {}) } }
+                                });
+                            }
                             const payloadRaw = sanitizeTagValue(activeNpcTag[1]);
                             const payload = String(payloadRaw || "").trim();
                             if (!payload || /^none$/i.test(payload)) {
@@ -5584,6 +5592,13 @@ Example:
                     const anchoredChanges = getAnchoredWorldChanges();
                     const pendingChanges = Array.isArray(anchoredChanges[String(ts)]) ? anchoredChanges[String(ts)] : [];
                     let changed = false;
+                    pendingChanges.forEach((change) => {
+                        if (!change || change.type !== "activeSceneNpcs") return;
+                        try {
+                            setActiveSceneNpcState(change.previousState || { ids: [], turns: {} });
+                            try { updatePresentNPCs(); } catch {}
+                        } catch {}
+                    });
                     cards.forEach(c => {
                         if (c.genre === "character") {
                             if (Array.isArray(c.memories)) {
