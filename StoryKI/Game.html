@@ -5871,18 +5871,37 @@ Example:
             }
             function buildNarratorPrompt(systemInst, tagContext = "", extraNote = "", firstCount = 10, lastCount = 5) {
                 const MAX_PROMPT_CHARS = 6900;
-                const prefix = String(systemInst || "") + String(tagContext || "") + "\n\n### STORY LOG ###\n";
+                const marker = "\n\n### STORY LOG ###\n";
+                const _compactSystemInstForBudget = (s, maxChars) => {
+                    const txt = String(s || "");
+                    const n = Math.max(0, parseInt(maxChars, 10) || 0);
+                    if (txt.length <= n) return txt;
+                    if (n <= 0) return "";
+                    const headKeep = Math.min(1000, n);
+                    const tailKeep = Math.max(0, n - headKeep);
+                    if (tailKeep <= 0) return txt.slice(0, n);
+                    return txt.slice(0, headKeep) + "\n\n" + txt.slice(txt.length - tailKeep);
+                };
                 const suffix =
                     (extraNote ? "\n\n" + String(extraNote || "") : "") +
                     "\n\n" + buildLanguageLockLine() +
                     "\n" + buildTextSizeLockLine() +
                     "\n\nNarrator:";
+                const RESERVED_HISTORY_CHARS = 1800;
+                let systemBlock = String(systemInst || "") + String(tagContext || "");
+                let prefix = systemBlock + marker;
 
                 let f = Math.max(0, parseInt(firstCount, 10) || 0);
                 let l = Math.max(0, parseInt(lastCount, 10) || 0);
                 let history = buildHistoryLinesCombined(f, l);
 
                 let maxHistoryLen = MAX_PROMPT_CHARS - prefix.length - suffix.length;
+                if (maxHistoryLen < RESERVED_HISTORY_CHARS) {
+                    const systemBudget = MAX_PROMPT_CHARS - suffix.length - marker.length - RESERVED_HISTORY_CHARS;
+                    systemBlock = _compactSystemInstForBudget(systemBlock, systemBudget);
+                    prefix = systemBlock + marker;
+                    maxHistoryLen = MAX_PROMPT_CHARS - prefix.length - suffix.length;
+                }
                 const MIN_LAST = 8;
                 while (history.length > Math.max(0, maxHistoryLen) && (f > 0 || l > MIN_LAST)) {
                     if (f > 0) f -= 1;
