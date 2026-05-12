@@ -1236,6 +1236,7 @@
             const PENDING_MESSAGE_KEY = "storyki_pending_message";
             const RELATIONS_LAYOUT_KEY = "storyki_relations_layout";
             const RELATIONS_FILTER_KEY = "storyki_relations_filter";
+            const ACTIVE_SCENE_NPCS_KEY = "storyki_active_scene_npcs";
             const NSFW_BLOCKED_TOKEN = "__NSFW_BLOCKED__";
             const NSFW_BLOCKED_TEXT = "The generated message contained offensive content which has been blocked due to your NSWF block.";
 
@@ -1279,6 +1280,81 @@
             let _editRow = null;
             let _editIndex = -1;
             let currentNarrationTs = null;
+
+            function _activeSceneNpcStorageKey() {
+                const storyId = Storage.get(CURRENT_STORY_ID_KEY) || "";
+                return storyId ? `${ACTIVE_SCENE_NPCS_KEY}:${storyId}` : ACTIVE_SCENE_NPCS_KEY;
+            }
+            function getActiveSceneNpcState() {
+                try {
+                    const raw = Storage.get(_activeSceneNpcStorageKey());
+                    const parsed = raw ? JSON.parse(raw) : null;
+                    const ids = Array.isArray(parsed?.ids) ? parsed.ids.filter(Boolean) : [];
+                    const turns = (parsed && typeof parsed.turns === "object" && parsed.turns) ? parsed.turns : {};
+                    return { ids, turns };
+                } catch {
+                    return { ids: [], turns: {} };
+                }
+            }
+            function setActiveSceneNpcState(state) {
+                try {
+                    const ids = Array.isArray(state?.ids) ? state.ids.filter(Boolean) : [];
+                    const turns = (state && typeof state.turns === "object" && state.turns) ? state.turns : {};
+                    Storage.set(_activeSceneNpcStorageKey(), JSON.stringify({ ids, turns }));
+                } catch {}
+            }
+            function getActiveSceneNpcIds() {
+                return getActiveSceneNpcState().ids;
+            }
+            function clearActiveSceneNpcState() {
+                try { Storage.remove(_activeSceneNpcStorageKey()); } catch {}
+            }
+            function setActiveSceneNpcIds(ids, fullDetailTurns = 3) {
+                try {
+                    const cards = getCards();
+                    const chars = cards.filter(c => c && c.genre === "character");
+                    const alive = new Set(chars.filter(c => (c.status || "Alive") !== "Dead").map(c => c.id));
+                    const nextIds = (Array.isArray(ids) ? ids : [])
+                        .map(s => String(s || "").trim())
+                        .filter(Boolean)
+                        .filter(id => alive.has(id));
+
+                    const st = getActiveSceneNpcState();
+                    const prevIds = new Set(st.ids || []);
+                    const nextTurns = { ...(st.turns || {}) };
+                    nextIds.forEach(id => {
+                        if (!prevIds.has(id)) nextTurns[id] = fullDetailTurns;
+                        if (nextTurns[id] == null) nextTurns[id] = fullDetailTurns;
+                        nextTurns[id] = Math.max(0, parseInt(nextTurns[id], 10) || 0);
+                    });
+                    Object.keys(nextTurns).forEach(id => {
+                        if (!nextIds.includes(id)) delete nextTurns[id];
+                    });
+
+                    setActiveSceneNpcState({ ids: nextIds, turns: nextTurns });
+                } catch {}
+            }
+            function getActiveNpcDetailTurnsRemaining(npcId) {
+                const st = getActiveSceneNpcState();
+                const t = st.turns ? st.turns[npcId] : 0;
+                return Math.max(0, parseInt(t, 10) || 0);
+            }
+            function consumeActiveSceneNpcDetailTurns() {
+                try {
+                    const st = getActiveSceneNpcState();
+                    const ids = Array.isArray(st.ids) ? st.ids : [];
+                    const turns = { ...(st.turns || {}) };
+                    let changed = false;
+                    ids.forEach(id => {
+                        const cur = Math.max(0, parseInt(turns[id], 10) || 0);
+                        if (cur > 0) {
+                            turns[id] = cur - 1;
+                            changed = true;
+                        }
+                    });
+                    if (changed) setActiveSceneNpcState({ ids, turns });
+                } catch {}
+            }
 
             function _setElDisplay(el, nextDisplay) {
                 if (!el) return;
@@ -2011,6 +2087,27 @@
                             window._pendingMemoryTargets = targets;
                         } catch (e) {
                             console.warn("Memory tag parse failed", e);
+                        }
+                        continue;
+                    }
+                    const activeNpcTag = content.match(/^ActiveNPCs?\s*:\s*(.+)$/i);
+                    if (activeNpcTag) {
+                        try {
+                            const payloadRaw = sanitizeTagValue(activeNpcTag[1]);
+                            const payload = String(payloadRaw || "").trim();
+                            if (!payload || /^none$/i.test(payload)) {
+                                setActiveSceneNpcIds([]);
+                            } else {
+                                const nearbySet = new Set(getNearbyNpcIdsFromWorld());
+                                const ids = payload
+                                    .split(/[,;]+/)
+                                    .map(s => String(s || "").trim())
+                                    .filter(Boolean)
+                                    .filter(id => nearbySet.has(id));
+                                setActiveSceneNpcIds(ids);
+                            }
+                        } catch (e) {
+                            console.warn("ActiveNPCs tag parse failed", e);
                         }
                         continue;
                     }
@@ -3336,211 +3433,88 @@
                     const cards = getCards();
                     if (!currentLocationId) return "";
 
-                    const currentLoc = cards.find((c) => c.id === currentLocationId);
-                    if (!currentLoc) return "";
-
-                    // Get ancestors (parent locations)
-                    const ancestors = [];
-                    let current = currentLoc;
-                    while (current) {
-                        ancestors.push(current);
-                        const parent = cards.find((c) => {
-                            if (c.genre !== "location" || !c.sublocations) return false;
-                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
-                        });
-                        current = parent;
-                    }
-
-                    const ancestorIds = new Set(ancestors.map(a => a.id));
-                    const scheduleNow = computeSchoolPresenceNow();
-                    const scheduledByNpc = scheduleNow.byNpc || new Map();
-
-                    // Get currently PRESENT NPCs (visible in bar)
                     const presentIds = getPresentNpcIds();
                     const presentSet = new Set(presentIds);
+                    const nearbyIds = getNearbyNpcIdsFromWorld();
+                    const nearbySet = new Set(nearbyIds);
 
-                    // Get all resident IDs from this location and ancestors
-                    const residentIds = new Set();
-                    ancestors.forEach((loc) => {
-                        if (loc.residents) {
-                            loc.residents.forEach((id) => residentIds.add(id));
-                        }
-                    });
+                    const presentNPCs = presentIds
+                        .map((id) => cards.find((c) => c && c.genre === "character" && c.id === id))
+                        .filter((c) => c && (c.status || "Alive") !== "Dead");
 
-                    // Categorize characters
-                    const presentNPCs = [];
-                    const residentNPCs = [];
-                    const deadHereNPCs = [];
-                    const mentionedNPCs = [];
+                    const nearbyNPCs = nearbyIds
+                        .filter((id) => !presentSet.has(id))
+                        .map((id) => cards.find((c) => c && c.genre === "character" && c.id === id))
+                        .filter((c) => c && (c.status || "Alive") !== "Dead");
 
-                    // Process all present NPCs and residents (combine both sets)
-                    const allRelevantIds = new Set([...presentSet, ...residentIds]);
-                    allRelevantIds.forEach(id => {
-                        const c = cards.find(card => card.genre === "character" && card.id === id);
-                        if (!c) return;
-
-                        const isDead = (c.status || "Alive") === "Dead";
-                        const isPresent = presentSet.has(id);
-                        const isResident = residentIds.has(id);
-
-                        // Check school schedule - if at school, not present here
-                        const sched = scheduledByNpc.get(c.id);
-                        const atSchool = sched && !ancestorIds.has(sched.schoolId);
-
-                        if (isDead) {
-                            // Only show dead NPCs if they died HERE
-                            if (c.deathLocationId === currentLocationId || ancestorIds.has(c.deathLocationId)) {
-                                deadHereNPCs.push(c);
-                            }
-                        } else if (isPresent && !atSchool) {
-                            presentNPCs.push(c);
-                        } else if (isResident) {
-                            // Resident but not present (could be elsewhere)
-                            residentNPCs.push(c);
-                        }
-                    });
-
-                    // Check for recently mentioned NPCs that might be elsewhere
-                    _mentionedNpcIds.forEach(id => {
-                        if (residentIds.has(id) || presentSet.has(id)) return; // Already covered
-                        const c = cards.find(card => card.genre === "character" && card.id === id);
-                        if (c && (c.status || "Alive") !== "Dead") {
-                            mentionedNPCs.push(c);
-                        }
-                    });
-
-                    // Build context with tiers
                     const contextLines = [];
-                    contextLines.push("\n# CHARACTERS (Smart Visibility Tiers)\n");
+                    contextLines.push("\n# CHARACTERS\n");
 
-                    // TIER 1: PRESENT - Full details
                     if (presentNPCs.length > 0) {
-                        contextLines.push("## PRESENT (Physically Here - Full Details)\n");
-                        contextLines.push("These NPCs are currently visible and can interact.\n");
+                        contextLines.push("## PRESENT NPCs (Active in the scene)\n");
                         presentNPCs.forEach((c) => {
+                            const turnsLeft = getActiveNpcDetailTurnsRemaining(c.id);
                             const age = parseInt(c.age, 10);
                             const bd = readBirthdate(c);
                             const secrets = readSecrets(c);
                             const knownSecrets = readKnownSecrets(c);
-                            
-                            contextLines.push(`- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})`);
-                            if (Number.isFinite(age) && age > 0) contextLines.push(`  Age: ${age}`);
-                            if (bd) contextLines.push(`  Birthdate: ${formatBirthdate(bd)}`);
-                            if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
-                            if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
-                            if (c.appearance) contextLines.push(`  Appearance: ${c.appearance}`);
-                            if (c.personality) contextLines.push(`  Personality: ${c.personality}`);
-                            if (c.description) contextLines.push(`  Description: ${c.description}`);
-                            if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
-                            
-                            // Include recent memories for present NPCs
-                            if (c.memories && c.memories.length > 0) {
-                                // Get relevant memories based on player input
-                                let relevantMems = [];
-                                if (playerInput) {
-                                    const { keywords } = extractPlayerSpeechKeywords(playerInput);
-                                    const { dateFilters, dayFilters } = parseDateReferences(playerInput);
-                                    relevantMems = searchMemoriesForNpc(c, keywords, dateFilters, dayFilters);
-                                }
-                                
-                                // Always show last 5 memories as fallback
-                                const recentMems = c.memories.slice(-5);
-                                
-                                if (relevantMems.length > 0) {
-                                    contextLines.push(`  RELEVANT MEMORIES (matching your question):`);
-                                    relevantMems.forEach(m => {
-                                        const txt = m.text || m;
-                                        const dateInfo = m.date || '';
-                                        contextLines.push(`    [${dateInfo}] ${txt.substring(0, 100)}${txt.length > 100 ? "..." : ""}`);
-                                    });
-                                } else if (recentMems.length > 0) {
-                                    contextLines.push(`  Last 5 Memories:`);
-                                    recentMems.forEach(m => {
-                                        const txt = m.text || m;
-                                        const dateInfo = m.date || '';
-                                        contextLines.push(`    [${dateInfo}] ${txt.substring(0, 80)}${txt.length > 80 ? "..." : ""}`);
-                                    });
-                                }
-                            }
-                            contextLines.push("");
-                        });
-                    }
 
-                    // TIER 2: RESIDENTS - Summaries only
-                    if (residentNPCs.length > 0) {
-                        contextLines.push("## RESIDENTS (Live Here, Currently Elsewhere)\n");
-                        contextLines.push("These NPCs belong to this location but are not currently present.\n");
-                        residentNPCs.forEach((c) => {
-                            const sched = scheduledByNpc.get(c.id);
-                            let location = "Unknown location";
-                            const secrets = readSecrets(c);
-                            const knownSecrets = readKnownSecrets(c);
-                            if (sched) {
-                                const schoolCard = cards.find(card => card.id === sched.schoolId);
-                                location = schoolCard ? `At ${schoolCard.title} (School)` : "At school";
-                            }
-                            contextLines.push(`- ${c.title} (${c.raceName || "Character"})${c.description ? ` - ${c.description.substring(0, 50)}...` : ""}`);
-                            contextLines.push(`  Currently: ${location}`);
-                            if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
-                            if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
-                        });
-                        contextLines.push("");
-                    }
-
-                    // TIER 3: DEAD HERE - Atmosphere only
-                    if (deadHereNPCs.length > 0) {
-                        contextLines.push("## DEAD HERE (Former Residents)\n");
-                        contextLines.push("These NPCs died at this location. Their presence lingers in memory.\n");
-                        deadHereNPCs.forEach((c) => {
-                            contextLines.push(`- ${c.title} (${c.raceName || "Character"}) - ${c.deathCause || "Unknown cause"}`);
-                            if (c.lore) contextLines.push(`  Legend: ${c.lore.substring(0, 60)}...`);
-                        });
-                        contextLines.push("");
-                    }
-
-                    // TIER 4: MENTIONED - For continuity
-                    if (mentionedNPCs.length > 0) {
-                        contextLines.push("## MENTIONED (Referenced in Recent Story)\n");
-                        contextLines.push("These NPCs were mentioned recently but are elsewhere.\n");
-                        mentionedNPCs.forEach((c) => {
-                            const secrets = readSecrets(c);
-                            const knownSecrets = readKnownSecrets(c);
-                            contextLines.push(`- ${c.title} (${c.raceName || "Character"}) - Not present here`);
-                            if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
-                            if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
-                        });
-                        contextLines.push("");
-                    }
-
-                    // KNOWN ELSEWHERE - Characters with relations to player
-                    if (activeChar && activeChar.relations && activeChar.relations.length > 0) {
-                        const knownIds = new Set();
-                        activeChar.relations.forEach(r => {
-                            if (r.targetId) knownIds.add(r.targetId);
-                        });
-                        // Filter out those already mentioned
-                        const knownElsewhere = [];
-                        knownIds.forEach(id => {
-                            if (residentIds.has(id) || presentSet.has(id) || _mentionedNpcIds.has(id)) return;
-                            const c = cards.find(card => card.genre === "character" && card.id === id);
-                            if (c && (c.status || "Alive") !== "Dead") {
-                                knownElsewhere.push(c);
-                            }
-                        });
-                        
-                        if (knownElsewhere.length > 0) {
-                            contextLines.push("## KNOWN ELSEWHERE (Relations to Player)\n");
-                            knownElsewhere.forEach((c) => {
-                                const rel = activeChar.relations.find(r => r.targetId === c.id);
-                                const relText = rel ? (rel.relation === "Family" ? rel.familySub : rel.relation) : "Known";
-                                const secrets = readSecrets(c);
-                                const knownSecrets = readKnownSecrets(c);
-                                contextLines.push(`- ${c.title} (${c.raceName || "Character"}) - ${relText}`);
+                            if (turnsLeft > 0) {
+                                contextLines.push(`- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})`);
+                                if (Number.isFinite(age) && age > 0) contextLines.push(`  Age: ${age}`);
+                                if (bd) contextLines.push(`  Birthdate: ${formatBirthdate(bd)}`);
                                 if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
                                 if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
-                            });
+                                if (c.appearance) contextLines.push(`  Appearance: ${c.appearance}`);
+                                if (c.personality) contextLines.push(`  Personality: ${c.personality}`);
+                                if (c.description) contextLines.push(`  Description: ${c.description}`);
+                                if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
+
+                                if (c.memories && c.memories.length > 0) {
+                                    let mems = [];
+                                    if (playerInput) {
+                                        const { keywords } = extractPlayerSpeechKeywords(playerInput);
+                                        const { dateFilters, dayFilters } = parseDateReferences(playerInput);
+                                        mems = searchMemoriesForNpc(c, keywords, dateFilters, dayFilters) || [];
+                                    }
+                                    if (!mems.length) mems = c.memories.slice(-2);
+                                    if (mems.length) {
+                                        contextLines.push(`  Memories:`);
+                                        mems.slice(-2).forEach(m => {
+                                            const txt = m.text || m;
+                                            const dateInfo = m.date || '';
+                                            contextLines.push(`    [${dateInfo}] ${String(txt || "").substring(0, 120)}${String(txt || "").length > 120 ? "..." : ""}`);
+                                        });
+                                    }
+                                }
+                            } else {
+                                const short = (s, max) => {
+                                    const t = String(s || "").replace(/\s+/g, " ").trim();
+                                    return t.length > max ? t.slice(0, max - 1) + "…" : t;
+                                };
+                                contextLines.push(`- ${c.title} [ID: ${c.id}]`);
+                                if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
+                                if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
+                                if (c.appearance) contextLines.push(`  Appearance: ${short(c.appearance, 140)}`);
+                                if (c.personality) contextLines.push(`  Personality: ${short(c.personality, 140)}`);
+                            }
                             contextLines.push("");
-                        }
+                        });
+                    } else {
+                        contextLines.push("## PRESENT NPCs (Active in the scene)\n");
+                        contextLines.push("(none)\n");
+                    }
+
+                    const nearbyInfoLines = getNearbyNpcInfoLines();
+                    const filteredNearbyLines = nearbyInfoLines.filter(line => {
+                        const m = String(line).match(/\[ID:\s*([A-Za-z0-9\-_]+)\]/);
+                        const id = m ? m[1] : null;
+                        return id ? !presentSet.has(id) : true;
+                    });
+                    if (filteredNearbyLines.length > 0) {
+                        contextLines.push("## NEARBY NPCs (Name only)\n");
+                        contextLines.push(...filteredNearbyLines);
+                        contextLines.push("");
                     }
 
                     return contextLines.join("\n");
@@ -4319,7 +4293,7 @@ CRITICAL: NPC Secrets define their TRUE behavior, not their public facade. If an
 ${locationCurseContext}- PRESENT NPCs: ${presentNPCs || "None"}
 - PRESENT SPECIES: ${presentSpecies || "None"}
 
-# PRESENT NPCs WITH SECRETS (CRITICAL - THESE DEFINE TRUE BEHAVIOR)
+# CHARACTERS (PRESENT + NEARBY)
 ${charContext}
 
 # PLAYER CHARACTER
@@ -4379,6 +4353,14 @@ Your entire output must be in ${aiLang} - no exceptions.
 - When your narration changes a location’s persistent state, append a single control tag BEFORE the metadata block.
 - Syntax: [[LocState:key=value]] or with expiry [[LocState:key=value;ttl=19d]]. Multiple pairs may be separated by semicolons.
 - Examples: [[LocState:door=broken]] , [[LocState:gum_spot=present;ttl=30d]]
+
+# ACTIVE NPC TAG (MANDATORY - DEFINES PRESENT NPCs)
+- PRESENT NPCs are ONLY the NPCs you mark as active with this tag.
+- Output EXACTLY ONE of these tags in EVERY response, BEFORE the final [[TIME: ...]] tag:
+  [[ActiveNPCs:NPC_ID1,NPC_ID2]]
+  [[ActiveNPCs:none]]
+- NPC_IDs MUST be chosen from the NEARBY NPCs list in the CHARACTERS section.
+- Only PRESENT NPCs may speak, act, fight, or receive Memory tags.
 
 # NPC MEMORY TAGS (MANDATORY WHEN PRESENT NPCs ACT)
 - Whenever any PRESENT NPC performs an explicit action in your narration:
@@ -4566,6 +4548,7 @@ Example:
                 if (!nameOrId) return;
                 // Strip surrounding quotes if present
                 nameOrId = nameOrId.replace(/^["']|["']$/g, "").trim();
+                const prevLocationId = currentLocationId;
                 const cards = getCards();
                 let card = null;
 
@@ -4601,6 +4584,10 @@ Example:
                     if (activeChar) activeChar.currentLocationId = null; // Save to activeChar
                     if (el) el.textContent = nameOrId.toUpperCase();
                     console.warn(`[Location] No card found for: ${nameOrId}`);
+                }
+
+                if (prevLocationId !== currentLocationId) {
+                    clearActiveSceneNpcState();
                 }
                 
                 updatePresentNPCs();
@@ -4705,51 +4692,17 @@ Example:
             function updatePresentNPCs() {
                 const bar = document.getElementById("present-npcs-bar");
                 if (!bar) return;
-                if (!currentLocationId) {
+                const ids = getActiveSceneNpcIds();
+                if (!ids.length) {
                     bar.classList.remove("visible");
                     bar.innerHTML = "";
                     return;
                 }
 
                 const cards = getCards();
-                const currentLoc = cards.find((c) => c.id === currentLocationId);
-                if (!currentLoc) {
-                    bar.classList.remove("visible");
-                    return;
-                }
-
-                // Find all ancestors
-                const ancestors = [];
-                let current = currentLoc;
-
-                while (current) {
-                    ancestors.push(current);
-                    // find parent
-                    const parent = cards.find((c) => {
-                        if (c.genre !== "location" || !c.sublocations)
-                            return false;
-                        return Object.values(c.sublocations).some((arr) =>
-                            (arr || []).includes(current.id),
-                        );
-                    });
-                    current = parent;
-                }
-
-                // Collect residents from current and all ancestors
-                const residentIds = new Set();
-                ancestors.forEach((loc) => {
-                    if (loc.residents) {
-                        loc.residents.forEach((id) => residentIds.add(id));
-                    }
-                });
-
-                const presentNPCs = [];
-                residentIds.forEach((id) => {
-                    const char = cards.find(
-                        (c) => c.genre === "character" && c.id === id,
-                    );
-                    if (char && (char.status || "Alive") !== "Dead") presentNPCs.push(char);
-                });
+                const presentNPCs = ids
+                    .map((id) => cards.find((c) => c.genre === "character" && c.id === id))
+                    .filter((c) => c && (c.status || "Alive") !== "Dead");
 
                 if (presentNPCs.length === 0) {
                     bar.classList.remove("visible");
@@ -4821,26 +4774,7 @@ Example:
             }
 
             function getPresentNpcIds() {
-                const bar = document.getElementById("present-npcs-bar");
-                const cards = getCards();
-                const ids = bar ? Array.from(bar.querySelectorAll(".npc-item"))
-                    .map((item) => {
-                        // Try dataset.npcId first, then data-npc-id attribute
-                        let id = item.dataset.npcId || item.getAttribute("data-npc-id");
-                        if (!id) {
-                            // Fallback: find by name text content
-                            const nameEl = item.querySelector(".npc-name-xs");
-                            if (nameEl) {
-                                const name = nameEl.textContent.trim();
-                                const npc = cards.find(c => c.genre === "character" && (c.title === name || c.name === name));
-                                if (npc) id = npc.id;
-                            }
-                        }
-                        return id || null;
-                    })
-                    .filter(Boolean) : [];
-                if (ids.length > 0) return ids;
-                return derivePresentNpcIdsFromWorld();
+                return getActiveSceneNpcIds();
             }
 
             function getPresentNpcNames() {
@@ -4853,6 +4787,71 @@ Example:
                     .map((c) => c.title || c.id);
             }
 
+            function getNearbyNpcIdsFromWorld() {
+                try {
+                    if (!currentLocationId) return [];
+                    const cards = getCards();
+                    const here = cards.find(c => c.genre === "location" && c.id === currentLocationId);
+                    if (!here) return [];
+                    const siblings = getSiblingLocations ? getSiblingLocations() : [];
+                    const nearbyLocs = [here, ...(Array.isArray(siblings) ? siblings : [])].filter(Boolean);
+                    const nearbyLocIds = new Set(nearbyLocs.map(l => l.id));
+                    const residentIds = new Set();
+                    nearbyLocs.forEach(loc => {
+                        if (Array.isArray(loc.residents)) loc.residents.forEach(id => residentIds.add(id));
+                    });
+                    const scheduleNow = computeSchoolPresenceNow();
+                    const scheduledByNpc = scheduleNow.byNpc || new Map();
+                    const result = [];
+                    residentIds.forEach(id => {
+                        const c = cards.find(card => card.genre === "character" && card.id === id);
+                        if (!c) return;
+                        if ((c.status || "Alive") === "Dead") return;
+                        const sched = scheduledByNpc.get(c.id);
+                        if (sched && sched.schoolId && !nearbyLocIds.has(sched.schoolId)) return;
+                        result.push(c.id);
+                    });
+                    return result;
+                } catch (e) {
+                    console.warn("getNearbyNpcIdsFromWorld failed", e);
+                    return [];
+                }
+            }
+
+            function getNearbyNpcInfoLines() {
+                try {
+                    const ids = getNearbyNpcIdsFromWorld();
+                    if (!ids.length) return [];
+                    const cards = getCards();
+                    const here = cards.find(c => c.genre === "location" && c.id === currentLocationId);
+                    const siblings = getSiblingLocations ? getSiblingLocations() : [];
+                    const nearbyLocs = [here, ...(Array.isArray(siblings) ? siblings : [])].filter(Boolean);
+                    const locByNpc = new Map();
+                    nearbyLocs.forEach(loc => {
+                        (loc.residents || []).forEach(id => {
+                            if (!locByNpc.has(id)) locByNpc.set(id, loc);
+                        });
+                    });
+                    return ids
+                        .map(id => {
+                            const npc = cards.find(c => c.genre === "character" && c.id === id);
+                            if (!npc) return null;
+                            const loc = locByNpc.get(id);
+                            const locName = loc ? (loc.title || loc.id) : "";
+                            const name = npc.title || id;
+                            const race = npc.raceName || "Unknown Race";
+                            const gender = npc.gender || "Unknown";
+                            const age = (npc.age != null && String(npc.age).trim()) ? String(npc.age).trim() : "?";
+                            const base = `- ${name} [ID: ${id}] | Race: ${race} | Gender: ${gender} | Age: ${age}`;
+                            return locName ? `${base} @ ${locName}` : base;
+                        })
+                        .filter(Boolean);
+                } catch (e) {
+                    console.warn("getNearbyNpcInfoLines failed", e);
+                    return [];
+                }
+            }
+
             function buildPresentNpcDebugSnapshot() {
                 const cards = getCards();
                 const bar = document.getElementById("present-npcs-bar");
@@ -4862,7 +4861,8 @@ Example:
                         .filter(Boolean)
                     : [];
                 const resolvedIds = getPresentNpcIds();
-                const source = uiIds.length > 0 ? "ui-bar" : "world-fallback";
+                const source = "active-scene";
+                const mismatch = uiIds.length !== resolvedIds.length || uiIds.some(id => !resolvedIds.includes(id));
                 const lines = [];
                 resolvedIds.forEach((id, idx) => {
                     const npc = cards.find((c) => c.genre === "character" && c.id === id);
@@ -4873,6 +4873,7 @@ Example:
                 if (lines.length === 0) lines.push("(none)");
                 return {
                     source,
+                    mismatch,
                     uiCount: uiIds.length,
                     resolvedCount: resolvedIds.length,
                     lines
@@ -4885,7 +4886,7 @@ Example:
                 const meta = document.getElementById("dev-present-meta");
                 if (!overlay || !content || !meta) return;
                 const snap = buildPresentNpcDebugSnapshot();
-                meta.textContent = `source=${snap.source} | uiCount=${snap.uiCount} | resolvedCount=${snap.resolvedCount} | location=${currentLocationId || "none"}`;
+                meta.textContent = `source=${snap.source} | uiCount=${snap.uiCount} | resolvedCount=${snap.resolvedCount} | mismatch=${snap.mismatch ? "yes" : "no"} | location=${currentLocationId || "none"}`;
                 content.textContent = snap.lines.join("\n");
                 overlay.style.display = "flex";
             }
@@ -5677,6 +5678,7 @@ Example:
 
                 const cards = getCards();
                 const matched = [];
+                const activeSet = new Set(getPresentNpcIds());
 
                 const getRelationToPlayer = (npc) => {
                     if (!npc || !activeChar || !Array.isArray(activeChar.relations)) return "Stranger (Unknown)";
@@ -5732,8 +5734,7 @@ Example:
                 matched.forEach(({ card, tags }) => {
                     const displayTags = tags.map((t) => `"${t}"`).join(", ");
                     if (card.genre === "character") {
-                        const secrets = readSecrets(card);
-                        const knownSecrets = readKnownSecrets(card);
+                        const isActive = activeSet.has(card.id);
                         const relation = getRelationToPlayer(card);
                         result += `- NPC: ${card.title || card.id} [ID: ${card.id}] (matched tags: ${displayTags})\n`;
                         if (card.raceName) result += `  Race: ${card.raceName}\n`;
@@ -5742,10 +5743,15 @@ Example:
                         if (card.appearance) result += `  Appearance: ${card.appearance}\n`;
                         if (card.personality) result += `  Personality: ${card.personality}\n`;
                         if (card.description) result += `  Description: ${String(card.description).substring(0, 240)}\n`;
+                        if (card.lore) result += `  Lore: ${String(card.lore).substring(0, 240)}\n`;
                         result += `  Relation to Player: ${relation}\n`;
-                        result += `  Secrets: ${secrets.length ? secrets.join(" | ") : "None"}\n`;
-                        if (knownSecrets.length) {
-                            result += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
+                        if (isActive) {
+                            const secrets = readSecrets(card);
+                            const knownSecrets = readKnownSecrets(card);
+                            result += `  Secrets: ${secrets.length ? secrets.join(" | ") : "None"}\n`;
+                            if (knownSecrets.length) {
+                                result += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
+                            }
                         }
                     } else {
                         const desc = (card.description || "").substring(0, 200);
@@ -5774,6 +5780,39 @@ Example:
                         return `[${e.time} @ ${e.location}] ${e.sender}: ${e.text}`;
                     })
                     .join("\n");
+            }
+            function buildNarratorPrompt(systemInst, tagContext = "", extraNote = "", firstCount = 10, lastCount = 5) {
+                const MAX_PROMPT_CHARS = 6900;
+                const prefix = String(systemInst || "") + String(tagContext || "") + "\n\n### STORY LOG ###\n";
+                const suffix =
+                    (extraNote ? "\n\n" + String(extraNote || "") : "") +
+                    "\n\n" + buildLanguageLockLine() +
+                    "\n" + buildTextSizeLockLine() +
+                    "\n\nNarrator:";
+
+                let f = Math.max(0, parseInt(firstCount, 10) || 0);
+                let l = Math.max(0, parseInt(lastCount, 10) || 0);
+                let history = buildHistoryLinesCombined(f, l);
+
+                let maxHistoryLen = MAX_PROMPT_CHARS - prefix.length - suffix.length;
+                while (history.length > Math.max(0, maxHistoryLen) && (f > 0 || l > 0)) {
+                    if (l > 0) l -= 1;
+                    else if (f > 0) f -= 1;
+                    history = buildHistoryLinesCombined(f, l);
+                    maxHistoryLen = MAX_PROMPT_CHARS - prefix.length - suffix.length;
+                }
+
+                if (maxHistoryLen < 0) {
+                    const hardKeep = Math.max(0, MAX_PROMPT_CHARS - suffix.length);
+                    const trimmedPrefix = prefix.length > hardKeep ? prefix.slice(0, hardKeep) : prefix;
+                    return trimmedPrefix + suffix;
+                }
+
+                if (history.length > maxHistoryLen) {
+                    history = history.slice(history.length - Math.max(0, maxHistoryLen));
+                }
+
+                return prefix + history + suffix;
             }
             function getLastNarratorTexts(count = 10) {
                 const texts = [];
@@ -5816,12 +5855,12 @@ Example:
                 try { updatePresentNPCs(); } catch {}
 
                 const systemInst = buildSystemPrompt();
+                consumeActiveSceneNpcDetailTurns();
 
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
-                    const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
+                    const finalPrompt = buildNarratorPrompt(systemInst, "", "", 10, 5);
                     
                     const response = await askAIWithRetry(finalPrompt);
                     const useAiCheck = isAiCheckEnabled();
@@ -5848,7 +5887,7 @@ Example:
                         finalText = uniqueSentences(cleanResponse);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
+                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 10, 5);
                             const response2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = response2;
                             const hasNsfwTag2 = response2 && /\[\[\s*NSFW\s*\]\]/i.test(response2);
@@ -5919,6 +5958,8 @@ Example:
                     if (!npc) return null;
                     return `${npc.title} [ID: ${npc.id}] - Relation to Player: ${getNpcRelationToPlayer(npc)}`;
                 }).filter(Boolean).join(", ");
+
+                const nearbyNpcInfo = (getNearbyNpcInfoLines() || []).join("\n");
                 
                 const validationPrompt = `You are a SECOND-PASS REPAIR AI. Repair the narration below so it is safe to show to the user.
 
@@ -5931,6 +5972,8 @@ ${narrationText}
 - Current Time: ${curTime}
 - Current Location: ${curLocName}
 - Present NPCs: ${presentNpcInfo || "None"}
+- Nearby NPCs (name only):
+${nearbyNpcInfo || "(none)"}
 - Player said: "${playerInput || "N/A"}"
 - Last 5 Story Log messages (most recent context):
 ${lastStoryLines || "(empty)"}
@@ -5957,7 +6000,7 @@ Repair BOTH the prose and the control tags when needed.
    - If LOCATION equals Current Location, you may omit the LOCATION part
 
 2b. **[[Memory: NPC_ID|Short memory text]]** - MUST exist if any PRESENT NPC spoke, acted, reacted, attacked, answered, followed, touched, helped, threatened, kissed, or otherwise interacted with the player or scene
-   - NPC_ID must be from Present NPCs list above
+   - NPC_ID must be from Nearby NPCs list above
    - The memory text must be short and explicit, e.g. "Hat Kei gekuesst"
    - Output one memory tag per NPC that should remember something
    - You may keep legacy ID-only memory tags only if absolutely necessary, but prefer the explicit text format
@@ -5974,6 +6017,12 @@ Repair BOTH the prose and the control tags when needed.
 2e. **[[Death:ID|Cause]]** - Only if an NPC died
 
 2f. **[[SecretRevelation:NPC_ID|Secret text]]** - Add if a secret was explicitly revealed
+
+2g. **[[ActiveNPCs:NPC_ID1,NPC_ID2]]** or **[[ActiveNPCs:none]]**
+   - MUST exist in the output
+   - NPC_IDs must come from Nearby NPCs list above
+   - ActiveNPCs MUST include every NPC that spoke/acted/reacted OR received a [[Memory: ...]] tag
+   - If no NPC is active in the narration, use [[ActiveNPCs:none]]
 
 3. Tag order rules:
    - Put all non-TIME tags BEFORE the final [[TIME: ...]] tag
@@ -6030,6 +6079,56 @@ Return ONLY the repaired narration with tags.`;
                     } catch {
                         cleaned = `${String(cleaned || "").trim()}\n\n[[TIME: ${curTime}]]`.trim();
                     }
+                    try {
+                        const nearbySet = new Set(getNearbyNpcIdsFromWorld());
+                        const activeFromTag = [];
+                        const activeTagRegex = /\[\[\s*ActiveNPCs?\s*:\s*([^\]]+?)\s*\]\]/ig;
+                        let m;
+                        while ((m = activeTagRegex.exec(cleaned)) !== null) {
+                            const payload = String(m[1] || "").trim();
+                            if (!payload || /^none$/i.test(payload)) continue;
+                            payload.split(/[,;]+/).forEach(s => {
+                                const id = String(s || "").trim();
+                                if (id) activeFromTag.push(id);
+                            });
+                        }
+
+                        const memNpcIds = [];
+                        const memTagRegex = /\[\[\s*Memory\s*:\s*([^\]]+?)\s*\]\]/ig;
+                        while ((m = memTagRegex.exec(cleaned)) !== null) {
+                            const payload = String(m[1] || "").trim();
+                            const pairRegex = /([A-Za-z0-9\-]+)\s*\|\s*([\s\S]*?)(?=(?:\s*;\s*[A-Za-z0-9\-]+\s*\|)|$)/g;
+                            let anyPairs = false;
+                            let pm;
+                            while ((pm = pairRegex.exec(payload)) !== null) {
+                                anyPairs = true;
+                                const id = String(pm[1] || "").trim();
+                                if (id) memNpcIds.push(id);
+                            }
+                            if (!anyPairs) {
+                                payload.split(/,\s*/).forEach(s => {
+                                    const id = String(s || "").trim().split(":")[0];
+                                    if (id) memNpcIds.push(id);
+                                });
+                            }
+                        }
+
+                        const activeSet = new Set();
+                        [...activeFromTag, ...memNpcIds].forEach(id => {
+                            if (nearbySet.has(id)) activeSet.add(id);
+                        });
+                        const activeIds = [...activeSet];
+                        const normalizedTag = activeIds.length ? `[[ActiveNPCs:${activeIds.join(",")}]]` : `[[ActiveNPCs:none]]`;
+
+                        cleaned = cleaned.replace(activeTagRegex, "").trim();
+                        cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+                        cleaned = cleaned.replace(/\[\[\s*TIME\s*:[\s\S]*?\]\]\s*$/i, (timeBlock) => {
+                            return `${normalizedTag}\n\n${timeBlock.trim()}`;
+                        }).trim();
+                        if (!/\[\[\s*ActiveNPCs?\s*:/i.test(cleaned)) {
+                            cleaned = `${cleaned}\n\n${normalizedTag}`.trim();
+                        }
+                    } catch {}
                     return cleaned || narrationText;
                 } catch (e) {
                     console.error("[Validation] Error during validation", e);
@@ -6266,13 +6365,13 @@ Return ONLY the repaired narration with tags.`;
                 try { updatePresentNPCs(); } catch {}
 
                 const systemInst = buildSystemPrompt(text);
+                consumeActiveSceneNpcDetailTurns();
                 const tagMatchedContext = buildTagMatchedContext(text);
 
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
-                    const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
+                    const finalPrompt = buildNarratorPrompt(systemInst, tagMatchedContext, "", 10, 5);
                     
                     const response = await askAIWithRetry(finalPrompt);
                     
@@ -6305,7 +6404,7 @@ Return ONLY the repaired narration with tags.`;
                         finalText = uniqueSentences(cleanResponse);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
+                            const finalPrompt2 = buildNarratorPrompt(systemInst, tagMatchedContext, "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 10, 5);
                             const response2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = response2;
                             const hasNsfwTag2 = response2 && /\[\[\s*NSFW\s*\]\]/i.test(response2);
@@ -6479,13 +6578,13 @@ Return ONLY the repaired narration with tags.`;
                     : "";
                 
                 const systemInst = buildSystemPrompt(lastUserText);
+                consumeActiveSceneNpcDetailTurns();
                 const tagMatchedContext = buildTagMatchedContext(lastUserText);
 
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory;
-                    const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + tagMatchedContext + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
+                    const finalPrompt = buildNarratorPrompt(systemInst, tagMatchedContext, "", 10, 5);
                     
                     const r = await askAIWithRetry(finalPrompt);
                     const useAiCheck = isAiCheckEnabled();
@@ -6511,7 +6610,7 @@ Return ONLY the repaired narration with tags.`;
                         finalText = uniqueSentences(cleanR);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
+                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 10, 5);
                             const r2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = r2;
                             const hasNsfwTag2 = r2 && /\[\[\s*NSFW\s*\]\]/i.test(r2);
@@ -6565,12 +6664,12 @@ Return ONLY the repaired narration with tags.`;
                 try { updatePresentNPCs(); } catch {}
 
                 const systemInst = buildSystemPrompt();
+                consumeActiveSceneNpcDetailTurns();
 
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory.slice(-10);
-                    const historyLines = buildHistoryLinesCombined(10, 5);
-                    const finalPrompt = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
+                    const finalPrompt = buildNarratorPrompt(systemInst, "", "", 10, 5);
                     
                     const r = await askAIWithRetry(finalPrompt);
                     const useAiCheck = isAiCheckEnabled();
@@ -6596,7 +6695,7 @@ Return ONLY the repaired narration with tags.`;
                         finalText = uniqueSentences(cleanR);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = systemInst + "\n\n### STORY LOG ###\n" + historyLines + "\n\nNote: Do not repeat previous narration. Continue the story with new actions and consequences.\n\n" + buildLanguageLockLine() + "\n" + buildTextSizeLockLine() + "\n\nNarrator:";
+                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 10, 5);
                             const r2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = r2;
                             const hasNsfwTag2 = r2 && /\[\[\s*NSFW\s*\]\]/i.test(r2);
