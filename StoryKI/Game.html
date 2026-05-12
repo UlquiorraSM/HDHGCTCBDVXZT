@@ -2131,6 +2131,33 @@
                     out = out.replace(/^["']+/, "").replace(/["']+$/, "");
                     return out.trim();
                 };
+                const resolveNpcIdFromRef = (ref, restrictSet = null) => {
+                    try {
+                        const raw = String(ref || "").trim();
+                        if (!raw) return "";
+                        const cards = getCards();
+                        const chars = cards.filter(c => c && c.genre === "character" && c.id);
+                        const idMatch = chars.find(c => c.id === raw);
+                        if (idMatch && (!restrictSet || restrictSet.has(idMatch.id))) return idMatch.id;
+                        const norm = (s) => String(s || "")
+                            .toLowerCase()
+                            .replace(/[“”„"]/g, "")
+                            .replace(/\s+/g, " ")
+                            .trim();
+                        const r = norm(raw);
+                        if (!r) return "";
+                        const exactTitle = chars.find(c => norm(c.title) === r);
+                        if (exactTitle && (!restrictSet || restrictSet.has(exactTitle.id))) return exactTitle.id;
+                        const exactFirst = chars.find(c => norm(c.firstName) === r);
+                        if (exactFirst && (!restrictSet || restrictSet.has(exactFirst.id))) return exactFirst.id;
+                        const twoPart = chars.find(c => norm([c.firstName, c.lastName].filter(Boolean).join(" ")) === r);
+                        if (twoPart && (!restrictSet || restrictSet.has(twoPart.id))) return twoPart.id;
+                        return "";
+                    } catch {
+                        return "";
+                    }
+                };
+                const memoryNpcIdsForAutoActive = [];
 
                 while ((match = tagPattern.exec(text)) !== null) {
                     const content = match[1].trim();
@@ -2143,9 +2170,13 @@
                             const pairRegex = /([A-Za-z0-9\-]+)\s*\|\s*([\s\S]*?)(?=(?:\s*;\s*[A-Za-z0-9\-]+\s*\|)|$)/g;
                             let pairMatch;
                             while ((pairMatch = pairRegex.exec(payload)) !== null) {
-                                const id = pairMatch[1].trim();
+                                const idRaw = pairMatch[1].trim();
+                                const id = resolveNpcIdFromRef(idRaw);
                                 const memText = sanitizeTagValue(pairMatch[2]);
-                                if (id && memText) targets.push({ id, text: memText });
+                                if (id && memText) {
+                                    targets.push({ id, text: memText });
+                                    memoryNpcIdsForAutoActive.push(id);
+                                }
                             }
                             // Legacy fallback: [[Memory:ID1,ID2,ID3]]
                             if (targets.length === 0) {
@@ -2153,8 +2184,12 @@
                                 items.forEach(it => {
                                     const m = it.match(/^([A-Za-z0-9\-]+)(?::\s*(Common|Important))?$/i);
                                     if (m) {
-                                        const id = m[1].trim();
-                                        targets.push({ id });
+                                        const idRaw = m[1].trim();
+                                        const id = resolveNpcIdFromRef(idRaw);
+                                        if (id) {
+                                            targets.push({ id });
+                                            memoryNpcIdsForAutoActive.push(id);
+                                        }
                                     }
                                 });
                             }
@@ -2179,12 +2214,15 @@
                             if (!payload || /^none$/i.test(payload)) {
                                 setActiveSceneNpcIds([]);
                             } else {
-                                const nearbySet = new Set(getNearbyNpcIdsFromWorld());
+                                const nearby = getNearbyNpcIdsFromWorld();
+                                const nearbySet = new Set(Array.isArray(nearby) ? nearby : []);
+                                const restrictSet = nearbySet.size > 0 ? nearbySet : null;
                                 const ids = payload
                                     .split(/[,;]+/)
                                     .map(s => String(s || "").trim())
                                     .filter(Boolean)
-                                    .filter(id => nearbySet.has(id));
+                                    .map(x => resolveNpcIdFromRef(x, restrictSet) || (restrictSet ? "" : resolveNpcIdFromRef(x)))
+                                    .filter(Boolean);
                                 setActiveSceneNpcIds(ids);
                             }
                         } catch (e) {
@@ -2365,6 +2403,24 @@
                         }
                     }
                 }
+
+                try {
+                    const current = getPresentNpcIds();
+                    if ((!Array.isArray(current) || current.length === 0) && memoryNpcIdsForAutoActive.length > 0) {
+                        const uniq = [...new Set(memoryNpcIdsForAutoActive.filter(Boolean))];
+                        if (uniq.length > 0) {
+                            if (currentNarrationTs) {
+                                const prev = getActiveSceneNpcState();
+                                rememberAnchoredWorldChange(currentNarrationTs, {
+                                    type: "activeSceneNpcs",
+                                    previousState: { ids: Array.isArray(prev.ids) ? [...prev.ids] : [], turns: { ...(prev.turns || {}) } }
+                                });
+                            }
+                            setActiveSceneNpcIds(uniq);
+                            try { updatePresentNPCs(); } catch {}
+                        }
+                    }
+                } catch {}
 
                 const metaMatch = text.match(/\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})(?:\s*,\s*LOCATION\s*:\s*["']?(.+?)["']?)?\s*\]\]\s*$/i);
                 if (metaMatch) {
@@ -2804,7 +2860,23 @@
             }
 
             function getCards() {
-                return JSON.parse(Storage.get(CARDS_KEY) || "[]");
+                const cards = JSON.parse(Storage.get(CARDS_KEY) || "[]");
+                try {
+                    let changed = false;
+                    cards.forEach((c) => {
+                        if (!c || !Array.isArray(c.memories)) return;
+                        c.memories.forEach((m) => {
+                            if (m && typeof m === "object" && Object.prototype.hasOwnProperty.call(m, "level")) {
+                                delete m.level;
+                                changed = true;
+                            }
+                        });
+                    });
+                    if (changed) {
+                        Storage.set(CARDS_KEY, JSON.stringify(cards));
+                    }
+                } catch {}
+                return cards;
             }
 
             function escHtml(text) {
@@ -4678,6 +4750,31 @@ Example:
                 if (!card && nameOrId.includes("(")) {
                     const regionName = nameOrId.split("(")[0].trim().toLowerCase();
                     card = cards.find((c) => c.genre === "location" && (c.title || "").toLowerCase() === regionName);
+                }
+
+                // 4. Fuzzy fallback for common translation/typo issues (e.g. "Haus" vs "House")
+                if (!card) {
+                    const norm = (s) => String(s || "")
+                        .toLowerCase()
+                        .replace(/[“”„"]/g, "")
+                        .replace(/\s+/g, " ")
+                        .trim();
+                    const a = norm(nameOrId);
+                    const variants = new Set([
+                        a,
+                        a.replace(/\bhaus\b/g, "house"),
+                        a.replace(/\bhouse\b/g, "haus")
+                    ]);
+                    for (const v of variants) {
+                        const exact = cards.find((c) => c.genre === "location" && norm(c.title) === v);
+                        if (exact) { card = exact; break; }
+                    }
+                    if (!card) {
+                        for (const v of variants) {
+                            const contains = cards.find((c) => c.genre === "location" && norm(c.title).includes(v) && v.length >= 4);
+                            if (contains) { card = contains; break; }
+                        }
+                    }
                 }
 
                 const el = document.getElementById("header-location");
