@@ -5898,6 +5898,9 @@ Example:
                 const d = activeChar?.startingDate || {};
                 const curTime = d.time || "00:00";
                 const curLocName = (document.getElementById("header-location")?.textContent || "Unknown Location").trim();
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
+                const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
                 const lastStoryLines = chatHistory
                     .slice(-5)
                     .map(e => {
@@ -5923,6 +5926,8 @@ Example:
 ${narrationText}
 
 # CURRENT CONTEXT:
+- Target Output Language: ${targetLanguage}
+- Target Language Code: ${aiLangSpec.code}
 - Current Time: ${curTime}
 - Current Location: ${curLocName}
 - Present NPCs: ${presentNpcInfo || "None"}
@@ -5937,7 +5942,9 @@ Repair BOTH the prose and the control tags when needed.
    - Fix obvious broken sentences, malformed punctuation, duplicated fragments, or cut-off dialogue.
    - ALWAYS close quotation marks, brackets, and parentheses.
    - If a dialogue line starts with a quote, close that quote.
-   - Keep the same meaning, outcome, tone, and language.
+   - Keep the same meaning, outcome, and tone.
+   - The FINAL output language MUST be ${targetLanguage}.
+   - If the narration is partly or fully in another language, translate it fully into ${targetLanguage}.
    - Do NOT invent major new plot facts. Only make minimal repairs needed for a coherent output.
 
 2. You MUST check and repair the control tags:
@@ -5976,6 +5983,7 @@ Repair BOTH the prose and the control tags when needed.
 4. Output rules:
    - Return the COMPLETE repaired narration
    - Keep the response concise and natural
+   - The final visible narration MUST be fully in ${targetLanguage}
    - Return ONLY the final repaired narration with tags
    - No explanations, no bullet list output, no markdown fences
 
