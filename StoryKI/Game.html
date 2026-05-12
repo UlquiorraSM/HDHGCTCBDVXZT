@@ -1244,8 +1244,10 @@
             const Storage = {
                 get: (key) => {
                     if (key === SETTINGS_KEY) {
-                        const val = sessionStorage.getItem(key) ?? localStorage.getItem(key);
-                        return val;
+                        const localVal = localStorage.getItem(key);
+                        const sessionVal = sessionStorage.getItem(key);
+                        if (localVal != null && sessionVal != null && localVal !== sessionVal) return localVal;
+                        return localVal ?? sessionVal;
                     }
                     return sessionStorage.getItem(key);
                 },
@@ -2027,6 +2029,66 @@
                     return !!isFirstMessageProtected || narratorEntries.length <= 1;
                 } catch {
                     return !!isFirstMessageProtected;
+                }
+            }
+
+            function normalizeActiveNpcTagInAiText(text) {
+                try {
+                    const t = String(text || "");
+                    if (!t.trim()) return t;
+                    if (/\[\[\s*ActiveNPCs?\s*:/i.test(t)) return t;
+
+                    const nearbySet = new Set(getNearbyNpcIdsFromWorld());
+                    const cards = getCards();
+                    const nearbyNpcs = cards
+                        .filter(c => c && c.genre === "character" && nearbySet.has(c.id))
+                        .map(c => ({ id: c.id, name: String(c.title || "").trim() }))
+                        .filter(x => x.id);
+
+                    const activeSet = new Set();
+                    const memTagRegex = /\[\[\s*Memory\s*:\s*([^\]]+?)\s*\]\]/ig;
+                    let m;
+                    while ((m = memTagRegex.exec(t)) !== null) {
+                        const payload = String(m[1] || "").trim();
+                        const pairRegex = /([A-Za-z0-9\-]+)\s*\|\s*([\s\S]*?)(?=(?:\s*;\s*[A-Za-z0-9\-]+\s*\|)|$)/g;
+                        let anyPairs = false;
+                        let pm;
+                        while ((pm = pairRegex.exec(payload)) !== null) {
+                            anyPairs = true;
+                            const id = String(pm[1] || "").trim();
+                            if (nearbySet.has(id)) activeSet.add(id);
+                        }
+                        if (!anyPairs) {
+                            payload.split(/,\s*/).forEach(s => {
+                                const id = String(s || "").trim().split(":")[0];
+                                if (nearbySet.has(id)) activeSet.add(id);
+                            });
+                        }
+                    }
+
+                    if (activeSet.size === 0) {
+                        nearbyNpcs.forEach(n => {
+                            if (!n.name) return;
+                            const rx = new RegExp(`\\b${n.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+                            if (rx.test(t)) activeSet.add(n.id);
+                        });
+                    }
+
+                    const activeIds = [...activeSet].slice(0, 6);
+                    const normalizedTag = activeIds.length ? `[[ActiveNPCs:${activeIds.join(",")}]]` : `[[ActiveNPCs:none]]`;
+                    try {
+                        console.log("[DEBUG] ActiveNPCs missing in AI output. Auto-inserting:", normalizedTag);
+                    } catch {}
+
+                    const metaEnd = t.match(/\[\[\s*TIME\s*:\s*[0-2]?\d:\d{2}(?:\s*,\s*LOCATION\s*:\s*["']?(.+?)["']?)?\s*\]\]\s*$/i);
+                    if (metaEnd) {
+                        return t.replace(/\s*$/g, "").replace(/\[\[\s*TIME\s*:[\s\S]*?\]\]\s*$/i, (timeBlock) => {
+                            return `${normalizedTag}\n\n${String(timeBlock || "").trim()}`;
+                        }).trim();
+                    }
+                    return `${t.trim()}\n\n${normalizedTag}`.trim();
+                } catch {
+                    return String(text || "");
                 }
             }
 
@@ -4262,7 +4324,19 @@
 
                 // DEBUG: Log the character context to console for verification
                 console.log("[DEBUG] Character Context:", charContext);
+                try {
+                    const localRaw = localStorage.getItem(SETTINGS_KEY);
+                    const sessRaw = sessionStorage.getItem(SETTINGS_KEY);
+                    console.log("[DEBUG] settings localStorage:", localRaw);
+                    console.log("[DEBUG] settings sessionStorage:", sessRaw);
+                } catch {}
                 console.log("[DEBUG] Present NPCs:", presentNPCs);
+                try {
+                    const activeState = getActiveSceneNpcState();
+                    const nearbyIds = getNearbyNpcIdsFromWorld();
+                    console.log("[DEBUG] ActiveSceneNPCs ids:", activeState.ids, "| turns:", activeState.turns);
+                    console.log("[DEBUG] NearbyNPCs ids:", nearbyIds);
+                } catch {}
                 console.log("[DEBUG] Final aiLang in prompt:", aiLang);
                 console.log("[DEBUG] Final prompt language section:", "CRITICAL LANGUAGE RULE: You MUST write your ENTIRE response in " + aiLang);
 
@@ -5864,6 +5938,10 @@ Example:
                     
                     const response = await askAIWithRetry(finalPrompt);
                     const useAiCheck = isAiCheckEnabled();
+                    try {
+                        const dbgSettings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                        console.log("[DEBUG] AI Check mode:", String(dbgSettings.aiCheck || "1"), "| useAiCheck:", useAiCheck ? "2" : "1");
+                    } catch {}
                     let validatedResponse = response;
                     const hasNsfwTag = response && /\[\[\s*NSFW\s*\]\]/i.test(response);
                     if (useAiCheck && response && !hasNsfwTag) {
@@ -5878,6 +5956,7 @@ Example:
                         }
                     }
                     removeTypingIndicator();
+                    validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
                     let rawAiUsed = validatedResponse;
                     const cleanResponse = processAICommands(validatedResponse);
                     let finalText = "";
@@ -5902,6 +5981,7 @@ Example:
                                     console.warn("[Validation] Trigger narration duplicate-avoidance validation failed, using original text", validationErr);
                                 }
                             }
+                            validatedResponse2 = normalizeActiveNpcTagInAiText(validatedResponse2);
                             const clean2 = processAICommands(validatedResponse2);
                             rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
@@ -6379,6 +6459,10 @@ Return ONLY the repaired narration with tags.`;
                     // VALIDATION PHASE: Second AI checks and fixes tags BEFORE processing
                     // ═════════════════════════════════════════════════════════════════
                     const useAiCheck = isAiCheckEnabled();
+                    try {
+                        const dbgSettings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                        console.log("[DEBUG] AI Check mode:", String(dbgSettings.aiCheck || "1"), "| useAiCheck:", useAiCheck ? "2" : "1");
+                    } catch {}
                     let validatedResponse = response;
                     const hasNsfwTag = response && /\[\[\s*NSFW\s*\]\]/i.test(response);
                     if (useAiCheck && response && !hasNsfwTag) {
@@ -6394,6 +6478,7 @@ Return ONLY the repaired narration with tags.`;
                     }
                     
                     // Now process the validated response (this removes the tags)
+                    validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
                     let cleanResponse = processAICommands(validatedResponse);
                     let rawAiUsed = validatedResponse;
                     
@@ -6419,6 +6504,7 @@ Return ONLY the repaired narration with tags.`;
                                     console.warn("[Validation] Duplicate-avoidance validation failed, using original text", validationErr);
                                 }
                             }
+                            validatedResponse2 = normalizeActiveNpcTagInAiText(validatedResponse2);
                             const clean2 = processAICommands(validatedResponse2);
                             rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
@@ -6588,6 +6674,10 @@ Return ONLY the repaired narration with tags.`;
                     
                     const r = await askAIWithRetry(finalPrompt);
                     const useAiCheck = isAiCheckEnabled();
+                    try {
+                        const dbgSettings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                        console.log("[DEBUG] AI Check mode:", String(dbgSettings.aiCheck || "1"), "| useAiCheck:", useAiCheck ? "2" : "1");
+                    } catch {}
                     let validatedResponse = r;
                     const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
                     if (useAiCheck && r && !hasNsfwTag) {
@@ -6601,6 +6691,7 @@ Return ONLY the repaired narration with tags.`;
                             console.warn("[Validation] Retry validation failed, using original text", validationErr);
                         }
                     }
+                    validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
                     let rawAiUsed = validatedResponse;
                     const cleanR = processAICommands(validatedResponse);
                     let finalText = "";
@@ -6625,6 +6716,7 @@ Return ONLY the repaired narration with tags.`;
                                     console.warn("[Validation] Retry duplicate-avoidance validation failed, using original text", validationErr);
                                 }
                             }
+                            validatedResponse2 = normalizeActiveNpcTagInAiText(validatedResponse2);
                             const clean2 = processAICommands(validatedResponse2);
                             rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
@@ -6673,6 +6765,10 @@ Return ONLY the repaired narration with tags.`;
                     
                     const r = await askAIWithRetry(finalPrompt);
                     const useAiCheck = isAiCheckEnabled();
+                    try {
+                        const dbgSettings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                        console.log("[DEBUG] AI Check mode:", String(dbgSettings.aiCheck || "1"), "| useAiCheck:", useAiCheck ? "2" : "1");
+                    } catch {}
                     let validatedResponse = r;
                     const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
                     if (useAiCheck && r && !hasNsfwTag) {
@@ -6686,6 +6782,7 @@ Return ONLY the repaired narration with tags.`;
                             console.warn("[Validation] Continue validation failed, using original text", validationErr);
                         }
                     }
+                    validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
                     let rawAiUsed = validatedResponse;
                     const cleanR = processAICommands(validatedResponse);
                     let finalText = "";
@@ -6710,6 +6807,7 @@ Return ONLY the repaired narration with tags.`;
                                     console.warn("[Validation] Continue duplicate-avoidance validation failed, using original text", validationErr);
                                 }
                             }
+                            validatedResponse2 = normalizeActiveNpcTagInAiText(validatedResponse2);
                             const clean2 = processAICommands(validatedResponse2);
                             rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
