@@ -2090,9 +2090,6 @@
 
                     const activeIds = [...activeSet].slice(0, 6);
                     const normalizedTag = activeIds.length ? `[[ActiveNPCs:${activeIds.join(",")}]]` : `[[ActiveNPCs:none]]`;
-                    try {
-                        console.log("[DEBUG] ActiveNPCs missing in AI output. Auto-inserting:", normalizedTag);
-                    } catch {}
 
                     const metaEnd = t.match(/\[\[\s*TIME\s*:\s*[0-2]?\d:\d{2}(?:\s*,\s*LOCATION\s*:\s*["']?(.+?)["']?)?\s*\]\]\s*$/i);
                     if (metaEnd) {
@@ -3529,50 +3526,70 @@
                     if (presentNPCs.length > 0) {
                         contextLines.push("## PRESENT NPCs (Active in the scene)\n");
                         presentNPCs.forEach((c) => {
-                            const turnsLeft = getActiveNpcDetailTurnsRemaining(c.id);
                             const age = parseInt(c.age, 10);
                             const bd = readBirthdate(c);
                             const secrets = readSecrets(c);
                             const knownSecrets = readKnownSecrets(c);
 
-                            if (turnsLeft > 0) {
-                                contextLines.push(`- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})`);
-                                if (Number.isFinite(age) && age > 0) contextLines.push(`  Age: ${age}`);
-                                if (bd) contextLines.push(`  Birthdate: ${formatBirthdate(bd)}`);
-                                if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
-                                if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
-                                if (c.appearance) contextLines.push(`  Appearance: ${c.appearance}`);
-                                if (c.personality) contextLines.push(`  Personality: ${c.personality}`);
-                                if (c.description) contextLines.push(`  Description: ${c.description}`);
-                                if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
+                            const short = (s, max) => {
+                                const t = String(s || "").replace(/\s+/g, " ").trim();
+                                return t.length > max ? t.slice(0, max - 1) + "…" : t;
+                            };
 
-                                if (c.memories && c.memories.length > 0) {
-                                    let mems = [];
-                                    if (playerInput) {
-                                        const { keywords } = extractPlayerSpeechKeywords(playerInput);
-                                        const { dateFilters, dayFilters } = parseDateReferences(playerInput);
-                                        mems = searchMemoriesForNpc(c, keywords, dateFilters, dayFilters) || [];
-                                    }
-                                    if (!mems.length) mems = c.memories.slice(-2);
-                                    if (mems.length) {
-                                        contextLines.push(`  Memories:`);
-                                        mems.slice(-2).forEach(m => {
-                                            const txt = m.text || m;
-                                            const dateInfo = m.date || '';
-                                            contextLines.push(`    [${dateInfo}] ${String(txt || "").substring(0, 120)}${String(txt || "").length > 120 ? "..." : ""}`);
-                                        });
-                                    }
+                            contextLines.push(`- ${c.title} [ID: ${c.id}] (${c.raceName || "Unknown Race"})`);
+                            if (Number.isFinite(age) && age > 0) contextLines.push(`  Age: ${age}`);
+                            if (bd) contextLines.push(`  Birthdate: ${formatBirthdate(bd)}`);
+                            if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
+                            if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
+                            if (c.appearance) contextLines.push(`  Appearance: ${c.appearance}`);
+                            if (c.personality) contextLines.push(`  Personality: ${c.personality}`);
+                            if (c.description) contextLines.push(`  Description: ${c.description}`);
+                            if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
+
+                            const allMems = Array.isArray(c.memories) ? c.memories : [];
+                            const latest = allMems.slice(-5);
+                            let matched = [];
+                            if (playerInput && presentNPCs.length > 0) {
+                                const { keywords } = extractPlayerSpeechKeywords(playerInput);
+                                const { dateFilters, dayFilters } = parseDateReferences(playerInput);
+                                matched = searchMemoriesForNpc(c, keywords, dateFilters, dayFilters) || [];
+                            }
+
+                            if (latest.length || matched.length) {
+                                const seen = new Set();
+                                const latestUnique = latest.filter(m => {
+                                    const k = _memoryKey(m);
+                                    if (seen.has(k)) return false;
+                                    seen.add(k);
+                                    return true;
+                                });
+                                const matchedUnique = matched.filter(m => {
+                                    const k = _memoryKey(m);
+                                    if (seen.has(k)) return false;
+                                    seen.add(k);
+                                    return true;
+                                });
+
+                                if (latestUnique.length) {
+                                    contextLines.push(`  Memories (latest 5):`);
+                                    latestUnique.slice(-5).forEach(m => {
+                                        const meta = _formatMemoryMeta(m);
+                                        const txt = m && typeof m === "object" ? (m.text || "") : String(m || "");
+                                        const line = `${meta ? meta : (m?.date || "")}`.trim();
+                                        contextLines.push(`    [${line}] ${short(txt, 160)}`);
+                                    });
+                                }
+                                if (matchedUnique.length) {
+                                    contextLines.push(`  Memories (matched):`);
+                                    matchedUnique.slice(0, 12).forEach(m => {
+                                        const meta = _formatMemoryMeta(m);
+                                        const txt = m && typeof m === "object" ? (m.text || "") : String(m || "");
+                                        const line = `${meta ? meta : (m?.date || "")}`.trim();
+                                        contextLines.push(`    [${line}] ${short(txt, 160)}`);
+                                    });
                                 }
                             } else {
-                                const short = (s, max) => {
-                                    const t = String(s || "").replace(/\s+/g, " ").trim();
-                                    return t.length > max ? t.slice(0, max - 1) + "…" : t;
-                                };
-                                contextLines.push(`- ${c.title} [ID: ${c.id}]`);
-                                if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
-                                if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
-                                if (c.appearance) contextLines.push(`  Appearance: ${short(c.appearance, 140)}`);
-                                if (c.personality) contextLines.push(`  Personality: ${short(c.personality, 140)}`);
+                                contextLines.push(`  Memories: (none)`);
                             }
                             contextLines.push("");
                         });
@@ -4451,8 +4468,8 @@ Your entire output must be in ${aiLang} - no exceptions.
 - Only PRESENT NPCs may speak, act, fight, or receive Memory tags.
 
 # NPC MEMORY TAGS (MANDATORY WHEN PRESENT NPCs ACT)
-- Whenever any PRESENT NPC performs an explicit action in your narration:
-  - Append one NPC memory tag per NPC BEFORE the final metadata block.
+- Add a Memory tag ONLY when it helps long-term continuity (important action, meaningful decision, new fact, promise, conflict, discovery, relationship shift, item gained/lost, secret revealed, injury, plan, or clear emotional milestone).
+- Do NOT add Memory tags for trivial filler (greetings, tiny talk, vague reactions, or routine one-liners) unless it changes the story state.
 - Syntax:
   [[Memory: NPC_ID|Short memory text]]
   - Use the exact NPC character ID
@@ -5069,27 +5086,30 @@ Example:
             
             // Extract keywords from player speech (text in quotes)
             function extractPlayerSpeechKeywords(input) {
-                const keywords = new Set();
-                
-                // Extract text in quotes (both "..." and "...")
-                const quoteMatches = input.match(/[""]([^"""]+)[""]|[""]([^""]+)[""]/g);
-                if (!quoteMatches) return { keywords: [], dateFilters: [], dayFilters: [] };
-                
-                const speechText = quoteMatches.map(m => m.replace(/["""]/g, '')).join(' ').toLowerCase();
-                
-                // Extract significant words (3+ chars, not common words)
-                const stopWords = new Set(['haben', 'have', 'ich', 'i', 'du', 'you', 'bin', 'am', 'ist', 'is', 'sind', 'are', 'war', 'was', 'waren', 'were', 'ein', 'eine', 'a', 'an', 'the', 'der', 'die', 'das', 'und', 'and', 'oder', 'or', 'aber', 'but', 'nicht', 'not', 'noch', 'still', 'nochmal', 'again', 'mal', 'time', 'was', 'what', 'wie', 'how', 'wo', 'where', 'wann', 'when', 'warum', 'why', 'wer', 'who', 'welche', 'which', 'mein', 'my', 'dein', 'your', 'sein', 'his', 'ihr', 'her', 'unser', 'our', 'euer', 'your', 'ihnen', 'them', 'uns', 'us', 'ihm', 'him', 'ihr', 'her', 'es', 'it', 'dies', 'this', 'das', 'that', 'jener', 'that', 'diese', 'these', 'jene', 'those', 'hier', 'here', 'dort', 'there', 'jetzt', 'now', 'dann', 'then', 'heute', 'today', 'gestern', 'yesterday', 'morgen', 'tomorrow']);
-                
-                const words = speechText.split(/\s+/);
-                words.forEach(word => {
-                    const w = word.toLowerCase().trim();
-                    if (w.length >= 3 && !stopWords.has(w) && !/^\d+$/.test(w)) {
-                        keywords.add(w);
-                    }
-                });
-                
-                return { 
-                    keywords: Array.from(keywords),
+                const s = String(input || "");
+                const parts = [];
+                const rx = /["“„]([\s\S]*?)["”]/g;
+                let m;
+                while ((m = rx.exec(s)) !== null) {
+                    const inner = String(m[1] || "").trim();
+                    if (inner) parts.push(inner);
+                }
+                if (parts.length === 0) return { keywords: [], dateFilters: [], dayFilters: [] };
+
+                const speechText = parts.join(" ").toLowerCase();
+                const rawWords = speechText.split(/\s+/).filter(Boolean);
+                const out = [];
+                for (const w0 of rawWords) {
+                    let w = String(w0 || "").toLowerCase();
+                    w = w.replace(/[^a-z0-9äöüß\-]+/gi, "");
+                    w = w.replace(/^-+/, "").replace(/-+$/, "");
+                    if (w.length < 2) continue;
+                    if (/^\d+$/.test(w)) continue;
+                    out.push(w);
+                }
+                const unique = [...new Set(out)];
+                return {
+                    keywords: unique.slice(0, 12),
                     dateFilters: [],
                     dayFilters: []
                 };
@@ -5150,6 +5170,33 @@ Example:
                     return null;
                 }
             }
+
+            function _weekdayTitleFromDateStr(dateStr) {
+                const w = getWeekdayFromDate(String(dateStr || ""));
+                if (!w) return "";
+                return w.charAt(0).toUpperCase() + w.slice(1);
+            }
+
+            function _formatMemoryMeta(m) {
+                const date = m && m.date ? String(m.date) : "";
+                const time = m && m.time ? String(m.time) : "";
+                const wd = _weekdayTitleFromDateStr(date);
+                const parts = [];
+                if (wd) parts.push(wd);
+                if (date) parts.push(date);
+                if (time) parts.push(time);
+                return parts.join(" ");
+            }
+
+            function _memoryKey(m) {
+                try {
+                    if (!m || typeof m !== "object") return String(m || "");
+                    if (m.logTs != null) return `ts:${String(m.logTs)}`;
+                    return `${String(m.date || "")}|${String(m.time || "")}|${String(m.location || "")}|${String(m.text || "")}`;
+                } catch {
+                    return String(m || "");
+                }
+            }
             
             // Search memories by keywords and date filters
             function searchMemoriesForNpc(npc, keywords, dateFilters, dayFilters) {
@@ -5198,13 +5245,11 @@ Example:
                         }
                     });
                     
-                    // If keywords provided, require at least one match
-                    // If only date/day filters, require at least one match
-                    if (keywords.length > 0 && keywordMatches === 0) {
-                        return; // Skip if keywords provided but none matched
+                    if (keywords.length > 0 && keywordMatches === 0 && dateFilters.length === 0 && dayFilters.length === 0) {
+                        return;
                     }
                     if (keywords.length === 0 && dateFilters.length === 0 && dayFilters.length === 0) {
-                        return; // Skip if no filters at all
+                        return;
                     }
                     
                     if (score > 0) {
@@ -6073,7 +6118,13 @@ Example:
                     return `${npc.title} [ID: ${npc.id}] - Relation to Player: ${getNpcRelationToPlayer(npc)}`;
                 }).filter(Boolean).join(", ");
 
-                const nearbyNpcInfo = (getNearbyNpcInfoLines() || []).join("\n");
+                let nearbyNpcInfo = "";
+                try {
+                    const lines = (getNearbyNpcInfoLines() || []).filter(Boolean);
+                    nearbyNpcInfo = lines.slice(0, 10).join("\n");
+                } catch {
+                    nearbyNpcInfo = "";
+                }
                 
                 const validationPrompt = `You are a SECOND-PASS REPAIR AI. Repair the narration below so it is safe to show to the user.
 
@@ -6195,6 +6246,8 @@ Return ONLY the repaired narration with tags.`;
                     }
                     try {
                         const nearbySet = new Set(getNearbyNpcIdsFromWorld());
+                        const presentSet = new Set(getPresentNpcIds());
+                        const allowedSet = new Set([...nearbySet, ...presentSet]);
                         const activeFromTag = [];
                         const activeTagRegex = /\[\[\s*ActiveNPCs?\s*:\s*([^\]]+?)\s*\]\]/ig;
                         let m;
@@ -6229,7 +6282,7 @@ Return ONLY the repaired narration with tags.`;
 
                         const activeSet = new Set();
                         [...activeFromTag, ...memNpcIds].forEach(id => {
-                            if (nearbySet.has(id)) activeSet.add(id);
+                            if (allowedSet.has(id)) activeSet.add(id);
                         });
                         const activeIds = [...activeSet];
                         const normalizedTag = activeIds.length ? `[[ActiveNPCs:${activeIds.join(",")}]]` : `[[ActiveNPCs:none]]`;
@@ -6245,7 +6298,6 @@ Return ONLY the repaired narration with tags.`;
                     } catch {}
                     return cleaned || narrationText;
                 } catch (e) {
-                    console.error("[Validation] Error during validation", e);
                     return narrationText;
                 }
             }
