@@ -4023,13 +4023,14 @@
                             set("schoolClasses", card.schoolClasses);
                             set("shopSchedule", card.shopSchedule);
                             set("shopWorkers", card.shopWorkers);
+                        set("transportDestinations", card.transportDestinations);
                             set("states", card.states);
-                            // Ensure each location memory contains a 'level' (default to 'Common' for legacy entries)
                             if (Array.isArray(card.memories)) {
-                                const memsLoc = card.memories.map(m => {
-                                    const lvl = (typeof m?.level === "string" && m.level.toLowerCase() === "important") ? "Important" : "Common";
-                                    return { ...m, level: lvl };
-                                });
+                            const memsLoc = card.memories.map(m => {
+                                const mm = { ...(m || {}) };
+                                if (mm && typeof mm === "object" && Object.prototype.hasOwnProperty.call(mm, "level")) delete mm.level;
+                                return mm;
+                            });
                                 set("memories", memsLoc);
                             }
                         } else if (g === "race") {
@@ -4079,11 +4080,11 @@
                             if (card.unusedDaysCounter !== undefined && card.unusedDaysCounter !== null) out.unusedDaysCounter = Math.max(0, parseInt(card.unusedDaysCounter, 10) || 0);
                             if (card.unusedDaysCounterLastSyncDayCount !== undefined && card.unusedDaysCounterLastSyncDayCount !== null) out.unusedDaysCounterLastSyncDayCount = parseInt(card.unusedDaysCounterLastSyncDayCount, 10) || 0;
                             if (card.unusedDaysCounterStartDayCount !== undefined && card.unusedDaysCounterStartDayCount !== null) out.unusedDaysCounterStartDayCount = parseInt(card.unusedDaysCounterStartDayCount, 10) || 0;
-                            // Ensure each character memory contains a 'level' (default to 'Common' for legacy entries)
                             if (Array.isArray(card.memories)) {
                                 const mems = card.memories.map(m => {
-                                    const lvl = (typeof m?.level === "string" && m.level.toLowerCase() === "important") ? "Important" : "Common";
-                                    return { ...m, level: lvl };
+                                    const mm = { ...(m || {}) };
+                                    if (mm && typeof mm === "object" && Object.prototype.hasOwnProperty.call(mm, "level")) delete mm.level;
+                                    return mm;
                                 });
                                 set("memories", mems);
                             }
@@ -4266,11 +4267,13 @@
                         set("schoolClasses", card.schoolClasses);
                         set("shopSchedule", card.shopSchedule);
                         set("shopWorkers", card.shopWorkers);
+                        set("transportDestinations", card.transportDestinations);
                         set("states", card.states);
                         if (Array.isArray(card.memories)) {
                             const memsLoc = card.memories.map(m => {
-                                const lvl = (typeof m?.level === "string" && m.level.toLowerCase() === "important") ? "Important" : "Common";
-                                return { ...m, level: lvl };
+                                const mm = { ...(m || {}) };
+                                if (mm && typeof mm === "object" && Object.prototype.hasOwnProperty.call(mm, "level")) delete mm.level;
+                                return mm;
                             });
                             set("memories", memsLoc);
                         }
@@ -4325,8 +4328,9 @@
                         if (card.unusedDaysCounterStartDayCount !== undefined && card.unusedDaysCounterStartDayCount !== null) out.unusedDaysCounterStartDayCount = parseInt(card.unusedDaysCounterStartDayCount, 10) || 0;
                         if (Array.isArray(card.memories)) {
                             const mems = card.memories.map(m => {
-                                const lvl = (typeof m?.level === "string" && m.level.toLowerCase() === "important") ? "Important" : "Common";
-                                return { ...m, level: lvl };
+                                const mm = { ...(m || {}) };
+                                if (mm && typeof mm === "object" && Object.prototype.hasOwnProperty.call(mm, "level")) delete mm.level;
+                                return mm;
                             });
                             set("memories", mems);
                         }
