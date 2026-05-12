@@ -6006,6 +6006,63 @@ Example:
                 return result;
             }
 
+            function _stripQuotedSegments(text) {
+                try {
+                    let s = String(text || "");
+                    s = s.replace(/"[^"]*"/g, " ");
+                    s = s.replace(/“[^”]*”/g, " ");
+                    s = s.replace(/„[^“]*“/g, " ");
+                    s = s.replace(/'[^']*'/g, " ");
+                    return s;
+                } catch {
+                    return String(text || "");
+                }
+            }
+
+            function autoSetPresentNpcsFromPlayerText(playerText, anchorTs) {
+                try {
+                    const raw = String(playerText || "");
+                    if (!raw.trim()) return;
+                    const text = _normalizeText(_stripQuotedSegments(raw));
+                    if (!text) return;
+                    const words = text.split(/\s+/).filter(w => w.length >= 2);
+                    if (words.length === 0) return;
+
+                    const cards = getCards();
+                    const candidates = cards.filter(c => c && c.genre === "character" && c.id && Array.isArray(c.tags) && c.tags.length > 0);
+                    if (candidates.length === 0) return;
+
+                    const matchedIds = [];
+                    for (const npc of candidates) {
+                        const tags = (npc.tags || []).map(t => _normalizeText(t)).filter(Boolean);
+                        if (tags.length === 0) continue;
+                        let hit = false;
+                        for (const tag of tags) {
+                            if (tag.length < 2) continue;
+                            for (const word of words) {
+                                if (word === tag || word.includes(tag) || tag.includes(word)) { hit = true; break; }
+                            }
+                            if (hit) break;
+                        }
+                        if (hit) matchedIds.push(npc.id);
+                    }
+
+                    if (matchedIds.length === 0) return;
+                    const prev = getActiveSceneNpcState();
+                    const prevIds = Array.isArray(prev.ids) ? prev.ids : [];
+                    const nextIds = [...new Set([...prevIds, ...matchedIds])];
+                    if (nextIds.length === prevIds.length && prevIds.every(id => nextIds.includes(id))) return;
+                    if (anchorTs) {
+                        rememberAnchoredWorldChange(anchorTs, {
+                            type: "activeSceneNpcs",
+                            previousState: { ids: [...prevIds], turns: { ...(prev.turns || {}) } }
+                        });
+                    }
+                    setActiveSceneNpcIds(nextIds);
+                    try { updatePresentNPCs(); } catch {}
+                } catch {}
+            }
+
             function getLastNarratorText() {
                 for (let i = chatHistory.length - 1; i >= 0; i--) {
                     const e = chatHistory[i];
@@ -6614,6 +6671,7 @@ Return ONLY the repaired narration with tags.`;
                           .join(" ")
                     : "Player";
                 const ts = addToStoryLog(senderName, text);
+                try { autoSetPresentNpcsFromPlayerText(text, ts); } catch {}
                 // Link bubble and potential pre-divider via timestamp
                 try {
                     if (bubble && bubble.parentElement) {
@@ -7066,7 +7124,7 @@ Return ONLY the repaired narration with tags.`;
                     } catch {}
                     saveStoryLog();
                     // Roll back world state
-                    if (removed && typeof removed !== 'string' && removed.sender === "Narrator") {
+                    if (removed && typeof removed !== 'string' && removed.timestamp) {
                         rollbackAnchoredChangesByTs(removed.timestamp);
                     }
                     rollbackToLastWorldState();
