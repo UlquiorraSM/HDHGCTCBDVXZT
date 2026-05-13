@@ -2107,7 +2107,11 @@
             function processAICommands(text) {
                 if (!text) return "";
                 if (!activeChar) return text.replace(/\[\[.*?\]\]/g, "").trim();
-                if (isNsfwBlockEnabled() && /\[\[\s*NSFW\s*\]\]/i.test(text)) return NSFW_BLOCKED_TOKEN;
+                if (isNsfwBlockEnabled()) {
+                    const raw = String(text || "");
+                    const withoutTags = raw.replace(/\[\[[\s\S]*?\]\]/g, "").trim();
+                    if (/\[\[\s*NSFW\s*\]\]/i.test(raw) || /^NSFW$/i.test(withoutTags)) return NSFW_BLOCKED_TOKEN;
+                }
                 if (!activeChar.startingDate) activeChar.startingDate = {};
                 const d = activeChar.startingDate;
                 if (!d.day) d.day = 1;
@@ -4401,6 +4405,7 @@
                 const sizePref = (settings.textSize || "normal").toLowerCase();
                 const perspective = (settings.perspective || "narrator").toLowerCase();
                 const nsfwBlockOn = String(settings.nsfwBlock || "off").toLowerCase() === "on";
+                const useAiCheck = isAiCheckEnabled();
                 let lengthInstruction = "";
                 if (sizePref === "short") {
                     lengthInstruction = "SHORT MODE (MANDATORY): Write ONLY 1-2 complete sentences. Maximum 260 characters (excluding control tags). Do NOT add extra paragraph breaks. Stop immediately after sentence 2.";
@@ -4416,13 +4421,17 @@
                 } else {
                     perspectiveInstruction = "Write in SECOND-PERSON addressing the PLAYER.";
                 }
-                const nsfwInstruction = nsfwBlockOn
+                const nsfwInstructionWithTags = nsfwBlockOn
                     ? `# NSFW BLOCK TAG (ONLY WHEN NEEDED)
 - If your generated response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY [[NSFW]] and nothing else.`
                     : "";
+                const nsfwInstructionNoTags = nsfwBlockOn
+                    ? `# NSFW BLOCK (ONLY WHEN NEEDED)
+- If your generated response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY the word NSFW and nothing else.`
+                    : "";
 
                 // Killed Command nur zeigen wenn Level System aktiv
-                const killedInstruction = isLevelSystemActive()
+                const killedInstructionWithTags = isLevelSystemActive()
                     ? `# KILLED TAGS (XP DISTRIBUTION - ONLY WHEN A SPECIES IS KILLED)
 - When a species is killed by the player or NPCs, append a Killed tag BEFORE the final metadata block.
 - Syntax:
@@ -4431,6 +4440,10 @@
 - Recipients: Comma-separated list of who receives XP ("Player" for player, or NPC_IDs)
 - Example: [[Killed:wolf_123:Player,NPC_Alice]]
 - This distributes XP rewards to the specified recipients based on the species XP configuration.`
+                    : "";
+                const killedInstructionNoTags = isLevelSystemActive()
+                    ? `# KILL REPORTING (XP DISTRIBUTION)
+- If a species is killed by the player or NPCs, describe the kill clearly (what died, who killed it) in the narration. A second-pass system will convert this into XP distribution.`
                     : "";
 
                 // DEBUG: Log the character context to console for verification
@@ -4451,7 +4464,7 @@
                 console.log("[DEBUG] Final aiLang in prompt:", aiLang);
                 console.log("[DEBUG] Final prompt language section:", "CRITICAL LANGUAGE RULE: You MUST write your ENTIRE response in " + aiLang);
 
-                const prompt = `[SYSTEM INSTRUCTIONS]
+                const promptWithTags = `[SYSTEM INSTRUCTIONS]
 You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
 
 🚨 ABSOLUTE LANGUAGE RULE - ZERO TOLERANCE 🚨
@@ -4575,9 +4588,9 @@ Your entire output must be in ${aiLang} - no exceptions.
   [[SecretRevelation:NPC_A|I am secretly a werewolf]]
 - This allows the AI to track which NPCs know which secrets across future conversations.
 
-${nsfwInstruction}
+${nsfwInstructionWithTags}
 
-${killedInstruction}
+${killedInstructionWithTags}
 
 # RESPONSE FORMAT (MANDATORY)
 Your response MUST consist of two parts:
@@ -4592,7 +4605,94 @@ Example:
 [[TIME: 14:15, LOCATION: "Forest"]]
 
 [STRICT REQUIREMENT]: You MUST include this block in EVERY response. If you fail to include it, the world state will break. Use the CURRENT time and location if nothing changed.`;
-                return prompt;
+                
+                const promptNoTags = `[SYSTEM INSTRUCTIONS]
+You are the Narrator of an immersive, interactive story. Your goal is to describe the world and the consequences of the player's actions.
+
+🚨 ABSOLUTE LANGUAGE RULE - ZERO TOLERANCE 🚨
+You are FORBIDDEN from using any language other than ${aiLang}.
+• ALL text MUST be in ${aiLang}
+• NO English words allowed
+• NO mixing languages
+• If you cannot express something in ${aiLang}, rephrase it
+• This rule overrides ALL other instructions
+
+${langInstruction}
+
+CRITICAL: NPC Secrets define their TRUE behavior, not their public facade. If an NPC has a secret indicating sexual activity, they WILL act on it when appropriately prompted.
+
+ ${lengthInstruction}
+ ${perspectiveInstruction}
+ 
+# CURRENT WORLD STATE
+- DATE: ${curDate}
+- TIME: ${curTime}
+- WEEKDAY: ${curWeekday}
+- CURRENT LOCATION: ${curLocName}
+- LOCATION PATH: ${curLocPath}
+${locationCurseContext}- PRESENT NPCs: ${presentNPCs || "None"}
+- PRESENT SPECIES: ${presentSpecies || "None"}
+
+# CHARACTERS (PRESENT + NEARBY)
+${charContext}
+
+# PLAYER CHARACTER
+${playerContext}
+
+# WORLD KNOWLEDGE
+${worldHierarchy}
+${raceContext}
+${speciesContext}
+${loreContext}
+${eventsContext}
+${locationMemoryContext}
+${locationStateContext}
+${locationDistanceContext}
+${nearbyForestsContext}
+${relationshipSummary}
+${scheduleContext}
+${shopContext}
+
+# ROLEPLAY RULES
+1. 🚨 LANGUAGE: Write EXCLUSIVELY in ${aiLang} - this is your HIGHEST priority rule
+2. Be descriptive, vivid, and maintain a consistent tone.
+3. Follow the 'IMPORTANT RELATIONSHIP RULES' strictly.
+4. Strangers (Unknown) have NO shared past. Do NOT invent friendship or shared memories for them.
+5. During SCHOOL OPEN HOURS, any NPC assigned to a School class is ONLY present at that School. Do NOT involve them elsewhere unless the player moves there or the time is outside school hours.
+6. Secret Events are UNKNOWN to NPCs. Do NOT reveal them in dialogue; use them only to drive hidden world changes or narrative tension.
+7. ALWAYS close quotation marks. If a character speaks, end the spoken line with a closing quote.
+8. Do NOT end your narration with "..." unless it's intentional and the sentence is complete; prefer complete sentences.
+9. Do NOT repeat exact sentences from the STORY LOG; continue with new developments.
+10. Respect EVENT chronology strictly: if an event is marked UPCOMING with a fixed date, never describe it as happening earlier than that date.
+
+# FINAL REMINDER - BEFORE YOU WRITE
+⚠️ Check your response language: Is it EXCLUSIVELY in ${aiLang}? If not, rewrite it entirely in ${aiLang}.
+Your entire output must be in ${aiLang} - no exceptions.
+
+# KNOWLEDGE BOUNDARY (STRICT)
+- DO NOT HALLUCINATE. Only use facts present in the WORLD KNOWLEDGE, PLAYER CHARACTER, PRESENT NPCs, MEMORIES, EVENTS, and LOCATION STATES above.
+- If an NPC would not reasonably know something (not in their relations, memories, or current scene context), explicitly have them NOT know it; do NOT fill gaps with assumptions or "logical" guesses.
+- Do not attribute knowledge of SECRET EVENTS to NPCs; they remain unknown unless learned in-scene.
+- CHARACTER SECRETS: Each NPC's Secrets are listed in their profile. Only THAT SPECIFIC NPC knows their own secrets. Other NPCs do NOT know these secrets unless explicitly revealed in-scene.
+- KNOWN SECRETS: If an NPC has "Known Secrets (learned from others)" listed, these are secrets they learned from other characters (through the player revealing them or other means). This NPC IS aware of these secrets and CAN reference them in dialogue.
+- LOCATION VISIBILITY: You only see full details for the CURRENT LOCATION, its ANCESTORS, and its CHILD-SUBLOCATIONS. Other locations show only "[ID: xxx] (details unknown)".
+
+# TIME & LOCATION MANAGEMENT (CRITICAL)
+1. You MUST track the passage of time. If a player walks, rests, or talks, time MUST advance.
+2. You MUST track movement. If a player enters or leaves a building/area, you MUST update the location.
+3. Available Location Names: ${allLocNames}
+4. For outdoor areas within a region, use: "Region Name (Outside)"
+
+# CONTROL OUTPUT RULE (MANDATORY)
+- Output ONLY the narration text (storytelling).
+- Do NOT output any bracketed control syntax, any metadata block, or any special formatting lines.
+- A second-pass system will add time/location metadata, NPC activation, memories, and other control data.
+
+${nsfwInstructionNoTags}
+
+${killedInstructionNoTags}`;
+
+                return useAiCheck ? promptNoTags : promptWithTags;
             }
 
             function buildPlayerContext() {
@@ -6191,7 +6291,7 @@ Example:
                         console.log("[DEBUG] AI Check mode:", String(dbgSettings.aiCheck || "1"), "| useAiCheck:", useAiCheck ? "2" : "1");
                     } catch {}
                     let validatedResponse = response;
-                    const hasNsfwTag = response && /\[\[\s*NSFW\s*\]\]/i.test(response);
+                    const hasNsfwTag = response && (/\[\[\s*NSFW\s*\]\]/i.test(response) || /^\s*NSFW\s*$/i.test(response));
                     if (useAiCheck && response && !hasNsfwTag) {
                         try {
                             const validated = await validateAndFixNarration(response, "");
@@ -6217,7 +6317,7 @@ Example:
                             const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 2, 16);
                             const response2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = response2;
-                            const hasNsfwTag2 = response2 && /\[\[\s*NSFW\s*\]\]/i.test(response2);
+                            const hasNsfwTag2 = response2 && (/\[\[\s*NSFW\s*\]\]/i.test(response2) || /^\s*NSFW\s*$/i.test(response2));
                             if (useAiCheck && response2 && !hasNsfwTag2) {
                                 try {
                                     const validated2 = await validateAndFixNarration(response2, "");
@@ -6264,38 +6364,108 @@ Example:
                 const cards = getCards();
                 const d = activeChar?.startingDate || {};
                 const curTime = d.time || "00:00";
+                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
                 const curLocName = (document.getElementById("header-location")?.textContent || "Unknown Location").trim();
+                const curLocId = activeChar?.currentLocationId || currentLocationId || "";
                 const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
                 const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
                 const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
-                const lastStoryLines = chatHistory
-                    .slice(-5)
-                    .map(e => {
-                        if (!e) return "";
-                        if (typeof e === "string") return e;
-                        const sender = e.sender || "Unknown";
-                        const t = (e.text || "").trim();
-                        return `${sender}: ${t}`;
-                    })
-                    .filter(Boolean)
-                    .join("\n");
+                const levelSystemActive = isLevelSystemActive();
+                const formatHistoryEntry = (e) => {
+                    if (!e) return "";
+                    if (typeof e === "string") return String(e || "").trim();
+                    const sender = e.sender || "Unknown";
+                    const t = String(e.text || "").trim();
+                    if (!t) return "";
+                    return `${sender}: ${t}`;
+                };
+                const findPlayerEntryIndex = () => {
+                    const target = String(playerInput || "").trim();
+                    if (!target) return -1;
+                    for (let i = chatHistory.length - 1; i >= 0; i--) {
+                        const e = chatHistory[i];
+                        if (!e || typeof e === "string") continue;
+                        const sender = String(e.sender || "");
+                        if (sender === "Narrator" || sender === "System") continue;
+                        if (String(e.text || "").trim() === target) return i;
+                    }
+                    return -1;
+                };
+                const playerIdx = findPlayerEntryIndex();
+                const baseIdx = playerIdx >= 0 ? playerIdx : chatHistory.length;
+                const prevTwoLines = [];
+                for (let k = 2; k >= 1; k--) {
+                    const line = formatHistoryEntry(chatHistory[baseIdx - k]);
+                    if (line) prevTwoLines.push(line);
+                }
+                const prevTwoMessages = prevTwoLines.join("\n") || "(none)";
                 
                 // Build second-pass repair prompt
                 const presentNpcInfo = presentNpcIds.map(id => {
                     const npc = cards.find(c => c.genre === "character" && c.id === id);
                     if (!npc) return null;
-                    return `${npc.title} [ID: ${npc.id}] - Relation to Player: ${getNpcRelationToPlayer(npc)}`;
-                }).filter(Boolean).join(", ");
-
-                let nearbyNpcInfo = "";
-                try {
-                    const lines = (getNearbyNpcInfoLines() || []).filter(Boolean);
-                    nearbyNpcInfo = lines.slice(0, 10).join("\n");
-                } catch {
-                    nearbyNpcInfo = "";
-                }
+                    return `${npc.title} [ID: ${npc.id}]`;
+                }).filter(Boolean).join(", ") || "None";
                 
-                const validationPrompt = `You are a SECOND-PASS REPAIR AI. Repair the narration below so it is safe to show to the user.
+                const availableNpcInfo = (() => {
+                    try {
+                        const nearbyIds = Array.isArray(getNearbyNpcIdsFromWorld()) ? getNearbyNpcIdsFromWorld() : [];
+                        const idSet = new Set([...(nearbyIds || []), ...(presentNpcIds || [])].filter(Boolean));
+                        const items = [...idSet]
+                            .map(id => {
+                                const npc = cards.find(c => c.genre === "character" && c.id === id);
+                                if (!npc) return null;
+                                return `${npc.title} [ID: ${npc.id}]`;
+                            })
+                            .filter(Boolean);
+                        return items.length ? items.join(", ") : "None";
+                    } catch {
+                        return "None";
+                    }
+                })();
+                
+                const visibleLocationsInfo = (() => {
+                    try {
+                        const locCard = curLocId ? cards.find(c => c.genre === "location" && c.id === curLocId) : null;
+                        const parent = curLocId
+                            ? cards.find((c) => {
+                                if (!c || c.genre !== "location" || !c.sublocations) return false;
+                                return Object.values(c.sublocations).some((arr) => (arr || []).includes(curLocId));
+                            })
+                            : null;
+                        const siblingIds = new Set();
+                        if (parent && parent.sublocations) {
+                            Object.values(parent.sublocations).forEach(arr => (arr || []).forEach(id => siblingIds.add(id)));
+                        }
+                        siblingIds.delete(curLocId);
+                        const siblings = [...siblingIds]
+                            .map(id => cards.find(c => c.genre === "location" && c.id === id))
+                            .filter(Boolean)
+                            .map(c => `${c.title} [ID: ${c.id}]`);
+                        const lines = [];
+                        if (locCard) lines.push(`- Current: ${locCard.title} [ID: ${locCard.id}]`);
+                        else if (curLocId) lines.push(`- Current: (unknown name) [ID: ${curLocId}]`);
+                        else lines.push(`- Current: (unknown)`);
+                        if (parent) lines.push(`- Parent: ${parent.title} [ID: ${parent.id}]`);
+                        else lines.push(`- Parent: None`);
+                        if (siblings.length) lines.push(`- Siblings: ${siblings.join(", ")}`);
+                        else lines.push(`- Siblings: None`);
+                        return lines.join("\n");
+                    } catch {
+                        return "- Current: (unknown)\n- Parent: (unknown)\n- Siblings: (unknown)";
+                    }
+                })();
+
+                const presentSpeciesInfo = (() => {
+                    try {
+                        const species = getPresentSpeciesCards();
+                        return species.map(s => `${s.title} [ID: ${s.id}]`).join(", ");
+                    } catch {
+                        return "";
+                    }
+                })();
+                
+                const validationPrompt = `You are a SECOND-PASS REPAIR AI. Your main focus is to add/fix control tags correctly.
 
 # NARRATION TO REPAIR:
 ${narrationText}
@@ -6303,38 +6473,55 @@ ${narrationText}
 # CURRENT CONTEXT:
 - Target Output Language: ${targetLanguage}
 - Target Language Code: ${aiLangSpec.code}
+- Player Message: "${String(playerInput || "").trim() || "N/A"}"
+- Previous 2 messages (immediately before Player Message):
+${prevTwoMessages}
+- Current Date: ${curDate}
 - Current Time: ${curTime}
-- Current Location: ${curLocName}
-- Present NPCs: ${presentNpcInfo || "None"}
-- Nearby NPCs (name only):
-${nearbyNpcInfo || "(none)"}
-- Player said: "${playerInput || "N/A"}"
-- Last 5 Story Log messages (most recent context):
-${lastStoryLines || "(empty)"}
+- Current Location (Name may be stylized): ${curLocName}
+- Current Location ID: ${curLocId || "(unknown)"}
+- Visible Locations (Name + ID):
+${visibleLocationsInfo}
+- Present NPCs (Name + ID): ${presentNpcInfo}
+- Available NPCs (Name + ID): ${availableNpcInfo}
+- Present Species: ${presentSpeciesInfo || "None"}
+- Level System Active: ${levelSystemActive ? "YES" : "NO"}
 
-# YOUR TASK:
-Repair BOTH the prose and the control tags when needed.
+# YOUR TASK (PRIORITIES):
+1) Tags first: Repair and add ALL required control tags (this is your main job).
+2) Prose second: Only fix the narration text if it is clearly broken (spelling/grammar, duplicated fragments, missing closing quotes/brackets). Do NOT rewrite otherwise.
 
-1. You MAY repair the narration text itself.
-   - Fix obvious broken sentences, malformed punctuation, duplicated fragments, or cut-off dialogue.
+# ID RULE (STRICT):
+- For any tag field that needs an ID, you MUST output IDs, not names.
+- This includes: ActiveNPCs, Memory, Death, SecretRevelation, Killed, and LOCATION inside the final [[TIME: ...]] tag (if LOCATION is included).
+- Use ONLY IDs from the lists above (NPCs/Locations/Species). If an ID is unknown, do NOT invent one.
+
+0. General output rules:
+   - Return ONLY the repaired narration with tags.
+   - No explanations, no bullet list output, no markdown fences.
+
+1. Prose repair (only if needed):
+   - Keep the same meaning, outcome, and tone.
    - ALWAYS close quotation marks, brackets, and parentheses.
    - If a dialogue line starts with a quote, close that quote.
-   - Keep the same meaning, outcome, and tone.
    - The FINAL output language MUST be ${targetLanguage}.
    - If the narration is partly or fully in another language, translate it fully into ${targetLanguage}.
-   - Do NOT invent major new plot facts. Only make minimal repairs needed for a coherent output.
+   - Do NOT invent major new plot facts.
 
 2. You MUST check and repair the control tags:
+
+2x. NSFW block (only when needed)
+   - If the repaired response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY [[NSFW]] and nothing else.
 
 2a. **[[TIME: HH:MM]]** or **[[TIME: HH:MM, LOCATION: "Place"]]** - MUST exist at the END (FINAL TAG)
    - Format must be EXACT: [[TIME: 14:15]]
    - Time must be valid (00:00-23:59)
-   - If the narration changed the location, include LOCATION in the FINAL tag like:
-     [[TIME: 14:15, LOCATION: "Forest"]]
-   - If LOCATION equals Current Location, you may omit the LOCATION part
+   - If the narration changed the location, include LOCATION in the FINAL tag using a LOCATION ID from Visible Locations:
+     [[TIME: 14:15, LOCATION: "loc_123"]]
+   - If LOCATION equals Current Location ID, you may omit the LOCATION part
 
 2b. **[[Memory: NPC_ID|Short memory text]]** - MUST exist if any PRESENT NPC spoke, acted, reacted, attacked, answered, followed, touched, helped, threatened, kissed, or otherwise interacted with the player or scene
-   - NPC_ID must be from Nearby NPCs list above
+   - NPC_ID must be from Available NPCs list above (use IDs)
    - The memory text must be short and explicit, e.g. "Hat Kei gekuesst"
    - Output one memory tag per NPC that should remember something
    - You may keep legacy ID-only memory tags only if absolutely necessary, but prefer the explicit text format
@@ -6354,21 +6541,25 @@ Repair BOTH the prose and the control tags when needed.
 
 2g. **[[ActiveNPCs:NPC_ID1,NPC_ID2]]** or **[[ActiveNPCs:none]]**
    - MUST exist in the output
-   - NPC_IDs must come from Nearby NPCs list above
+   - NPC_IDs must come from Available NPCs list above (use IDs)
    - ActiveNPCs MUST include every NPC that spoke/acted/reacted OR received a [[Memory: ...]] tag
    - If no NPC is active in the narration, use [[ActiveNPCs:none]]
 
+2h. Relative time change tags (only when time actually advances in the narration)
+   - If the narration clearly implies time passing (walking, searching, resting, a conversation, "later", "after a while", etc.), add exactly ONE minimal relative time tag BEFORE the final [[TIME: ...]] tag.
+   - Allowed forms: [[Time:+5]], [[Time:+10]], [[Time:+30]] (minutes), or [[Day:+1]], [[Week:+1]], [[Month:+1]], [[Year:+1]].
+   - If you add a relative time tag that changes the clock time, the final [[TIME: ...]] tag MUST reflect the resulting time after applying it.
+   - If the narration explicitly sets a clock time, you may omit a relative time tag and only set the final [[TIME: ...]] tag accordingly.
+
+2i. Killed tag (ONLY when Level System Active is YES and a species is killed)
+   - If the narration clearly describes a species being killed by the player or NPCs, add one [[Killed:Species_ID:Recipients]] tag BEFORE the final [[TIME: ...]] tag.
+   - Species_ID must be from Present Species list above (use the ID).
+   - Recipients must be "Player" and/or NPC IDs (from Available NPC IDs) based on who killed it.
+
 3. Tag order rules:
-   - Put all non-TIME tags BEFORE the final [[TIME: ...]] tag
+   - Put all tags (including relative time change and Killed tags) BEFORE the final [[TIME: ...]] tag, except the final [[TIME: ...]] tag itself
    - Every tag must be a complete separate block: [[...]]
    - Never merge multiple commands into one broken tag
-
-4. Output rules:
-   - Return the COMPLETE repaired narration
-   - Keep the response concise and natural
-   - The final visible narration MUST be fully in ${targetLanguage}
-   - Return ONLY the final repaired narration with tags
-   - No explanations, no bullet list output, no markdown fences
 
 # RESPONSE:
 Return ONLY the repaired narration with tags.`;
@@ -6379,6 +6570,19 @@ Return ONLY the repaired narration with tags.`;
                     
                     // Clean the response
                     let cleaned = validatedResponse.trim();
+                    const addMinutesToTime = (timeStr, mins) => {
+                        const m = String(timeStr || "").trim().match(/^([0-2]?\d):(\d{2})$/);
+                        if (!m) return String(timeStr || "00:00").trim() || "00:00";
+                        const h = Math.min(23, Math.max(0, parseInt(m[1], 10) || 0));
+                        const mm = Math.min(59, Math.max(0, parseInt(m[2], 10) || 0));
+                        let total = h * 60 + mm + (parseInt(mins, 10) || 0);
+                        const dayLen = 24 * 60;
+                        while (total < 0) total += dayLen;
+                        total = total % dayLen;
+                        const nh = Math.floor(total / 60);
+                        const nm = total % 60;
+                        return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+                    };
                     
                     // Remove any markdown code blocks
                     cleaned = cleaned.replace(/^```[\s\S]*?\n([\s\S]*?)\n?```$/g, '$1');
@@ -6404,14 +6608,14 @@ Return ONLY the repaired narration with tags.`;
                         }
 
                         const withoutMeta = cleaned.replace(metaRegex, "").trim();
-                        const finalTime = lastMeta?.time || curTime;
+                        const finalTime = lastMeta?.time || addMinutesToTime(curTime, 1);
                         const finalLoc = (lastMeta?.loc || "").trim();
                         const metaBlock = finalLoc
                             ? `[[TIME: ${finalTime}, LOCATION: "${finalLoc}"]]`
                             : `[[TIME: ${finalTime}]]`;
                         cleaned = `${withoutMeta}\n\n${metaBlock}`.trim();
                     } catch {
-                        cleaned = `${String(cleaned || "").trim()}\n\n[[TIME: ${curTime}]]`.trim();
+                        cleaned = `${String(cleaned || "").trim()}\n\n[[TIME: ${addMinutesToTime(curTime, 1)}]]`.trim();
                     }
                     try {
                         const nearbySet = new Set(getNearbyNpcIdsFromWorld());
@@ -6720,7 +6924,7 @@ Return ONLY the repaired narration with tags.`;
                         console.log("[DEBUG] AI Check mode:", String(dbgSettings.aiCheck || "1"), "| useAiCheck:", useAiCheck ? "2" : "1");
                     } catch {}
                     let validatedResponse = response;
-                    const hasNsfwTag = response && /\[\[\s*NSFW\s*\]\]/i.test(response);
+                    const hasNsfwTag = response && (/\[\[\s*NSFW\s*\]\]/i.test(response) || /^\s*NSFW\s*$/i.test(response));
                     if (useAiCheck && response && !hasNsfwTag) {
                         try {
                             const validated = await validateAndFixNarration(response, text);
@@ -6748,7 +6952,7 @@ Return ONLY the repaired narration with tags.`;
                             const finalPrompt2 = buildNarratorPrompt(systemInst, tagMatchedContext, "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 2, 16);
                             const response2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = response2;
-                            const hasNsfwTag2 = response2 && /\[\[\s*NSFW\s*\]\]/i.test(response2);
+                            const hasNsfwTag2 = response2 && (/\[\[\s*NSFW\s*\]\]/i.test(response2) || /^\s*NSFW\s*$/i.test(response2));
                             if (useAiCheck && response2 && !hasNsfwTag2) {
                                 try {
                                     const validated2 = await validateAndFixNarration(response2, text);
@@ -6935,7 +7139,7 @@ Return ONLY the repaired narration with tags.`;
                         console.log("[DEBUG] AI Check mode:", String(dbgSettings.aiCheck || "1"), "| useAiCheck:", useAiCheck ? "2" : "1");
                     } catch {}
                     let validatedResponse = r;
-                    const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
+                    const hasNsfwTag = r && (/\[\[\s*NSFW\s*\]\]/i.test(r) || /^\s*NSFW\s*$/i.test(r));
                     if (useAiCheck && r && !hasNsfwTag) {
                         try {
                             const validated = await validateAndFixNarration(r, lastUserText);
@@ -6960,7 +7164,7 @@ Return ONLY the repaired narration with tags.`;
                             const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 2, 16);
                             const r2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = r2;
-                            const hasNsfwTag2 = r2 && /\[\[\s*NSFW\s*\]\]/i.test(r2);
+                            const hasNsfwTag2 = r2 && (/\[\[\s*NSFW\s*\]\]/i.test(r2) || /^\s*NSFW\s*$/i.test(r2));
                             if (useAiCheck && r2 && !hasNsfwTag2) {
                                 try {
                                     const validated2 = await validateAndFixNarration(r2, lastUserText);
@@ -7026,7 +7230,7 @@ Return ONLY the repaired narration with tags.`;
                         console.log("[DEBUG] AI Check mode:", String(dbgSettings.aiCheck || "1"), "| useAiCheck:", useAiCheck ? "2" : "1");
                     } catch {}
                     let validatedResponse = r;
-                    const hasNsfwTag = r && /\[\[\s*NSFW\s*\]\]/i.test(r);
+                    const hasNsfwTag = r && (/\[\[\s*NSFW\s*\]\]/i.test(r) || /^\s*NSFW\s*$/i.test(r));
                     if (useAiCheck && r && !hasNsfwTag) {
                         try {
                             const validated = await validateAndFixNarration(r, "");
@@ -7051,7 +7255,7 @@ Return ONLY the repaired narration with tags.`;
                             const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 2, 16);
                             const r2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = r2;
-                            const hasNsfwTag2 = r2 && /\[\[\s*NSFW\s*\]\]/i.test(r2);
+                            const hasNsfwTag2 = r2 && (/\[\[\s*NSFW\s*\]\]/i.test(r2) || /^\s*NSFW\s*$/i.test(r2));
                             if (useAiCheck && r2 && !hasNsfwTag2) {
                                 try {
                                     const validated2 = await validateAndFixNarration(r2, "");
