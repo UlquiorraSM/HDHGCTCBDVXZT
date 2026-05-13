@@ -4523,6 +4523,11 @@ ${shopContext}
 9. Do NOT repeat exact sentences from the STORY LOG; continue with new developments.
 10. Respect EVENT chronology strictly: if an event is marked UPCOMING with a fixed date, never describe it as happening earlier than that date.
 
+# PLAYER AGENCY (STRICT)
+- Do NOT speak as the player. Do NOT write player dialogue in quotes.
+- Do NOT invent player actions, emotions, or inner thoughts. Only react to what the player explicitly wrote.
+- Do NOT copy, quote, or repeat the player's message text (even partially). Respond with NEW narration and NPC/world reactions only.
+
 # FINAL REMINDER - BEFORE YOU WRITE
 ⚠️ Check your response language: Is it EXCLUSIVELY in ${aiLang}? If not, rewrite it entirely in ${aiLang}.
 Your entire output must be in ${aiLang} - no exceptions.
@@ -4664,6 +4669,11 @@ ${shopContext}
 8. Do NOT end your narration with "..." unless it's intentional and the sentence is complete; prefer complete sentences.
 9. Do NOT repeat exact sentences from the STORY LOG; continue with new developments.
 10. Respect EVENT chronology strictly: if an event is marked UPCOMING with a fixed date, never describe it as happening earlier than that date.
+
+# PLAYER AGENCY (STRICT)
+- Do NOT speak as the player. Do NOT write player dialogue in quotes.
+- Do NOT invent player actions, emotions, or inner thoughts. Only react to what the player explicitly wrote.
+- Do NOT copy, quote, or repeat the player's message text (even partially). Respond with NEW narration and NPC/world reactions only.
 
 # FINAL REMINDER - BEFORE YOU WRITE
 ⚠️ Check your response language: Is it EXCLUSIVELY in ${aiLang}? If not, rewrite it entirely in ${aiLang}.
@@ -6251,6 +6261,14 @@ ${killedInstructionNoTags}`;
                 const prev = getLastNarratorTexts(10).map(_normalizeText);
                 return prev.includes(norm);
             }
+            function isEchoOfPlayerText(aiText, playerText) {
+                const a = _normalizeText(aiText);
+                const p = _normalizeText(playerText);
+                if (!p || p.length < 8) return false;
+                if (a === p) return true;
+                if (p.length >= 14 && a.includes(p)) return true;
+                return false;
+            }
             function uniqueSentences(t) {
                 const txt = String(t || "");
                 const parts = txt.split(/(?<=[\.!\?])\s+/).filter(Boolean);
@@ -6314,7 +6332,7 @@ ${killedInstructionNoTags}`;
                         finalText = uniqueSentences(cleanResponse);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 2, 16);
+                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences. Do NOT copy or quote the player's last message. Do NOT speak or act as the player.", 2, 16);
                             const response2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = response2;
                             const hasNsfwTag2 = response2 && (/\[\[\s*NSFW\s*\]\]/i.test(response2) || /^\s*NSFW\s*$/i.test(response2));
@@ -6490,6 +6508,11 @@ ${visibleLocationsInfo}
 # YOUR TASK (PRIORITIES):
 1) Tags first: Repair and add ALL required control tags (this is your main job).
 2) Prose second: Only fix the narration text if it is clearly broken (spelling/grammar, duplicated fragments, missing closing quotes/brackets). Do NOT rewrite otherwise.
+
+# PLAYER AGENCY (STRICT):
+- Do NOT speak or act as the player.
+- Do NOT add any new player dialogue.
+- Do NOT copy, quote, or repeat the Player Message text in the narration.
 
 # ID RULE (STRICT):
 - For any tag field that needs an ID, you MUST output IDs, not names.
@@ -6948,8 +6971,8 @@ Return ONLY the repaired narration with tags.`;
                     } else {
                         finalText = uniqueSentences(cleanResponse);
                         const lastNarr = getLastNarratorText();
-                        if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = buildNarratorPrompt(systemInst, tagMatchedContext, "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 2, 16);
+                        if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText) || isEchoOfPlayerText(finalText, text)) {
+                            const finalPrompt2 = buildNarratorPrompt(systemInst, tagMatchedContext, "Note: Do not repeat previous narration. Continue the story with new actions and consequences. Do NOT copy or quote the player's message. Do NOT speak or act as the player.", 2, 16);
                             const response2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = response2;
                             const hasNsfwTag2 = response2 && (/\[\[\s*NSFW\s*\]\]/i.test(response2) || /^\s*NSFW\s*$/i.test(response2));
@@ -7160,8 +7183,8 @@ Return ONLY the repaired narration with tags.`;
                     } else {
                         finalText = uniqueSentences(cleanR);
                         const lastNarr = getLastNarratorText();
-                        if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 2, 16);
+                        if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText) || isEchoOfPlayerText(finalText, lastUserText)) {
+                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences. Do NOT copy or quote the player's message. Do NOT speak or act as the player.", 2, 16);
                             const r2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = r2;
                             const hasNsfwTag2 = r2 && (/\[\[\s*NSFW\s*\]\]/i.test(r2) || /^\s*NSFW\s*$/i.test(r2));
@@ -7252,7 +7275,7 @@ Return ONLY the repaired narration with tags.`;
                         finalText = uniqueSentences(cleanR);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences.", 2, 16);
+                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences. Do NOT speak or act as the player.", 2, 16);
                             const r2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = r2;
                             const hasNsfwTag2 = r2 && (/\[\[\s*NSFW\s*\]\]/i.test(r2) || /^\s*NSFW\s*$/i.test(r2));
@@ -7384,27 +7407,254 @@ Return ONLY the repaired narration with tags.`;
                     if (b) { b.disabled = true; b.classList.add('locked'); }
                 });
             };
-            document.getElementById("edit-save-btn").onclick = () => {
+            async function reconcileTagsAfterNarratorEdit(editedText, previousRawAi) {
+                const cards = getCards();
+                const d = activeChar?.startingDate || {};
+                const curTime = d.time || "00:00";
+                const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
+                const curLocName = (document.getElementById("header-location")?.textContent || "Unknown Location").trim();
+                const curLocId = activeChar?.currentLocationId || currentLocationId || "";
+                const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
+                const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
+                const levelSystemActive = isLevelSystemActive();
+                
+                const prevTags = (String(previousRawAi || "").match(/\[\[[\s\S]*?\]\]/g) || []).map(s => s.trim()).filter(Boolean);
+                const prevTagsBlock = prevTags.length ? prevTags.join("\n") : "(none)";
+                
+                const presentNpcIds = getPresentNpcIds();
+                const presentNpcInfo = presentNpcIds
+                    .map(id => {
+                        const npc = cards.find(c => c.genre === "character" && c.id === id);
+                        return npc ? `${npc.title} [ID: ${npc.id}]` : null;
+                    })
+                    .filter(Boolean)
+                    .join(", ") || "None";
+                
+                const availableNpcInfo = (() => {
+                    try {
+                        const nearbyIds = Array.isArray(getNearbyNpcIdsFromWorld()) ? getNearbyNpcIdsFromWorld() : [];
+                        const idSet = new Set([...(nearbyIds || []), ...(presentNpcIds || [])].filter(Boolean));
+                        const items = [...idSet]
+                            .map(id => {
+                                const npc = cards.find(c => c.genre === "character" && c.id === id);
+                                if (!npc) return null;
+                                return `${npc.title} [ID: ${npc.id}]`;
+                            })
+                            .filter(Boolean);
+                        return items.length ? items.join(", ") : "None";
+                    } catch {
+                        return "None";
+                    }
+                })();
+                
+                const visibleLocationsInfo = (() => {
+                    try {
+                        const locCard = curLocId ? cards.find(c => c.genre === "location" && c.id === curLocId) : null;
+                        const parent = curLocId
+                            ? cards.find((c) => {
+                                if (!c || c.genre !== "location" || !c.sublocations) return false;
+                                return Object.values(c.sublocations).some((arr) => (arr || []).includes(curLocId));
+                            })
+                            : null;
+                        const siblingIds = new Set();
+                        if (parent && parent.sublocations) {
+                            Object.values(parent.sublocations).forEach(arr => (arr || []).forEach(id => siblingIds.add(id)));
+                        }
+                        siblingIds.delete(curLocId);
+                        const siblings = [...siblingIds]
+                            .map(id => cards.find(c => c.genre === "location" && c.id === id))
+                            .filter(Boolean)
+                            .map(c => `${c.title} [ID: ${c.id}]`);
+                        const lines = [];
+                        if (locCard) lines.push(`- Current: ${locCard.title} [ID: ${locCard.id}]`);
+                        else if (curLocId) lines.push(`- Current: (unknown name) [ID: ${curLocId}]`);
+                        else lines.push(`- Current: (unknown)`);
+                        if (parent) lines.push(`- Parent: ${parent.title} [ID: ${parent.id}]`);
+                        else lines.push(`- Parent: None`);
+                        if (siblings.length) lines.push(`- Siblings: ${siblings.join(", ")}`);
+                        else lines.push(`- Siblings: None`);
+                        return lines.join("\n");
+                    } catch {
+                        return "- Current: (unknown)\n- Parent: (unknown)\n- Siblings: (unknown)";
+                    }
+                })();
+                
+                const presentSpeciesInfo = (() => {
+                    try {
+                        const species = getPresentSpeciesCards();
+                        return species.map(s => `${s.title} [ID: ${s.id}]`).join(", ") || "None";
+                    } catch {
+                        return "None";
+                    }
+                })();
+                
+                const prompt = `You are a TAG RECONCILIATION AI for an edited Narrator message.
+
+# EDITED NARRATION (visible text, NO tags):
+${String(editedText || "").trim()}
+
+# PREVIOUS RAW AI (may contain old tags):
+${String(previousRawAi || "").trim() || "(empty)"}
+
+# PREVIOUS TAGS (as blocks):
+${prevTagsBlock}
+
+# CURRENT CONTEXT (BEFORE applying this edited message):
+- Target Output Language: ${targetLanguage}
+- Target Language Code: ${aiLangSpec.code}
+- Current Date: ${curDate}
+- Current Time: ${curTime}
+- Current Location (Name may be stylized): ${curLocName}
+- Current Location ID: ${curLocId || "(unknown)"}
+- Visible Locations (Name + ID):
+${visibleLocationsInfo}
+- Present NPCs (Name + ID): ${presentNpcInfo}
+- Available NPCs (Name + ID): ${availableNpcInfo}
+- Present Species (Name + ID): ${presentSpeciesInfo}
+- Level System Active: ${levelSystemActive ? "YES" : "NO"}
+
+# YOUR TASK (PRIORITIES):
+1) Tags first: Ensure the output has the correct control tags and that they are compatible with the edited narration.
+   - You MAY delete, change, or add tags (Memory/ActiveNPCs/Time/Location/LocState/Death/SecretRevelation/Killed/Relations) as needed.
+2) Prose second: Keep the edited narration text as-is. ONLY fix obvious mistakes (spelling, missing closing quotes/brackets, duplicated fragments). Do NOT rewrite otherwise.
+
+# PLAYER AGENCY (STRICT):
+- Do NOT speak or act as the player.
+- Do NOT add any player dialogue.
+
+# ID RULE (STRICT):
+- For any tag field that needs an ID, you MUST output IDs, not names.
+- This includes: ActiveNPCs, Memory, Death, SecretRevelation, Killed, and LOCATION inside the final [[TIME: ...]] tag (if LOCATION is included).
+- Use ONLY IDs from the lists above (NPCs/Locations/Species). If an ID is unknown, do NOT invent one.
+
+# TAG RULES:
+- Output MUST include exactly ONE [[ActiveNPCs:...]] tag (or [[ActiveNPCs:none]]) BEFORE the final [[TIME: ...]] tag.
+- Output MUST include a final [[TIME: HH:MM]] tag at the very end (optionally with LOCATION using a LOCATION ID).
+- If you add a relative time tag ([[Time:+...]] etc), the final [[TIME: ...]] must reflect the resulting time after applying it.
+- Put all non-final tags BEFORE the final [[TIME: ...]] tag.
+
+# RESPONSE:
+Return ONLY the edited narration with corrected tags. No explanations.`;
+                
+                return await askAIWithRetry(prompt, 2);
+            }
+            
+            document.getElementById("edit-save-btn").onclick = async () => {
                 if (!isEditing || _editIndex < 0 || !_editRow) return;
                 const input = document.getElementById("user-input");
                 const newText = (input.value || "").trim();
                 if (!newText) { showToast("Text darf nicht leer sein.", "rgba(180,60,60,0.85)"); return; }
-                const bubble = _editRow.querySelector(".msg-bubble");
-                if (bubble) bubble.innerHTML = formatMessageText(newText);
-                // Update history
                 const entry = chatHistory[_editIndex];
-                if (entry && typeof entry === "object") {
-                    entry.text = newText;
+                const isNarratorEntry = entry && typeof entry === "object" && entry.sender === "Narrator";
+                const useBetterAi = isNarratorEntry && isAiCheckEnabled();
+                const hasRawAi = isNarratorEntry && entry && typeof entry.rawAi === "string" && entry.rawAi.trim().length > 0;
+                
+                if (useBetterAi && hasRawAi) {
+                    const saveBtn = document.getElementById("edit-save-btn");
+                    const cancelBtn = document.getElementById("edit-cancel-btn");
+                    if (saveBtn) { saveBtn.disabled = true; saveBtn.classList.add('locked'); }
+                    if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.classList.add('locked'); }
+                    
+                    isBusy = true;
+                    setSendDisabled(true);
+                    setStatus(false);
+                    lockAllButtons();
+                    appendTypingIndicator();
+                    
+                    const ts = entry.timestamp;
+                    const oldRawAi = String(entry.rawAi || "");
+                    let removed = null;
                     try {
-                        if (entry.sender === "Narrator" && entry.timestamp && _retryVariantSession && Array.isArray(_retryVariantSession.variants)) {
-                            const v = _retryVariantSession.variants.find(x => x && x.ts === entry.timestamp);
-                            if (v) v.displayText = newText;
+                        removed = chatHistory.splice(_editIndex, 1)[0];
+                        saveStoryLog();
+                        rollbackAnchoredChangesByTs(ts);
+                        rollbackToLastWorldState();
+                        try { updatePresentNPCs(); } catch {}
+                        
+                        const reconciledRaw = await reconcileTagsAfterNarratorEdit(newText, oldRawAi);
+                        let validatedResponse = String(reconciledRaw || "").trim();
+                        validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
+                        
+                        currentNarrationTs = ts;
+                        const clean = processAICommands(validatedResponse);
+                        currentNarrationTs = null;
+                        
+                        const bubble = _editRow.querySelector(".msg-bubble");
+                        let finalText = "";
+                        if (clean === NSFW_BLOCKED_TOKEN) {
+                            finalText = NSFW_BLOCKED_TEXT;
+                        } else {
+                            finalText = uniqueSentences(clean);
                         }
-                    } catch {}
-                    if (entry.timestamp) {
-                        updateMemoriesTextByTs(entry.timestamp, newText);
+                        
+                        // Reinsert and update entry with new tags + updated world meta
+                        const d2 = activeChar?.startingDate || {};
+                        const day2 = String(d2.day || 1).padStart(2, "0");
+                        const mon2 = String(d2.month || 1).padStart(2, "0");
+                        const yr2 = d2.year || 1983;
+                        const tm2 = d2.time || "00:00";
+                        const loc2 = document.getElementById("header-location")?.textContent || "Unknown Location";
+                        if (removed && typeof removed === "object") {
+                            removed.text = finalText;
+                            removed.rawAi = validatedResponse;
+                            removed.date = `${day2}.${mon2}.${yr2}`;
+                            removed.time = tm2;
+                            removed.location = loc2;
+                            if (isLevelSystemActive() && activeChar?.levelData) {
+                                removed.levelData = { ...(activeChar.levelData || { level: 1, xp: 0 }) };
+                            }
+                        }
+                        chatHistory.splice(_editIndex, 0, removed);
+                        saveStoryLog();
+                        
+                        try {
+                            if (removed && removed.sender === "Narrator" && removed.timestamp && _retryVariantSession && Array.isArray(_retryVariantSession.variants)) {
+                                const v = _retryVariantSession.variants.find(x => x && x.ts === removed.timestamp);
+                                if (v) { v.displayText = finalText; v.rawAi = validatedResponse; }
+                            }
+                        } catch {}
+                        
+                        if (bubble) bubble.innerHTML = formatMessageText(finalText);
+                        showToast("Message edited & tags updated.");
+                    } catch (e) {
+                        try {
+                            if (removed) {
+                                chatHistory.splice(_editIndex, 0, removed);
+                                saveStoryLog();
+                            }
+                            currentNarrationTs = ts;
+                            processAICommands(oldRawAi);
+                            currentNarrationTs = null;
+                        } catch {}
+                        console.error("Edit revalidation failed", e);
+                        showToast("Edit saved, but tag validation failed.", "rgba(180,60,60,0.85)");
+                    } finally {
+                        removeTypingIndicator();
+                        isBusy = false;
+                        setSendDisabled(false);
+                        setStatus(true);
+                        unlockAllButtons();
+                        if (saveBtn) { saveBtn.disabled = false; saveBtn.classList.remove('locked'); }
+                        if (cancelBtn) { cancelBtn.disabled = false; cancelBtn.classList.remove('locked'); }
                     }
-                    saveStoryLog();
+                } else {
+                    const bubble = _editRow.querySelector(".msg-bubble");
+                    if (bubble) bubble.innerHTML = formatMessageText(newText);
+                    if (entry && typeof entry === "object") {
+                        entry.text = newText;
+                        try {
+                            if (entry.sender === "Narrator" && entry.timestamp && _retryVariantSession && Array.isArray(_retryVariantSession.variants)) {
+                                const v = _retryVariantSession.variants.find(x => x && x.ts === entry.timestamp);
+                                if (v) v.displayText = newText;
+                            }
+                        } catch {}
+                        if (entry.timestamp) {
+                            updateMemoriesTextByTs(entry.timestamp, newText);
+                        }
+                        saveStoryLog();
+                    }
+                    showToast("Message edited.");
                 }
                 // Reset edit state
                 isEditing = false;
@@ -7417,7 +7667,6 @@ Return ONLY the repaired narration with tags.`;
                     const b = document.getElementById(id);
                     if (b) { b.disabled = false; b.classList.remove('locked'); }
                 });
-                showToast("Message edited.");
             };
             document.getElementById("edit-cancel-btn").onclick = () => {
                 if (!isEditing) return;
