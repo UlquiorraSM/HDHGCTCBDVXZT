@@ -7418,6 +7418,9 @@ Return ONLY the repaired narration with tags.`;
                 const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
                 const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
                 const levelSystemActive = isLevelSystemActive();
+                const playerName = activeChar
+                    ? [activeChar.firstName, activeChar.lastName].filter(Boolean).join(" ")
+                    : "Player";
                 
                 const prevTags = (String(previousRawAi || "").match(/\[\[[\s\S]*?\]\]/g) || []).map(s => s.trim()).filter(Boolean);
                 const prevTagsBlock = prevTags.length ? prevTags.join("\n") : "(none)";
@@ -7491,6 +7494,13 @@ Return ONLY the repaired narration with tags.`;
                 
                 const prompt = `You are a TAG RECONCILIATION AI for an edited Narrator message.
 
+🚨 ABSOLUTE LANGUAGE RULE - ZERO TOLERANCE 🚨
+You are FORBIDDEN from using any language other than ${targetLanguage}.
+• ALL visible text MUST be in ${targetLanguage}
+• NO English words allowed
+• This applies to narration text AND to all tag payloads that are visible text (e.g. Memory text, Death cause)
+• If you cannot express something in ${targetLanguage}, rephrase it in ${targetLanguage}
+
 # EDITED NARRATION (visible text, NO tags):
 ${String(editedText || "").trim()}
 
@@ -7503,6 +7513,7 @@ ${prevTagsBlock}
 # CURRENT CONTEXT (BEFORE applying this edited message):
 - Target Output Language: ${targetLanguage}
 - Target Language Code: ${aiLangSpec.code}
+- Player Name: ${playerName}
 - Current Date: ${curDate}
 - Current Time: ${curTime}
 - Current Location (Name may be stylized): ${curLocName}
@@ -7522,6 +7533,7 @@ ${visibleLocationsInfo}
 # PLAYER AGENCY (STRICT):
 - Do NOT speak or act as the player.
 - Do NOT add any player dialogue.
+- Do NOT refer to the player as "Player" in narration or Memory text. Use second-person ("du") or the Player Name when needed.
 
 # ID RULE (STRICT):
 - For any tag field that needs an ID, you MUST output IDs, not names.
@@ -7531,6 +7543,7 @@ ${visibleLocationsInfo}
 # TAG RULES:
 - Output MUST include exactly ONE [[ActiveNPCs:...]] tag (or [[ActiveNPCs:none]]) BEFORE the final [[TIME: ...]] tag.
 - If any NPC in [[ActiveNPCs:...]] did anything non-trivial in the edited narration (spoke, reacted, moved, touched, helped, threatened, kissed, discovered something, promised something, conflict, item gained/lost), output at least ONE [[Memory:NPC_ID|...]] for that NPC.
+  - Memory text must be in ${targetLanguage}, short, explicit, and should use the Player Name when referencing the player (e.g. "Hat ${playerName} geküsst").
 - Output MUST include a final [[TIME: HH:MM]] tag at the very end (optionally with LOCATION using a LOCATION ID).
 - If you add a relative time tag ([[Time:+...]] etc), the final [[TIME: ...]] must reflect the resulting time after applying it.
 - Put all non-final tags BEFORE the final [[TIME: ...]] tag.
