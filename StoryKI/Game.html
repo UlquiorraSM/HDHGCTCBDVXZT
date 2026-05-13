@@ -7530,6 +7530,7 @@ ${visibleLocationsInfo}
 
 # TAG RULES:
 - Output MUST include exactly ONE [[ActiveNPCs:...]] tag (or [[ActiveNPCs:none]]) BEFORE the final [[TIME: ...]] tag.
+- If any NPC in [[ActiveNPCs:...]] did anything non-trivial in the edited narration (spoke, reacted, moved, touched, helped, threatened, kissed, discovered something, promised something, conflict, item gained/lost), output at least ONE [[Memory:NPC_ID|...]] for that NPC.
 - Output MUST include a final [[TIME: HH:MM]] tag at the very end (optionally with LOCATION using a LOCATION ID).
 - If you add a relative time tag ([[Time:+...]] etc), the final [[TIME: ...]] must reflect the resulting time after applying it.
 - Put all non-final tags BEFORE the final [[TIME: ...]] tag.
@@ -7554,13 +7555,18 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                     const saveBtn = document.getElementById("edit-save-btn");
                     const cancelBtn = document.getElementById("edit-cancel-btn");
                     if (saveBtn) { saveBtn.disabled = true; saveBtn.classList.add('locked'); }
-                    if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.classList.add('locked'); }
+                    if (cancelBtn) _setElDisplay(cancelBtn, "none");
+                    
+                    const bubble = _editRow.querySelector(".msg-bubble");
+                    const bubblePrevHtml = bubble ? bubble.innerHTML : "";
+                    if (bubble) {
+                        bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+                    }
                     
                     isBusy = true;
                     setSendDisabled(true);
                     setStatus(false);
                     lockAllButtons();
-                    appendTypingIndicator();
                     
                     const ts = entry.timestamp;
                     const oldRawAi = String(entry.rawAi || "");
@@ -7580,12 +7586,16 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                         const clean = processAICommands(validatedResponse);
                         currentNarrationTs = null;
                         
-                        const bubble = _editRow.querySelector(".msg-bubble");
                         let finalText = "";
                         if (clean === NSFW_BLOCKED_TOKEN) {
                             finalText = NSFW_BLOCKED_TEXT;
                         } else {
                             finalText = uniqueSentences(clean);
+                        }
+                        if (finalText !== NSFW_BLOCKED_TEXT) {
+                            try { addNpcMemoriesFromPending(finalText, ts); } catch {}
+                            try { addLocationMemoryFromNarration(finalText, ts); } catch {}
+                            try { extractAndTrackMentionedNpcs(finalText); } catch {}
                         }
                         
                         // Reinsert and update entry with new tags + updated world meta
@@ -7628,15 +7638,15 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                             currentNarrationTs = null;
                         } catch {}
                         console.error("Edit revalidation failed", e);
-                        showToast("Edit saved, but tag validation failed.", "rgba(180,60,60,0.85)");
+                        if (bubble) bubble.innerHTML = bubblePrevHtml || formatMessageText(newText);
+                        showToast("Edit gespeichert, aber Tag-Prüfung fehlgeschlagen.", "rgba(180,60,60,0.85)");
                     } finally {
-                        removeTypingIndicator();
                         isBusy = false;
                         setSendDisabled(false);
                         setStatus(true);
                         unlockAllButtons();
                         if (saveBtn) { saveBtn.disabled = false; saveBtn.classList.remove('locked'); }
-                        if (cancelBtn) { cancelBtn.disabled = false; cancelBtn.classList.remove('locked'); }
+                        if (cancelBtn) _restoreElDisplay(cancelBtn);
                     }
                 } else {
                     const bubble = _editRow.querySelector(".msg-bubble");
