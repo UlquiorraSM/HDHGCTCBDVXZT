@@ -4185,6 +4185,83 @@
             let curseTemp = [];
             let curseCtx = null;
 
+            const FAMILY_MEMBER_RELATIONS = [
+                "Relative",
+                "Parent",
+                "Mother",
+                "Father",
+                "Adoptive Mother",
+                "Adoptive Father",
+                "Foster Mother",
+                "Foster Father",
+                "Step-Mother",
+                "Step-Father",
+                "Guardian",
+                "Ward",
+                "Child",
+                "Son",
+                "Daughter",
+                "Adopted Son",
+                "Adopted Daughter",
+                "Step-Son",
+                "Step-Daughter",
+                "Sibling",
+                "Brother",
+                "Sister",
+                "Twin Brother",
+                "Twin Sister",
+                "Half-Brother",
+                "Half-Sister",
+                "Step-Brother",
+                "Step-Sister",
+                "Grandparent",
+                "Grandmother",
+                "Grandfather",
+                "Great-Grandmother",
+                "Great-Grandfather",
+                "Grandchild",
+                "Grandson",
+                "Granddaughter",
+                "Great-Grandson",
+                "Great-Granddaughter",
+                "Aunt",
+                "Uncle",
+                "Great-Aunt",
+                "Great-Uncle",
+                "Niece",
+                "Nephew",
+                "Cousin",
+                "Second Cousin",
+                "First Cousin Once Removed",
+                "Mother-in-law",
+                "Father-in-law",
+                "Brother-in-law",
+                "Sister-in-law",
+                "Son-in-law",
+                "Daughter-in-law",
+                "Godmother",
+                "Godfather",
+                "Godson",
+                "Goddaughter",
+            ];
+
+            function sanitizeFamilyMemberRelation(rel) {
+                const r = (rel || "").trim();
+                if (!r) return "Relative";
+                if (r === "Spouse") return "Relative";
+                if (FAMILY_MEMBER_RELATIONS.includes(r)) return r;
+                return "Relative";
+            }
+
+            function buildFamilyMemberRelationOptionsHtml(selected) {
+                const sel = sanitizeFamilyMemberRelation(selected);
+                return FAMILY_MEMBER_RELATIONS.map((r) => {
+                    const value = escHtml(r);
+                    const isSel = r === sel ? "selected" : "";
+                    return `<option value="${value}" ${isSel}>${value}</option>`;
+                }).join("");
+            }
+
             /* ─────────────────────────────────────────
            BACKGROUND
         ───────────────────────────────────────── */
@@ -5551,7 +5628,12 @@
                     
                     // Load family data BEFORE setting type (to avoid race condition with onTypeChange)
                     if (card.genre === "family") {
-                        familyMembersTemp = Array.isArray(card.familyMembers) ? [...card.familyMembers] : [];
+                        familyMembersTemp = Array.isArray(card.familyMembers)
+                            ? card.familyMembers.map((m) => ({
+                                  ...m,
+                                  relation: sanitizeFamilyMemberRelation(m?.relation),
+                              }))
+                            : [];
                         populateFamilyRaceSelect();
                         if (card.familyRaceId) {
                             setTimeout(() => {
@@ -5734,7 +5816,7 @@
                         "ID: " + card.id;
                     document.getElementById("btn-save").textContent = "Save";
                     // restore location sub-dropdowns
-                    resetLocationSubtype();
+                    resetLocationSubtype(card.genre === "location");
                     onTypeChange();
                     if (card.genre === "location") {
                         applyLocationSubtype(card);
@@ -6324,12 +6406,14 @@
                 }
             }
 
-            function resetLocationSubtype() {
+            function resetLocationSubtype(preserveLocationTags = false) {
                 document.getElementById("f-location-sub").value = "";
                 document.getElementById("f-building-sub").value = "";
                 curseTags = [];
-                locationTags = [];
-                renderGenericTags("location");
+                if (!preserveLocationTags) {
+                    locationTags = [];
+                    renderGenericTags("location");
+                }
                 transportDestinationId = null;
                 onBuildingSubChange();
                 resetSpawnCheck();
@@ -7244,26 +7328,27 @@
                 filtered.forEach(char => {
                     const isSelected = familyMembersTemp.some(m => m.id === char.id);
                     const existingRelation = familyMembersTemp.find(m => m.id === char.id);
+                    const selectedRelation = sanitizeFamilyMemberRelation(existingRelation?.relation);
+                    const pfpHtml = char.pfpUrl ? `<img class="entry-pfp" src="${escHtml(char.pfpUrl)}" alt="" />` : "";
                     
                     const row = document.createElement("div");
                     row.className = "student-item";
-                    row.style.cssText = `display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; cursor:pointer; background:${isSelected ? 'rgba(74,144,226,0.3)' : 'rgba(255,255,255,0.05)'};`;
+                    row.style.cssText = `display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; cursor:pointer; transition:background .15s, border-color .15s; background:${isSelected ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${isSelected ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'};`;
                     row.innerHTML = `
-                        <input type="checkbox" ${isSelected ? 'checked' : ''} style="cursor:pointer;">
-                        <div style="flex:1;">
-                            <div style="font-weight:700; color:#fff;">${escHtml(char.title)}</div>
-                            ${char.raceName ? `<div style="font-size:12px; opacity:0.7; color:#fff;">${escHtml(char.raceName)}</div>` : ''}
+                        ${pfpHtml}
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(char.title)}</div>
+                            ${char.raceName ? `<div style="font-size:12px; opacity:0.7; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(char.raceName)}</div>` : ''}
                         </div>
-                        ${isSelected ? `<select onchange="updateFamilyMemberRelation('${char.id}', this.value)" onclick="event.stopPropagation();" style="padding:4px 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.3); color:#fff; cursor:pointer;" onclick="event.stopPropagation();">
-                            <option value="Parent" ${existingRelation?.relation === 'Parent' ? 'selected' : ''}>Parent</option>
-                            <option value="Child" ${existingRelation?.relation === 'Child' ? 'selected' : ''}>Child</option>
-                            <option value="Sibling" ${existingRelation?.relation === 'Sibling' ? 'selected' : ''}>Sibling</option>
-                            <option value="Spouse" ${existingRelation?.relation === 'Spouse' ? 'selected' : ''}>Spouse</option>
-                            <option value="Relative" ${existingRelation?.relation === 'Relative' ? 'selected' : ''}>Relative</option>
-                        </select>` : ''}
+                        <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                            ${isSelected ? `<select onchange="updateFamilyMemberRelation('${char.id}', this.value)" onclick="event.stopPropagation();" style="padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.18); background:rgba(0,0,0,0.25); color:#fff; cursor:pointer;">
+                                ${buildFamilyMemberRelationOptionsHtml(selectedRelation)}
+                            </select>` : ''}
+                            <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();" onchange="toggleFamilyMemberById('${char.id}')" style="cursor:pointer; accent-color: rgba(220,220,220,0.9); width:16px; height:16px;">
+                        </div>
                     `;
                     row.onclick = (e) => {
-                        if (e.target.tagName !== 'SELECT') {
+                        if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'INPUT') {
                             toggleFamilyMember(char);
                         }
                     };
@@ -7271,6 +7356,12 @@
                 });
                 
                 updateFamilyMembersCount();
+            }
+
+            function toggleFamilyMemberById(charId) {
+                const char = getCards().find(c => c.id === charId);
+                if (!char) return;
+                toggleFamilyMember(char);
             }
 
             function toggleFamilyMember(char) {
@@ -7287,7 +7378,7 @@
             function updateFamilyMemberRelation(charId, relation) {
                 const member = familyMembersTemp.find(m => m.id === charId);
                 if (member) {
-                    member.relation = relation;
+                    member.relation = sanitizeFamilyMemberRelation(relation);
                 }
             }
 
@@ -7306,7 +7397,7 @@
                     container.innerHTML = '<span style="color:rgba(255,255,255,0.5); font-size:12px; font-style:italic;">No family members selected</span>';
                 } else {
                     container.innerHTML = familyMembersTemp.map(m => 
-                        `<span class="tag-item" style="display:inline-flex; align-items:center; gap:4px; padding:6px 12px; background:rgba(74,144,226,0.35); border:1px solid rgba(74,144,226,0.5); border-radius:16px; font-size:12px; color:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.2);">${escHtml(m.name)} <span style="opacity:0.8; margin-left:2px;">(${escHtml(m.relation)})</span> <span style="cursor:pointer; margin-left:6px; padding:0 4px; border-radius:4px; background:rgba(255,255,255,0.15);" onclick="removeFamilyMember('${m.id}')">&#10005;</span></span>`
+                        `<span class="tag-item" style="display:inline-flex; align-items:center; gap:4px; padding:6px 12px; background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.16); border-radius:16px; font-size:12px; color:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.2);">${escHtml(m.name)} <span style="opacity:0.8; margin-left:2px;">(${escHtml(sanitizeFamilyMemberRelation(m.relation))})</span> <span style="cursor:pointer; margin-left:6px; padding:0 4px; border-radius:4px; background:rgba(255,255,255,0.15);" onclick="removeFamilyMember('${m.id}')">&#10005;</span></span>`
                     ).join("");
                 }
                 

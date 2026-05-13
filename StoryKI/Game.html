@@ -6023,6 +6023,68 @@ ${killedInstructionNoTags}`;
                 return String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
             }
 
+            function _isAnySublocationId(locId, cards) {
+                if (!locId) return false;
+                const arr = Array.isArray(cards) ? cards : getCards();
+                return arr.some((c) => {
+                    if (!c || c.genre !== "location" || !c.sublocations) return false;
+                    return Object.values(c.sublocations).some((ids) => (ids || []).includes(locId));
+                });
+            }
+
+            function getMatchedLocationCardsFromPlayerText(playerText) {
+                if (!playerText) return [];
+                const text = _normalizeText(playerText);
+                const words = text.split(/\s+/).filter((w) => w.length >= 2);
+                if (words.length === 0) return [];
+
+                const cards = getCards();
+                const curId = currentLocationId || "";
+                const matched = [];
+                const seen = new Set();
+
+                const locs = cards.filter((c) => {
+                    if (!c || c.genre !== "location") return false;
+                    if (c.id && c.id === curId) return false;
+                    if (c.id && _isAnySublocationId(c.id, cards)) return false;
+                    const sub = c.locationSub || c.locationSubType || "";
+                    if (!(sub === "building" || sub === "custom")) return false;
+                    return Array.isArray(c.tags) && c.tags.length > 0;
+                });
+
+                for (const loc of locs) {
+                    const cardTags = (loc.tags || []).map((t) => _normalizeText(t)).filter(Boolean);
+                    const hitTags = [];
+                    for (const tag of cardTags) {
+                        if (tag.length < 2) continue;
+                        for (const w of words) {
+                            if (w.includes(tag) || tag.includes(w)) { hitTags.push(tag); break; }
+                        }
+                    }
+                    const uniq = [...new Set(hitTags)];
+                    if (uniq.length > 0) {
+                        const id = loc.id || loc.title || JSON.stringify(loc);
+                        if (seen.has(id)) continue;
+                        seen.add(id);
+                        matched.push({ card: loc, matchedTags: uniq });
+                    }
+                }
+
+                return matched;
+            }
+
+            function showMatchedLocationsFromTags(playerText) {
+                const matched = getMatchedLocationCardsFromPlayerText(playerText);
+                if (!matched.length) return;
+                addSystemDivider("ERWÄHNTE ORTE (Tags)", false);
+                const lines = matched.map(({ card }) => {
+                    const name = card.title || card.id || "Unknown";
+                    const desc = String(card.description || "").trim();
+                    return desc ? `- ${name}: ${desc}` : `- ${name}`;
+                });
+                appendBubble("ai", lines.join("\n"));
+            }
+
             // Build context for cards whose tags match words in the player's message.
             // Supports Race, Location (Building/Custom) and Character cards.
             function buildTagMatchedContext(playerText) {
@@ -6930,6 +6992,7 @@ Return ONLY the repaired narration with tags.`;
                 const systemInst = buildSystemPrompt(text);
                 consumeActiveSceneNpcDetailTurns();
                 const tagMatchedContext = buildTagMatchedContext(text);
+                try { showMatchedLocationsFromTags(text); } catch {}
 
                 try {
                     currentNarrationTs = Date.now();
@@ -7238,13 +7301,24 @@ Return ONLY the repaired narration with tags.`;
                 appendTypingIndicator();
                 try { updatePresentNPCs(); } catch {}
 
-                const systemInst = buildSystemPrompt();
+                const lastUserEntry = chatHistory.slice().reverse().find(e => {
+                    const sender = typeof e === 'string' ? e.split(':')[0] : e.sender;
+                    return sender && sender !== "Narrator" && sender !== "System";
+                });
+                const lastUserText = lastUserEntry
+                    ? (typeof lastUserEntry === 'string'
+                        ? lastUserEntry.substring(lastUserEntry.indexOf(':') + 1).trim()
+                        : lastUserEntry.text)
+                    : "";
+
+                const systemInst = buildSystemPrompt(lastUserText);
                 consumeActiveSceneNpcDetailTurns();
+                const tagMatchedContext = buildTagMatchedContext(lastUserText);
 
                 try {
                     currentNarrationTs = Date.now();
                     const recentHistory = chatHistory.slice(-10);
-                    const finalPrompt = buildNarratorPrompt(systemInst, "", "", 2, 16);
+                    const finalPrompt = buildNarratorPrompt(systemInst, tagMatchedContext, "", 2, 16);
                     
                     const r = await askAIWithRetry(finalPrompt);
                     const useAiCheck = isAiCheckEnabled();
@@ -7256,7 +7330,7 @@ Return ONLY the repaired narration with tags.`;
                     const hasNsfwTag = r && (/\[\[\s*NSFW\s*\]\]/i.test(r) || /^\s*NSFW\s*$/i.test(r));
                     if (useAiCheck && r && !hasNsfwTag) {
                         try {
-                            const validated = await validateAndFixNarration(r, "");
+                            const validated = await validateAndFixNarration(r, lastUserText);
                             if (validated && validated !== r) {
                                 console.log("[Validation] Continue text was corrected by validation AI");
                                 validatedResponse = validated;
@@ -7275,13 +7349,13 @@ Return ONLY the repaired narration with tags.`;
                         finalText = uniqueSentences(cleanR);
                         const lastNarr = getLastNarratorText();
                         if (_normalizeText(finalText) === _normalizeText(lastNarr) || isDuplicateText(finalText)) {
-                            const finalPrompt2 = buildNarratorPrompt(systemInst, "", "Note: Do not repeat previous narration. Continue the story with new actions and consequences. Do NOT speak or act as the player.", 2, 16);
+                            const finalPrompt2 = buildNarratorPrompt(systemInst, tagMatchedContext, "Note: Do not repeat previous narration. Continue the story with new actions and consequences. Do NOT speak or act as the player.", 2, 16);
                             const r2 = await askAIWithRetry(finalPrompt2);
                             let validatedResponse2 = r2;
                             const hasNsfwTag2 = r2 && (/\[\[\s*NSFW\s*\]\]/i.test(r2) || /^\s*NSFW\s*$/i.test(r2));
                             if (useAiCheck && r2 && !hasNsfwTag2) {
                                 try {
-                                    const validated2 = await validateAndFixNarration(r2, "");
+                                    const validated2 = await validateAndFixNarration(r2, lastUserText);
                                     if (validated2 && validated2 !== r2) {
                                         console.log("[Validation] Continue duplicate-avoidance text was corrected by validation AI");
                                         validatedResponse2 = validated2;
