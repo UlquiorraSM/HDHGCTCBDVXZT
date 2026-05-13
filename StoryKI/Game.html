@@ -1775,6 +1775,16 @@
                     renderStatsLevel();
                 }
 
+                try {
+                    if (entry.activeSceneNpcState && typeof entry.activeSceneNpcState === "object") {
+                        const st = entry.activeSceneNpcState;
+                        const ids = Array.isArray(st.ids) ? st.ids.slice() : [];
+                        const turns = (st.turns && typeof st.turns === "object") ? { ...st.turns } : {};
+                        setActiveSceneNpcState({ ids, turns });
+                    }
+                    updatePresentNPCs();
+                } catch {}
+
                 saveActiveCharacter();
             }
 
@@ -1787,6 +1797,21 @@
                         if (!window._chatLoadedCount) window._chatLoadedCount = 0;
                         window._chatLoadedCount = Math.min(window._chatPageSize, chatHistory.length);
                         renderChatWindow(false, 0);
+                        try {
+                            // Restore ActiveNPCs state from the latest log entry that has it
+                            for (let i = chatHistory.length - 1; i >= 0; i--) {
+                                const e = chatHistory[i];
+                                if (!e || typeof e === "string") continue;
+                                if (e.activeSceneNpcState && typeof e.activeSceneNpcState === "object") {
+                                    const st = e.activeSceneNpcState;
+                                    const ids = Array.isArray(st.ids) ? st.ids.slice() : [];
+                                    const turns = (st.turns && typeof st.turns === "object") ? { ...st.turns } : {};
+                                    setActiveSceneNpcState({ ids, turns });
+                                    break;
+                                }
+                            }
+                            updatePresentNPCs();
+                        } catch {}
                         const messagesEl = document.getElementById("messages");
                         if (messagesEl && !window._chatScrollBound) {
                             window._chatScrollBound = true;
@@ -1836,6 +1861,11 @@
 
                 // Save level data if level system is active
                 const levelData = isLevelSystemActive() ? (activeChar?.levelData || { level: 1, xp: 0 }) : null;
+                const currentActiveScene = getActiveSceneNpcState();
+                const activeSceneNpcState = {
+                    ids: Array.isArray(currentActiveScene.ids) ? currentActiveScene.ids.slice() : [],
+                    turns: (currentActiveScene.turns && typeof currentActiveScene.turns === "object") ? { ...currentActiveScene.turns } : {}
+                };
 
                 const entry = {
                     sender: sender,
@@ -1845,6 +1875,7 @@
                     location: loc,
                     timestamp: tsOverride || Date.now(),
                     ...(levelData ? { levelData: { ...levelData } } : {}),
+                    activeSceneNpcState,
                     ...(extra && typeof extra === "object" ? extra : {})
                 };
 
@@ -4906,7 +4937,7 @@ ${killedInstructionNoTags}`;
                     console.warn(`[Location] No card found for: ${nameOrId}`);
                 }
 
-                if (prevLocationId !== currentLocationId) {
+                if (prevLocationId && prevLocationId !== currentLocationId) {
                     clearActiveSceneNpcState();
                 }
                 
@@ -6959,8 +6990,9 @@ Return ONLY the repaired narration with tags.`;
                           .filter(Boolean)
                           .join(" ")
                     : "Player";
-                const ts = addToStoryLog(senderName, text);
+                const ts = Date.now();
                 try { autoSetPresentNpcsFromPlayerText(text, ts); } catch {}
+                addToStoryLog(senderName, text, ts);
                 // Link bubble and potential pre-divider via timestamp
                 try {
                     if (bubble && bubble.parentElement) {
