@@ -1245,6 +1245,8 @@
             const RELATIONS_LAYOUT_KEY = "storyki_relations_layout";
             const RELATIONS_FILTER_KEY = "storyki_relations_filter";
             const ACTIVE_SCENE_NPCS_KEY = "storyki_active_scene_npcs";
+            /** Turns an „Szene aktiv“-Detail für die UI / Kontext; pro Spieler-Nachricht −1 (Retry zählt nicht doppelt). */
+            const ACTIVE_SCENE_NPC_DETAIL_TURNS = 5;
             const NSFW_BLOCKED_TOKEN = "__NSFW_BLOCKED__";
             const NSFW_BLOCKED_TEXT = "The generated message contained offensive content which has been blocked due to your NSWF block.";
 
@@ -1319,15 +1321,29 @@
             function clearActiveSceneNpcState() {
                 try { Storage.remove(_activeSceneNpcStorageKey()); } catch {}
             }
-            function setActiveSceneNpcIds(ids, fullDetailTurns = 3) {
+            function setActiveSceneNpcIds(ids, fullDetailTurns = ACTIVE_SCENE_NPC_DETAIL_TURNS, opts = null) {
                 try {
                     const cards = getCards();
                     const chars = cards.filter(c => c && c.genre === "character");
                     const alive = new Set(chars.filter(c => (c.status || "Alive") !== "Dead").map(c => c.id));
-                    const nextIds = (Array.isArray(ids) ? ids : [])
+                    let nextIds = (Array.isArray(ids) ? ids : [])
                         .map(s => String(s || "").trim())
                         .filter(Boolean)
                         .filter(id => alive.has(id));
+
+                    const mergeFromTag = !!(opts && typeof opts === "object" && opts.mergeFromTag);
+                    if (mergeFromTag && nextIds.length > 0) {
+                        const st0 = getActiveSceneNpcState();
+                        const prevIdsArr = Array.isArray(st0.ids) ? st0.ids : [];
+                        const prevTurns0 = st0.turns || {};
+                        const incomingSet = new Set(nextIds);
+                        const kept = prevIdsArr.filter((id) =>
+                            alive.has(id) &&
+                            !incomingSet.has(id) &&
+                            Math.max(0, parseInt(prevTurns0[id], 10) || 0) > 0
+                        );
+                        nextIds = [...nextIds, ...kept.filter((id) => !nextIds.includes(id))];
+                    }
 
                     const st = getActiveSceneNpcState();
                     const prevIds = new Set(st.ids || []);
@@ -1354,15 +1370,23 @@
                     const st = getActiveSceneNpcState();
                     const ids = Array.isArray(st.ids) ? st.ids : [];
                     const turns = { ...(st.turns || {}) };
+                    const nextIds = [];
                     let changed = false;
                     ids.forEach(id => {
                         const cur = Math.max(0, parseInt(turns[id], 10) || 0);
-                        if (cur > 0) {
-                            turns[id] = cur - 1;
-                            changed = true;
+                        if (cur <= 0) {
+                            if (turns[id] != null) { delete turns[id]; changed = true; }
+                            return;
                         }
+                        const nv = cur - 1;
+                        turns[id] = nv;
+                        changed = true;
+                        if (nv > 0) nextIds.push(id);
+                        else delete turns[id];
                     });
-                    if (changed) setActiveSceneNpcState({ ids, turns });
+                    if (changed || nextIds.length !== ids.length) {
+                        setActiveSceneNpcState({ ids: nextIds, turns });
+                    }
                 } catch {}
             }
 
@@ -2476,7 +2500,7 @@
                                     .filter(Boolean)
                                     .map(x => resolveNpcIdFromRef(x, restrictSet) || (restrictSet ? "" : resolveNpcIdFromRef(x)))
                                     .filter(Boolean);
-                                setActiveSceneNpcIds(ids);
+                                setActiveSceneNpcIds(ids, ACTIVE_SCENE_NPC_DETAIL_TURNS, { mergeFromTag: true });
                             }
                         } catch (e) {
                             console.warn("ActiveNPCs tag parse failed", e);
@@ -6897,6 +6921,18 @@ ${killedInstructionNoTags}`;
                         return "";
                     }
                 })();
+
+                const preActiveScene = getActiveSceneNpcState();
+                const preActiveIdsArr = Array.isArray(preActiveScene.ids) ? preActiveScene.ids.filter(Boolean) : [];
+                const preActiveIdsStr = preActiveIdsArr.length ? preActiveIdsArr.join(", ") : "(none)";
+                const incomingActivePayload = (() => {
+                    try {
+                        const m = String(narrationText || "").match(/\[\[\s*ActiveNPCs?\s*:\s*([^\]]+?)\s*\]\]/i);
+                        return m ? String(m[1] || "").trim() : "(no ActiveNPCs tag in input)";
+                    } catch {
+                        return "(no ActiveNPCs tag in input)";
+                    }
+                })();
                 
                 const validationPrompt = `You are a SECOND-PASS REPAIR AI. Your main focus is to add/fix control tags correctly.
 
@@ -6916,6 +6952,8 @@ ${prevTwoMessages}
 - Visible Locations (Name + ID):
 ${visibleLocationsInfo}
 - Present NPCs (Name + ID): ${presentNpcInfo}
+- Currently scene-active NPC IDs (game state BEFORE this repair): ${preActiveIdsStr}
+- Input narration ActiveNPCs payload (if any): ${incomingActivePayload}
 - Available NPCs (Name + ID): ${availableNpcInfo}
 - Present Species: ${presentSpeciesInfo || "None"}
 - Level System Active: ${levelSystemActive ? "YES" : "NO"}
@@ -6979,11 +7017,18 @@ ${visibleLocationsInfo}
 
 2f. **[[SecretRevelation:NPC_ID|Secret text]]** - Add if a secret was explicitly revealed
 
-2g. **[[ActiveNPCs:NPC_ID1,NPC_ID2]]** or **[[ActiveNPCs:none]]**
-   - MUST exist in the output
-   - NPC_IDs must come from Available NPCs list above (use IDs)
-   - ActiveNPCs MUST include every NPC that spoke/acted/reacted OR received a [[Memory: ...]] tag
-   - If no NPC is active in the narration, use [[ActiveNPCs:none]]
+2g. **[[ActiveNPCs:NPC_ID1,NPC_ID2]]** or **[[ActiveNPCs:none]]** (STRICT)
+   - MUST exist exactly once in the output, BEFORE the final [[TIME: ...]] tag.
+   - NPC_IDs must come from Available NPCs list above (use IDs).
+   - ActiveNPCs MUST include every NPC that spoke/acted/reacted OR received a [[Memory: ...]] tag.
+
+   **FORBIDDEN misuse of [[ActiveNPCs:none]]:**
+   - If "Present NPCs" is not "None" OR "Currently scene-active NPC IDs" is not "(none)", you MUST NOT output [[ActiveNPCs:none]] unless the narration **explicitly** establishes that those NPCs are gone from the scene (they leave, are dismissed, the scene cuts to you being truly alone, explicit collective departure, etc.).
+   - A paragraph that only focuses on the player, ambient description, or silence does **NOT** mean other characters vanished—if they were present or scene-active, they stay present **by default**.
+   - When in doubt, output a **non-empty** [[ActiveNPCs:...]] list: include all interaction/Memory NPCs **plus** any IDs from Present NPCs / scene-active IDs that the text does **not** clearly write out of the scene.
+
+   **When [[ActiveNPCs:none]] IS allowed:**
+   - "Present NPCs" is "None" AND "Currently scene-active NPC IDs" is "(none)" AND no on-screen NPCs are implied, OR the narration clearly states nobody else remains in the scene.
 
 2h. Relative time change tags (only when time actually advances in the narration)
    - If the narration clearly implies time passing (walking, searching, resting, a conversation, "later", "after a while", etc.), add exactly ONE minimal relative time tag BEFORE the final [[TIME: ...]] tag.
@@ -7574,7 +7619,7 @@ Return ONLY the repaired narration with tags.`;
                     : "";
                 
                 const systemInst = buildSystemPrompt(lastUserText);
-                consumeActiveSceneNpcDetailTurns();
+                // Kein consumeActiveSceneNpcDetailTurns hier: dieselbe Spielerzeile hat beim Senden schon −1 gezählt; Retry wäre sonst doppelter Abzug.
                 const tagMatchedContext = buildTagMatchedContext(lastUserText);
 
                 try {
@@ -7929,6 +7974,10 @@ Return ONLY the repaired narration with tags.`;
                         return "None";
                     }
                 })();
+
+                const preActiveSceneEdit = getActiveSceneNpcState();
+                const preActiveIdsEditArr = Array.isArray(preActiveSceneEdit.ids) ? preActiveSceneEdit.ids.filter(Boolean) : [];
+                const preActiveIdsEditStr = preActiveIdsEditArr.length ? preActiveIdsEditArr.join(", ") : "(none)";
                 
                 const prompt = `You are a TAG RECONCILIATION AI for an edited Narrator message.
 
@@ -7960,6 +8009,7 @@ ${prevTagsBlock}
 - Visible Locations (Name + ID):
 ${visibleLocationsInfo}
 - Present NPCs (Name + ID): ${presentNpcInfo}
+- Currently scene-active NPC IDs (game state BEFORE this edit): ${preActiveIdsEditStr}
 - Available NPCs (Name + ID): ${availableNpcInfo}
 - Present Species (Name + ID): ${presentSpeciesInfo}
 - Level System Active: ${levelSystemActive ? "YES" : "NO"}
@@ -7981,6 +8031,7 @@ ${visibleLocationsInfo}
 
 # TAG RULES:
 - Output MUST include exactly ONE [[ActiveNPCs:...]] tag (or [[ActiveNPCs:none]]) BEFORE the final [[TIME: ...]] tag.
+- **[[ActiveNPCs:none]] (STRICT):** If "Present NPCs" is not "None" OR "Currently scene-active NPC IDs" is not "(none)", you MUST NOT output [[ActiveNPCs:none]] unless the edited narration **explicitly** establishes that those NPCs left the scene or are no longer present. Player-only focus, mood, or silence is NOT enough. When in doubt, use a non-empty list: every NPC with a Memory tag or clear interaction, plus any Present / scene-active IDs the text does not clearly write out.
 - If any NPC in [[ActiveNPCs:...]] did anything non-trivial in the edited narration (spoke, reacted, moved, touched, helped, threatened, kissed, discovered something, promised something, conflict, item gained/lost), output at least ONE Memory tag for that NPC:
   - Normal: [[Memory:NPC_ID,Text]] (preferred) or [[Memory:NPC_ID|Text]]
   - Insight (promises/permissions/core facts): [[Memory:NPC_ID,Text,Insight]]
