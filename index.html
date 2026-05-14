@@ -4335,6 +4335,14 @@
                             });
                             set("memories", mems);
                         }
+                        if (Array.isArray(card.insights)) {
+                            const ins = card.insights.map(m => {
+                                const mm = { ...(m || {}) };
+                                if (mm && typeof mm === "object" && Object.prototype.hasOwnProperty.call(mm, "level")) delete mm.level;
+                                return mm;
+                            });
+                            set("insights", ins);
+                        }
                     } else if (g === "item") {
                         set("tags", card.tags);
                     } else if (g === "skill") {
