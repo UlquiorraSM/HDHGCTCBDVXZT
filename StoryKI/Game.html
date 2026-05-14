@@ -2405,6 +2405,17 @@
                         return "";
                     }
                 };
+                const resolveMemoryTagTarget = (ref) => {
+                    try {
+                        const nid = resolveNpcIdFromRef(ref);
+                        if (nid) return { kind: "character", id: nid };
+                        const lid = resolveLocationMemoryTargetFromRef(ref, getCards());
+                        if (lid) return { kind: "location", id: lid };
+                        return null;
+                    } catch {
+                        return null;
+                    }
+                };
                 const memoryNpcIdsForAutoActive = [];
 
                 while ((match = tagPattern.exec(text)) !== null) {
@@ -2414,7 +2425,7 @@
                         try { _applyScheduledEventTagPayload(eventTag[1], currentNarrationTs); } catch (e) { console.warn("Event tag parse failed", e); }
                         continue;
                     }
-                    // Handle NPC memory tags: [[Memory:NPC_ID|Memory text]]
+                    // Handle Memory tags: [[Memory:NPC_ID|...]] or [[Memory:LOCATION_ID|...]] (Custom/Building only)
                     const memIdList = content.match(/^Memory\s*:\s*(.+)$/i);
                     if (memIdList) {
                         try {
@@ -2424,11 +2435,11 @@
                             let pairMatch;
                             while ((pairMatch = pairRegex.exec(payload)) !== null) {
                                 const idRaw = pairMatch[1].trim();
-                                const id = resolveNpcIdFromRef(idRaw);
+                                const resolved = resolveMemoryTagTarget(idRaw);
                                 const memText = sanitizeTagValue(pairMatch[2]);
-                                if (id && memText) {
-                                    targets.push({ id, text: memText, type: "" });
-                                    memoryNpcIdsForAutoActive.push(id);
+                                if (resolved && memText) {
+                                    targets.push({ id: resolved.id, text: memText, type: "", kind: resolved.kind });
+                                    if (resolved.kind === "character") memoryNpcIdsForAutoActive.push(resolved.id);
                                 }
                             }
                             if (targets.length === 0) {
@@ -2447,11 +2458,11 @@
                                             textPart = rest.slice(0, lastComma).trim();
                                         }
                                     }
-                                    const id = resolveNpcIdFromRef(idRaw);
+                                    const resolved = resolveMemoryTagTarget(idRaw);
                                     const memText = sanitizeTagValue(textPart);
-                                    if (id && memText) {
-                                        targets.push({ id, text: memText, type });
-                                        memoryNpcIdsForAutoActive.push(id);
+                                    if (resolved && memText) {
+                                        targets.push({ id: resolved.id, text: memText, type, kind: resolved.kind });
+                                        if (resolved.kind === "character") memoryNpcIdsForAutoActive.push(resolved.id);
                                     }
                                 }
                             }
@@ -2462,10 +2473,10 @@
                                     const m = it.match(/^([A-Za-z0-9\-]+)(?::\s*(Common|Important))?$/i);
                                     if (m) {
                                         const idRaw = m[1].trim();
-                                        const id = resolveNpcIdFromRef(idRaw);
-                                        if (id) {
-                                            targets.push({ id, text: "", type: "" });
-                                            memoryNpcIdsForAutoActive.push(id);
+                                        const resolved = resolveMemoryTagTarget(idRaw);
+                                        if (resolved) {
+                                            targets.push({ id: resolved.id, text: "", type: "", kind: resolved.kind });
+                                            if (resolved.kind === "character") memoryNpcIdsForAutoActive.push(resolved.id);
                                         }
                                     }
                                 });
@@ -4344,11 +4355,13 @@
                         current = parent;
                     }
                     const contextLines = [];
-                    contextLines.push("\nLOCATION MEMORIES (Current area and parent regions):");
+                    contextLines.push("\nLOCATION MEMORIES (current area, ancestors, Custom + Building — same IDs as [[Memory:LOCATION_ID|...]] tags):");
                     ancestors.forEach(loc => {
                         const mem = Array.isArray(loc.memories) ? loc.memories : [];
                         if (mem.length === 0) return;
-                        contextLines.push(`- ${loc.title}:`);
+                        const sub = String(loc.locationSub || "").toLowerCase();
+                        const kind = sub === "custom" || sub === "building" ? sub : (loc.locationDetail || "location");
+                        contextLines.push(`- ${loc.title} [ID: ${loc.id}] (${kind}):`);
                         mem.slice(-8).forEach(m => {
                             contextLines.push(`  * ${m.date} ${m.time} — ${m.text}`);
                         });
@@ -4401,6 +4414,62 @@
                 }
                 return ancestors;
             }
+
+            function isLocationMemoryTargetCard(loc) {
+                if (!loc || loc.genre !== "location") return false;
+                const sub = String(loc.locationSub || "").toLowerCase();
+                return sub === "custom" || sub === "building";
+            }
+
+            function resolveLocationMemoryTargetFromRef(ref, cards) {
+                try {
+                    const raw = String(ref || "").trim();
+                    if (!raw) return "";
+                    const arr = Array.isArray(cards) ? cards : getCards();
+                    const locs = arr.filter((c) => c && c.genre === "location" && c.id && isLocationMemoryTargetCard(c));
+                    if (locs.some((c) => c.id === raw)) return raw;
+                    const norm = (s) => String(s || "")
+                        .toLowerCase()
+                        .replace(/[“”„"]/g, "")
+                        .replace(/\s+/g, " ")
+                        .trim();
+                    const r = norm(raw);
+                    if (!r) return "";
+                    const exact = locs.find((c) => norm(c.title) === r);
+                    return exact ? exact.id : "";
+                } catch {
+                    return "";
+                }
+            }
+
+            function getCustomBuildingLocationLinesForPrompt() {
+                try {
+                    const cards = getCards();
+                    if (!currentLocationId) return [];
+                    const byId = new Map();
+                    _getAncestorsForCurrent().forEach((loc) => {
+                        if (isLocationMemoryTargetCard(loc)) byId.set(loc.id, loc);
+                    });
+                    const cur = cards.find((c) => c.id === currentLocationId && c.genre === "location");
+                    if (cur && isLocationMemoryTargetCard(cur)) byId.set(cur.id, cur);
+                    if (cur && cur.sublocations) {
+                        Object.values(cur.sublocations).forEach((arr) => {
+                            (Array.isArray(arr) ? arr : []).forEach((cid) => {
+                                const ch = cards.find((c) => c.id === cid && c.genre === "location");
+                                if (ch && isLocationMemoryTargetCard(ch)) byId.set(ch.id, ch);
+                            });
+                        });
+                    }
+                    return [...byId.values()].map((loc) => {
+                        const sub = String(loc.locationSub || "").toLowerCase();
+                        return `- ${loc.title} [ID: ${loc.id}] (${sub})`;
+                    });
+                } catch (e) {
+                    console.warn("getCustomBuildingLocationLinesForPrompt failed", e);
+                    return [];
+                }
+            }
+
             function _applyEventOverrideToCard(card, changes, snapshot) {
                 if (!card || !changes) return;
                 if (!snapshot[card.id]) snapshot[card.id] = {};
@@ -4678,6 +4747,10 @@
                 const eventsContext = buildEventsContext();
                 const loreContext = buildLoreContext();
                 const locationMemoryContext = buildLocationMemoryContext();
+                const customBuildingLocLinesForMemory = getCustomBuildingLocationLinesForPrompt();
+                const locationMemoryTagTargetsBlock = customBuildingLocLinesForMemory.length
+                    ? `\n# CUSTOM / BUILDING LOCATION IDS (valid targets for [[Memory:LOCATION_ID|text]] only)\n${customBuildingLocLinesForMemory.join("\n")}\n`
+                    : "";
                 const locationStateContext = buildLocationStateContext();
                 const locationCurseContext = buildLocationCurseContext();
                 const locationDistanceContext = buildLocationDistanceContext();
@@ -4807,6 +4880,7 @@ ${speciesContext}
 ${loreContext}
 ${eventsContext}
 ${locationMemoryContext}
+${locationMemoryTagTargetsBlock}
 ${locationStateContext}
 ${locationDistanceContext}
 ${nearbyForestsContext}
@@ -4866,17 +4940,22 @@ Your entire output must be in ${aiLang} - no exceptions.
   [[ActiveNPCs:NPC_ID1,NPC_ID2]]
   [[ActiveNPCs:none]]
 - NPC_IDs MUST be chosen from the NEARBY NPCs list in the CHARACTERS section.
-- Only PRESENT NPCs may speak, act, fight, or receive Memory tags.
+- Only PRESENT NPCs may speak, act, fight, or receive **character** Memory tags ([[Memory:NPC_ID|...]]). Persistent facts tied to a **Custom or Building** site (traps, prisoners, damage, hidden rooms, ongoing conditions in that place) use [[Memory:LOCATION_ID|...]] with an ID from the list above — prefer the **parent Building** ID when the fact applies to the whole property (e.g. someone held in this house’s cellar).
 
-# NPC MEMORY TAGS (MANDATORY WHEN PRESENT NPCs ACT)
-- Add a Memory tag ONLY when it helps long-term continuity (important action, meaningful decision, new fact, promise, conflict, discovery, relationship shift, item gained/lost, secret revealed, injury, plan, or clear emotional milestone).
+# NPC & LOCATION MEMORY TAGS (MANDATORY WHEN CONTINUITY MATTERS)
+- Add Memory tags ONLY when they help long-term continuity (important action, meaningful decision, new fact, promise, conflict, discovery, relationship shift, item gained/lost, secret revealed, injury, plan, clear emotional milestone, **or a lasting change / situation at a Custom or Building location**).
 - Do NOT add Memory tags for trivial filler (greetings, tiny talk, vague reactions, or routine one-liners) unless it changes the story state.
-- Syntax:
-  [[Memory: NPC_ID|Short memory text]]
-  - Use the exact NPC character ID
-  - The memory text must be short, clear, and specific, e.g. "Hat Kei gekuesst"
-  - If multiple NPCs need memories, output multiple [[Memory: ...]] tags
-  - Date, time, and location are stored automatically
+- **Character (present / acting NPCs):**
+  - Syntax: [[Memory:NPC_ID|Short memory text]] (space after colon is allowed)
+  - Use the exact NPC character ID from the CHARACTERS section.
+- **Location (Custom or Building only — IDs in “CUSTOM / BUILDING LOCATION IDS” above):**
+  - Syntax: [[Memory:LOCATION_ID|Short memory text]]
+  - Use when something **about that place** should be remembered (restraints in a cellar, barricaded door, hidden stash, fire damage, “NPC X is held here”, ritual circle, etc.).
+  - If the scene is a **room under a building** and the fact is about the **building or its interior** generally, tag the **Building** location ID, not an unrelated outdoor card.
+  - Do NOT use forest/land/ocean/etc. location IDs for [[Memory:...]] — only Custom and Building IDs from the list.
+- The memory text must be short, clear, and in ${aiLang}.
+- If multiple entities need memories, output multiple [[Memory: ...]] tags.
+- Date, time, and location metadata are stored automatically by the game.
 
 # NPC DEATH TAGS (MANDATORY WHEN A RESIDENT NPC DIES)
 - If a resident NPC truly dies in the scene, append a death tag BEFORE the final metadata block.
@@ -4954,6 +5033,7 @@ ${speciesContext}
 ${loreContext}
 ${eventsContext}
 ${locationMemoryContext}
+${locationMemoryTagTargetsBlock}
 ${locationStateContext}
 ${locationDistanceContext}
 ${nearbyForestsContext}
@@ -5823,7 +5903,26 @@ ${killedInstructionNoTags}`;
                 const memorySummary = extractMemorySummary(narrativeText);
                 
                 let changed = false;
-                targets.forEach(({ id, text, type }) => {
+                targets.forEach(({ id, text, type, kind }) => {
+                    const k = kind || "character";
+                    if (k === "location") {
+                        const loc = cards.find((c) => c.genre === "location" && c.id === id && isLocationMemoryTargetCard(c));
+                        if (!loc) return;
+                        const memoryText = String(text || "").trim() || memorySummary;
+                        if (!memoryText) return;
+                        if (!Array.isArray(loc.memories)) loc.memories = [];
+                        loc.memories.push({
+                            date: dateStr,
+                            time: timeStr,
+                            location: locName,
+                            dayCount: _worldDayCount(d),
+                            text: memoryText,
+                            logTs: anchorTs || null
+                        });
+                        if (loc.memories.length > 200) loc.memories = loc.memories.slice(-200);
+                        changed = true;
+                        return;
+                    }
                     const npc = cards.find(c => c.genre === "character" && c.id === id);
                     if (!npc) return;
                     const memoryText = String(text || "").trim() || memorySummary;
@@ -5867,7 +5966,7 @@ ${killedInstructionNoTags}`;
                 if (changed) {
                     sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
                 }
-                syncNpcInactivityCounters(targets.map(t => t.id));
+                syncNpcInactivityCounters(targets.filter((t) => (t.kind || "character") === "character").map((t) => t.id));
                 window._pendingMemoryTargets = [];
             }
 
@@ -6933,6 +7032,11 @@ ${killedInstructionNoTags}`;
                         return "(no ActiveNPCs tag in input)";
                     }
                 })();
+
+                const customBuildingLocLinesVal = getCustomBuildingLocationLinesForPrompt();
+                const customBuildingLocBlockVal = customBuildingLocLinesVal.length
+                    ? customBuildingLocLinesVal.join("\n")
+                    : "(none in current scope — do NOT invent Custom/Building IDs for [[Memory:LOCATION_ID|...]])";
                 
                 const validationPrompt = `You are a SECOND-PASS REPAIR AI. Your main focus is to add/fix control tags correctly.
 
@@ -6957,6 +7061,8 @@ ${visibleLocationsInfo}
 - Available NPCs (Name + ID): ${availableNpcInfo}
 - Present Species: ${presentSpeciesInfo || "None"}
 - Level System Active: ${levelSystemActive ? "YES" : "NO"}
+- Custom / Building location IDs (ONLY these may be used as LOCATION_ID in [[Memory:LOCATION_ID|text]]):
+${customBuildingLocBlockVal}
 
 # YOUR TASK (PRIORITIES):
 1) Tags first: Repair and add ALL required control tags (this is your main job).
@@ -6969,8 +7075,8 @@ ${visibleLocationsInfo}
 
 # ID RULE (STRICT):
 - For any tag field that needs an ID, you MUST output IDs, not names.
-- This includes: ActiveNPCs, Memory, Death, SecretRevelation, Killed, and LOCATION inside the final [[TIME: ...]] tag (if LOCATION is included).
-- Use ONLY IDs from the lists above (NPCs/Locations/Species). If an ID is unknown, do NOT invent one.
+- This includes: ActiveNPCs, Memory (NPC **or** Custom/Building LOCATION), Death, SecretRevelation, Killed, and LOCATION inside the final [[TIME: ...]] tag (if LOCATION is included).
+- Use ONLY NPC IDs from Available NPCs, LOCATION IDs from Visible Locations / Custom-Building list as applicable, and Species IDs from Present Species. If an ID is unknown, do NOT invent one.
 
 0. General output rules:
    - Return ONLY the repaired narration with tags.
@@ -6996,13 +7102,16 @@ ${visibleLocationsInfo}
      [[TIME: 14:15, LOCATION: "loc_123"]]
    - If LOCATION equals Current Location ID, you may omit the LOCATION part
 
-2b. **[[Memory:...]]** - MUST exist if any PRESENT NPC spoke, acted, reacted, attacked, answered, followed, touched, helped, threatened, kissed, or otherwise interacted with the player or scene
-   - Normal memory (preferred): [[Memory:NPC_ID,Short memory text]]
-   - Normal memory (also allowed): [[Memory:NPC_ID|Short memory text]]
-   - INSIGHT memory (only when it is an explicit promise/permission/core fact): [[Memory:NPC_ID,Short memory text,Insight]]
-   - NPC_ID must be from Available NPCs list above (use IDs)
-   - The memory text must be short and explicit, e.g. "Hat Kei geküsst" or "Hat versprochen, hier zu übernachten"
-   - Output one memory tag per NPC that should remember something
+2b. **[[Memory:...]]** for **NPCs** and **Custom/Building LOCATIONS**
+   - **NPC memories (MANDATORY when warranted):** If any PRESENT NPC spoke, acted, reacted, attacked, answered, followed, touched, helped, threatened, kissed, or otherwise meaningfully interacted, add [[Memory:NPC_ID|...]] (or comma form). NPC_ID must be from Available NPCs.
+   - **Location memories (add when the narration establishes a lasting fact about a Custom or Building place):** e.g. someone imprisoned in a cellar, a door barricaded, a hidden room found, structural damage, a trap armed, contraband stashed — use [[Memory:LOCATION_ID|Short text]] where LOCATION_ID is **exactly** one of the IDs listed under "Custom / Building location IDs" above.
+   - **Choosing the LOCATION_ID:** If the player is in a **sub-room** under a **Building** and the fact concerns the **building or its interior** (cellar, attic, basement hall), prefer the **parent Building** card’s ID so the memory is visible for the whole property. Use a **Custom** sub-location ID only when the fact is specific to that named room and not the whole building.
+   - Do NOT attach [[Memory:...]] to forest/land/ocean/etc. cards — only Custom or Building IDs from the provided list.
+   - Normal memory (preferred): [[Memory:ID,Short memory text]]
+   - Normal memory (also allowed): [[Memory:ID|Short memory text]]
+   - INSIGHT (NPC only, explicit promise/permission/core fact): [[Memory:NPC_ID,Short memory text,Insight]]
+   - The memory text must be short, explicit, and in ${targetLanguage}.
+   - Output separate Memory tags for each distinct NPC or location that needs continuity.
 
 2c. **[[NPC_ID:Friend]]**, **[[NPC_ID:Spouse]]**, **[[NPC_ID:Lover]]**, **[[NPC_ID:Enemy]]**
    - Add one if the narration/context clearly establishes or updates that relation to the player
@@ -7020,7 +7129,7 @@ ${visibleLocationsInfo}
 2g. **[[ActiveNPCs:NPC_ID1,NPC_ID2]]** or **[[ActiveNPCs:none]]** (STRICT)
    - MUST exist exactly once in the output, BEFORE the final [[TIME: ...]] tag.
    - NPC_IDs must come from Available NPCs list above (use IDs).
-   - ActiveNPCs MUST include every NPC that spoke/acted/reacted OR received a [[Memory: ...]] tag.
+   - ActiveNPCs MUST include every NPC that spoke/acted/reacted OR received an **NPC** [[Memory:NPC_ID|...]] / [[Memory:NPC_ID,...]] tag (do not treat location Memory IDs as NPCs).
 
    **FORBIDDEN misuse of [[ActiveNPCs:none]]:**
    - If "Present NPCs" is not "None" OR "Currently scene-active NPC IDs" is not "(none)", you MUST NOT output [[ActiveNPCs:none]] unless the narration **explicitly** establishes that those NPCs are gone from the scene (they leave, are dismissed, the scene cuts to you being truly alone, explicit collective departure, etc.).
@@ -7978,6 +8087,11 @@ Return ONLY the repaired narration with tags.`;
                 const preActiveSceneEdit = getActiveSceneNpcState();
                 const preActiveIdsEditArr = Array.isArray(preActiveSceneEdit.ids) ? preActiveSceneEdit.ids.filter(Boolean) : [];
                 const preActiveIdsEditStr = preActiveIdsEditArr.length ? preActiveIdsEditArr.join(", ") : "(none)";
+
+                const customBuildingLocLinesEdit = getCustomBuildingLocationLinesForPrompt();
+                const customBuildingLocBlockEdit = customBuildingLocLinesEdit.length
+                    ? customBuildingLocLinesEdit.join("\n")
+                    : "(none in current scope — do NOT invent Custom/Building IDs for [[Memory:LOCATION_ID|...]])";
                 
                 const prompt = `You are a TAG RECONCILIATION AI for an edited Narrator message.
 
@@ -8013,6 +8127,8 @@ ${visibleLocationsInfo}
 - Available NPCs (Name + ID): ${availableNpcInfo}
 - Present Species (Name + ID): ${presentSpeciesInfo}
 - Level System Active: ${levelSystemActive ? "YES" : "NO"}
+- Custom / Building location IDs (ONLY valid LOCATION_ID for [[Memory:LOCATION_ID|text]]):
+${customBuildingLocBlockEdit}
 
 # YOUR TASK (PRIORITIES):
 1) Tags first: Ensure the output has the correct control tags and that they are compatible with the edited narration.
@@ -8026,8 +8142,8 @@ ${visibleLocationsInfo}
 
 # ID RULE (STRICT):
 - For any tag field that needs an ID, you MUST output IDs, not names.
-- This includes: ActiveNPCs, Memory, Death, SecretRevelation, Killed, and LOCATION inside the final [[TIME: ...]] tag (if LOCATION is included).
-- Use ONLY IDs from the lists above (NPCs/Locations/Species). If an ID is unknown, do NOT invent one.
+- This includes: ActiveNPCs, Memory (NPC **or** Custom/Building LOCATION), Death, SecretRevelation, Killed, and LOCATION inside the final [[TIME: ...]] tag (if LOCATION is included).
+- Use ONLY NPC IDs from Available NPCs, LOCATION IDs from Visible Locations / Custom-Building list as applicable, and Species IDs from Present Species. If an ID is unknown, do NOT invent one.
 
 # TAG RULES:
 - Output MUST include exactly ONE [[ActiveNPCs:...]] tag (or [[ActiveNPCs:none]]) BEFORE the final [[TIME: ...]] tag.
@@ -8036,6 +8152,7 @@ ${visibleLocationsInfo}
   - Normal: [[Memory:NPC_ID,Text]] (preferred) or [[Memory:NPC_ID|Text]]
   - Insight (promises/permissions/core facts): [[Memory:NPC_ID,Text,Insight]]
   - Text must be in ${targetLanguage}, short, explicit, and should use the Player Name when referencing the player (e.g. "Hat ${playerName} geküsst").
+- **Location memories:** If the edited narration implies a **lasting fact about a Custom or Building place** (someone held in a cellar, barricade, hidden room, damage, trap, stash, etc.), add [[Memory:LOCATION_ID|Text]] using **only** an ID from "Custom / Building location IDs" above. Prefer the **parent Building** ID when the fact applies to the whole property (e.g. basement of this house). Do NOT use non–Custom/Building location IDs in Memory tags.
 - If the edited narration clearly establishes a persistent event for a CUSTOM location, output one [[Event:DD.MM.YYYY,Text]] tag (comma after date). Keep it short and factual.
 - Output MUST include a final [[TIME: HH:MM]] tag at the very end (optionally with LOCATION using a LOCATION ID).
 - If you add a relative time tag ([[Time:+...]] etc), the final [[TIME: ...]] must reflect the resulting time after applying it.
