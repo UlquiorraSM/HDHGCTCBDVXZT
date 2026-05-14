@@ -249,6 +249,13 @@
                 font-family: monospace;
                 margin-top: 2px;
             }
+            #header-event {
+                font-size: 11px;
+                font-weight: 700;
+                color: rgba(255, 120, 120, 0.95);
+                margin-top: 4px;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+            }
 
             /* Character badge in header */
             #char-badge {
@@ -1046,6 +1053,7 @@
 
                 <div id="header-info">
                     <div id="header-location">—</div>
+                    <div id="header-event" style="display:none;"></div>
                     <div id="header-time">—</div>
                 </div>
 
@@ -1516,6 +1524,7 @@
                     if (!entry || entry.type !== change.type) return false;
                     if (change.type === "npcDeath") return entry.npcId === change.npcId;
                     if (change.type === "activeSceneNpcs") return true;
+                    if (change.type === "scheduledEventUpsert") return entry.eventId === change.eventId;
                     if (change.type === "eventExpired") {
                         const sigA = JSON.stringify(change.event || {});
                         const sigB = JSON.stringify(entry.event || {});
@@ -1895,6 +1904,179 @@
                 const el = document.getElementById("header-time");
                 const wdn = _weekdayNameEn(d.day || 1, d.month || 1, d.year || 1983);
                 if (el) el.textContent = `${wdn}, ${day}.${mon}.${yr} — ${tm}`;
+                try { updateHeaderEvent(); } catch {}
+            }
+
+            function _readSettingsObj() {
+                try {
+                    const raw = Storage.get(SETTINGS_KEY) || "{}";
+                    const obj = JSON.parse(raw);
+                    return (obj && typeof obj === "object") ? obj : {};
+                } catch {
+                    return {};
+                }
+            }
+            function _writeSettingsObj(settings) {
+                try {
+                    Storage.set(SETTINGS_KEY, JSON.stringify(settings || {}));
+                } catch {}
+                try { autoSaveStory(); } catch {}
+            }
+            function _getScheduledEvents() {
+                const settings = _readSettingsObj();
+                const arr = settings.scheduledEvents;
+                return Array.isArray(arr) ? arr.filter(Boolean) : [];
+            }
+            function _setScheduledEvents(list) {
+                const settings = _readSettingsObj();
+                settings.scheduledEvents = Array.isArray(list) ? list.filter(Boolean) : [];
+                _writeSettingsObj(settings);
+            }
+            function _fmtDMY(day, month, year) {
+                const dd = String(parseInt(day, 10) || 1).padStart(2, "0");
+                const mm = String(parseInt(month, 10) || 1).padStart(2, "0");
+                const yy = parseInt(year, 10) || 1983;
+                return `${dd}.${mm}.${yy}`;
+            }
+            function _parseEventDateInput(dateStr) {
+                try {
+                    const raw = String(dateStr || "").trim();
+                    if (!raw) return null;
+                    const m = raw.match(/^(\d{1,2})\.(\d{1,2})(?:\.(\d{2}|\d{4}))?$/);
+                    if (!m) return null;
+                    const day = parseInt(m[1], 10);
+                    const month = parseInt(m[2], 10);
+                    let year = m[3] ? parseInt(m[3], 10) : null;
+                    if (year != null && year < 100) year = year < 50 ? 2000 + year : 1900 + year;
+                    if (year == null) year = parseInt(activeChar?.startingDate?.year, 10) || 1983;
+                    if (!(day >= 1 && day <= 31 && month >= 1 && month <= 12)) return null;
+                    const d = normalizeYMD({ day, month, year });
+                    return {
+                        day: d.day,
+                        month: d.month,
+                        year: d.year,
+                        dayCount: _worldDayCount(d),
+                        display: _fmtDMY(d.day, d.month, d.year)
+                    };
+                } catch {
+                    return null;
+                }
+            }
+            function _isCurrentLocationCustom() {
+                try {
+                    if (!currentLocationId) return false;
+                    const cards = getCards();
+                    const loc = cards.find(c => c && c.genre === "location" && c.id === currentLocationId);
+                    const sub = String(loc?.locationSub || "").toLowerCase().trim();
+                    return sub === "custom";
+                } catch {
+                    return false;
+                }
+            }
+            function _getActiveScheduledEventsForCurrent() {
+                try {
+                    if (!activeChar?.startingDate) return [];
+                    const nowCount = _worldDayCount(activeChar.startingDate);
+                    const all = _getScheduledEvents();
+                    const scopeMatch = _isCurrentLocationCustom();
+                    if (!scopeMatch) return [];
+                    return all
+                        .filter(e => e && e.scope === "locationSub" && e.scopeValue === "custom")
+                        .filter(e => Number.isFinite(parseInt(e.dayCount, 10)) && nowCount <= parseInt(e.dayCount, 10))
+                        .sort((a, b) => (parseInt(a.dayCount, 10) || 0) - (parseInt(b.dayCount, 10) || 0));
+                } catch {
+                    return [];
+                }
+            }
+            function updateHeaderEvent() {
+                const el = document.getElementById("header-event");
+                if (!el) return;
+                const list = _getActiveScheduledEventsForCurrent();
+                if (!list.length) {
+                    el.textContent = "";
+                    el.style.display = "none";
+                    return;
+                }
+                const first = list[0] || {};
+                const dateText = String(first.displayDate || first.date || "").trim();
+                const txt = String(first.text || "").trim();
+                const suffix = list.length > 1 ? ` (+${list.length - 1})` : "";
+                el.textContent = `EVENT ${dateText ? "(" + dateText + ")" : ""}: ${txt}${suffix}`.trim();
+                el.style.display = "block";
+            }
+            function _upsertScheduledEvent(dateObj, text, anchorTs = null) {
+                try {
+                    if (!dateObj || !Number.isFinite(dateObj.dayCount)) return null;
+                    const t = String(text || "").replace(/\s+/g, " ").trim();
+                    if (!t) return null;
+                    const now = Date.now();
+                    const list = _getScheduledEvents();
+                    const newEntry = {
+                        id: Math.random().toString(36).slice(2, 10),
+                        scope: "locationSub",
+                        scopeValue: "custom",
+                        day: dateObj.day,
+                        month: dateObj.month,
+                        year: dateObj.year,
+                        dayCount: dateObj.dayCount,
+                        displayDate: dateObj.display,
+                        text: t.slice(0, 260),
+                        createdAt: now,
+                        updatedAt: now
+                    };
+                    const matchIdx = list.findIndex(e =>
+                        e &&
+                        e.scope === "locationSub" &&
+                        e.scopeValue === "custom" &&
+                        parseInt(e.dayCount, 10) === dateObj.dayCount
+                    );
+                    if (matchIdx >= 0) {
+                        const prev = JSON.parse(JSON.stringify(list[matchIdx] || null));
+                        const updated = { ...(list[matchIdx] || {}), ...newEntry, id: list[matchIdx].id || newEntry.id };
+                        list[matchIdx] = updated;
+                        if (anchorTs) {
+                            rememberAnchoredWorldChange(anchorTs, {
+                                type: "scheduledEventUpsert",
+                                eventId: updated.id,
+                                existed: true,
+                                previousEvent: prev
+                            });
+                        }
+                        _setScheduledEvents(list);
+                        try { updateHeaderEvent(); } catch {}
+                        return updated;
+                    }
+                    list.push(newEntry);
+                    if (anchorTs) {
+                        rememberAnchoredWorldChange(anchorTs, {
+                            type: "scheduledEventUpsert",
+                            eventId: newEntry.id,
+                            existed: false,
+                            previousEvent: null
+                        });
+                    }
+                    _setScheduledEvents(list);
+                    try { updateHeaderEvent(); } catch {}
+                    return newEntry;
+                } catch {
+                    return null;
+                }
+            }
+            function _applyScheduledEventTagPayload(payload, anchorTs = null) {
+                try {
+                    const raw = String(payload || "").trim();
+                    if (!raw) return null;
+                    let sepIdx = raw.indexOf(",");
+                    if (sepIdx === -1) sepIdx = raw.indexOf("|");
+                    if (sepIdx === -1) return null;
+                    const datePart = raw.slice(0, sepIdx).trim();
+                    const textPart = raw.slice(sepIdx + 1).trim().replace(/^["']+/, "").replace(/["']+$/, "");
+                    const d = _parseEventDateInput(datePart);
+                    if (!d) return null;
+                    return _upsertScheduledEvent(d, textPart, anchorTs);
+                } catch {
+                    return null;
+                }
             }
 
             function applyTextSizeLimit(text) {
@@ -2094,10 +2276,17 @@
                             if (allNpcIdSet.has(id)) activeSet.add(id);
                         }
                         if (!anyPairs) {
-                            payload.split(/,\s*/).forEach(s => {
-                                const id = String(s || "").trim().split(":")[0];
+                            const legacyListRx = /^([A-Za-z0-9\-_]+(?:\s*:\s*(?:Common|Important))?)(?:\s*,\s*[A-Za-z0-9\-_]+(?:\s*:\s*(?:Common|Important))?)*$/i;
+                            const firstComma = payload.indexOf(",");
+                            if (firstComma !== -1 && !legacyListRx.test(payload)) {
+                                const id = payload.slice(0, firstComma).trim();
                                 if (allNpcIdSet.has(id)) activeSet.add(id);
-                            });
+                            } else {
+                                payload.split(/,\s*/).forEach(s => {
+                                    const id = String(s || "").trim().split(":")[0];
+                                    if (allNpcIdSet.has(id)) activeSet.add(id);
+                                });
+                            }
                         }
                     }
 
@@ -2196,6 +2385,11 @@
 
                 while ((match = tagPattern.exec(text)) !== null) {
                     const content = match[1].trim();
+                    const eventTag = content.match(/^Event\s*:\s*(.+)$/i);
+                    if (eventTag) {
+                        try { _applyScheduledEventTagPayload(eventTag[1], currentNarrationTs); } catch (e) { console.warn("Event tag parse failed", e); }
+                        continue;
+                    }
                     // Handle NPC memory tags: [[Memory:NPC_ID|Memory text]]
                     const memIdList = content.match(/^Memory\s*:\s*(.+)$/i);
                     if (memIdList) {
@@ -2209,8 +2403,32 @@
                                 const id = resolveNpcIdFromRef(idRaw);
                                 const memText = sanitizeTagValue(pairMatch[2]);
                                 if (id && memText) {
-                                    targets.push({ id, text: memText });
+                                    targets.push({ id, text: memText, type: "" });
                                     memoryNpcIdsForAutoActive.push(id);
+                                }
+                            }
+                            if (targets.length === 0) {
+                                const legacyListRx = /^([A-Za-z0-9\-_]+(?:\s*:\s*(?:Common|Important))?)(?:\s*,\s*[A-Za-z0-9\-_]+(?:\s*:\s*(?:Common|Important))?)*$/i;
+                                const firstComma = payload.indexOf(",");
+                                if (firstComma !== -1 && !legacyListRx.test(payload)) {
+                                    const idRaw = payload.slice(0, firstComma).trim();
+                                    const rest = payload.slice(firstComma + 1).trim();
+                                    const lastComma = rest.lastIndexOf(",");
+                                    let type = "";
+                                    let textPart = rest;
+                                    if (lastComma !== -1) {
+                                        const tail = rest.slice(lastComma + 1).trim();
+                                        if (/^insight$/i.test(tail)) {
+                                            type = "Insight";
+                                            textPart = rest.slice(0, lastComma).trim();
+                                        }
+                                    }
+                                    const id = resolveNpcIdFromRef(idRaw);
+                                    const memText = sanitizeTagValue(textPart);
+                                    if (id && memText) {
+                                        targets.push({ id, text: memText, type });
+                                        memoryNpcIdsForAutoActive.push(id);
+                                    }
                                 }
                             }
                             // Legacy fallback: [[Memory:ID1,ID2,ID3]]
@@ -2222,7 +2440,7 @@
                                         const idRaw = m[1].trim();
                                         const id = resolveNpcIdFromRef(idRaw);
                                         if (id) {
-                                            targets.push({ id });
+                                            targets.push({ id, text: "", type: "" });
                                             memoryNpcIdsForAutoActive.push(id);
                                         }
                                     }
@@ -3661,6 +3879,17 @@
                             if (c.description) contextLines.push(`  Description: ${c.description}`);
                             if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
 
+                            const ins = Array.isArray(c.insights) ? c.insights : [];
+                            if (ins.length > 0) {
+                                contextLines.push(`  Insights (always remember):`);
+                                ins.slice(-10).forEach(m => {
+                                    const meta = _formatMemoryMeta(m);
+                                    const txt = m && typeof m === "object" ? (m.text || "") : String(m || "");
+                                    const line = `${meta ? meta : (m?.date || "")}`.trim();
+                                    contextLines.push(`    [${line}] ${short(txt, 160)}`);
+                                });
+                            }
+
                             const allMems = Array.isArray(c.memories) ? c.memories : [];
                             const latest = allMems.slice(-5);
                             let matched = [];
@@ -3857,6 +4086,21 @@
                     const d = activeChar?.startingDate || {};
                     const curDate = `${String(d.day || 1).padStart(2,"0")}.${String(d.month || 1).padStart(2,"0")}.${d.year || 1983}`;
                     const curTime = d.time || "00:00";
+                    const scheduled = (() => {
+                        try {
+                            const list = _getActiveScheduledEventsForCurrent();
+                            if (!list.length) return [];
+                            const nowCount = _worldDayCount(activeChar.startingDate);
+                            return list.map(e => {
+                                const dateStr = String(e.displayDate || _fmtDMY(e.day, e.month, e.year)).trim();
+                                const daysLeft = (parseInt(e.dayCount, 10) || 0) - nowCount;
+                                const rel = daysLeft === 0 ? "TODAY" : (daysLeft === 1 ? "TOMORROW" : (daysLeft > 1 ? `IN ${daysLeft} DAYS` : "PAST"));
+                                return `  * [SCHEDULED | ${rel}] ${dateStr} — ${String(e.text || "").trim()}`;
+                            });
+                        } catch {
+                            return [];
+                        }
+                    })();
                     // Find ancestors of current location
                     const ancestors = [];
                     let current = cards.find(c => c.id === currentLocationId);
@@ -3870,6 +4114,10 @@
                         current = parent;
                     }
                     const contextLines = [];
+                    if (scheduled.length) {
+                        contextLines.push("\nSCHEDULED EVENTS (Persistent; hidden after the date passes, returns if time is set back):");
+                        contextLines.push(...scheduled);
+                    }
                     contextLines.push("\nLOCATION EVENTS (Current area and parent regions):");
                     const nowDay = _nowDayKey();
                     ancestors.forEach(loc => {
@@ -3902,7 +4150,7 @@
                             contextLines.push(`  * [${type} | ${phase}] ${dateStr} ${timeStr}${relativeBadge} — ${desc}`);
                         });
                     });
-                    if (contextLines.length <= 1) return "";
+                    if (contextLines.length <= (scheduled.length ? 2 : 1)) return "";
                     contextLines.push(`Current date reference: ${curDate} ${curTime}`);
                     contextLines.push("Future PUBLIC events are fixed calendar facts. Do not move them earlier or later.");
                     contextLines.push("Secret events are unknown to NPCs; use them only as hidden world triggers.");
@@ -4943,6 +5191,7 @@ ${killedInstructionNoTags}`;
                 
                 updatePresentNPCs();
                 saveActiveCharacter(); // Save the location state
+                try { updateHeaderEvent(); } catch {}
                 try { loadBackground(); } catch {}
                 updateTravelButtonVisibility(); // Show/hide travel button based on transport building
                 updateMoveButtonVisibility();
@@ -5550,12 +5799,36 @@ ${killedInstructionNoTags}`;
                 const memorySummary = extractMemorySummary(narrativeText);
                 
                 let changed = false;
-                targets.forEach(({ id, text }) => {
+                targets.forEach(({ id, text, type }) => {
                     const npc = cards.find(c => c.genre === "character" && c.id === id);
                     if (!npc) return;
-                    if (!Array.isArray(npc.memories)) npc.memories = [];
                     const memoryText = String(text || "").trim() || memorySummary;
                     if (!memoryText) return;
+                    const isInsight = /^insight$/i.test(String(type || "").trim());
+                    if (isInsight) {
+                        if (!Array.isArray(npc.insights)) npc.insights = [];
+                        const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+                        const sig = norm(memoryText);
+                        const idx = npc.insights.findIndex(m => m && norm(m.text) === sig);
+                        const entry = {
+                            date: dateStr,
+                            time: timeStr,
+                            location: locName,
+                            dayCount: _worldDayCount(d),
+                            text: memoryText,
+                            logTs: anchorTs || null,
+                            type: "Insight"
+                        };
+                        if (idx >= 0) {
+                            npc.insights[idx] = { ...(npc.insights[idx] || {}), ...entry };
+                        } else {
+                            npc.insights.push(entry);
+                        }
+                        if (npc.insights.length > 120) npc.insights = npc.insights.slice(-120);
+                        changed = true;
+                        return;
+                    }
+                    if (!Array.isArray(npc.memories)) npc.memories = [];
                     npc.memories.push({
                         date: dateStr,
                         time: timeStr,
@@ -5564,7 +5837,6 @@ ${killedInstructionNoTags}`;
                         text: memoryText,
                         logTs: anchorTs || null
                     });
-                    // Keep more entries now since they're shorter (max 500 instead of 200)
                     if (npc.memories.length > 500) npc.memories = npc.memories.slice(-500);
                     changed = true;
                 });
@@ -5844,6 +6116,11 @@ ${killedInstructionNoTags}`;
                                 c.memories = c.memories.filter(m => m.logTs !== ts);
                                 if (c.memories.length !== lenBefore) changed = true;
                             }
+                            if (Array.isArray(c.insights)) {
+                                const lenBefore = c.insights.length;
+                                c.insights = c.insights.filter(m => m.logTs !== ts);
+                                if (c.insights.length !== lenBefore) changed = true;
+                            }
                         } else if (c.genre === "location") {
                             if (Array.isArray(c.memories)) {
                                 const lenBefore = c.memories.length;
@@ -5892,6 +6169,32 @@ ${killedInstructionNoTags}`;
                         list.splice(boundedIdx, 0, restoredEvent);
                         changed = true;
                     });
+                    try {
+                        const scheduledChanges = pendingChanges.filter(c => c && c.type === "scheduledEventUpsert" && c.eventId);
+                        if (scheduledChanges.length) {
+                            let list = _getScheduledEvents();
+                            let did = false;
+                            scheduledChanges.forEach(ch => {
+                                const id = String(ch.eventId || "").trim();
+                                if (!id) return;
+                                if (ch.existed && ch.previousEvent) {
+                                    const idx = list.findIndex(e => e && e.id === id);
+                                    if (idx >= 0) {
+                                        list[idx] = JSON.parse(JSON.stringify(ch.previousEvent));
+                                        did = true;
+                                    }
+                                } else {
+                                    const before = list.length;
+                                    list = list.filter(e => !(e && e.id === id));
+                                    if (list.length !== before) did = true;
+                                }
+                            });
+                            if (did) {
+                                _setScheduledEvents(list);
+                                try { updateHeaderEvent(); } catch {}
+                            }
+                        }
+                    } catch {}
                     if (pendingChanges.length > 0) {
                         delete anchoredChanges[String(ts)];
                         saveAnchoredWorldChanges(anchoredChanges);
@@ -5914,6 +6217,14 @@ ${killedInstructionNoTags}`;
                     cards.forEach(c => {
                         if (Array.isArray(c.memories)) {
                             c.memories.forEach(m => {
+                                if (m && m.logTs === ts) {
+                                    m.text = newT;
+                                    changed = true;
+                                }
+                            });
+                        }
+                        if (Array.isArray(c.insights)) {
+                            c.insights.forEach(m => {
                                 if (m && m.logTs === ts) {
                                     m.text = newT;
                                     changed = true;
@@ -5947,7 +6258,18 @@ ${killedInstructionNoTags}`;
                 if (mem.length > 0) {
                     info += `\nMemories (latest):\n`;
                     mem.forEach((m) => {
-                        info += `- ${m.date} ${m.time} @ ${m.location}\n`;
+                        const meta = `${m.date || ""} ${m.time || ""} @ ${m.location || ""}`.trim();
+                        const txt = String(m.text || "").trim();
+                        info += `- ${meta}${txt ? ` — ${txt}` : ""}\n`;
+                    });
+                }
+                const insights = Array.isArray(npc.insights) ? npc.insights : [];
+                if (insights.length > 0) {
+                    info += `\nInsights:\n`;
+                    insights.slice(-12).forEach((m) => {
+                        const meta = `${m.date || ""} ${m.time || ""}`.trim();
+                        const txt = String(m.text || "").trim();
+                        info += `- ${meta}${txt ? ` — ${txt}` : ""}\n`;
                     });
                 }
                 
@@ -6636,11 +6958,13 @@ ${visibleLocationsInfo}
      [[TIME: 14:15, LOCATION: "loc_123"]]
    - If LOCATION equals Current Location ID, you may omit the LOCATION part
 
-2b. **[[Memory: NPC_ID|Short memory text]]** - MUST exist if any PRESENT NPC spoke, acted, reacted, attacked, answered, followed, touched, helped, threatened, kissed, or otherwise interacted with the player or scene
+2b. **[[Memory:...]]** - MUST exist if any PRESENT NPC spoke, acted, reacted, attacked, answered, followed, touched, helped, threatened, kissed, or otherwise interacted with the player or scene
+   - Normal memory (preferred): [[Memory:NPC_ID,Short memory text]]
+   - Normal memory (also allowed): [[Memory:NPC_ID|Short memory text]]
+   - INSIGHT memory (only when it is an explicit promise/permission/core fact): [[Memory:NPC_ID,Short memory text,Insight]]
    - NPC_ID must be from Available NPCs list above (use IDs)
-   - The memory text must be short and explicit, e.g. "Hat Kei gekuesst"
+   - The memory text must be short and explicit, e.g. "Hat Kei geküsst" or "Hat versprochen, hier zu übernachten"
    - Output one memory tag per NPC that should remember something
-   - You may keep legacy ID-only memory tags only if absolutely necessary, but prefer the explicit text format
 
 2c. **[[NPC_ID:Friend]]**, **[[NPC_ID:Spouse]]**, **[[NPC_ID:Lover]]**, **[[NPC_ID:Enemy]]**
    - Add one if the narration/context clearly establishes or updates that relation to the player
@@ -6671,6 +6995,14 @@ ${visibleLocationsInfo}
    - If the narration clearly describes a species being killed by the player or NPCs, add one [[Killed:Species_ID:Recipients]] tag BEFORE the final [[TIME: ...]] tag.
    - Species_ID must be from Present Species list above (use the ID).
    - Recipients must be "Player" and/or NPC IDs (from Available NPC IDs) based on who killed it.
+
+2j. **[[Event:DD.MM.YYYY,Text]]** (ONLY when clearly implied)
+   - Use this ONLY when the narration explicitly establishes a persistent event/reminder the player should see when they are in a CUSTOM location.
+   - Example triggers: someone says they will stay overnight here; a meeting/appointment is set to happen here on a specific date; a deadline for something happening here.
+   - Date MUST be a real calendar date. If the event happens today, use Current Date.
+   - Text must be short, factual, and permanent-looking (no quotes). It will be shown as an IMPORTANT banner under the Location until the date passes.
+   - Syntax MUST be EXACT with a comma after the date:
+     [[Event:28.06.2026,Pinkie will stay overnight here.]]
 
 3. Tag order rules:
    - Put all tags (including relative time change and Killed tags) BEFORE the final [[TIME: ...]] tag, except the final [[TIME: ...]] tag itself
@@ -7633,7 +7965,7 @@ ${visibleLocationsInfo}
 
 # YOUR TASK (PRIORITIES):
 1) Tags first: Ensure the output has the correct control tags and that they are compatible with the edited narration.
-   - You MAY delete, change, or add tags (Memory/ActiveNPCs/Time/Location/LocState/Death/SecretRevelation/Killed/Relations) as needed.
+   - You MAY delete, change, or add tags (Memory/ActiveNPCs/Time/Location/LocState/Death/SecretRevelation/Killed/Relations/Event) as needed.
 2) Prose second: Keep the edited narration text as-is. ONLY fix obvious mistakes (spelling, missing closing quotes/brackets, duplicated fragments). Do NOT rewrite otherwise.
 
 # PLAYER AGENCY (STRICT):
@@ -7648,8 +7980,11 @@ ${visibleLocationsInfo}
 
 # TAG RULES:
 - Output MUST include exactly ONE [[ActiveNPCs:...]] tag (or [[ActiveNPCs:none]]) BEFORE the final [[TIME: ...]] tag.
-- If any NPC in [[ActiveNPCs:...]] did anything non-trivial in the edited narration (spoke, reacted, moved, touched, helped, threatened, kissed, discovered something, promised something, conflict, item gained/lost), output at least ONE [[Memory:NPC_ID|...]] for that NPC.
-  - Memory text must be in ${targetLanguage}, short, explicit, and should use the Player Name when referencing the player (e.g. "Hat ${playerName} geküsst").
+- If any NPC in [[ActiveNPCs:...]] did anything non-trivial in the edited narration (spoke, reacted, moved, touched, helped, threatened, kissed, discovered something, promised something, conflict, item gained/lost), output at least ONE Memory tag for that NPC:
+  - Normal: [[Memory:NPC_ID,Text]] (preferred) or [[Memory:NPC_ID|Text]]
+  - Insight (promises/permissions/core facts): [[Memory:NPC_ID,Text,Insight]]
+  - Text must be in ${targetLanguage}, short, explicit, and should use the Player Name when referencing the player (e.g. "Hat ${playerName} geküsst").
+- If the edited narration clearly establishes a persistent event for a CUSTOM location, output one [[Event:DD.MM.YYYY,Text]] tag (comma after date). Keep it short and factual.
 - Output MUST include a final [[TIME: HH:MM]] tag at the very end (optionally with LOCATION using a LOCATION ID).
 - If you add a relative time tag ([[Time:+...]] etc), the final [[TIME: ...]] must reflect the resulting time after applying it.
 - Put all non-final tags BEFORE the final [[TIME: ...]] tag.
