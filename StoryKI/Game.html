@@ -7845,7 +7845,7 @@ Return ONLY the repaired narration with tags.`;
                     if (b) { b.disabled = true; b.classList.add('locked'); }
                 });
             };
-            async function reconcileTagsAfterNarratorEdit(editedText, previousRawAi) {
+            async function reconcileTagsAfterNarratorEdit(editedText, previousRawAi, playerMessage = null) {
                 const cards = getCards();
                 const d = activeChar?.startingDate || {};
                 const curTime = d.time || "00:00";
@@ -7951,6 +7951,7 @@ ${prevTagsBlock}
 # CURRENT CONTEXT (BEFORE applying this edited message):
 - Target Output Language: ${targetLanguage}
 - Target Language Code: ${aiLangSpec.code}
+- Player Message: "${String(playerMessage || "").trim() || "N/A"}"
 - Player Name: ${playerName}
 - Current Date: ${curDate}
 - Current Time: ${curTime}
@@ -8024,6 +8025,27 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                     
                     const ts = entry.timestamp;
                     const oldRawAi = String(entry.rawAi || "");
+                    const playerMsgForReconcile = (() => {
+                        try {
+                            for (let i = _editIndex - 1; i >= 0; i--) {
+                                const e = chatHistory[i];
+                                if (!e) continue;
+                                if (typeof e === "string") {
+                                    const sender = String(e.split(":")[0] || "").trim();
+                                    if (sender && sender !== "Narrator" && sender !== "System") {
+                                        const txt = e.substring(e.indexOf(":") + 1).trim();
+                                        return txt;
+                                    }
+                                    continue;
+                                }
+                                const sender = String(e.sender || "").trim();
+                                if (sender && sender !== "Narrator" && sender !== "System") {
+                                    return String(e.text || "").trim();
+                                }
+                            }
+                        } catch {}
+                        return "";
+                    })();
                     let removed = null;
                     try {
                         removed = chatHistory.splice(_editIndex, 1)[0];
@@ -8032,7 +8054,7 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                         rollbackToLastWorldState();
                         try { updatePresentNPCs(); } catch {}
                         
-                        const reconciledRaw = await reconcileTagsAfterNarratorEdit(newText, oldRawAi);
+                        const reconciledRaw = await reconcileTagsAfterNarratorEdit(newText, oldRawAi, playerMsgForReconcile);
                         let validatedResponse = String(reconciledRaw || "").trim();
                         validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
                         
