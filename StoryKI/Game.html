@@ -4470,6 +4470,88 @@
                 }
             }
 
+            function getRecentWorldMemoriesSnapshotLines(limit = 15) {
+                try {
+                    const cards = getCards();
+                    const lim = Math.max(1, Math.min(50, parseInt(limit, 10) || 15));
+                    const rows = [];
+                    cards.forEach((c) => {
+                        if (!c || !c.id) return;
+                        if (c.genre === "character") {
+                            const name = String(c.title || c.firstName || c.id || "").trim() || c.id;
+                            (Array.isArray(c.memories) ? c.memories : []).forEach((m) => {
+                                if (!m || typeof m !== "object") return;
+                                const text = String(m.text || "").trim();
+                                if (!text) return;
+                                const date = String(m.date || "").trim() || "?";
+                                const time = String(m.time || "00:00").trim() || "00:00";
+                                const logTs = Number(m.logTs) || 0;
+                                const dc = parseInt(m.dayCount, 10);
+                                rows.push({
+                                    logTs,
+                                    dayCount: Number.isFinite(dc) ? dc : null,
+                                    date,
+                                    time,
+                                    text,
+                                    id: c.id,
+                                    name,
+                                    entity: "NPC",
+                                });
+                            });
+                        } else if (c.genre === "location" && isLocationMemoryTargetCard(c)) {
+                            const name = String(c.title || c.id || "").trim() || c.id;
+                            (Array.isArray(c.memories) ? c.memories : []).forEach((m) => {
+                                if (!m || typeof m !== "object") return;
+                                const text = String(m.text || "").trim();
+                                if (!text) return;
+                                const date = String(m.date || "").trim() || "?";
+                                const time = String(m.time || "00:00").trim() || "00:00";
+                                const logTs = Number(m.logTs) || 0;
+                                const dc = parseInt(m.dayCount, 10);
+                                rows.push({
+                                    logTs,
+                                    dayCount: Number.isFinite(dc) ? dc : null,
+                                    date,
+                                    time,
+                                    text,
+                                    id: c.id,
+                                    name,
+                                    entity: "Location",
+                                });
+                            });
+                        }
+                    });
+                    const sortKey = (r) => {
+                        if (r.logTs > 0) return r.logTs;
+                        let dc = r.dayCount;
+                        if (!Number.isFinite(dc)) {
+                            const parts = String(r.date || "").split(".");
+                            if (parts.length >= 3) {
+                                dc = _worldDayCount({
+                                    day: parseInt(parts[0], 10) || 1,
+                                    month: parseInt(parts[1], 10) || 1,
+                                    year: parseInt(parts[2], 10) || 1983,
+                                });
+                            } else {
+                                dc = 0;
+                            }
+                        }
+                        return dc * 1440 + _timeToMinutes(r.time);
+                    };
+                    rows.sort((a, b) => sortKey(b) - sortKey(a));
+                    const top = rows.slice(0, lim);
+                    if (!top.length) return { block: "(no saved memories yet in world cards)", lines: [] };
+                    const lines = top.map((r, i) => {
+                        const txt = String(r.text || "").replace(/\s+/g, " ").trim();
+                        return `${i + 1}) Name: ${r.name} | Entity: ${r.entity} | ID: ${r.id} | Date: ${r.date} | Time: ${r.time} | Text: ${txt}`;
+                    });
+                    return { block: lines.join("\n"), lines: top };
+                } catch (e) {
+                    console.warn("getRecentWorldMemoriesSnapshotLines failed", e);
+                    return { block: "(error loading memory snapshot)", lines: [] };
+                }
+            }
+
             function _applyEventOverrideToCard(card, changes, snapshot) {
                 if (!card || !changes) return;
                 if (!snapshot[card.id]) snapshot[card.id] = {};
@@ -7037,6 +7119,9 @@ ${killedInstructionNoTags}`;
                 const customBuildingLocBlockVal = customBuildingLocLinesVal.length
                     ? customBuildingLocLinesVal.join("\n")
                     : "(none in current scope — do NOT invent Custom/Building IDs for [[Memory:LOCATION_ID|...]])";
+
+                const recentMemSnapVal = getRecentWorldMemoriesSnapshotLines(15);
+                const recentMemBlockVal = recentMemSnapVal.block;
                 
                 const validationPrompt = `You are a SECOND-PASS REPAIR AI. Your main focus is to add/fix control tags correctly.
 
@@ -7063,6 +7148,15 @@ ${visibleLocationsInfo}
 - Level System Active: ${levelSystemActive ? "YES" : "NO"}
 - Custom / Building location IDs (ONLY these may be used as LOCATION_ID in [[Memory:LOCATION_ID|text]]):
 ${customBuildingLocBlockVal}
+
+# RECENT SAVED MEMORIES (15 newest — already stored on NPC or Custom/Building location cards)
+${recentMemBlockVal}
+
+# DUPLICATE MEMORY AVOIDANCE (STRICT)
+- Before adding any [[Memory:ID|text]] (or comma form), compare **ID**, **Date** (DD.MM.YYYY), and the **gist** of the memory **Text** against the list above.
+- If the **same core fact** for the **same ID** is already present on the **same Date** (even hours earlier — e.g. the same kiss, promise, imprisonment in the cellar, barricaded door), **do not** emit a second tag that only repeats it; **omit** the duplicate or **replace** the narration-side implication so no redundant tag is needed.
+- Only add a new memory on the same Date + same ID if the text records a **clearly new** development (not a paraphrase or trivial rewording of the same beat).
+- A new **calendar Date** may justify a follow-up memory if the story truly progressed; still avoid pointless repetition.
 
 # YOUR TASK (PRIORITIES):
 1) Tags first: Repair and add ALL required control tags (this is your main job).
@@ -7111,7 +7205,7 @@ ${customBuildingLocBlockVal}
    - Normal memory (also allowed): [[Memory:ID|Short memory text]]
    - INSIGHT (NPC only, explicit promise/permission/core fact): [[Memory:NPC_ID,Short memory text,Insight]]
    - The memory text must be short, explicit, and in ${targetLanguage}.
-   - Output separate Memory tags for each distinct NPC or location that needs continuity.
+   - Output separate Memory tags for each distinct NPC or location that needs continuity — but **always** apply **DUPLICATE MEMORY AVOIDANCE** against the "RECENT SAVED MEMORIES" list above.
 
 2c. **[[NPC_ID:Friend]]**, **[[NPC_ID:Spouse]]**, **[[NPC_ID:Lover]]**, **[[NPC_ID:Enemy]]**
    - Add one if the narration/context clearly establishes or updates that relation to the player
@@ -8092,6 +8186,9 @@ Return ONLY the repaired narration with tags.`;
                 const customBuildingLocBlockEdit = customBuildingLocLinesEdit.length
                     ? customBuildingLocLinesEdit.join("\n")
                     : "(none in current scope — do NOT invent Custom/Building IDs for [[Memory:LOCATION_ID|...]])";
+
+                const recentMemSnapEdit = getRecentWorldMemoriesSnapshotLines(15);
+                const recentMemBlockEdit = recentMemSnapEdit.block;
                 
                 const prompt = `You are a TAG RECONCILIATION AI for an edited Narrator message.
 
@@ -8130,6 +8227,14 @@ ${visibleLocationsInfo}
 - Custom / Building location IDs (ONLY valid LOCATION_ID for [[Memory:LOCATION_ID|text]]):
 ${customBuildingLocBlockEdit}
 
+# RECENT SAVED MEMORIES (15 newest — already stored on NPC or Custom/Building location cards)
+${recentMemBlockEdit}
+
+# DUPLICATE MEMORY AVOIDANCE (STRICT)
+- Before adding any [[Memory:ID|text]], compare **ID**, **Date** (DD.MM.YYYY), and the **gist** of **Text** against the list above.
+- If the **same core fact** for the **same ID** already exists on the **same Date**, **omit** a redundant tag (even if the edited narration echoes it again hours later).
+- Only add a same-day + same-ID memory if it records a **clearly new** development, not a paraphrase of an existing line.
+
 # YOUR TASK (PRIORITIES):
 1) Tags first: Ensure the output has the correct control tags and that they are compatible with the edited narration.
    - You MAY delete, change, or add tags (Memory/ActiveNPCs/Time/Location/LocState/Death/SecretRevelation/Killed/Relations/Event) as needed.
@@ -8152,7 +8257,8 @@ ${customBuildingLocBlockEdit}
   - Normal: [[Memory:NPC_ID,Text]] (preferred) or [[Memory:NPC_ID|Text]]
   - Insight (promises/permissions/core facts): [[Memory:NPC_ID,Text,Insight]]
   - Text must be in ${targetLanguage}, short, explicit, and should use the Player Name when referencing the player (e.g. "Hat ${playerName} geküsst").
-- **Location memories:** If the edited narration implies a **lasting fact about a Custom or Building place** (someone held in a cellar, barricade, hidden room, damage, trap, stash, etc.), add [[Memory:LOCATION_ID|Text]] using **only** an ID from "Custom / Building location IDs" above. Prefer the **parent Building** ID when the fact applies to the whole property (e.g. basement of this house). Do NOT use non–Custom/Building location IDs in Memory tags.
+  - Apply **DUPLICATE MEMORY AVOIDANCE** against "RECENT SAVED MEMORIES" (same ID + same Date + same gist => do not repeat).
+- **Location memories:** If the edited narration implies a **lasting fact about a Custom or Building place** (someone held in a cellar, barricade, hidden room, damage, trap, stash, etc.), add [[Memory:LOCATION_ID|Text]] using **only** an ID from "Custom / Building location IDs" above. Prefer the **parent Building** ID when the fact applies to the whole property (e.g. basement of this house). Do NOT use non–Custom/Building location IDs in Memory tags. Apply **DUPLICATE MEMORY AVOIDANCE** against "RECENT SAVED MEMORIES".
 - If the edited narration clearly establishes a persistent event for a CUSTOM location, output one [[Event:DD.MM.YYYY,Text]] tag (comma after date). Keep it short and factual.
 - Output MUST include a final [[TIME: HH:MM]] tag at the very end (optionally with LOCATION using a LOCATION ID).
 - If you add a relative time tag ([[Time:+...]] etc), the final [[TIME: ...]] must reflect the resulting time after applying it.
