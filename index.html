@@ -3377,7 +3377,7 @@
                 
                 Storage.set(CURRENT_STORY_ID_KEY, id);
                 Storage.remove(SELECTED_WORLD_ID_KEY);
-                Storage.set("storyki_active_player", player.id);
+                Storage.set("storyki_active_player", JSON.stringify(player));
                 Storage.set("storyki_active_character", character.id);
                 // Setze auch in sessionStorage für OCGame.html
                 sessionStorage.setItem("storyki_current_story_id", id);
@@ -3404,22 +3404,27 @@
                 // Find bot character: either by genre or by having title but no name property
                 let botChar = cards.find(c => c.genre === "character" || (!c.name && c.title));
                 if (!botChar && cards.length > 0) {
-                    // Fallback: first card that is not a player (players have .name)
+                    // Fallback: first card that is not a player (players tend to have .name)
                     botChar = cards.find(c => !c.name);
                 }
 
-                // Find player character: by having a name property
-                let playerChar = cards.find(c => c.name);
+                // Determine player character robustly from story cards
+                let playerChar = null;
+                if (botChar) {
+                    playerChar = cards.find(c => c.id !== botChar.id);
+                }
+                if (!playerChar) {
+                    playerChar = cards.find(c => c.name);
+                }
 
-                // Save full player object to session storage (not just ID) to prevent "No character selected" error
+                // Save full player object to session storage (not just ID)
                 if (botChar) Storage.set("storyki_active_character", botChar.id);
                 if (playerChar) {
-                    // Save full player object as JSON string
                     Storage.set("storyki_active_player", JSON.stringify(playerChar));
                 } else {
                     // Try to find player from global storage if not in cards
                     const players = getPlayerCharacters();
-                    const savedPlayerId = story.data?.playerId || story.characterId;
+                    const savedPlayerId = story.data?.playerId || cards.find(c => c.id !== botChar?.id)?.id;
                     const foundPlayer = players.find(p => p.id === savedPlayerId);
                     if (foundPlayer) {
                         Storage.set("storyki_active_player", JSON.stringify(foundPlayer));
