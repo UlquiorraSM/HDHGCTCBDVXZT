@@ -126,6 +126,7 @@
                 align-items: flex-end;
                 gap: 10px;
                 max-width: 85%;
+                flex-wrap: wrap;
             }
             .msg-row.user {
                 align-self: flex-end;
@@ -136,10 +137,13 @@
             }
 
             .retry-switcher {
-                display: inline-flex;
+                display: flex;
                 align-items: center;
+                justify-content: flex-start;
                 gap: 8px;
-                margin-top: 10px;
+                width: 100%;
+                flex-basis: 100%;
+                margin-top: 6px;
             }
 
             .retry-switcher-btn {
