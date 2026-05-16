@@ -435,7 +435,29 @@
                     height: min(56vw, 320px);
                 }
             }
-            #all-worlds-menu { display: none; }
+            #all-worlds-menu,
+            #all-characters-menu {
+                display: none;
+                opacity: 0;
+                transition: opacity 0.25s ease;
+            }
+            #all-worlds-menu.is-open,
+            #all-characters-menu.is-open {
+                display: flex;
+                opacity: 1;
+            }
+            .submenu-empty {
+                color: rgba(255, 255, 255, 0.75);
+                text-align: center;
+                margin: 24px 0 8px;
+                font-size: 15px;
+                padding: 20px;
+                background: rgba(0, 0, 0, 0.25);
+                border-radius: 14px;
+                border: 1px dashed rgba(255, 255, 255, 0.15);
+                max-width: 420px;
+                width: 100%;
+            }
             #all-worlds-grid {
                 display: grid;
                 grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -514,50 +536,383 @@
                     justify-content: center !important;
                 }
 
-                /* Player Characters mobile grid (same as All Characters) */
-                #players-list {
-                    display: grid !important;
-                    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-                    gap: 8px !important;
-                    padding: 10px !important;
-                    overflow-x: visible !important;
-                    flex-direction: unset !important;
-                }
-                #players-list .world-card {
-                    width: auto !important;
-                    min-width: 0 !important;
-                    max-width: none !important;
-                    padding: 10px !important;
-                    min-height: 120px !important;
-                    aspect-ratio: 1 / 1.2 !important;
-                }
-                #players-list .world-card > div:first-child {
-                    font-size: 12px !important;
-                    line-height: 1.2 !important;
-                }
-                #players-list .world-card .menu-button {
-                    padding: 6px 4px !important;
-                    font-size: 11px !important;
-                    min-width: 0 !important;
-                    flex: 1 1 auto !important;
-                    white-space: nowrap !important;
-                    overflow: hidden !important;
-                    text-overflow: ellipsis !important;
-                }
-                #players-list .world-card .menu-button:first-child {
-                    font-size: 12px !important;
-                    padding: 8px 4px !important;
-                    flex: 1 1 100% !important;
-                    font-weight: 600 !important;
-                }
-                #players-list .world-card > div:last-child {
-                    display: flex !important;
-                    flex-wrap: wrap !important;
-                    gap: 3px !important;
-                    justify-content: center !important;
-                }
-
             }
+
+            /* ─── Player Characters Screen ─── */
+            .players-screen {
+                position: fixed;
+                inset: 0;
+                z-index: 1000;
+                display: none;
+                flex-direction: column;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                overflow: hidden;
+            }
+            .players-screen__bg {
+                position: fixed;
+                inset: 0;
+                z-index: -2;
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+            }
+            .players-screen__scrim {
+                position: fixed;
+                inset: 0;
+                z-index: -1;
+                background: linear-gradient(180deg, rgba(8, 10, 22, 0.55) 0%, rgba(8, 10, 22, 0.82) 100%);
+                pointer-events: none;
+            }
+            .players-screen__inner {
+                flex: 1;
+                width: 100%;
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: max(16px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+                box-sizing: border-box;
+            }
+            .players-screen__header {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 20px;
+                flex-shrink: 0;
+            }
+            .players-back-btn {
+                flex-shrink: 0;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                color: #fff;
+                padding: 10px 16px;
+                border-radius: 12px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: background 0.2s, transform 0.2s;
+            }
+            .players-back-btn:hover {
+                background: rgba(255, 255, 255, 0.18);
+                transform: translateX(-2px);
+            }
+            .players-screen__titles {
+                flex: 1;
+                min-width: 0;
+                text-align: left;
+            }
+            .players-screen__titles h2 {
+                margin: 0;
+                color: #fff;
+                font-weight: 600;
+                font-size: clamp(1.35rem, 4vw, 1.85rem);
+                letter-spacing: -0.02em;
+                line-height: 1.15;
+            }
+            .players-screen__titles p {
+                margin: 6px 0 0;
+                color: rgba(255, 255, 255, 0.62);
+                font-size: 13px;
+            }
+            .players-count-badge {
+                flex-shrink: 0;
+                min-width: 40px;
+                height: 40px;
+                padding: 0 12px;
+                border-radius: 999px;
+                background: rgba(102, 126, 234, 0.35);
+                border: 1px solid rgba(140, 160, 255, 0.45);
+                color: #fff;
+                font-size: 14px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .players-toolbar {
+                flex-shrink: 0;
+                margin-bottom: 18px;
+            }
+            .players-search {
+                width: 100%;
+                padding: 14px 18px 14px 44px;
+                border-radius: 14px;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                background: rgba(0, 0, 0, 0.35) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='m16 16-4-4'/%3E%3C/svg%3E") 14px center no-repeat;
+                color: #fff;
+                font-size: 15px;
+                outline: none;
+                box-sizing: border-box;
+                transition: border-color 0.2s, box-shadow 0.2s;
+            }
+            .players-search:focus {
+                border-color: rgba(140, 160, 255, 0.55);
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+            }
+            .players-search::placeholder {
+                color: rgba(255, 255, 255, 0.4);
+            }
+            .players-grid-wrap {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                -webkit-overflow-scrolling: touch;
+                padding-right: 4px;
+            }
+            .players-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 18px;
+                width: 100%;
+                padding-bottom: 12px;
+            }
+            .player-card {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                min-height: 300px;
+                border-radius: 18px;
+                overflow: hidden;
+                background: rgba(18, 20, 32, 0.88);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+                transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+            }
+            .player-card:hover {
+                transform: translateY(-4px);
+                border-color: rgba(255, 255, 255, 0.22);
+                box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+            }
+            .player-card__media {
+                height: 140px;
+                background: linear-gradient(135deg, #5b6ee8 0%, #764ba2 100%);
+                background-image: var(--player-cover, linear-gradient(135deg, #5b6ee8 0%, #764ba2 100%));
+                background-size: cover;
+                background-position: center;
+                position: relative;
+            }
+            .player-card__media::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(180deg, transparent 30%, rgba(10, 12, 22, 0.92) 100%);
+            }
+            .player-card__fav {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                z-index: 2;
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                background: rgba(0, 0, 0, 0.45);
+                color: rgba(255, 255, 255, 0.75);
+                font-size: 18px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+            .player-card__fav.is-fav {
+                background: linear-gradient(135deg, rgba(241, 196, 15, 0.9), rgba(243, 156, 18, 0.9));
+                border-color: transparent;
+                color: #fff;
+            }
+            .player-card__body {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                padding: 14px 16px 16px;
+                margin-top: -28px;
+                position: relative;
+                z-index: 1;
+            }
+            .player-card__name {
+                margin: 0 0 6px;
+                color: #fff;
+                font-size: 1.15rem;
+                font-weight: 700;
+                line-height: 1.25;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+            }
+            .player-card__bio {
+                margin: 0 0 12px;
+                color: rgba(255, 255, 255, 0.62);
+                font-size: 12px;
+                line-height: 1.45;
+                flex: 1;
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+            }
+            .player-card__actions {
+                display: flex;
+                gap: 6px;
+                margin-top: auto;
+            }
+            .player-card__btn {
+                flex: 1;
+                border: none;
+                border-radius: 10px;
+                padding: 9px 6px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                color: #fff;
+                transition: filter 0.2s, transform 0.15s;
+            }
+            .player-card__btn:active {
+                transform: scale(0.97);
+            }
+            .player-card__btn--edit {
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .player-card__btn--edit:hover {
+                background: rgba(255, 255, 255, 0.22);
+            }
+            .player-card__btn--dl {
+                background: rgba(76, 175, 120, 0.75);
+            }
+            .player-card__btn--dl:hover {
+                filter: brightness(1.08);
+            }
+            .player-card__btn--del {
+                background: rgba(220, 70, 70, 0.8);
+                flex: 0 0 42px;
+                padding-left: 0;
+                padding-right: 0;
+            }
+            .player-card__btn--del:hover {
+                filter: brightness(1.1);
+            }
+            .player-card--create {
+                min-height: 300px;
+                cursor: pointer;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                background: rgba(255, 255, 255, 0.06);
+                border: 2px dashed rgba(255, 255, 255, 0.22);
+                box-shadow: none;
+            }
+            .player-card--create:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.35);
+            }
+            .player-card--create .player-card__plus {
+                font-size: 48px;
+                font-weight: 200;
+                color: rgba(255, 255, 255, 0.9);
+                line-height: 1;
+                margin-bottom: 8px;
+            }
+            .player-card--create .player-card__create-label {
+                font-size: 16px;
+                font-weight: 600;
+                color: #fff;
+            }
+            .players-empty.is-visible {
+                display: block;
+            }
+            .players-empty {
+                display: none;
+                text-align: center;
+                padding: 48px 24px;
+                color: rgba(255, 255, 255, 0.85);
+                background: rgba(0, 0, 0, 0.28);
+                border-radius: 16px;
+                border: 1px dashed rgba(255, 255, 255, 0.15);
+                margin: 8px 0 20px;
+            }
+            .players-empty__icon {
+                font-size: 40px;
+                margin-bottom: 12px;
+                opacity: 0.85;
+            }
+            .players-empty p {
+                margin: 0 0 16px;
+                font-size: 15px;
+                line-height: 1.5;
+                color: rgba(255, 255, 255, 0.75);
+            }
+            .players-empty__cta {
+                display: inline-block;
+                padding: 12px 22px;
+                border-radius: 12px;
+                border: none;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: #fff;
+                font-weight: 600;
+                font-size: 14px;
+                cursor: pointer;
+            }
+            @media (max-width: 768px) {
+                .players-screen__inner {
+                    padding-left: 14px;
+                    padding-right: 14px;
+                }
+                .players-screen__header {
+                    flex-wrap: wrap;
+                }
+                .players-count-badge {
+                    order: 3;
+                    margin-left: auto;
+                }
+                .players-grid {
+                    grid-template-columns: 1fr;
+                    gap: 12px;
+                }
+                .player-card:not(.player-card--create) {
+                    flex-direction: row;
+                    min-height: 0;
+                    max-height: none;
+                }
+                .player-card:not(.player-card--create) .player-card__media {
+                    width: 96px;
+                    min-width: 96px;
+                    height: auto;
+                    min-height: 112px;
+                    flex-shrink: 0;
+                }
+                .player-card:not(.player-card--create) .player-card__media::after {
+                    background: linear-gradient(90deg, transparent 0%, rgba(10, 12, 22, 0.85) 100%);
+                }
+                .player-card:not(.player-card--create) .player-card__body {
+                    margin-top: 0;
+                    padding: 12px 12px 12px 4px;
+                    justify-content: center;
+                }
+                .player-card:not(.player-card--create) .player-card__bio {
+                    -webkit-line-clamp: 2;
+                    margin-bottom: 8px;
+                }
+                .player-card--create {
+                    min-height: 88px;
+                    flex-direction: row;
+                    gap: 14px;
+                    padding: 16px 20px;
+                }
+                .player-card--create .player-card__plus {
+                    font-size: 36px;
+                    margin-bottom: 0;
+                }
+            }
+            @media (max-width: 600px) {
+                .players-screen__bg {
+                    background-attachment: scroll;
+                }
+            }
+
 
             html, body { -ms-overflow-style: none; scrollbar-width: none; }
             html::-webkit-scrollbar { display: none; }
@@ -702,6 +1057,9 @@
                     />
                 </div>
                 <div id="all-worlds-grid"></div>
+                <div id="all-worlds-empty" class="submenu-empty" style="display:none;">
+                    No worlds found. Create a world from the main menu or clear your search.
+                </div>
                 <div class="menu-buttons" style="max-width: 300px;">
                     <button class="menu-button" onclick="closeAllWorldsMenu()">Back</button>
                 </div>
@@ -910,28 +1268,38 @@
             </div>
         </div>
 
-        <!-- Player Characters Menu (like stories-menu) -->
-        <div id="players-menu" style="display:none; opacity:0; position:fixed; inset:0; z-index:1000; flex-direction:column; align-items:center; padding:40px 20px;">
-            <!-- Background will be set by loadBackground() -->
-            <div id="players-bg" style="position:fixed; inset:0; z-index:-2; background-size:cover; background-position:center; background-attachment:fixed;"></div>
-            <div style="position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:-1;"></div>
+        <!-- Player Characters Screen -->
+        <div id="players-menu" class="players-screen">
+            <div id="players-bg" class="players-screen__bg"></div>
+            <div class="players-screen__scrim"></div>
+            <div class="players-screen__inner">
+                <header class="players-screen__header">
+                    <button type="button" class="players-back-btn" onclick="closePlayerMenu()">&#8592; Back</button>
+                    <div class="players-screen__titles">
+                        <h2>Your Player Characters</h2>
+                        <p>Avatars you play in StoryKI worlds and character stories</p>
+                    </div>
+                    <span id="players-count-badge" class="players-count-badge" title="Saved players">0</span>
+                </header>
             
-            <div class="stories-header" style="width:100%; max-width:1200px; display:flex; align-items:center; justify-content:space-between; margin-bottom:30px;">
-                <button class="back-button" onclick="closePlayerMenu()" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px; transition:all 0.3s;">&#8592; Back</button>
-                <h2 style="color:#fff; font-weight:300; font-size:28px; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.3);">Your Player Characters</h2>
-                <div style="width:80px;"></div>
-            </div>
-            
-            <div class="stories-search-container" style="width:100%; max-width:800px; margin-bottom:30px;">
-                <input type="text" id="player-search" class="search-input" placeholder="Search players..." oninput="renderPlayerCharacters()" style="width:100%; padding:14px 20px; border-radius:12px; border:none; background:rgba(255,255,255,0.15); color:#fff; font-size:16px; backdrop-filter:blur(10px); outline:none;">
-            </div>
-            
-            <div id="players-list" class="stories-list" style="width:100%; max-width:1200px; display:flex; gap:24px; overflow-x:auto; padding:20px; scroll-behavior:smooth;">
-                <!-- Dynamically rendered -->
-            </div>
-            
-            <div id="no-players-hint" style="color:rgba(255,255,255,.9); text-align:center; margin: 40px 0; display:none; font-size:16px; text-shadow:0 2px 4px rgba(0,0,0,0.3);">
-                No player characters found. Click "Create new" to add one.
+                <div class="players-toolbar">
+                    <input
+                        type="text"
+                        id="player-search"
+                        class="players-search"
+                        placeholder="Search by name…"
+                        oninput="renderPlayerCharacters()"
+                        autocomplete="off"
+                    />
+                </div>
+                <div id="no-players-hint" class="players-empty">
+                    <div class="players-empty__icon">&#128100;</div>
+                    <p>No player characters yet. Create one to use in worlds and OC stories.</p>
+                    <button type="button" class="players-empty__cta" onclick="navigateToPlayerCreate()">Create your first player</button>
+                </div>
+                <div class="players-grid-wrap">
+                    <div id="players-list" class="players-grid"></div>
+                </div>
             </div>
         </div>
 
@@ -1806,15 +2174,21 @@
                 document.getElementById("main-menu").style.opacity = "0";
                 setTimeout(() => {
                     document.getElementById("main-menu").style.display = "none";
-                    document.getElementById("all-worlds-menu").style.display = "flex";
+                    const menu = document.getElementById("all-worlds-menu");
+                    if (menu) {
+                        menu.style.display = "";
+                        menu.classList.add("is-open");
+                    }
                     renderAllWorlds();
-                    setTimeout(() => { document.getElementById("all-worlds-menu").style.opacity = "1"; }, 50);
                 }, 200);
             }
             function closeAllWorldsMenu() {
-                document.getElementById("all-worlds-menu").style.opacity = "0";
+                const menu = document.getElementById("all-worlds-menu");
+                if (menu) {
+                    menu.classList.remove("is-open");
+                    menu.style.display = "none";
+                }
                 setTimeout(() => {
-                    document.getElementById("all-worlds-menu").style.display = "none";
                     document.getElementById("main-menu").style.display = "flex";
                     setTimeout(() => { document.getElementById("main-menu").style.opacity = "1"; }, 50);
                 }, 200);
@@ -1913,6 +2287,14 @@
 
             function setWorldFavorites(favorites) {
                 localStorage.setItem(WORLD_FAVORITES_KEY, JSON.stringify(favorites));
+            }
+
+            function getWorldFavorites() {
+                try {
+                    return JSON.parse(localStorage.getItem(WORLD_FAVORITES_KEY) || "[]");
+                } catch {
+                    return [];
+                }
             }
 
             function isWorldFavorite(worldId) {
@@ -2256,294 +2638,133 @@
                 }, 300);
             }
             
+            function buildCreatePlayerCardElement() {
+                const createCard = document.createElement("article");
+                createCard.className = "player-card player-card--create";
+                createCard.setAttribute("role", "button");
+                createCard.tabIndex = 0;
+                const plus = document.createElement("div");
+                plus.className = "player-card__plus";
+                plus.textContent = "+";
+                const label = document.createElement("div");
+                label.className = "player-card__create-label";
+                label.textContent = "Create new player";
+                createCard.appendChild(plus);
+                createCard.appendChild(label);
+                createCard.onclick = () => navigateToPlayerCreate();
+                createCard.onkeydown = (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        navigateToPlayerCreate();
+                    }
+                };
+                return createCard;
+            }
+
+            function buildPlayerCardElement(p) {
+                const card = document.createElement("article");
+                card.className = "player-card";
+                const coverUrl = (p?.coverUrl || p?.image || "").trim();
+                if (coverUrl) {
+                    card.style.setProperty("--player-cover", 'url("' + coverUrl.replace(/"/g, "%22") + '")');
+                }
+                const name = p.title || p.name || "Unnamed Player";
+                const bio = String(p.generally || "").trim();
+                const isFav = isPlayerFavorite(p.id);
+                const fav = document.createElement("button");
+                fav.type = "button";
+                fav.className = "player-card__fav" + (isFav ? " is-fav" : "");
+                fav.innerHTML = isFav ? "&#9733;" : "&#9734;";
+                fav.title = isFav ? "Remove from favorites" : "Add to favorites";
+                fav.onclick = (e) => {
+                    e.stopPropagation();
+                    togglePlayerFavorite(p.id);
+                    renderPlayerCharacters();
+                };
+                const media = document.createElement("div");
+                media.className = "player-card__media";
+                media.appendChild(fav);
+                const body = document.createElement("div");
+                body.className = "player-card__body";
+                const nameEl = document.createElement("h3");
+                nameEl.className = "player-card__name";
+                nameEl.textContent = name;
+                body.appendChild(nameEl);
+                if (bio) {
+                    const bioEl = document.createElement("p");
+                    bioEl.className = "player-card__bio";
+                    bioEl.textContent = bio;
+                    body.appendChild(bioEl);
+                }
+                const actions = document.createElement("div");
+                actions.className = "player-card__actions";
+                const editBtn = document.createElement("button");
+                editBtn.type = "button";
+                editBtn.className = "player-card__btn player-card__btn--edit";
+                editBtn.textContent = "Edit";
+                editBtn.onclick = (e) => { e.stopPropagation(); editPlayerCharacter(p); };
+                const dlBtn = document.createElement("button");
+                dlBtn.type = "button";
+                dlBtn.className = "player-card__btn player-card__btn--dl";
+                dlBtn.textContent = "Export";
+                dlBtn.onclick = (e) => { e.stopPropagation(); downloadPlayerCharacter(p); };
+                const delBtn = document.createElement("button");
+                delBtn.type = "button";
+                delBtn.className = "player-card__btn player-card__btn--del";
+                delBtn.textContent = "🗑";
+                delBtn.title = "Delete player";
+                delBtn.onclick = (e) => { e.stopPropagation(); deletePlayerCharacter(p.id); };
+                actions.appendChild(editBtn);
+                actions.appendChild(dlBtn);
+                actions.appendChild(delBtn);
+                body.appendChild(actions);
+                card.appendChild(media);
+                card.appendChild(body);
+                return card;
+            }
+
             function renderPlayerCharacters() {
                 const listEl = document.getElementById("players-list");
                 const hintEl = document.getElementById("no-players-hint");
+                const countBadge = document.getElementById("players-count-badge");
                 const searchInput = document.getElementById("player-search");
                 const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
-
                 if (!listEl) return;
-
                 listEl.innerHTML = "";
-
-                // Get players from localStorage
-                let players = [];
-                try {
-                    players = JSON.parse(localStorage.getItem("storyki_player_characters") || "[]");
-                } catch(e) {
-                    players = [];
-                }
-
+                let allPlayers = getPlayerCharacters();
+                if (countBadge) countBadge.textContent = String(allPlayers.length);
+                let players = allPlayers;
                 if (searchTerm) {
-                    players = players.filter(p =>
+                    players = players.filter((p) =>
                         (p.title || "").toLowerCase().includes(searchTerm) ||
-                        (p.name || "").toLowerCase().includes(searchTerm)
+                        (p.name || "").toLowerCase().includes(searchTerm) ||
+                        (p.generally || "").toLowerCase().includes(searchTerm)
                     );
                 }
-
-                hintEl.style.display = "none";
-
-                const isMobile = window.innerWidth <= 700;
-
-                // Desktop: horizontal scroll layout
-                if (!isMobile) {
-                    const visibleCount = Math.min(players.length + 1, 5);
-                    listEl.style.margin = "0 auto";
-                    listEl.style.maxWidth = "100%";
-                    listEl.style.width = "auto";
-                    listEl.style.justifyContent = (visibleCount <= 3) ? "center" : "flex-start";
-                    listEl.style.flexDirection = "row";
-                    listEl.scrollLeft = 0;
-                }
-
-                // Create new Player Card at the front
-                const createCard = document.createElement("div");
-                createCard.className = "world-card";
-                if (isMobile) {
-                    createCard.style.cssText = `
-                        background: linear-gradient(135deg, rgba(100, 100, 100, 0.8) 0%, rgba(80, 80, 80, 0.8) 100%);
-                        cursor: pointer;
-                        display: flex;
-                        flex-direction: row;
-                        justify-content: center;
-                        align-items: center;
-                        gap: 15px;
-                        width: 100%;
-                        height: 80px;
-                        border-radius: 12px;
-                        transition: transform 0.3s, box-shadow 0.3s;
-                        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-                    `;
-                } else {
-                    createCard.style.cssText = `
-                        background: linear-gradient(135deg, rgba(100, 100, 100, 0.8) 0%, rgba(80, 80, 80, 0.8) 100%);
-                        cursor: pointer;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                        gap: 15px;
-                        min-width: 220px;
-                        height: 280px;
-                        border-radius: 16px;
-                        transition: transform 0.3s, box-shadow 0.3s;
-                        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-                    `;
-                }
-                createCard.onmouseover = () => { createCard.style.transform = isMobile ? "scale(1.01)" : "translateY(-8px) scale(1.02)"; };
-                createCard.onmouseout = () => { createCard.style.transform = "translateY(0) scale(1)"; };
-
-                const plusIcon = document.createElement("div");
-                plusIcon.textContent = "+";
-                plusIcon.style.cssText = isMobile
-                    ? "font-size: 32px; font-weight: 200; color: rgba(255,255,255,0.95);"
-                    : "font-size: 64px; font-weight: 200; color: rgba(255,255,255,0.95); text-shadow: 0 4px 15px rgba(0,0,0,0.3);";
-
-                const createText = document.createElement("div");
-                createText.textContent = "Create new";
-                createText.style.cssText = isMobile
-                    ? "font-size: 16px; font-weight: 600; color: #fff;"
-                    : "font-size: 18px; font-weight: 600; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.3);";
-
-                createCard.appendChild(plusIcon);
-                createCard.appendChild(createText);
-                createCard.onclick = () => navigateToPlayerCreate();
-                listEl.appendChild(createCard);
-
-                if (!players.length && !searchTerm) {
-                    hintEl.style.display = "block";
-                    hintEl.textContent = "No player characters found. Click \"Create new\" to add one.";
-                }
-
-                players.forEach(p => {
-                    const card = document.createElement("div");
-                    card.className = "world-card";
-                    const coverUrl = (p?.coverUrl || p?.image || "").trim();
-
-                    if (isMobile) {
-                        // Mobile layout: horizontal card with cover left, name center, buttons right
-                        card.style.cssText = `
-                            position: relative;
-                            width: 100%;
-                            height: 120px;
-                            border-radius: 12px;
-                            padding: 12px;
-                            display: flex;
-                            flex-direction: row;
-                            align-items: center;
-                            gap: 12px;
-                            color: #fff;
-                            background: ${coverUrl ? `linear-gradient(rgba(10,10,15,.7), rgba(10,10,15,.9)), url("${coverUrl}")` : `linear-gradient(135deg, rgba(100,100,100,0.8) 0%, rgba(80,80,80,0.8) 100%)`};
-                            background-size: cover;
-                            background-position: center;
-                            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-                            transition: transform 0.3s, box-shadow 0.3s;
-                            overflow: hidden;
-                        `;
-
-                        if (coverUrl) {
-                            card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.6), rgba(10,10,15,.8)), url("${coverUrl}")`;
-                        } else {
-                            card.style.background = `linear-gradient(135deg, rgba(100,100,100,0.8) 0%, rgba(80,80,80,0.8) 100%)`;
-                        }
-
-                        // Cover as full background (remove header, cover is background)
-                        card.style.backgroundSize = "cover";
-                        card.style.backgroundPosition = "center";
-
-                        // Name overlay at top
-                        const nameOverlay = document.createElement("div");
-                        nameOverlay.textContent = p.title || p.name || "Unnamed Player";
-                        nameOverlay.style.cssText = "width:100%; text-align:center; color:#fff; font-weight:700; font-size:12px; line-height:1.2; text-shadow:0 2px 8px rgba(0,0,0,0.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:auto;";
-                        card.appendChild(nameOverlay);
-
-                        // Actions container at bottom
-                        const actionsDiv = document.createElement("div");
-                        actionsDiv.style.cssText = "display:flex; gap:6px; width:100%; margin-top:auto; align-items:flex-end;";
-
-                        // Left side: Edit button
-                        const editBtn = document.createElement("button");
-                        editBtn.textContent = "Edit";
-                        editBtn.className = "menu-button";
-                        editBtn.style.cssText = "padding:8px 8px; font-size:11px; flex:1; font-weight:600; background:rgba(100,100,100,0.85);";
-                        editBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            editPlayerCharacter(p);
-                        };
-                        actionsDiv.appendChild(editBtn);
-
-                        // Right side container for Favorite and Delete
-                        const rightActions = document.createElement("div");
-                        rightActions.style.cssText = "display:flex; flex-direction:column; gap:4px; flex:1;";
-
-                        // Favorite star button (above Delete)
-                        const isFav = isPlayerFavorite(p.id);
-                        const starBtn = document.createElement("button");
-                        starBtn.innerHTML = isFav ? "&#9733;" : "&#9734;";
-                        starBtn.className = "menu-button";
-                        starBtn.title = isFav ? "Remove from favorites" : "Add to favorites";
-                        starBtn.style.cssText = isFav
-                            ? "padding:6px 8px; font-size:14px; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
-                            : "padding:6px 8px; font-size:14px; background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3);";
-                        starBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            const nowFav = togglePlayerFavorite(p.id);
-                            starBtn.innerHTML = nowFav ? "&#9733;" : "&#9734;";
-                            starBtn.title = nowFav ? "Remove from favorites" : "Add to favorites";
-                            starBtn.style.cssText = nowFav
-                                ? "padding:6px 8px; font-size:14px; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
-                                : "padding:6px 8px; font-size:14px; background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3);";
-                            renderPlayerCharacters();
-                        };
-                        rightActions.appendChild(starBtn);
-
-                        // Delete button (trash emoji)
-                        const deleteBtn = document.createElement("button");
-                        deleteBtn.innerHTML = "&#128465;";
-                        deleteBtn.className = "menu-button";
-                        deleteBtn.style.cssText = "padding:6px 8px; font-size:14px; background:rgba(200,50,50,0.85); color:#fff;";
-                        deleteBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            deletePlayerCharacter(p.id);
-                        };
-                        rightActions.appendChild(deleteBtn);
-
-                        actionsDiv.appendChild(rightActions);
-                        card.appendChild(actionsDiv);
-                    } else {
-                        // Desktop layout: vertical card
-                        card.style.cssText = `
-                            position: relative;
-                            min-width: 220px;
-                            height: 280px;
-                            border-radius: 16px;
-                            padding: 20px;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: flex-start;
-                            align-items: center;
-                            color: #fff;
-                            background-size: cover;
-                            background-position: center;
-                            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-                            transition: transform 0.3s, box-shadow 0.3s;
-                            overflow: hidden;
-                        `;
-                        card.onmouseover = () => { card.style.transform = "translateY(-8px) scale(1.02)"; card.style.boxShadow = "0 12px 40px rgba(0,0,0,0.4)"; };
-                        card.onmouseout = () => { card.style.transform = "translateY(0) scale(1)"; card.style.boxShadow = "0 8px 32px rgba(0,0,0,0.3)"; };
-
-                        if (coverUrl) {
-                            card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.6), rgba(10,10,15,.8)), url("${coverUrl}")`;
-                        } else {
-                            card.style.background = `linear-gradient(135deg, rgba(100,100,100,0.8) 0%, rgba(80,80,80,0.8) 100%)`;
-                        }
-
-                        const header = document.createElement("div");
-                        header.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-bottom: auto; width:100%; text-align:center;";
-
-                        const name = document.createElement("div");
-                        name.textContent = p.title || p.name || "Unnamed Player";
-                        name.style.cssText = "color:#fff; font-weight:700; font-size: 18px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
-                        header.appendChild(name);
-
-                        const actions = document.createElement("div");
-                        actions.style.cssText = "display:flex; gap:4px; width:100%; margin-top: auto; border-radius:8px; overflow:hidden;";
-
-                        // Favorite star button
-                        const isFavDesktop = isPlayerFavorite(p.id);
-                        const starBtnDesktop = document.createElement("button");
-                        starBtnDesktop.innerHTML = isFavDesktop ? "&#9733;" : "&#9734;";
-                        starBtnDesktop.className = "menu-button";
-                        starBtnDesktop.title = isFavDesktop ? "Remove from favorites" : "Add to favorites";
-                        starBtnDesktop.style.cssText = isFavDesktop
-                            ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
-                            : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
-                        starBtnDesktop.onclick = () => {
-                            const nowFav = togglePlayerFavorite(p.id);
-                            starBtnDesktop.innerHTML = nowFav ? "&#9733;" : "&#9734;";
-                            starBtnDesktop.title = nowFav ? "Remove from favorites" : "Add to favorites";
-                            starBtnDesktop.style.cssText = nowFav
-                                ? "padding:8px 10px; font-size:18px; min-width:0; background: linear-gradient(135deg, rgba(241,196,15,0.85) 0%, rgba(243,156,18,0.85) 100%); color: #fff; border: none;"
-                                : "padding:8px 10px; font-size:18px; min-width:0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.2);";
-                            renderPlayerCharacters();
-                        };
-                        actions.appendChild(starBtnDesktop);
-
-                        const editBtn = document.createElement("button");
-                        editBtn.textContent = "Edit";
-                        editBtn.style.cssText = "padding:8px 0; font-size:12px; flex:1; background: rgba(100,100,100,0.7); color:#fff; border:none; cursor:pointer; font-weight:500; transition:all 0.2s;";
-                        editBtn.onmouseover = () => editBtn.style.background = "rgba(120,120,120,0.85)";
-                        editBtn.onmouseout = () => editBtn.style.background = "rgba(100,100,100,0.7)";
-                        editBtn.onclick = () => { editPlayerCharacter(p); };
-
-                        const downloadBtn = document.createElement("button");
-                        downloadBtn.textContent = "📥";
-                        downloadBtn.title = "Download player";
-                        downloadBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(76,175,80,0.7); color:#fff; border:none; cursor:pointer; transition:all 0.2s;";
-                        downloadBtn.onmouseover = () => downloadBtn.style.background = "rgba(76,175,80,0.85)";
-                        downloadBtn.onmouseout = () => downloadBtn.style.background = "rgba(76,175,80,0.7)";
-                        downloadBtn.onclick = () => { downloadPlayerCharacter(p); };
-
-                        const deleteBtn = document.createElement("button");
-                        deleteBtn.textContent = "🗑️";
-                        deleteBtn.title = "Delete player";
-                        deleteBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(244,67,54,0.7); color:#fff; border:none; cursor:pointer; transition:all 0.2s;";
-                        deleteBtn.onmouseover = () => deleteBtn.style.background = "rgba(244,67,54,0.85)";
-                        deleteBtn.onmouseout = () => deleteBtn.style.background = "rgba(244,67,54,0.7)";
-                        deleteBtn.onclick = () => { deletePlayerCharacter(p.id); };
-
-                        actions.appendChild(editBtn);
-                        actions.appendChild(downloadBtn);
-                        actions.appendChild(deleteBtn);
-
-                        card.appendChild(header);
-                        card.appendChild(actions);
-                    }
-
-                    listEl.appendChild(card);
+                const favorites = getPlayerFavorites();
+                players.sort((a, b) => {
+                    const af = favorites.includes(a.id) ? 1 : 0;
+                    const bf = favorites.includes(b.id) ? 1 : 0;
+                    if (af !== bf) return bf - af;
+                    return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0);
                 });
+                if (hintEl) {
+                    if (!allPlayers.length && !searchTerm) {
+                        hintEl.classList.add("is-visible");
+                        const hintP = hintEl.querySelector("p");
+                        if (hintP) hintP.textContent = "No player characters yet. Create one to use in worlds and OC stories.";
+                    } else if (searchTerm && !players.length) {
+                        hintEl.classList.add("is-visible");
+                        const hintP = hintEl.querySelector("p");
+                        if (hintP) hintP.textContent = "No players match your search.";
+                    } else {
+                        hintEl.classList.remove("is-visible");
+                    }
+                }
+                listEl.appendChild(buildCreatePlayerCardElement());
+                players.forEach((p) => listEl.appendChild(buildPlayerCardElement(p)));
             }
-            
+
             function navigateToPlayerCreate() {
                 // Speichern, dass wir vom Characters-View kommen
                 sessionStorage.setItem("storyki_previous_view", "characters");
@@ -2985,14 +3206,20 @@
                 renderCharacterStories(story.characterId);
             }
 
+            function isWorldScenario(s) {
+                return s && !s.worldId && !s.characterId;
+            }
+
             function renderAllWorlds() {
                 const grid = document.getElementById("all-worlds-grid");
+                const emptyEl = document.getElementById("all-worlds-empty");
                 const qEl = document.getElementById("all-worlds-search");
                 const q = (qEl ? qEl.value : "").toLowerCase().trim();
+                if (!grid) return;
                 grid.innerHTML = "";
                 const favorites = getWorldFavorites();
                 let scenarios = getScenarios()
-                    .filter(s => !s.worldId)
+                    .filter(isWorldScenario)
                     .filter(s => !q || (s.name || "").toLowerCase().includes(q))
                     .sort((a, b) => {
                         const aFav = favorites.includes(a.id) ? 1 : 0;
@@ -3098,6 +3325,7 @@
                     card.appendChild(btnRow2);
                     grid.appendChild(card);
                 });
+                if (emptyEl) emptyEl.style.display = scenarios.length ? "none" : "block";
             }
 
             function getAllCharacterGenres() {
