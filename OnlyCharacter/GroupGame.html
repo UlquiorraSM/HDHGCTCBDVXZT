@@ -694,6 +694,7 @@
             let activeChar = null;
             let activeGroup = null;
             let activeNpc = null;
+            let activeNpcManualOverride = false;
             let activePlayer = null;
             let storyLog = [];
             let isProcessing = false;
@@ -978,6 +979,7 @@
                 if (!target) return;
                 activeNpc = target;
                 activeChar = activeNpc;
+                activeNpcManualOverride = !silent;
                 if (!silent) {
                     showToast(`${activeNpc.title || activeNpc.name || "Character"} is now speaking.`);
                     closeNpcSettings();
@@ -1793,7 +1795,16 @@ Return ONLY the edited message with corrected Memory tags. No explanations.`;
                 if (activeGroup) {
                     const onlineCandidates = getGroupOnlineMembers();
                     if (onlineCandidates.length) {
-                        const chosen = onlineCandidates[Math.floor(Math.random() * onlineCandidates.length)];
+                        let chosen = null;
+                        if (activeNpcManualOverride && activeNpc) {
+                            const activeOnline = onlineCandidates.some((m) => m.id === activeNpc.id);
+                            if (activeOnline) {
+                                chosen = activeNpc;
+                            }
+                        }
+                        if (!chosen) {
+                            chosen = onlineCandidates[Math.floor(Math.random() * onlineCandidates.length)];
+                        }
                         if (chosen) {
                             activeNpc = chosen;
                             activeChar = activeNpc;
@@ -1801,6 +1812,7 @@ Return ONLY the edited message with corrected Memory tags. No explanations.`;
                             showToast(`${activeNpc.title || activeNpc.name || "Character"} is now speaking.`);
                         }
                     }
+                    activeNpcManualOverride = false;
                 }
 
                 // Add user message
@@ -2152,13 +2164,6 @@ Provide ONLY your response as the character. No meta commentary.
             function goBack() {
                 // Save current story data before leaving
                 saveStoryToScenarios();
-
-                // Clear session storage to prevent double-saving in index.html
-                sessionStorage.removeItem("storyki_storycards");
-                sessionStorage.removeItem("storyki_storylog");
-                sessionStorage.removeItem("storyki_active_character");
-                sessionStorage.removeItem("storyki_active_player");
-
                 window.location.href = "../index.html";
             }
 
@@ -2167,20 +2172,70 @@ Provide ONLY your response as the character. No meta commentary.
                 const storyId = sessionStorage.getItem("storyki_current_story_id");
                 const cards = JSON.parse(sessionStorage.getItem("storyki_storycards") || "[]");
                 const log = JSON.parse(sessionStorage.getItem("storyki_storylog") || "[]");
-
-                if (!cards.length) return;
-
                 const scenarios = JSON.parse(localStorage.getItem("storyki_scenarios") || "[]");
+
+                const activeGroupData = (() => {
+                    const raw = sessionStorage.getItem("storyki_active_group");
+                    if (!raw) return null;
+                    try {
+                        return JSON.parse(raw);
+                    } catch (e) {
+                        return null;
+                    }
+                })();
+                const activePlayerData = (() => {
+                    const raw = sessionStorage.getItem("storyki_active_player");
+                    if (!raw) return null;
+                    try {
+                        return JSON.parse(raw);
+                    } catch (e) {
+                        return raw;
+                    }
+                })();
+
+                const fallbackCards = [];
+                if (activeGroupData && Array.isArray(activeGroupData.members) && activeGroupData.members.length) {
+                    fallbackCards.push(...activeGroupData.members.map((member) => ({ ...member })));
+                }
+                if (activePlayerData && typeof activePlayerData === "object") {
+                    fallbackCards.push({ ...activePlayerData });
+                }
+                const cardsToSave = cards.length ? cards : fallbackCards;
+                if (!cardsToSave.length && !log.length) return;
 
                 if (storyId) {
                     // Update existing story
                     const idx = scenarios.findIndex(s => s.id === storyId);
                     if (idx !== -1) {
-                        scenarios[idx].data = { ...scenarios[idx].data, cards, log };
+                        scenarios[idx].data = { ...scenarios[idx].data, cards: cardsToSave, log };
                         scenarios[idx].updatedAt = Date.now();
                         localStorage.setItem("storyki_scenarios", JSON.stringify(scenarios));
+                        return;
                     }
                 }
+
+                // No existing story id - create a minimal scenario to preserve the group/chat session
+                const newId = `group-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+                const scenarioName = activeGroupData ? `Group Chat: ${activeGroupData.title || "Unnamed Group"}` : "Untitled Chat";
+                const newScenario = {
+                    id: newId,
+                    name: scenarioName,
+                    data: {
+                        cards: cardsToSave,
+                        log,
+                        settings: {
+                            groupId: activeGroupData?.id || null,
+                            groupTitle: activeGroupData?.title || null
+                        },
+                        anchoredWorldChanges: {}
+                    },
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+
+                scenarios.push(newScenario);
+                localStorage.setItem("storyki_scenarios", JSON.stringify(scenarios));
+                sessionStorage.setItem("storyki_current_story_id", newId);
             }
         </script>
     </body>
