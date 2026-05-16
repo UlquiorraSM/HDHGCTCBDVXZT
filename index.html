@@ -924,6 +924,8 @@
             #stories-list::-webkit-scrollbar { display: none; }
             #universe-list { scrollbar-width: none; }
             #universe-list::-webkit-scrollbar { display: none; }
+            #group-members-list { scrollbar-width: none; -ms-overflow-style: none; }
+            #group-members-list::-webkit-scrollbar { display: none; }
 
             .see-url-row {
                 display: flex;
@@ -1016,6 +1018,9 @@
                 <div class="menu-row" id="player-btn-row" style="display:none;">
                     <button class="menu-button" onclick="openPlayerMenu()">
                         Create Player
+                    </button>
+                    <button class="menu-button" onclick="openGroupCreateOverlay()">
+                        Create Group
                     </button>
                 </div>
                 <div class="menu-row">
@@ -1303,6 +1308,31 @@
             </div>
         </div>
 
+        <!-- Create Group Overlay -->
+        <div id="group-create-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000; backdrop-filter:blur(10px);">
+            <div class="conf-panel" style="max-width:600px; width:95%; max-height:90vh; overflow:auto;">
+                <h2>Create Group</h2>
+                <div class="conf-group">
+                    <label class="conf-label">Group Name</label>
+                    <input id="group-name-input" class="conf-input" type="text" placeholder="Enter group name" />
+                </div>
+                <div class="conf-group" style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button type="button" class="conf-btn conf-btn-save" id="group-list-toggle-btn" onclick="toggleGroupList()">List Characters</button>
+                </div>
+                <div id="group-list-container" style="display:none; margin-top: 12px;">
+                    <div id="group-member-hint" style="color:rgba(255,255,255,0.8); margin-bottom:10px;">Select at least 2 characters.</div>
+                    <div class="conf-group" style="margin-bottom: 10px;">
+                        <input id="group-search-input" class="conf-input" type="text" placeholder="Search characters..." oninput="renderGroupCreateList()" />
+                    </div>
+                    <div id="group-members-list" style="display:grid; gap: 10px; max-height: 320px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;"></div>
+                </div>
+                <div class="conf-actions" style="margin-top: 16px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                    <button class="conf-btn conf-btn-cancel" onclick="closeGroupCreateOverlay()">Cancel</button>
+                    <button class="conf-btn conf-btn-save" id="group-play-btn" onclick="createGroupAndPlay()" disabled>Play</button>
+                </div>
+            </div>
+        </div>
+
         <!-- New Character Story - Player Selection Overlay -->
         <div id="new-char-story-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000; backdrop-filter:blur(10px);">
             <div class="conf-panel" style="max-width:500px; width:90%;">
@@ -1365,6 +1395,7 @@
             let _selectedWorld = null;
             let _selectedCharacter = null;
             let _viewMode = 'worlds'; // 'worlds' oder 'characters'
+            let _pendingGroupMemberIds = [];
 
             // ID Generator
             function generateId() {
@@ -2389,16 +2420,20 @@
             function renderCharactersView(listEl, hintEl, searchTerm) {
                 // Load standalone characters (independent chat bots)
                 let allCharacters = getStandaloneCharacters();
+                let allGroups = getCharacterGroups();
                 
                 if (searchTerm) {
+                    const lower = searchTerm.toLowerCase();
                     allCharacters = allCharacters.filter(c => 
-                        (c.title || "").toLowerCase().includes(searchTerm) ||
-                        (c.description || "").toLowerCase().includes(searchTerm)
+                        (c.title || "").toLowerCase().includes(lower) ||
+                        (c.description || "").toLowerCase().includes(lower)
                     );
+                    allGroups = allGroups.filter(g => (g.title || "").toLowerCase().includes(lower));
                 }
                 
                 // Sortieren nach Name
                 allCharacters.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+                allGroups.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
                 
                 hintEl.style.display = "none";
                 
@@ -2438,11 +2473,12 @@
                 createCard.appendChild(createText);
                 createCard.onclick = () => createCharacter();
                 listEl.appendChild(createCard);
+                allGroups.forEach((group) => listEl.appendChild(buildGroupCardElement(group)));
 
-                if (!allCharacters.length) {
+                if (!allCharacters.length && !allGroups.length) {
                     if (!searchTerm) {
                         hintEl.style.display = "block";
-                        hintEl.textContent = "No characters available. Click Create Character to add one.";
+                        hintEl.textContent = "No characters or groups available. Click Create Character or Create Group to add one.";
                     }
                     return;
                 }
@@ -2568,6 +2604,7 @@
             }
             
             const PLAYER_CHARS_KEY = "storyki_player_characters";
+            const CHARACTER_GROUPS_KEY = "storyki_character_groups";
             
             function getPlayerCharacters() {
                 try {
@@ -2579,6 +2616,18 @@
             
             function setPlayerCharacters(players) {
                 localStorage.setItem(PLAYER_CHARS_KEY, JSON.stringify(players));
+            }
+            
+            function getCharacterGroups() {
+                try {
+                    return JSON.parse(localStorage.getItem(CHARACTER_GROUPS_KEY) || "[]");
+                } catch {
+                    return [];
+                }
+            }
+            
+            function setCharacterGroups(groups) {
+                localStorage.setItem(CHARACTER_GROUPS_KEY, JSON.stringify(groups));
             }
             
             function openPlayerMenu() {
@@ -2759,6 +2808,189 @@
                 // Speichern, dass wir vom Characters-View kommen
                 sessionStorage.setItem("storyki_previous_view", "characters");
                 navigateWithTransition("OnlyCharacter/PlayerCreate.html");
+            }
+            
+            function openGroupCreateOverlay() {
+                const chars = getStandaloneCharacters();
+                if (!chars.length) {
+                    alert("You need at least 2 characters to create a group.");
+                    return;
+                }
+                _pendingGroupMemberIds = getRandomGroupMembers(chars, 3);
+                document.getElementById("group-name-input").value = "";
+                document.getElementById("group-list-container").style.display = "none";
+                document.getElementById("group-list-toggle-btn").textContent = "List Characters";
+                renderGroupCreateList(chars);
+                updateGroupPlayState();
+                const overlay = document.getElementById("group-create-overlay");
+                if (overlay) overlay.style.display = "flex";
+            }
+            
+            function closeGroupCreateOverlay() {
+                const overlay = document.getElementById("group-create-overlay");
+                if (overlay) overlay.style.display = "none";
+            }
+            
+            function toggleGroupList() {
+                const container = document.getElementById("group-list-container");
+                if (!container) return;
+                const shown = container.style.display === "flex" || container.style.display === "block";
+                container.style.display = shown ? "none" : "block";
+                document.getElementById("group-list-toggle-btn").textContent = shown ? "List Characters" : "Hide Characters";
+            }
+            
+            function renderGroupCreateList(chars) {
+                const list = document.getElementById("group-members-list");
+                if (!list) return;
+                const searchTerm = (document.getElementById("group-search-input")?.value || "").toLowerCase().trim();
+                if (!Array.isArray(chars)) {
+                    chars = getStandaloneCharacters();
+                }
+                const favorites = getCharacterFavorites();
+                chars = chars
+                    .filter(c => {
+                        const title = (c.title || c.name || "").toLowerCase();
+                        return !searchTerm || title.includes(searchTerm);
+                    })
+                    .sort((a, b) => {
+                        const aFav = favorites.includes(a.id) ? 1 : 0;
+                        const bFav = favorites.includes(b.id) ? 1 : 0;
+                        if (aFav !== bFav) return bFav - aFav;
+                        return (a.title || a.name || "").localeCompare(b.title || b.name || "");
+                    });
+                list.innerHTML = "";
+                chars.forEach((c) => {
+                    const coverUrl = (c?.coverUrl || c?.image || "").trim();
+                    const item = document.createElement("label");
+                    item.style.cssText = "display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border:1px solid rgba(255,255,255,0.12); border-radius:14px; background:rgba(255,255,255,0.05); cursor:pointer;";
+
+                    const left = document.createElement("div");
+                    left.style.cssText = "display:flex; align-items:center; gap:10px; min-width:0; flex:1;";
+                    if (coverUrl) {
+                        const thumb = document.createElement("img");
+                        thumb.src = coverUrl;
+                        thumb.alt = "";
+                        thumb.style.cssText = "width:40px; height:40px; object-fit:cover; border-radius:12px; flex-shrink:0;";
+                        left.appendChild(thumb);
+                    }
+                    const title = document.createElement("div");
+                    title.textContent = c.title || c.name || "Unnamed";
+                    title.style.cssText = "color:#fff; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
+                    left.appendChild(title);
+
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.checked = _pendingGroupMemberIds.includes(c.id);
+                    checkbox.style.cssText = "width:18px; height:18px; margin-left:auto;";
+                    checkbox.onchange = (e) => {
+                        e.stopPropagation();
+                        if (checkbox.checked) {
+                            _pendingGroupMemberIds.push(c.id);
+                        } else {
+                            _pendingGroupMemberIds = _pendingGroupMemberIds.filter(id => id !== c.id);
+                        }
+                        updateGroupPlayState();
+                    };
+
+                    item.appendChild(left);
+                    item.appendChild(checkbox);
+
+                    item.onclick = (e) => {
+                        if (e.target === checkbox) return;
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+                    };
+
+                    list.appendChild(item);
+                });
+            }
+            
+            function updateGroupPlayState() {
+                const playBtn = document.getElementById("group-play-btn");
+                if (!playBtn) return;
+                playBtn.disabled = _pendingGroupMemberIds.length < 2;
+                const hint = document.getElementById("group-member-hint");
+                if (hint) {
+                    if (_pendingGroupMemberIds.length < 2) {
+                        hint.textContent = "Select at least 2 characters.";
+                        hint.style.color = "rgba(255,128,128,0.9)";
+                    } else {
+                        hint.textContent = `${_pendingGroupMemberIds.length} characters selected.`;
+                        hint.style.color = "rgba(255,255,255,0.8)";
+                    }
+                }
+            }
+            
+            function getRandomGroupMembers(chars, count) {
+                const ids = chars.map(c => c.id);
+                const shuffled = ids.sort(() => Math.random() - 0.5);
+                return shuffled.slice(0, Math.min(Math.max(count, 2), ids.length));
+            }
+            
+            function createGroupAndPlay() {
+                const title = (document.getElementById("group-name-input").value || "").trim() || "New Group";
+                if (_pendingGroupMemberIds.length < 2) {
+                    alert("A group needs at least 2 characters.");
+                    return;
+                }
+                const groups = getCharacterGroups();
+                const group = {
+                    id: generateId(),
+                    title,
+                    memberIds: Array.from(new Set(_pendingGroupMemberIds)),
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                };
+                groups.unshift(group);
+                setCharacterGroups(groups);
+                sessionStorage.setItem("storyki_active_group", JSON.stringify(group));
+                sessionStorage.removeItem("storyki_active_character");
+                closeGroupCreateOverlay();
+                navigateWithTransition("OnlyCharacter/GroupGame.html");
+            }
+            
+            function buildGroupCardElement(group) {
+                const card = document.createElement("div");
+                card.className = "world-card";
+                card.style.backgroundImage = "linear-gradient(135deg, rgba(75, 100, 160, 0.85), rgba(50, 40, 70, 0.85))";
+                const title = document.createElement("div");
+                title.textContent = group.title || "Unnamed Group";
+                title.style.cssText = "color:#fff; font-weight:700; font-size:15px; margin-bottom:10px;";
+                const subtitle = document.createElement("div");
+                subtitle.textContent = `${group.memberIds.length} member${group.memberIds.length === 1 ? "" : "s"}`;
+                subtitle.style.cssText = "color:rgba(255,255,255,0.78); font-size:13px; margin-bottom:10px;";
+                const btnRow = document.createElement("div");
+                btnRow.style.cssText = "display:flex; gap:6px; justify-content:center;";
+                const playBtn = document.createElement("button");
+                playBtn.type = "button";
+                playBtn.className = "menu-button";
+                playBtn.style.cssText = "padding:8px 6px; font-size:12px; flex:1;";
+                playBtn.textContent = "Play";
+                playBtn.onclick = () => { openGroupPlay(group); };
+                const delBtn = document.createElement("button");
+                delBtn.type = "button";
+                delBtn.className = "menu-button";
+                delBtn.style.cssText = "padding:8px 6px; font-size:12px; flex:1; background: rgba(160, 60, 60, 0.8);";
+                delBtn.textContent = "Delete";
+                delBtn.onclick = () => {
+                    if (!confirm("Delete this group?")) return;
+                    const remaining = getCharacterGroups().filter(g => g.id !== group.id);
+                    setCharacterGroups(remaining);
+                    renderScenarios();
+                    renderAllCharacters();
+                };
+                btnRow.appendChild(playBtn);
+                btnRow.appendChild(delBtn);
+                card.appendChild(title);
+                card.appendChild(subtitle);
+                card.appendChild(btnRow);
+                return card;
+            }
+            
+            function openGroupPlay(group) {
+                sessionStorage.setItem("storyki_active_group", JSON.stringify(group));
+                sessionStorage.removeItem("storyki_active_character");
+                navigateWithTransition("OnlyCharacter/GroupGame.html");
             }
             
             function selectPlayerCharacter(player) {
@@ -3352,6 +3584,7 @@
                 
                 grid.innerHTML = "";
                 let chars = getStandaloneCharacters();
+                let groups = getCharacterGroups();
                 
                 // Update genre dropdown with available genres
                 updateGenreDropdown();
@@ -3362,6 +3595,7 @@
                         (c.title || "").toLowerCase().includes(q) ||
                         (c.description || "").toLowerCase().includes(q)
                     );
+                    groups = groups.filter(g => (g.title || "").toLowerCase().includes(q));
                 }
                 
                 // Genre filter
@@ -3384,6 +3618,12 @@
                     const bFav = favorites.includes(b.id) ? 1 : 0;
                     if (aFav !== bFav) return bFav - aFav; // favorites first
                     return (a.title || "").localeCompare(b.title || "");
+                });
+                groups.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+
+                groups.forEach(group => {
+                    const card = buildGroupCardElement(group);
+                    grid.appendChild(card);
                 });
 
                 chars.forEach(c => {
