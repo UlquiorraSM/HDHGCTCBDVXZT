@@ -810,7 +810,7 @@
                             activePlayer = parsed;
                             playerId = parsed.id;
                         } else {
-                            // Old format: just the ID string
+                            // Fallback: treat as string ID
                             playerId = playerData;
                         }
                     } catch (e) {
@@ -1224,11 +1224,27 @@
                 const playerId = activePlayer?.id || "";
                 const playerName = activePlayer?.name || "Player";
 
+                // For group chats, collect all NPC member IDs
+                let allValidMemberIds = [charId, playerId];
+                if (activeGroup && Array.isArray(activeGroup.memberIds)) {
+                    allValidMemberIds = Array.from(new Set([
+                        ...activeGroup.memberIds,
+                        playerId
+                    ].filter(Boolean)));
+                }
+
                 const recentHistory = buildOCChatHistoryLines(15);
                 const charMemBlock = formatMemoriesForPrompt(activeChar, charName.toUpperCase(), 12);
                 const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName.toUpperCase(), 12);
 
-                const validationPrompt = `You are a SECOND-PASS REPAIR AI for a 1-on-1 character chat. Your main job is to add and fix Memory control tags.
+                // Build member list for context
+                let groupMembersContext = "";
+                if (activeGroup && Array.isArray(activeGroup.members)) {
+                    groupMembersContext = "\n# GROUP MEMBERS:\n" + 
+                        activeGroup.members.map(m => `- [${m.id}] ${m.title || m.name || "Unnamed"}`).join("\n");
+                }
+
+                const validationPrompt = `You are a SECOND-PASS REPAIR AI for a group character chat. Your main job is to add and fix Memory control tags.
 
 # NARRATION TO REPAIR:
 ${narrationText}
@@ -1236,8 +1252,9 @@ ${narrationText}
 # CONTEXT
 - Target language: ${targetLanguage} (code: ${aiLangSpec.code})
 - Player message: "${String(playerInput || "").trim() || "N/A"}"
-- Character: ${charName} [ID: ${charId}]
+- Character (speaking): ${charName} [ID: ${charId}]
 - Player: ${playerName} [ID: ${playerId}]
+${groupMembersContext}
 ${charMemBlock}
 ${playerMemBlock}
 
@@ -1248,11 +1265,11 @@ ${recentHistory || "(none)"}
 1) Add/fix Memory tags when warranted (main job).
 2) Only fix prose if clearly broken (grammar, unclosed quotes). Do not rewrite otherwise.
 3) Do NOT speak or act as the player. Do not quote the player message.
-4) Use ONLY these IDs in Memory tags: ${charId} or ${playerId}.
+4) Use ONLY these IDs in Memory tags: ${allValidMemberIds.join(" or ")}.
 5) Do NOT add date, time, or calendar tags.
 
 # REQUIRED TAGS
-- [[Memory:ID|short text]] when the scene creates lasting facts (feelings, promises, secrets learned, important events). Use character or player ID.
+- [[Memory:ID|short text]] when the scene creates lasting facts (feelings, promises, secrets learned, important events). Use any character or player ID from the group.
 
 # RULES
 - Return ONLY repaired narration with Memory tags. No explanations or markdown fences.
@@ -2183,23 +2200,51 @@ Provide ONLY your response as the character. No meta commentary.
                         return null;
                     }
                 })();
-                const activePlayerData = (() => {
+                
+                // Extract player data - handle both JSON object and string ID formats
+                let activePlayerData = null;
+                let playerIdFallback = null;
+                (() => {
                     const raw = sessionStorage.getItem("storyki_active_player");
-                    if (!raw) return null;
+                    if (!raw) return;
                     try {
-                        return JSON.parse(raw);
+                        const parsed = JSON.parse(raw);
+                        if (typeof parsed === 'object' && parsed !== null && parsed.id) {
+                            activePlayerData = parsed;
+                            playerIdFallback = parsed.id;
+                        } else {
+                            playerIdFallback = raw;
+                        }
                     } catch (e) {
-                        return raw;
+                        // Raw string is a fallback ID
+                        playerIdFallback = raw;
                     }
                 })();
 
+                // Build fallback cards for saving
                 const fallbackCards = [];
                 if (activeGroupData && Array.isArray(activeGroupData.members) && activeGroupData.members.length) {
                     fallbackCards.push(...activeGroupData.members.map((member) => ({ ...member })));
                 }
+                
+                // Add player data if available
                 if (activePlayerData && typeof activePlayerData === "object") {
                     fallbackCards.push({ ...activePlayerData });
+                } else if (playerIdFallback) {
+                    // Try to look up player by ID
+                    const storyCards = JSON.parse(sessionStorage.getItem("storyki_storycards") || "[]");
+                    const playerFromStory = storyCards.find(c => c.id === playerIdFallback);
+                    if (playerFromStory) {
+                        fallbackCards.push({ ...playerFromStory });
+                    } else {
+                        const players = JSON.parse(localStorage.getItem("storyki_player_characters") || "[]");
+                        const playerFromStorage = players.find(p => p.id === playerIdFallback);
+                        if (playerFromStorage) {
+                            fallbackCards.push({ ...playerFromStorage });
+                        }
+                    }
                 }
+                
                 const cardsToSave = cards.length ? cards : fallbackCards;
                 if (!cardsToSave.length && !log.length) return;
 
