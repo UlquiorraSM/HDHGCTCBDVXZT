@@ -1316,6 +1316,12 @@
                     <label class="conf-label">Group Name</label>
                     <input id="group-name-input" class="conf-input" type="text" placeholder="Enter group name" />
                 </div>
+                <div class="conf-group">
+                    <label class="conf-label">Player Character</label>
+                    <select id="group-player-select" class="conf-input" style="background:rgba(255,255,255,0.1); color:#fff; cursor:pointer;">
+                        <option value="" style="background:#2a2a3a; color:#fff;">-- Choose a player --</option>
+                    </select>
+                </div>
                 <div class="conf-group" style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button type="button" class="conf-btn conf-btn-save" id="group-list-toggle-btn" onclick="toggleGroupList()">List Characters</button>
                 </div>
@@ -2818,8 +2824,10 @@
                 }
                 _pendingGroupMemberIds = getRandomGroupMembers(chars, 3);
                 document.getElementById("group-name-input").value = "";
+                document.getElementById("group-player-select").value = "";
                 document.getElementById("group-list-container").style.display = "none";
                 document.getElementById("group-list-toggle-btn").textContent = "List Characters";
+                renderGroupPlayerSelect();
                 renderGroupCreateList(chars);
                 updateGroupPlayState();
                 const overlay = document.getElementById("group-create-overlay");
@@ -2908,17 +2916,38 @@
             function updateGroupPlayState() {
                 const playBtn = document.getElementById("group-play-btn");
                 if (!playBtn) return;
-                playBtn.disabled = _pendingGroupMemberIds.length < 2;
+                const playerSelect = document.getElementById("group-player-select");
+                const playerSelected = playerSelect && playerSelect.value;
+                const enoughMembers = _pendingGroupMemberIds.length >= 2;
+                playBtn.disabled = !(enoughMembers && playerSelected);
                 const hint = document.getElementById("group-member-hint");
                 if (hint) {
-                    if (_pendingGroupMemberIds.length < 2) {
+                    if (!enoughMembers) {
                         hint.textContent = "Select at least 2 characters.";
                         hint.style.color = "rgba(255,128,128,0.9)";
+                    } else if (!playerSelected) {
+                        hint.textContent = "Choose a player character before you play.";
+                        hint.style.color = "rgba(255,200,100,0.9)";
                     } else {
                         hint.textContent = `${_pendingGroupMemberIds.length} characters selected.`;
                         hint.style.color = "rgba(255,255,255,0.8)";
                     }
                 }
+            }
+
+            function renderGroupPlayerSelect() {
+                const select = document.getElementById("group-player-select");
+                if (!select) return;
+                const players = getPlayerCharacters();
+                select.innerHTML = '<option value="" style="background:#2a2a3a; color:#fff;">-- Choose a player --</option>';
+                players.forEach((p) => {
+                    const option = document.createElement("option");
+                    option.value = p.id;
+                    option.textContent = p.title || p.name || "Unnamed Player";
+                    option.style.cssText = "background:#2a2a3a; color:#fff;";
+                    select.appendChild(option);
+                });
+                select.onchange = () => updateGroupPlayState();
             }
             
             function getRandomGroupMembers(chars, count) {
@@ -2929,8 +2958,14 @@
             
             function createGroupAndPlay() {
                 const title = (document.getElementById("group-name-input").value || "").trim() || "New Group";
+                const playerSelect = document.getElementById("group-player-select");
+                const playerId = playerSelect ? playerSelect.value : "";
                 if (_pendingGroupMemberIds.length < 2) {
                     alert("A group needs at least 2 characters.");
+                    return;
+                }
+                if (!playerId) {
+                    alert("Please choose a player character before playing.");
                     return;
                 }
                 const groups = getCharacterGroups();
@@ -2944,6 +2979,7 @@
                 groups.unshift(group);
                 setCharacterGroups(groups);
                 sessionStorage.setItem("storyki_active_group", JSON.stringify(group));
+                sessionStorage.setItem("storyki_active_player", playerId);
                 sessionStorage.removeItem("storyki_active_character");
                 closeGroupCreateOverlay();
                 navigateWithTransition("OnlyCharacter/GroupGame.html");
