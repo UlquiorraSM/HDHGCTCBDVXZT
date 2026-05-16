@@ -1341,16 +1341,6 @@
                     </select>
                 </div>
 
-                <div class="conf-group">
-                    <label class="conf-label">Starting Date & Time</label>
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
-                        <input type="number" id="story-day" class="conf-input" placeholder="Day" min="1" max="31" value="1" style="background:rgba(255,255,255,0.1); color:#fff;">
-                        <input type="number" id="story-month" class="conf-input" placeholder="Month" min="1" max="12" value="1" style="background:rgba(255,255,255,0.1); color:#fff;">
-                        <input type="number" id="story-year" class="conf-input" placeholder="Year" min="1" max="9999" value="1983" style="background:rgba(255,255,255,0.1); color:#fff;">
-                    </div>
-                    <input type="time" id="story-time" class="conf-input" value="09:00" style="background:rgba(255,255,255,0.1); color:#fff; width:100%;">
-                </div>
-
                 <div class="conf-actions">
                     <button class="conf-btn conf-btn-cancel" onclick="closeNewCharStoryOverlay()">Cancel</button>
                     <button class="conf-btn conf-btn-save" onclick="startNewCharacterStory()">Start Story</button>
@@ -3019,10 +3009,6 @@
                 document.getElementById("new-char-story-overlay").style.display = "none";
                 document.getElementById("story-player-select").value = "";
                 document.getElementById("story-intro-input").value = "";
-                document.getElementById("story-day").value = "1";
-                document.getElementById("story-month").value = "1";
-                document.getElementById("story-year").value = "1983";
-                document.getElementById("story-time").value = "09:00";
                 _pendingCharId = null;
             }
             
@@ -3041,10 +3027,6 @@
                 const intro = document.getElementById("story-intro-input").value.trim();
                 const relationType = document.getElementById("story-relation-type").value;
                 const relationSubtype = document.getElementById("story-relation-subtype").value;
-                const day = parseInt(document.getElementById("story-day").value) || 1;
-                const month = parseInt(document.getElementById("story-month").value) || 1;
-                const year = parseInt(document.getElementById("story-year").value) || 1983;
-                const time = document.getElementById("story-time").value || "09:00";
 
                 if (!playerId) {
                     alert("Please select a player character!");
@@ -3117,7 +3099,6 @@
                 Storage.remove(SELECTED_WORLD_ID_KEY);
                 Storage.set("storyki_active_player", player.id);
                 Storage.set("storyki_active_character", character.id);
-                Storage.set("storyki_starting_date", JSON.stringify({ day, month, year, time }));
                 // Setze auch in sessionStorage für OCGame.html
                 sessionStorage.setItem("storyki_current_story_id", id);
 
