@@ -2978,8 +2978,18 @@
                 };
                 groups.unshift(group);
                 setCharacterGroups(groups);
+                
+                // Store full player object, not just ID
+                const playerChars = getPlayerCharacters();
+                const selectedPlayer = playerChars.find(p => p.id === playerId);
+                
                 sessionStorage.setItem("storyki_active_group", JSON.stringify(group));
-                sessionStorage.setItem("storyki_active_player", playerId);
+                if (selectedPlayer) {
+                    sessionStorage.setItem("storyki_active_player", JSON.stringify(selectedPlayer));
+                } else {
+                    // Fallback: at least store ID
+                    sessionStorage.setItem("storyki_active_player", playerId);
+                }
                 sessionStorage.removeItem("storyki_active_character");
                 closeGroupCreateOverlay();
                 navigateWithTransition("OnlyCharacter/GroupGame.html");
@@ -3026,6 +3036,8 @@
             function openGroupPlay(group) {
                 sessionStorage.setItem("storyki_active_group", JSON.stringify(group));
                 sessionStorage.removeItem("storyki_active_character");
+                // Note: Player info is preserved if already set from previous session
+                // If no player set yet, GroupGame.html will handle the missing player gracefully
                 navigateWithTransition("OnlyCharacter/GroupGame.html");
             }
             
