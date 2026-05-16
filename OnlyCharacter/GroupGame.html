@@ -533,6 +533,54 @@
                 color: rgba(255, 255, 255, 0.45);
             }
 
+            @media (max-width: 760px) {
+                #npc-settings-content {
+                    width: min(96vw, 100%);
+                    max-height: 94vh;
+                    border-radius: 16px;
+                    padding: 0;
+                }
+                #npc-settings-header {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 10px;
+                }
+                #npc-settings-header h2 {
+                    font-size: 17px;
+                }
+                #npc-settings-body {
+                    grid-template-columns: 1fr;
+                    gap: 12px;
+                    padding: 12px 16px 16px 16px;
+                }
+                .npc-column {
+                    max-height: calc(94vh - 210px);
+                    padding: 12px;
+                }
+                .npc-item {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                .npc-actions {
+                    justify-content: flex-start;
+                }
+                .npc-actions button {
+                    width: 100%;
+                }
+                #npc-settings-footer {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 10px;
+                    padding: 12px 16px 16px 16px;
+                }
+                #npc-settings-footer button {
+                    width: 100%;
+                }
+                #npc-settings-close {
+                    align-self: flex-end;
+                }
+            }
+
             #toast {
                 position: fixed;
                 left: 50%;
