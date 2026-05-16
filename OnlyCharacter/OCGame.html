@@ -250,67 +250,63 @@
                 transform: none;
             }
 
-            /* Welcome Overlay */
-            #welcome-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.85);
-                z-index: 100;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                backdrop-filter: blur(10px);
-                opacity: 1;
-                transition: opacity 0.5s ease;
-            }
-            #welcome-overlay.hidden {
-                opacity: 0;
-                pointer-events: none;
+            .action-bar button.locked,
+            .action-bar button:disabled {
+                opacity: 0.45;
+                cursor: not-allowed;
             }
 
-            .welcome-card {
-                background: rgba(30, 30, 30, 0.9);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 20px;
-                padding: 40px;
-                text-align: center;
-                max-width: 400px;
+            .action-bar .btn-save {
+                background: rgba(76, 175, 80, 0.35);
+                border-color: rgba(76, 175, 80, 0.5);
             }
-            .welcome-avatar {
-                width: 80px;
-                height: 80px;
-                border-radius: 50%;
-                background: rgba(255, 100, 150, 0.3);
-                display: flex;
+
+            .action-bar .btn-cancel {
+                background: rgba(180, 60, 60, 0.35);
+                border-color: rgba(180, 60, 60, 0.5);
+            }
+
+            .typing-dots {
+                display: inline-flex;
+                gap: 4px;
                 align-items: center;
-                justify-content: center;
-                font-size: 40px;
-                margin: 0 auto 20px;
+                min-height: 18px;
             }
-            .welcome-title {
-                font-size: 22px;
-                font-weight: 600;
-                margin-bottom: 8px;
+
+            .typing-dots span {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.65);
+                animation: ocTyping 1.2s infinite ease-in-out;
             }
-            .welcome-meta {
-                font-size: 13px;
-                color: rgba(255, 255, 255, 0.6);
-                margin-bottom: 24px;
+
+            .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+            .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+            @keyframes ocTyping {
+                0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+                40% { opacity: 1; transform: translateY(-3px); }
             }
-            .welcome-btn {
-                padding: 12px 32px;
-                border-radius: 24px;
-                border: none;
-                background: rgba(100, 150, 255, 0.8);
+
+            #toast {
+                position: fixed;
+                left: 50%;
+                bottom: 110px;
+                transform: translateX(-50%) translateY(12px);
+                padding: 10px 16px;
+                border-radius: 8px;
                 color: #fff;
-                font-size: 15px;
-                font-weight: 500;
-                cursor: pointer;
-                transition: all 0.2s ease;
+                font-size: 13px;
+                z-index: 200;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.25s, transform 0.25s;
             }
-            .welcome-btn:hover {
-                transform: scale(1.02);
-                background: rgba(120, 170, 255, 0.9);
+
+            #toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
             }
 
             /* Loading indicator */
@@ -354,20 +350,13 @@
                     <button id="send-btn" onclick="sendMessage()">&#10148;</button>
                 </div>
                 <div class="action-bar">
-                    <button onclick="retryLast()">Retry</button>
-                    <button onclick="editLast()">Edit</button>
-                    <button onclick="continueLast()">Continue</button>
-                    <button onclick="eraseLast()">Erase</button>
+                    <button type="button" id="retry-btn" onclick="retryLast()">Retry</button>
+                    <button type="button" id="edit-btn">Edit</button>
+                    <button type="button" id="continue-btn" onclick="continueLast()">Continue</button>
+                    <button type="button" id="erase-btn" onclick="eraseLast()">Erase</button>
+                    <button type="button" id="edit-save-btn" class="btn-save" style="display:none;">Save</button>
+                    <button type="button" id="edit-cancel-btn" class="btn-cancel" style="display:none;">Cancel</button>
                 </div>
-            </div>
-        </div>
-
-        <div id="welcome-overlay" style="display: none;">
-            <div class="welcome-card">
-                <div class="welcome-avatar" id="welcome-avatar">&#129302;</div>
-                <div class="welcome-title" id="welcome-char-name">Character</div>
-                <div class="welcome-meta" id="welcome-meta"></div>
-                <button class="welcome-btn" onclick="dismissWelcome()">Start Chat</button>
             </div>
         </div>
 
@@ -383,6 +372,10 @@
             let storyLog = [];
             let isProcessing = false;
             let currentDate = { day: 1, month: 1, year: 1983, time: "09:00" };
+            let storyBaseline = null;
+            let isEditing = false;
+            let _editRow = null;
+            let _editIndex = -1;
 
             // Init
             document.addEventListener("DOMContentLoaded", () => {
@@ -396,6 +389,7 @@
                 input.addEventListener("keydown", (e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
+                        if (isEditing) return;
                         sendMessage();
                     }
                 });
@@ -403,6 +397,10 @@
                     input.style.height = "auto";
                     input.style.height = Math.min(input.scrollHeight, 120) + "px";
                 });
+
+                document.getElementById("edit-btn").onclick = startEditLastMessage;
+                document.getElementById("edit-save-btn").onclick = saveEditedMessage;
+                document.getElementById("edit-cancel-btn").onclick = cancelEditMessage;
             });
 
             function initGame() {
@@ -475,31 +473,26 @@
                     currentDate = JSON.parse(savedDate);
                 }
 
-                // Update UI
                 document.getElementById("char-name").textContent = activeChar.title || "Character";
-                document.getElementById("welcome-char-name").textContent = activeChar.title || "Character";
-                document.getElementById("welcome-meta").textContent = activeChar.generally || "";
 
-                // Set avatar
-                const avatar = getAvatarForChar(activeChar);
-                document.getElementById("welcome-avatar").innerHTML = avatar;
+                if (!Array.isArray(activeChar.memories)) activeChar.memories = [];
+                if (activePlayer && !Array.isArray(activePlayer.memories)) activePlayer.memories = [];
+                storyBaseline = {
+                    date: cloneDate(currentDate),
+                    memories: snapshotMemories(),
+                };
 
                 updateTimeDisplay();
                 renderChat();
+                maybePostIntroduction();
+            }
 
-                // Check if continuing story or new story
-                if (storyLog.length > 0) {
-                    // Continuing existing story - keep overlay hidden
-                    dismissWelcome();
-                } else {
-                    // New story - show welcome overlay
-                    const overlay = document.getElementById("welcome-overlay");
-                    overlay.style.display = "flex";
-                    // Small delay to allow display to apply before fading in
-                    setTimeout(() => {
-                        overlay.style.opacity = "1";
-                    }, 50);
-                }
+            function maybePostIntroduction() {
+                if (storyLog.length > 0) return;
+                const intro = String(activeChar?.introduction || "").trim();
+                if (!intro) return;
+                appendMessage("ai", intro);
+                addToLog("bot", intro);
             }
 
             function getAvatarForChar(char) {
@@ -530,27 +523,290 @@
                 return player?.name ? player.name[0].toUpperCase() : "&#128100;";
             }
 
-            function dismissWelcome() {
-                const overlay = document.getElementById("welcome-overlay");
-                overlay.classList.add("hidden");
-                setTimeout(() => overlay.style.display = "none", 500);
-
-                // Send intro if new story
-                if (storyLog.length === 0 && activeChar.introduction) {
-                    setTimeout(() => {
-                        appendMessage("ai", activeChar.introduction);
-                        addToLog("bot", activeChar.introduction);
-                    }, 500);
-                }
-            }
-
             function applyUiSettings() {
                 try {
-                    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+                    const settings = getSettings();
                     const textSize = settings.textSize || "normal";
                     const px = textSize === "short" ? "13px" : textSize === "tall" ? "16px" : "14px";
                     document.documentElement.style.setProperty("--msg-font-size", px);
                 } catch {}
+            }
+
+            function getSettings() {
+                try {
+                    const local = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+                    const session = JSON.parse(sessionStorage.getItem(SETTINGS_KEY) || "{}");
+                    return { ...local, ...session };
+                } catch {
+                    return {};
+                }
+            }
+
+            function isAiCheckEnabled() {
+                try {
+                    return String(getSettings().aiCheck || "1") === "2";
+                } catch {
+                    return false;
+                }
+            }
+
+            function getAiLanguageSpec(aiLanguageCode) {
+                const aiLangMap = {
+                    de: { name: "German", native: "Deutsch", code: "de" },
+                    en: { name: "English", native: "English", code: "en" },
+                    ja: { name: "Japanese", native: "日本語", code: "ja" },
+                    fr: { name: "French", native: "Français", code: "fr" },
+                    es: { name: "Spanish", native: "Español", code: "es" },
+                };
+                return aiLangMap[aiLanguageCode] || aiLangMap.en;
+            }
+
+            function cloneDate(d) {
+                return {
+                    day: d?.day ?? 1,
+                    month: d?.month ?? 1,
+                    year: d?.year ?? 1983,
+                    time: d?.time || "09:00",
+                };
+            }
+
+            function formatCurrentDateStr() {
+                return `${String(currentDate.day || 1).padStart(2, "0")}.${String(currentDate.month || 1).padStart(2, "0")}.${currentDate.year || 1983}`;
+            }
+
+            function snapshotMemories() {
+                return {
+                    char: JSON.parse(JSON.stringify(activeChar?.memories || [])),
+                    player: JSON.parse(JSON.stringify(activePlayer?.memories || [])),
+                };
+            }
+
+            function restoreMemoriesSnapshot(snap) {
+                if (!snap) return;
+                if (activeChar) activeChar.memories = JSON.parse(JSON.stringify(snap.char || []));
+                if (activePlayer) activePlayer.memories = JSON.parse(JSON.stringify(snap.player || []));
+                persistCardsToSession();
+            }
+
+            function persistCardsToSession() {
+                try {
+                    const cards = JSON.parse(sessionStorage.getItem(CARDS_KEY) || "[]");
+                    if (!cards.length) return;
+                    const updated = cards.map((c) => {
+                        if (activeChar && c.id === activeChar.id) {
+                            return { ...c, memories: activeChar.memories || [] };
+                        }
+                        if (activePlayer && c.id === activePlayer.id) {
+                            return { ...c, memories: activePlayer.memories || [] };
+                        }
+                        return c;
+                    });
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(updated));
+                } catch (e) {
+                    console.warn("persistCardsToSession failed", e);
+                }
+            }
+
+            function restoreStateFromLastLogEntry() {
+                const prev = storyLog[storyLog.length - 1];
+                if (prev?.dateSnapshot) {
+                    currentDate = cloneDate(prev.dateSnapshot);
+                } else if (storyBaseline?.date) {
+                    currentDate = cloneDate(storyBaseline.date);
+                }
+                if (prev?.memoriesSnapshot) {
+                    restoreMemoriesSnapshot(prev.memoriesSnapshot);
+                } else if (storyBaseline?.memories) {
+                    restoreMemoriesSnapshot(storyBaseline.memories);
+                }
+                updateTimeDisplay();
+                saveDate();
+            }
+
+            function formatMemoriesForPrompt(entity, label, max = 10) {
+                const mems = (entity?.memories || []).slice(-max);
+                if (!mems.length) return "";
+                const lines = mems.map((m) => {
+                    const when = [m.date, m.time].filter(Boolean).join(" ");
+                    return `- [${when || "?"}] ${m.text || ""}`;
+                });
+                return `\n# ${label} MEMORIES\n${lines.join("\n")}`;
+            }
+
+            function buildOCChatHistoryLines(maxMessages = 15) {
+                return storyLog
+                    .slice(-maxMessages)
+                    .map((e) => {
+                        const role =
+                            e.role === "user"
+                                ? activePlayer?.name || "Player"
+                                : activeChar?.title || "Character";
+                        return `${role}: ${e.content || ""}`;
+                    })
+                    .join("\n");
+            }
+
+            function buildNarratorPrompt(systemInst, userMessage, extraNote = "") {
+                const history = buildOCChatHistoryLines(15);
+                const marker = "\n\n### CHAT LOG (last 15 messages) ###\n";
+                let suffix = "";
+                if (extraNote) suffix += "\n\n" + String(extraNote);
+                if (userMessage === "(continue)") {
+                    suffix += `\n\nContinue the scene naturally with NEW content.\n${activeChar?.title || "Character"}:`;
+                } else if (userMessage) {
+                    suffix += `\n\n${activePlayer?.name || "Player"}: ${userMessage}\n${activeChar?.title || "Character"}:`;
+                } else {
+                    suffix += `\n\n${activeChar?.title || "Character"}:`;
+                }
+                return `${systemInst}${marker}${history}${suffix}`;
+            }
+
+            function resolveMemoryEntityId(ref) {
+                const raw = String(ref || "").trim();
+                if (!raw) return null;
+                if (activeChar?.id === raw) return { entity: activeChar, kind: "char" };
+                if (activePlayer?.id === raw) return { entity: activePlayer, kind: "player" };
+                const charTitle = String(activeChar?.title || "").toLowerCase().trim();
+                const playerName = String(activePlayer?.name || "").toLowerCase().trim();
+                const r = raw.toLowerCase();
+                if (charTitle && r === charTitle) return { entity: activeChar, kind: "char" };
+                if (playerName && r === playerName) return { entity: activePlayer, kind: "player" };
+                return null;
+            }
+
+            function applyMemoryToEntity(entity, text, logTs) {
+                if (!entity || !text) return;
+                if (!Array.isArray(entity.memories)) entity.memories = [];
+                entity.memories.push({
+                    text: String(text).trim(),
+                    date: formatCurrentDateStr(),
+                    time: currentDate.time || "00:00",
+                    logTs: logTs || Date.now(),
+                });
+                if (entity.memories.length > 100) {
+                    entity.memories = entity.memories.slice(-100);
+                }
+            }
+
+            function applyMemoryTagsFromText(text, logTs) {
+                if (!text) return;
+                const tagPattern = /\[\[([\s\S]*?)\]\]/g;
+                let match;
+                while ((match = tagPattern.exec(text)) !== null) {
+                    const content = match[1].trim();
+                    const memMatch = content.match(/^Memory\s*:\s*(.+)$/i);
+                    if (!memMatch) continue;
+                    const payload = memMatch[1].trim();
+                    const pairRegex = /([A-Za-z0-9\-_]+)\s*\|\s*([\s\S]*?)(?=(?:\s*;\s*[A-Za-z0-9\-_]+\s*\|)|$)/g;
+                    let pairMatch;
+                    let found = false;
+                    while ((pairMatch = pairRegex.exec(payload)) !== null) {
+                        const resolved = resolveMemoryEntityId(pairMatch[1].trim());
+                        const memText = String(pairMatch[2] || "").trim();
+                        if (resolved?.entity && memText) {
+                            applyMemoryToEntity(resolved.entity, memText, logTs);
+                            found = true;
+                        }
+                    }
+                    if (!found) {
+                        const comma = payload.indexOf(",");
+                        if (comma > 0) {
+                            const resolved = resolveMemoryEntityId(payload.slice(0, comma).trim());
+                            const memText = payload.slice(comma + 1).trim();
+                            if (resolved?.entity && memText) {
+                                applyMemoryToEntity(resolved.entity, memText, logTs);
+                            }
+                        }
+                    }
+                }
+                persistCardsToSession();
+            }
+
+            async function validateAndFixNarration(narrationText, playerInput) {
+                if (!narrationText || narrationText.length < 12) return narrationText;
+
+                const settings = getSettings();
+                const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
+                const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
+                const curDate = formatCurrentDateStr();
+                const curTime = currentDate.time || "00:00";
+                const charId = activeChar?.id || "";
+                const charName = activeChar?.title || "Character";
+                const playerId = activePlayer?.id || "";
+                const playerName = activePlayer?.name || "Player";
+
+                const recentHistory = buildOCChatHistoryLines(15);
+                const charMemBlock = formatMemoriesForPrompt(activeChar, charName.toUpperCase(), 12);
+                const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName.toUpperCase(), 12);
+
+                const validationPrompt = `You are a SECOND-PASS REPAIR AI for a 1-on-1 character chat. Your main job is to add and fix control tags.
+
+# NARRATION TO REPAIR:
+${narrationText}
+
+# CONTEXT
+- Target language: ${targetLanguage} (code: ${aiLangSpec.code})
+- Player message: "${String(playerInput || "").trim() || "N/A"}"
+- Current date: ${curDate}
+- Current time: ${curTime}
+- Character: ${charName} [ID: ${charId}]
+- Player: ${playerName} [ID: ${playerId}]
+${charMemBlock}
+${playerMemBlock}
+
+# CHAT LOG (last 15 messages)
+${recentHistory || "(none)"}
+
+# TASK
+1) Add/fix ALL required control tags (main job).
+2) Only fix prose if clearly broken (grammar, unclosed quotes). Do not rewrite otherwise.
+3) Do NOT speak or act as the player. Do not quote the player message.
+4) Use ONLY these IDs in Memory tags: ${charId} or ${playerId}.
+
+# REQUIRED TAGS
+- [[Memory:ID|short text]] when the scene creates lasting facts (feelings, promises, secrets learned, important events). Use character or player ID.
+- [[DATE: DD.MM.YYYY]] only if the calendar date clearly changed (before final TIME tag).
+- Relative time if time passes: [[Time:+5]], [[Time:+30]], [[Day:+1]], etc. (before final TIME).
+- Final tag at the very end: [[TIME: HH:MM]] (24h, e.g. [[TIME: 14:15]])
+
+# RULES
+- Return ONLY repaired narration with tags. No explanations or markdown fences.
+- If NSFW block is required by policy, output only [[NSFW]].
+- Avoid duplicate memories already listed above for the same ID and same fact.
+- All memory text must be in ${targetLanguage}.
+- Tag order: Memory/relative time/DATE tags first, then exactly one final [[TIME: ...]] at the end.
+
+# RESPONSE:
+Return ONLY the repaired narration with tags.`;
+
+                try {
+                    let cleaned = (await askAIWithRetry(validationPrompt, 2)).trim();
+                    cleaned = cleaned.replace(/^```[\s\S]*?\n([\s\S]*?)\n?```$/g, "$1");
+                    cleaned = cleaned.replace(/^```\n?|```$/g, "");
+
+                    const addMinutesToTime = (timeStr, mins) => {
+                        const m = String(timeStr || "").trim().match(/^([0-2]?\d):(\d{2})$/);
+                        if (!m) return curTime;
+                        let total = (parseInt(m[1], 10) || 0) * 60 + (parseInt(m[2], 10) || 0) + (parseInt(mins, 10) || 0);
+                        while (total < 0) total += 24 * 60;
+                        total %= 24 * 60;
+                        return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+                    };
+
+                    const metaRegex = /\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})\s*\]\]/ig;
+                    let lastTime = null;
+                    let metaMatch;
+                    while ((metaMatch = metaRegex.exec(cleaned)) !== null) {
+                        lastTime = metaMatch[1];
+                    }
+                    const withoutMeta = cleaned.replace(metaRegex, "").trim();
+                    const finalTime = lastTime || addMinutesToTime(curTime, 1);
+                    cleaned = `${withoutMeta}\n\n[[TIME: ${finalTime}]]`.trim();
+                    return cleaned;
+                } catch (err) {
+                    console.warn("[Validation] failed, using original", err);
+                    return narrationText;
+                }
             }
 
             function renderChat() {
@@ -602,9 +858,340 @@
                 container.scrollTop = container.scrollHeight;
             }
 
-            function addToLog(role, content) {
-                storyLog.push({ role, content, timestamp: Date.now() });
+            function addToLog(role, content, extra = {}) {
+                storyLog.push({
+                    role,
+                    content,
+                    timestamp: Date.now(),
+                    dateSnapshot: cloneDate(currentDate),
+                    memoriesSnapshot: snapshotMemories(),
+                    ...extra,
+                });
                 persistStoryLog();
+            }
+
+            let _toastTimer = null;
+            function showToast(message, bg = "rgba(40, 40, 40, 0.92)") {
+                let el = document.getElementById("toast");
+                if (!el) {
+                    el = document.createElement("div");
+                    el.id = "toast";
+                    document.body.appendChild(el);
+                }
+                el.textContent = message;
+                el.style.background = bg;
+                el.classList.add("show");
+                if (_toastTimer) clearTimeout(_toastTimer);
+                _toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
+            }
+
+            function _setElDisplay(el, display) {
+                if (!el) return;
+                if (display === "none") {
+                    if (!el.dataset.prevDisplay) {
+                        el.dataset.prevDisplay = el.style.display || "";
+                    }
+                    el.style.display = "none";
+                } else {
+                    const prev = el.dataset.prevDisplay;
+                    el.style.display = display || prev || "";
+                    try { delete el.dataset.prevDisplay; } catch {}
+                }
+            }
+
+            function enterEditModeUI() {
+                ["send-btn", "retry-btn", "continue-btn", "erase-btn", "edit-btn"].forEach((id) => {
+                    _setElDisplay(document.getElementById(id), "none");
+                });
+                _setElDisplay(document.getElementById("edit-save-btn"), "block");
+                _setElDisplay(document.getElementById("edit-cancel-btn"), "block");
+            }
+
+            function exitEditModeUI() {
+                ["send-btn", "retry-btn", "continue-btn", "erase-btn", "edit-btn"].forEach((id) => {
+                    _setElDisplay(document.getElementById(id), "");
+                });
+                _setElDisplay(document.getElementById("edit-save-btn"), "none");
+                _setElDisplay(document.getElementById("edit-cancel-btn"), "none");
+                ["send-btn", "retry-btn", "continue-btn", "erase-btn", "edit-btn", "edit-save-btn", "edit-cancel-btn"].forEach((id) => {
+                    const b = document.getElementById(id);
+                    if (b) {
+                        b.disabled = false;
+                        b.classList.remove("locked");
+                    }
+                });
+            }
+
+            function lockActionButtons(exceptIds = []) {
+                const except = new Set(exceptIds);
+                ["retry-btn", "continue-btn", "erase-btn", "edit-btn", "send-btn"].forEach((id) => {
+                    if (except.has(id)) return;
+                    const b = document.getElementById(id);
+                    if (b) {
+                        b.disabled = true;
+                        b.classList.add("locked");
+                    }
+                });
+            }
+
+            function restoreWorldStateBeforeIndex(index) {
+                const prev = index > 0 ? storyLog[index - 1] : null;
+                if (prev?.dateSnapshot) {
+                    currentDate = cloneDate(prev.dateSnapshot);
+                } else if (storyBaseline?.date) {
+                    currentDate = cloneDate(storyBaseline.date);
+                }
+                if (prev?.memoriesSnapshot) {
+                    restoreMemoriesSnapshot(prev.memoriesSnapshot);
+                } else if (storyBaseline?.memories) {
+                    restoreMemoriesSnapshot(storyBaseline.memories);
+                }
+                updateTimeDisplay();
+                saveDate();
+            }
+
+            function findPlayerMessageBeforeIndex(index) {
+                for (let i = index - 1; i >= 0; i--) {
+                    const e = storyLog[i];
+                    if (e && e.role === "user") return String(e.content || "").trim();
+                }
+                return "";
+            }
+
+            async function reconcileTagsAfterCharacterEdit(editedText, previousRawAi, playerMessage = null) {
+                const settings = getSettings();
+                const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
+                const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
+                const curDate = formatCurrentDateStr();
+                const curTime = currentDate.time || "00:00";
+                const charId = activeChar?.id || "";
+                const charName = activeChar?.title || "Character";
+                const playerId = activePlayer?.id || "";
+                const playerName = activePlayer?.name || "Player";
+                const prevTags = (String(previousRawAi || "").match(/\[\[[\s\S]*?\]\]/g) || [])
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                const prevTagsBlock = prevTags.length ? prevTags.join("\n") : "(none)";
+                const charMemBlock = formatMemoriesForPrompt(activeChar, charName.toUpperCase(), 12);
+                const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName.toUpperCase(), 12);
+                const recentHistory = buildOCChatHistoryLines(15);
+
+                const prompt = `You are a TAG RECONCILIATION AI for an edited character-chat message.
+
+# TARGET LANGUAGE (STRICT)
+Write ALL visible text and memory tag payloads in ${targetLanguage} (${aiLangSpec.code}).
+
+# EDITED MESSAGE (visible text, may lack tags):
+${String(editedText || "").trim()}
+
+# PREVIOUS RAW AI (with old tags):
+${String(previousRawAi || "").trim() || "(empty)"}
+
+# PREVIOUS TAG BLOCKS:
+${prevTagsBlock}
+
+# CONTEXT
+- Player message before this reply: "${String(playerMessage || "").trim() || "N/A"}"
+- Current date: ${curDate}
+- Current time: ${curTime}
+- Character: ${charName} [ID: ${charId}]
+- Player: ${playerName} [ID: ${playerId}]
+${charMemBlock}
+${playerMemBlock}
+
+# CHAT LOG (last 15)
+${recentHistory || "(none)"}
+
+# TASK
+1) Tags first: Add, change, or remove control tags so they match the edited message.
+2) Keep the edited visible text as-is; only fix obvious typos or unclosed quotes.
+3) Do NOT speak or act as the player.
+4) Memory IDs: only ${charId} or ${playerId}.
+5) Avoid duplicate memories already listed above (same ID + same date + same gist).
+
+# REQUIRED TAGS
+- [[Memory:ID|text]] when warranted
+- [[DATE: DD.MM.YYYY]] only if date changed (before final TIME)
+- Relative time [[Time:+N]] etc. if time passes
+- Final tag at end: [[TIME: HH:MM]]
+
+Return ONLY the edited message with corrected tags. No explanations.`;
+
+                let cleaned = (await askAIWithRetry(prompt, 2)).trim();
+                cleaned = cleaned.replace(/^```[\s\S]*?\n([\s\S]*?)\n?```$/g, "$1");
+                cleaned = cleaned.replace(/^```\n?|```$/g, "");
+
+                const addMinutesToTime = (timeStr, mins) => {
+                    const m = String(timeStr || "").trim().match(/^([0-2]?\d):(\d{2})$/);
+                    if (!m) return curTime;
+                    let total = (parseInt(m[1], 10) || 0) * 60 + (parseInt(m[2], 10) || 0) + (parseInt(mins, 10) || 0);
+                    while (total < 0) total += 24 * 60;
+                    total %= 24 * 60;
+                    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+                };
+
+                const metaRegex = /\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})\s*\]\]/ig;
+                let lastTime = null;
+                let metaMatch;
+                while ((metaMatch = metaRegex.exec(cleaned)) !== null) {
+                    lastTime = metaMatch[1];
+                }
+                const withoutMeta = cleaned.replace(metaRegex, "").trim();
+                const finalTime = lastTime || addMinutesToTime(curTime, 1);
+                return `${withoutMeta}\n\n[[TIME: ${finalTime}]]`.trim();
+            }
+
+            function startEditLastMessage() {
+                if (isProcessing || isEditing || !storyLog.length) return;
+
+                const container = document.getElementById("chat-scroll");
+                const rows = Array.from(container.querySelectorAll(".msg-row")).filter((r) => r.id !== "typing-indicator");
+                if (!rows.length) return;
+
+                const lastRow = rows[rows.length - 1];
+                const bubble = lastRow.querySelector(".msg-bubble");
+                const text = bubble ? bubble.textContent : "";
+                const role = lastRow.classList.contains("user") ? "user" : "bot";
+
+                let idx = -1;
+                for (let i = storyLog.length - 1; i >= 0; i--) {
+                    if (storyLog[i].role === role) {
+                        idx = i;
+                        break;
+                    }
+                }
+                if (idx === -1) return;
+
+                isEditing = true;
+                _editRow = lastRow;
+                _editIndex = idx;
+
+                const input = document.getElementById("chat-input");
+                input.value = text;
+                input.focus();
+                input.style.height = "auto";
+                input.style.height = Math.min(input.scrollHeight, 120) + "px";
+
+                enterEditModeUI();
+                lockActionButtons(["edit-save-btn", "edit-cancel-btn"]);
+            }
+
+            async function saveEditedMessage() {
+                if (!isEditing || _editIndex < 0 || !_editRow) return;
+
+                const input = document.getElementById("chat-input");
+                const newText = (input.value || "").trim();
+                if (!newText) {
+                    showToast("Text cannot be empty.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+
+                const entry = storyLog[_editIndex];
+                const isBotEntry = entry && entry.role === "bot";
+                const useTagAi = isBotEntry && isAiCheckEnabled();
+                const hasRawAi = isBotEntry && typeof entry.rawAi === "string" && entry.rawAi.trim().length > 0;
+
+                if (useTagAi) {
+                    const saveBtn = document.getElementById("edit-save-btn");
+                    const cancelBtn = document.getElementById("edit-cancel-btn");
+                    if (saveBtn) {
+                        saveBtn.disabled = true;
+                        saveBtn.classList.add("locked");
+                    }
+                    _setElDisplay(cancelBtn, "none");
+
+                    const bubble = _editRow.querySelector(".msg-bubble");
+                    const bubblePrevHtml = bubble ? bubble.innerHTML : "";
+                    if (bubble) {
+                        bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+                    }
+
+                    isProcessing = true;
+                    document.getElementById("send-btn").disabled = true;
+                    lockActionButtons(["edit-save-btn"]);
+
+                    const oldRawAi = String(entry.rawAi || "");
+                    const playerMsg = findPlayerMessageBeforeIndex(_editIndex);
+                    const ts = entry.timestamp || Date.now();
+                    const removed = storyLog.splice(_editIndex, 1)[0];
+
+                    try {
+                        restoreWorldStateBeforeIndex(_editIndex);
+
+                        let reconciledRaw;
+                        if (hasRawAi) {
+                            reconciledRaw = await reconcileTagsAfterCharacterEdit(newText, oldRawAi, playerMsg);
+                        } else {
+                            reconciledRaw = await validateAndFixNarration(newText, playerMsg);
+                        }
+
+                        applyMemoryTagsFromText(reconciledRaw, ts);
+                        const finalText = parseNarration(reconciledRaw);
+
+                        if (removed) {
+                            removed.content = finalText;
+                            removed.rawAi = reconciledRaw;
+                            removed.timestamp = ts;
+                            removed.dateSnapshot = cloneDate(currentDate);
+                            removed.memoriesSnapshot = snapshotMemories();
+                        }
+                        storyLog.splice(_editIndex, 0, removed);
+                        persistStoryLog();
+
+                        if (bubble) bubble.innerHTML = formatText(finalText);
+                        showToast("Message edited and tags updated.");
+                    } catch (e) {
+                        console.error("Edit tag reconciliation failed", e);
+                        try {
+                            restoreWorldStateBeforeIndex(_editIndex);
+                            if (removed) {
+                                storyLog.splice(_editIndex, 0, removed);
+                                persistStoryLog();
+                            }
+                            if (oldRawAi) {
+                                applyMemoryTagsFromText(oldRawAi, ts);
+                                parseNarration(oldRawAi);
+                            }
+                        } catch {}
+                        if (bubble) bubble.innerHTML = bubblePrevHtml || formatText(newText);
+                        showToast("Saved, but tag check failed.", "rgba(180, 60, 60, 0.85)");
+                    } finally {
+                        isProcessing = false;
+                        document.getElementById("send-btn").disabled = false;
+                        if (saveBtn) {
+                            saveBtn.disabled = false;
+                            saveBtn.classList.remove("locked");
+                        }
+                        _setElDisplay(cancelBtn, "block");
+                        finishEditSession();
+                    }
+                    return;
+                }
+
+                const bubble = _editRow.querySelector(".msg-bubble");
+                if (bubble) bubble.innerHTML = formatText(newText);
+                if (entry) {
+                    entry.content = newText;
+                    persistStoryLog();
+                }
+                showToast("Message edited.");
+                finishEditSession();
+            }
+
+            function cancelEditMessage() {
+                if (!isEditing) return;
+                finishEditSession();
+                showToast("Edit cancelled.");
+            }
+
+            function finishEditSession() {
+                isEditing = false;
+                _editIndex = -1;
+                _editRow = null;
+                const input = document.getElementById("chat-input");
+                input.value = "";
+                input.style.height = "auto";
+                exitEditModeUI();
             }
 
             function persistStoryLog() {
@@ -634,6 +1221,10 @@
             }
 
             async function sendMessage() {
+                if (isEditing) {
+                    showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
                 const input = document.getElementById("chat-input");
                 const text = input.value.trim();
                 if (!text || isProcessing) return;
@@ -653,10 +1244,10 @@
                 addMinutes(5);
 
                 try {
-                    const response = await callAI(text);
+                    const { display, rawAi } = await callAI(text);
                     hideTyping();
-                    appendMessage("ai", response);
-                    addToLog("bot", response);
+                    appendMessage("ai", display);
+                    addToLog("bot", display, { rawAi });
                 } catch (err) {
                     hideTyping();
                     appendMessage("ai", "Sorry, I couldn't process that. Please try again.");
@@ -669,11 +1260,16 @@
 
             // Retry the last AI message (regenerate)
             async function retryLast() {
+                if (isEditing) {
+                    showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
                 if (isProcessing || storyLog.length === 0) return;
 
                 // Remove trailing bot response if present, then regenerate from last user line.
                 if (storyLog.length && storyLog[storyLog.length - 1].role === "bot") {
                     storyLog.pop();
+                    restoreStateFromLastLogEntry();
                 }
                 let lastUserText = null;
                 for (let i = storyLog.length - 1; i >= 0; i--) {
@@ -691,10 +1287,10 @@
                 showTyping();
                 
                 try {
-                    const response = await callAI(lastUserText);
+                    const { display, rawAi } = await callAI(lastUserText);
                     hideTyping();
-                    appendMessage("ai", response);
-                    addToLog("bot", response);
+                    appendMessage("ai", display);
+                    addToLog("bot", display, { rawAi });
                 } catch (err) {
                     hideTyping();
                     appendMessage("ai", "Sorry, I couldn't process that. Please try again.");
@@ -705,35 +1301,12 @@
                 }
             }
 
-            // Edit the last user message
-            function editLast() {
-                if (isProcessing || storyLog.length === 0) return;
-
-                // Remove trailing bot response first (paired response to last user message).
-                if (storyLog.length && storyLog[storyLog.length - 1].role === "bot") {
-                    storyLog.pop();
-                }
-
-                let userIndex = -1;
-                for (let i = storyLog.length - 1; i >= 0; i--) {
-                    if (storyLog[i].role === "user") {
-                        userIndex = i;
-                        break;
-                    }
-                }
-                if (userIndex === -1) return;
-                const content = storyLog[userIndex].content || "";
-                storyLog.splice(userIndex, 1);
-                persistStoryLog();
-                renderChat();
-
-                const input = document.getElementById("chat-input");
-                input.value = content;
-                input.focus();
-            }
-
             // Continue the conversation (send empty message to get more content)
             async function continueLast() {
+                if (isEditing) {
+                    showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
                 if (isProcessing || storyLog.length === 0) return;
                 if (storyLog[storyLog.length - 1].role !== "bot") return;
                 
@@ -742,10 +1315,10 @@
                 showTyping();
                 
                 try {
-                    const response = await callAI("(continue)");
+                    const { display, rawAi } = await callAI("(continue)");
                     hideTyping();
-                    appendMessage("ai", response);
-                    addToLog("bot", response);
+                    appendMessage("ai", display);
+                    addToLog("bot", display, { rawAi });
                 } catch (err) {
                     hideTyping();
                     appendMessage("ai", "Sorry, I couldn't process that. Please try again.");
@@ -756,17 +1329,25 @@
                 }
             }
 
-            // Erase the last bot message
+            function isFirstMessageProtected() {
+                return storyLog.length <= 1;
+            }
+
+            // Erase the last chat message (user or bot) and roll back date/memories
             function eraseLast() {
-                if (isProcessing || storyLog.length === 0) return;
-                for (let i = storyLog.length - 1; i >= 0; i--) {
-                    if (storyLog[i].role === "bot") {
-                        storyLog.splice(i, 1);
-                        persistStoryLog();
-                        renderChat();
-                        return;
-                    }
+                if (isEditing) {
+                    showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
+                    return;
                 }
+                if (isProcessing || storyLog.length === 0) return;
+                if (isFirstMessageProtected()) {
+                    showToast("The first message is protected.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                storyLog.pop();
+                restoreStateFromLastLogEntry();
+                persistStoryLog();
+                renderChat();
             }
 
             function askAI(prompt) {
@@ -810,31 +1391,34 @@
             async function callAI(userMessage) {
                 applyUiSettings();
 
-                const systemPrompt = buildSystemPrompt();
-                const historyLines = storyLog.slice(-20).map((e) => {
-                    const role = e.role === "user" ? (activePlayer?.name || "Player") : (activeChar?.title || "Character");
-                    return `${role}: ${e.content}`;
-                }).join("\n");
-                const finalPrompt =
-                    `${systemPrompt}\n\n### CHAT LOG ###\n${historyLines}\n\n` +
-                    (userMessage === "(continue)"
-                        ? `Continue the scene naturally with NEW content.\n${activeChar?.title || "Character"}:`
-                        : `${activePlayer?.name || "Player"}: ${userMessage}\n${activeChar?.title || "Character"}:`);
+                const systemPrompt = buildSystemPrompt(userMessage);
+                const finalPrompt = buildNarratorPrompt(systemPrompt, userMessage);
 
-                let content = await askAIWithRetry(finalPrompt);
+                let raw = await askAIWithRetry(finalPrompt);
 
-                // Parse time tags
-                content = parseNarration(content);
+                const useAiCheck = isAiCheckEnabled();
+                const hasNsfwTag =
+                    raw && (/\[\[\s*NSFW\s*\]\]/i.test(raw) || /^\s*NSFW\s*$/i.test(String(raw).replace(/\[\[[\s\S]*?\]\]/g, "").trim()));
+                if (useAiCheck && raw && !hasNsfwTag) {
+                    try {
+                        const validated = await validateAndFixNarration(raw, userMessage === "(continue)" ? "" : userMessage);
+                        if (validated) raw = validated;
+                    } catch (validationErr) {
+                        console.warn("[Validation] failed, using original", validationErr);
+                    }
+                }
 
-                return content;
+                const logTs = Date.now();
+                applyMemoryTagsFromText(raw, logTs);
+                const display = parseNarration(raw);
+                return { display, rawAi: String(raw || "") };
             }
 
-            function buildSystemPrompt() {
-                const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-                const aiLang = settings.aiLanguage === "de" ? "German" :
-                              settings.aiLanguage === "ja" ? "Japanese" :
-                              settings.aiLanguage === "fr" ? "French" :
-                              settings.aiLanguage === "es" ? "Spanish" : "English";
+            function buildSystemPrompt(playerInput = null) {
+                const settings = getSettings();
+                const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
+                const aiLang = `${aiLangSpec.name} (${aiLangSpec.native})`;
+                const useAiCheck = isAiCheckEnabled();
                 const perspective = settings.perspective || "narrator";
                 const textSize = settings.textSize || "normal";
                 const nsfwBlock = settings.nsfwBlock || "off";
@@ -890,19 +1474,40 @@
                     }
                 }
 
+                const charMemBlock = formatMemoriesForPrompt(activeChar, activeChar?.title || "Character", 10);
+                const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName, 10);
+
+                const tagRulesWithTags = `
+# METADATA TAGS (MANDATORY when you output tags yourself)
+- End every reply with exactly one final tag: [[TIME: HH:MM]] (24-hour clock).
+- If the calendar date changes, add [[DATE: DD.MM.YYYY]] before the final TIME tag.
+- For lasting facts, add [[Memory:ID|short text]] using ONLY these IDs:
+  - Character: ${activeChar?.id || "CHAR_ID"} (${activeChar?.title || "Character"})
+  - Player: ${activePlayer?.id || "PLAYER_ID"} (${playerName})
+- Relative time: [[Time:+30]], [[Day:+1]], [[Month:+1]], [[Year:+1]] when time passes in the scene.
+- Put Memory/relative/DATE tags before the final [[TIME: ...]] tag.`;
+
+                const tagRulesNoTags = `
+# CONTROL OUTPUT (AI CHECK ON)
+- Output ONLY in-character text (dialogue and narration). Do NOT output bracket tags.
+- A second-pass AI will add [[TIME]], [[DATE]], and [[Memory]] tags.`;
+
                 return `[SYSTEM INSTRUCTIONS]
 You are ${activeChar?.title || "the AI character"}, having a conversation with ${playerName} (the user).
 
-Current time: ${currentDate.day}.${currentDate.month}.${currentDate.year} ${currentDate.time}
+Current date: ${formatCurrentDateStr()}
+Current time: ${currentDate.time}
 
-PLAYER (User):
+PLAYER (User) [ID: ${activePlayer?.id || "unknown"}]:
 - Name: ${playerName}
 - Description: ${playerDesc}
 ${relationText ? "- Relationship: " + relationText : ""}
+${playerMemBlock}
 
-YOU (The Character):
+YOU (The Character) [ID: ${activeChar?.id || "unknown"}]:
 - Name: ${activeChar?.title || "Character"}
 - Description: ${botDesc}
+${charMemBlock}
 
 RULES:
 1. Write ONLY in ${aiLang}.
@@ -910,15 +1515,15 @@ RULES:
 3. Respond naturally as if having a real conversation.
 3b. ${lengthRule}
 3c. ${perspectiveRule}
-4. Use time tags to control time: [[Time:+30]] adds 30 minutes, [[Day:+1]] adds 1 day, [[Month:+1]] adds 1 month, [[Year:+1]] adds 1 year.
-5. To set specific time/date in narration, write {15}.{3}.{2024} for date or 14:30 for time.
-6. Close all quotation marks properly.
-7. Be descriptive and engaging.
-8. ACT ACCORDING TO THE RELATIONSHIP described above (talk to family members as family, enemies as enemies, etc.).
-9. ${nsfwBlock === "on" ? "Avoid explicit sexual/offensive NSFW details." : "NSFW filter is OFF, but remain coherent and character-accurate."}
+4. Close all quotation marks properly.
+5. Be descriptive and engaging.
+6. ACT ACCORDING TO THE RELATIONSHIP described above.
+7. Do NOT speak or act as the player. Do not quote the player's message.
+8. ${nsfwBlock === "on" ? "Avoid explicit sexual/offensive NSFW details. If needed, output only [[NSFW]]." : "NSFW filter is OFF, but remain coherent and character-accurate."}
+${useAiCheck ? tagRulesNoTags : tagRulesWithTags}
 
 OUTPUT FORMAT:
-Provide ONLY your response as the character. No narrator prefixes or meta commentary.
+Provide ONLY your response as the character. No meta commentary.
 [END SYSTEM INSTRUCTIONS]`;
             }
 
@@ -972,6 +1577,22 @@ Provide ONLY your response as the character. No narrator prefixes or meta commen
                     const parts = content.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
 
                     for (const part of parts) {
+                        const dateMetaPart = part.match(/^DATE\s*:\s*(\d{1,2})\.(\d{1,2})\.(\d{4})$/i);
+                        if (dateMetaPart) {
+                            currentDate.day = parseInt(dateMetaPart[1], 10);
+                            currentDate.month = parseInt(dateMetaPart[2], 10);
+                            currentDate.year = parseInt(dateMetaPart[3], 10);
+                            dateChanged = true;
+                            continue;
+                        }
+
+                        const timeMetaPart = part.match(/^TIME\s*:\s*(\d{1,2}:\d{2})$/i);
+                        if (timeMetaPart) {
+                            currentDate.time = timeMetaPart[1];
+                            timeChanged = true;
+                            continue;
+                        }
+
                         // Parse relative time: [[Time:+XX]] or [[Time:-XX]]
                         const timeMatch = part.match(/^Time\s*:\s*([+-]?\d+(?::\d{2})?)$/i);
                         if (timeMatch) {
@@ -1043,6 +1664,21 @@ Provide ONLY your response as the character. No narrator prefixes or meta commen
                             continue;
                         }
                     }
+                }
+
+                const dateBlockMatch = text.match(/\[\[\s*DATE\s*:\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\s*\]\]/i);
+                if (dateBlockMatch) {
+                    currentDate.day = parseInt(dateBlockMatch[1], 10);
+                    currentDate.month = parseInt(dateBlockMatch[2], 10);
+                    currentDate.year = parseInt(dateBlockMatch[3], 10);
+                    normalizeYMD(currentDate);
+                    dateChanged = true;
+                }
+
+                const metaTimeMatch = text.match(/\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})\s*\]\]\s*$/i);
+                if (metaTimeMatch) {
+                    currentDate.time = metaTimeMatch[1];
+                    timeChanged = true;
                 }
 
                 // Normalize date if changed
@@ -1145,7 +1781,7 @@ Provide ONLY your response as the character. No narrator prefixes or meta commen
                 }
 
                 // Fall back to settings or default
-                const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+                const settings = getSettings();
                 const url = charBackgroundUrl || settings.backgroundUrl || "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
                 document.getElementById("bg-layer").style.backgroundImage = `url(${url})`;
             }
