@@ -652,6 +652,89 @@
                 transform: translateY(0);
             }
 
+            .modal {
+                position: fixed;
+                inset: 0;
+                z-index: 60;
+                background: rgba(8, 8, 12, 0.9);
+                backdrop-filter: blur(18px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.2s ease;
+            }
+
+            .modal[aria-hidden="false"] {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            .modal__panel {
+                width: min(760px, calc(100vw - 40px));
+                max-height: calc(100vh - 40px);
+                overflow: auto;
+                border-radius: var(--radius);
+                border: 1px solid var(--glass-border);
+                background: rgba(12, 12, 18, 0.98);
+                box-shadow: var(--shadow);
+            }
+
+            .modal__head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 18px 20px;
+                border-bottom: 1px solid var(--glass-border);
+                background: rgba(255, 255, 255, 0.03);
+            }
+
+            .close-btn {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                border: 1px solid var(--glass-border);
+                background: rgba(255, 255, 255, 0.06);
+                color: var(--text);
+                font-size: 20px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .close-btn:hover {
+                background: rgba(255, 255, 255, 0.12);
+            }
+
+            .modal .section__body {
+                padding: 20px;
+            }
+
+            .modal .genre-container {
+                min-height: auto;
+                padding: 12px;
+                margin-top: 12px;
+            }
+
+            .modal .genre-container:empty::before {
+                content: "No secrets yet — add one above.";
+                font-size: 12px;
+                color: var(--muted);
+            }
+
+            .modal .genre-tag {
+                background: rgba(232, 106, 106, 0.18);
+                border-color: rgba(232, 106, 106, 0.35);
+                color: #ffdfe6;
+            }
+
+            .modal .genre-tag button {
+                background: rgba(255, 255, 255, 0.08);
+            }
+
             /* Toast */
             #toast {
                 position: fixed;
@@ -791,6 +874,11 @@
                             </div>
                         </div>
                         <div class="section__body">
+                            <div class="field">
+                                <label>Secrets <span class="hint">Hidden from players</span></label>
+                                <button type="button" class="btn-add-genre" onclick="openSecretScene()">Edit Secrets</button>
+                                <div class="char-count" id="secretCount">0 secrets</div>
+                            </div>
                             <div class="genre-add-row">
                                 <input type="text" id="charGenreInput" placeholder="Romance, Fantasy, Drama…" autocomplete="off" />
                                 <button type="button" class="btn-add-genre" onclick="addGenreTag()">Add</button>
@@ -799,6 +887,28 @@
                         </div>
                     </section>
                 </form>
+
+                <div id="secretScene" class="modal" aria-hidden="true">
+                    <div class="modal__panel">
+                        <div class="modal__head">
+                            <div>
+                                <div class="section__title">Character Secrets</div>
+                                <div class="section__desc">Only this NPC will know these hidden details.</div>
+                            </div>
+                            <button type="button" class="close-btn" onclick="closeSecretScene()">×</button>
+                        </div>
+                        <div class="section__body">
+                            <div class="field field--tall">
+                                <label for="secretInput">New secret</label>
+                                <textarea id="secretInput" placeholder="Enter a secret that only the NPC knows…" rows="4"></textarea>
+                            </div>
+                            <div class="genre-add-row">
+                                <button type="button" class="btn-add-genre" onclick="addSecretItem()">Add secret</button>
+                            </div>
+                            <div id="secretList" class="genre-container"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -818,6 +928,7 @@
 
             let _editCharId = null;
             let _currentGenres = [];
+            let _currentSecrets = [];
             let _toastTimer = null;
 
             function escapeHtml(str) {
@@ -1033,6 +1144,50 @@
                 });
             }
 
+            function renderSecretItems() {
+                const container = document.getElementById("secretList");
+                container.innerHTML = "";
+                _currentSecrets.forEach((secret, idx) => {
+                    const tag = document.createElement("span");
+                    tag.className = "genre-tag";
+                    tag.innerHTML = `${escapeHtml(secret)}<button type="button" aria-label="Remove secret">&times;</button>`;
+                    tag.querySelector("button").addEventListener("click", () => removeSecretItem(idx));
+                    container.appendChild(tag);
+                });
+                const count = document.getElementById("secretCount");
+                if (count) count.textContent = `${_currentSecrets.length} secret${_currentSecrets.length === 1 ? "" : "s"}`;
+            }
+
+            function openSecretScene() {
+                const modal = document.getElementById("secretScene");
+                if (!modal) return;
+                modal.setAttribute("aria-hidden", "false");
+                document.body.style.overflow = "hidden";
+                renderSecretItems();
+            }
+
+            function closeSecretScene() {
+                const modal = document.getElementById("secretScene");
+                if (!modal) return;
+                modal.setAttribute("aria-hidden", "true");
+                document.body.style.overflow = "";
+            }
+
+            function addSecretItem() {
+                const input = document.getElementById("secretInput");
+                if (!input) return;
+                const value = input.value.trim();
+                if (!value) return;
+                _currentSecrets.push(value);
+                input.value = "";
+                renderSecretItems();
+            }
+
+            function removeSecretItem(index) {
+                _currentSecrets.splice(index, 1);
+                renderSecretItems();
+            }
+
             function saveCharacter() {
                 const name = document.getElementById("charName").value.trim();
                 const generally = document.getElementById("charGenerally").value.trim();
@@ -1049,6 +1204,7 @@
 
                 const chars = getStandaloneCharacters();
                 const description = `${generally}\n\nAppearance: ${appearance}\n\nPersonality: ${personality}`.trim();
+                const secrets = [..._currentSecrets];
 
                 if (_editCharId) {
                     const idx = chars.findIndex((c) => c.id === _editCharId);
@@ -1065,6 +1221,7 @@
                     chars[idx].backgroundUrl = backgroundUrl || null;
                     chars[idx].description = description;
                     chars[idx].genres = [..._currentGenres];
+                    chars[idx].secrets = secrets;
                     chars[idx].updatedAt = Date.now();
                     setStandaloneCharacters(chars);
                     showToast(`"${name}" updated successfully.`, "success");
@@ -1081,6 +1238,7 @@
                         backgroundUrl: backgroundUrl || null,
                         description: description,
                         genres: [..._currentGenres],
+                        secrets: secrets,
                         createdAt: Date.now(),
                         isStandalone: true,
                     };
@@ -1137,7 +1295,9 @@
                         document.getElementById("charCoverUrl").value = char.coverUrl || "";
                         document.getElementById("charBackgroundUrl").value = char.backgroundUrl || "";
                         _currentGenres = char.genres && Array.isArray(char.genres) ? [...char.genres] : [];
+                        _currentSecrets = char.secrets && Array.isArray(char.secrets) ? [...char.secrets] : [];
                         renderGenreTags();
+                        renderSecretItems();
 
                         document.getElementById("pageTitle").textContent = "Edit Character";
                         document.getElementById("pageSubtitle").textContent = "Update your standalone character";

@@ -111,11 +111,6 @@
                 font-weight: 600;
                 color: #fff;
             }
-            .header-time {
-                font-size: 12px;
-                color: rgba(255, 255, 255, 0.6);
-            }
-
             /* Chat Area */
             #chat-scroll {
                 flex: 1;
@@ -138,6 +133,36 @@
             }
             .msg-row.ai {
                 align-self: flex-start;
+            }
+
+            .retry-switcher {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 10px;
+            }
+
+            .retry-switcher-btn {
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: rgba(255, 255, 255, 0.08);
+                color: #fff;
+                padding: 6px 12px;
+                border-radius: 999px;
+                cursor: pointer;
+                font-size: 12px;
+                min-width: 36px;
+            }
+
+            .retry-switcher-btn:disabled {
+                opacity: 0.4;
+                cursor: default;
+            }
+
+            .retry-switcher-count {
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 12px;
+                min-width: 42px;
+                text-align: center;
             }
 
             .msg-avatar {
@@ -338,7 +363,6 @@
                 <button class="nav-back-btn" onclick="goBack()">&#8592;</button>
                 <div id="header-info">
                     <div class="header-title" id="char-name">Character</div>
-                    <div class="header-time" id="header-time">Loading...</div>
                 </div>
             </div>
 
@@ -371,11 +395,11 @@
             let activePlayer = null;
             let storyLog = [];
             let isProcessing = false;
-            let currentDate = { day: 1, month: 1, year: 1983, time: "09:00" };
             let storyBaseline = null;
             let isEditing = false;
             let _editRow = null;
             let _editIndex = -1;
+            let _retryVariantSession = null;
 
             // Init
             document.addEventListener("DOMContentLoaded", () => {
@@ -467,22 +491,14 @@
                 // Load story log
                 storyLog = JSON.parse(sessionStorage.getItem(STORY_LOG_KEY) || "[]");
 
-                // Load date/time
-                const savedDate = sessionStorage.getItem("storyki_starting_date");
-                if (savedDate) {
-                    currentDate = JSON.parse(savedDate);
-                }
-
                 document.getElementById("char-name").textContent = activeChar.title || "Character";
 
                 if (!Array.isArray(activeChar.memories)) activeChar.memories = [];
                 if (activePlayer && !Array.isArray(activePlayer.memories)) activePlayer.memories = [];
                 storyBaseline = {
-                    date: cloneDate(currentDate),
                     memories: snapshotMemories(),
                 };
 
-                updateTimeDisplay();
                 renderChat();
                 maybePostIntroduction();
             }
@@ -561,17 +577,17 @@
                 return aiLangMap[aiLanguageCode] || aiLangMap.en;
             }
 
-            function cloneDate(d) {
-                return {
-                    day: d?.day ?? 1,
-                    month: d?.month ?? 1,
-                    year: d?.year ?? 1983,
-                    time: d?.time || "09:00",
-                };
+            function stripControlTags(text) {
+                return String(text || "").replace(/\[\[[\s\S]*?\]\]/g, "").trim();
             }
 
-            function formatCurrentDateStr() {
-                return `${String(currentDate.day || 1).padStart(2, "0")}.${String(currentDate.month || 1).padStart(2, "0")}.${currentDate.year || 1983}`;
+            function stripTimeDateTags(text) {
+                return String(text || "").replace(/\[\[\s*(?:TIME|DATE|Time|Day|Month|Year|Location)\s*:[^\]]*\]\]/gi, "").trim();
+            }
+
+            function processAiResponse(raw, logTs) {
+                applyMemoryTagsFromText(raw, logTs);
+                return stripControlTags(raw);
             }
 
             function snapshotMemories() {
@@ -609,18 +625,11 @@
 
             function restoreStateFromLastLogEntry() {
                 const prev = storyLog[storyLog.length - 1];
-                if (prev?.dateSnapshot) {
-                    currentDate = cloneDate(prev.dateSnapshot);
-                } else if (storyBaseline?.date) {
-                    currentDate = cloneDate(storyBaseline.date);
-                }
                 if (prev?.memoriesSnapshot) {
                     restoreMemoriesSnapshot(prev.memoriesSnapshot);
                 } else if (storyBaseline?.memories) {
                     restoreMemoriesSnapshot(storyBaseline.memories);
                 }
-                updateTimeDisplay();
-                saveDate();
             }
 
             function formatMemoriesForPrompt(entity, label, max = 10) {
@@ -679,8 +688,6 @@
                 if (!Array.isArray(entity.memories)) entity.memories = [];
                 entity.memories.push({
                     text: String(text).trim(),
-                    date: formatCurrentDateStr(),
-                    time: currentDate.time || "00:00",
                     logTs: logTs || Date.now(),
                 });
                 if (entity.memories.length > 100) {
@@ -728,8 +735,6 @@
                 const settings = getSettings();
                 const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
                 const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
-                const curDate = formatCurrentDateStr();
-                const curTime = currentDate.time || "00:00";
                 const charId = activeChar?.id || "";
                 const charName = activeChar?.title || "Character";
                 const playerId = activePlayer?.id || "";
@@ -739,7 +744,7 @@
                 const charMemBlock = formatMemoriesForPrompt(activeChar, charName.toUpperCase(), 12);
                 const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName.toUpperCase(), 12);
 
-                const validationPrompt = `You are a SECOND-PASS REPAIR AI for a 1-on-1 character chat. Your main job is to add and fix control tags.
+                const validationPrompt = `You are a SECOND-PASS REPAIR AI for a 1-on-1 character chat. Your main job is to add and fix Memory control tags.
 
 # NARRATION TO REPAIR:
 ${narrationText}
@@ -747,8 +752,6 @@ ${narrationText}
 # CONTEXT
 - Target language: ${targetLanguage} (code: ${aiLangSpec.code})
 - Player message: "${String(playerInput || "").trim() || "N/A"}"
-- Current date: ${curDate}
-- Current time: ${curTime}
 - Character: ${charName} [ID: ${charId}]
 - Player: ${playerName} [ID: ${playerId}]
 ${charMemBlock}
@@ -758,23 +761,20 @@ ${playerMemBlock}
 ${recentHistory || "(none)"}
 
 # TASK
-1) Add/fix ALL required control tags (main job).
+1) Add/fix Memory tags when warranted (main job).
 2) Only fix prose if clearly broken (grammar, unclosed quotes). Do not rewrite otherwise.
 3) Do NOT speak or act as the player. Do not quote the player message.
 4) Use ONLY these IDs in Memory tags: ${charId} or ${playerId}.
+5) Do NOT add date, time, or calendar tags.
 
 # REQUIRED TAGS
 - [[Memory:ID|short text]] when the scene creates lasting facts (feelings, promises, secrets learned, important events). Use character or player ID.
-- [[DATE: DD.MM.YYYY]] only if the calendar date clearly changed (before final TIME tag).
-- Relative time if time passes: [[Time:+5]], [[Time:+30]], [[Day:+1]], etc. (before final TIME).
-- Final tag at the very end: [[TIME: HH:MM]] (24h, e.g. [[TIME: 14:15]])
 
 # RULES
-- Return ONLY repaired narration with tags. No explanations or markdown fences.
+- Return ONLY repaired narration with Memory tags. No explanations or markdown fences.
 - If NSFW block is required by policy, output only [[NSFW]].
 - Avoid duplicate memories already listed above for the same ID and same fact.
 - All memory text must be in ${targetLanguage}.
-- Tag order: Memory/relative time/DATE tags first, then exactly one final [[TIME: ...]] at the end.
 
 # RESPONSE:
 Return ONLY the repaired narration with tags.`;
@@ -783,26 +783,7 @@ Return ONLY the repaired narration with tags.`;
                     let cleaned = (await askAIWithRetry(validationPrompt, 2)).trim();
                     cleaned = cleaned.replace(/^```[\s\S]*?\n([\s\S]*?)\n?```$/g, "$1");
                     cleaned = cleaned.replace(/^```\n?|```$/g, "");
-
-                    const addMinutesToTime = (timeStr, mins) => {
-                        const m = String(timeStr || "").trim().match(/^([0-2]?\d):(\d{2})$/);
-                        if (!m) return curTime;
-                        let total = (parseInt(m[1], 10) || 0) * 60 + (parseInt(m[2], 10) || 0) + (parseInt(mins, 10) || 0);
-                        while (total < 0) total += 24 * 60;
-                        total %= 24 * 60;
-                        return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-                    };
-
-                    const metaRegex = /\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})\s*\]\]/ig;
-                    let lastTime = null;
-                    let metaMatch;
-                    while ((metaMatch = metaRegex.exec(cleaned)) !== null) {
-                        lastTime = metaMatch[1];
-                    }
-                    const withoutMeta = cleaned.replace(metaRegex, "").trim();
-                    const finalTime = lastTime || addMinutesToTime(curTime, 1);
-                    cleaned = `${withoutMeta}\n\n[[TIME: ${finalTime}]]`.trim();
-                    return cleaned;
+                    return stripTimeDateTags(cleaned);
                 } catch (err) {
                     console.warn("[Validation] failed, using original", err);
                     return narrationText;
@@ -863,7 +844,6 @@ Return ONLY the repaired narration with tags.`;
                     role,
                     content,
                     timestamp: Date.now(),
-                    dateSnapshot: cloneDate(currentDate),
                     memoriesSnapshot: snapshotMemories(),
                     ...extra,
                 });
@@ -897,6 +877,139 @@ Return ONLY the repaired narration with tags.`;
                     el.style.display = display || prev || "";
                     try { delete el.dataset.prevDisplay; } catch {}
                 }
+            }
+
+            function _removeRetrySwitcherUI() {
+                try {
+                    document.querySelectorAll(".retry-switcher").forEach((el) => el.remove());
+                } catch {}
+            }
+
+            function clearRetryVariantSession() {
+                _retryVariantSession = null;
+                _removeRetrySwitcherUI();
+            }
+
+            function _getLastAiRowEl() {
+                const rows = Array.from(document.querySelectorAll(".msg-row.ai"));
+                return rows.length ? rows[rows.length - 1] : null;
+            }
+
+            function _getRetrySlotKey() {
+                let lastBotIndex = -1;
+                for (let i = storyLog.length - 1; i >= 0; i--) {
+                    if (storyLog[i].role === "bot") {
+                        lastBotIndex = i;
+                        break;
+                    }
+                }
+                if (lastBotIndex === -1) return null;
+                for (let i = lastBotIndex - 1; i >= 0; i--) {
+                    if (storyLog[i].role === "user") {
+                        return storyLog[i].timestamp || null;
+                    }
+                }
+                return null;
+            }
+
+            function ensureRetryVariantSessionForLatestAi() {
+                const slotKey = _getRetrySlotKey();
+                if (!slotKey) return null;
+                if (_retryVariantSession && _retryVariantSession.slotKey !== slotKey) {
+                    clearRetryVariantSession();
+                }
+                if (!_retryVariantSession) {
+                    _retryVariantSession = { slotKey, variants: [], selectedIndex: 0 };
+                }
+
+                const lastBot = (() => {
+                    for (let i = storyLog.length - 1; i >= 0; i--) {
+                        if (storyLog[i].role === "bot") return storyLog[i];
+                    }
+                    return null;
+                })();
+                if (lastBot) {
+                    const exists = _retryVariantSession.variants.some((v) => v && v.ts === lastBot.timestamp);
+                    if (!exists) {
+                        _retryVariantSession.variants.push({
+                            ts: lastBot.timestamp,
+                            rawAi: String(lastBot.rawAi || lastBot.content || ""),
+                            displayText: String(lastBot.content || ""),
+                        });
+                        _retryVariantSession.selectedIndex = _retryVariantSession.variants.length - 1;
+                    }
+                }
+                return _retryVariantSession;
+            }
+
+            function addRetryVariant(ts, rawAi, displayText) {
+                if (!_retryVariantSession) return;
+                const exists = _retryVariantSession.variants.some((v) => v && v.ts === ts);
+                if (!exists) {
+                    _retryVariantSession.variants.push({ ts, rawAi: String(rawAi || ""), displayText: String(displayText || "") });
+                }
+                _retryVariantSession.selectedIndex = Math.max(0, _retryVariantSession.variants.findIndex((v) => v && v.ts === ts));
+            }
+
+            async function applyRetryVariantIndex(newIndex) {
+                if (isProcessing) return;
+                if (!_retryVariantSession) return;
+                const total = _retryVariantSession.variants.length;
+                if (newIndex < 0 || newIndex >= total) return;
+                const target = _retryVariantSession.variants[newIndex];
+                if (!target) return;
+
+                let lastBotIndex = -1;
+                for (let i = storyLog.length - 1; i >= 0; i--) {
+                    if (storyLog[i].role === "bot") {
+                        lastBotIndex = i;
+                        break;
+                    }
+                }
+                if (lastBotIndex === -1) return;
+
+                storyLog[lastBotIndex].content = target.displayText;
+                storyLog[lastBotIndex].rawAi = String(target.rawAi || target.displayText || "");
+                persistStoryLog();
+
+                const row = _getLastAiRowEl();
+                if (row) {
+                    const bubble = row.querySelector(".msg-bubble");
+                    if (bubble) bubble.innerHTML = formatText(target.displayText || "");
+                }
+
+                _retryVariantSession.selectedIndex = newIndex;
+                updateRetrySwitcherUI();
+            }
+
+            function updateRetrySwitcherUI() {
+                _removeRetrySwitcherUI();
+                if (!_retryVariantSession) return;
+                const total = _retryVariantSession.variants.length;
+                if (total < 2) return;
+                const row = _getLastAiRowEl();
+                if (!row) return;
+
+                const bar = document.createElement("div");
+                bar.className = "retry-switcher";
+                const left = document.createElement("button");
+                left.className = "retry-switcher-btn";
+                left.textContent = "<-";
+                const count = document.createElement("div");
+                count.className = "retry-switcher-count";
+                const right = document.createElement("button");
+                right.className = "retry-switcher-btn";
+                right.textContent = "->";
+                const idx = _retryVariantSession.selectedIndex;
+                count.textContent = `${idx + 1}/${total}`;
+                left.disabled = idx <= 0;
+                right.disabled = idx >= total - 1;
+                left.onclick = (e) => { e.stopPropagation(); applyRetryVariantIndex(idx - 1); };
+                right.onclick = (e) => { e.stopPropagation(); applyRetryVariantIndex(idx + 1); };
+                bar.appendChild(left);
+                bar.appendChild(count);
+                bar.appendChild(right);
+                row.appendChild(bar);
             }
 
             function enterEditModeUI() {
@@ -936,18 +1049,11 @@ Return ONLY the repaired narration with tags.`;
 
             function restoreWorldStateBeforeIndex(index) {
                 const prev = index > 0 ? storyLog[index - 1] : null;
-                if (prev?.dateSnapshot) {
-                    currentDate = cloneDate(prev.dateSnapshot);
-                } else if (storyBaseline?.date) {
-                    currentDate = cloneDate(storyBaseline.date);
-                }
                 if (prev?.memoriesSnapshot) {
                     restoreMemoriesSnapshot(prev.memoriesSnapshot);
                 } else if (storyBaseline?.memories) {
                     restoreMemoriesSnapshot(storyBaseline.memories);
                 }
-                updateTimeDisplay();
-                saveDate();
             }
 
             function findPlayerMessageBeforeIndex(index) {
@@ -962,8 +1068,6 @@ Return ONLY the repaired narration with tags.`;
                 const settings = getSettings();
                 const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
                 const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
-                const curDate = formatCurrentDateStr();
-                const curTime = currentDate.time || "00:00";
                 const charId = activeChar?.id || "";
                 const charName = activeChar?.title || "Character";
                 const playerId = activePlayer?.id || "";
@@ -992,8 +1096,6 @@ ${prevTagsBlock}
 
 # CONTEXT
 - Player message before this reply: "${String(playerMessage || "").trim() || "N/A"}"
-- Current date: ${curDate}
-- Current time: ${curTime}
 - Character: ${charName} [ID: ${charId}]
 - Player: ${playerName} [ID: ${playerId}]
 ${charMemBlock}
@@ -1007,38 +1109,18 @@ ${recentHistory || "(none)"}
 2) Keep the edited visible text as-is; only fix obvious typos or unclosed quotes.
 3) Do NOT speak or act as the player.
 4) Memory IDs: only ${charId} or ${playerId}.
-5) Avoid duplicate memories already listed above (same ID + same date + same gist).
+5) Avoid duplicate memories already listed above (same ID + same gist).
+6) Do NOT add date, time, or calendar tags.
 
 # REQUIRED TAGS
 - [[Memory:ID|text]] when warranted
-- [[DATE: DD.MM.YYYY]] only if date changed (before final TIME)
-- Relative time [[Time:+N]] etc. if time passes
-- Final tag at end: [[TIME: HH:MM]]
 
-Return ONLY the edited message with corrected tags. No explanations.`;
+Return ONLY the edited message with corrected Memory tags. No explanations.`;
 
                 let cleaned = (await askAIWithRetry(prompt, 2)).trim();
                 cleaned = cleaned.replace(/^```[\s\S]*?\n([\s\S]*?)\n?```$/g, "$1");
                 cleaned = cleaned.replace(/^```\n?|```$/g, "");
-
-                const addMinutesToTime = (timeStr, mins) => {
-                    const m = String(timeStr || "").trim().match(/^([0-2]?\d):(\d{2})$/);
-                    if (!m) return curTime;
-                    let total = (parseInt(m[1], 10) || 0) * 60 + (parseInt(m[2], 10) || 0) + (parseInt(mins, 10) || 0);
-                    while (total < 0) total += 24 * 60;
-                    total %= 24 * 60;
-                    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-                };
-
-                const metaRegex = /\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})\s*\]\]/ig;
-                let lastTime = null;
-                let metaMatch;
-                while ((metaMatch = metaRegex.exec(cleaned)) !== null) {
-                    lastTime = metaMatch[1];
-                }
-                const withoutMeta = cleaned.replace(metaRegex, "").trim();
-                const finalTime = lastTime || addMinutesToTime(curTime, 1);
-                return `${withoutMeta}\n\n[[TIME: ${finalTime}]]`.trim();
+                return stripTimeDateTags(cleaned);
             }
 
             function startEditLastMessage() {
@@ -1125,14 +1207,12 @@ Return ONLY the edited message with corrected tags. No explanations.`;
                             reconciledRaw = await validateAndFixNarration(newText, playerMsg);
                         }
 
-                        applyMemoryTagsFromText(reconciledRaw, ts);
-                        const finalText = parseNarration(reconciledRaw);
+                        const finalText = processAiResponse(reconciledRaw, ts);
 
                         if (removed) {
                             removed.content = finalText;
-                            removed.rawAi = reconciledRaw;
+                            removed.rawAi = stripTimeDateTags(reconciledRaw);
                             removed.timestamp = ts;
-                            removed.dateSnapshot = cloneDate(currentDate);
                             removed.memoriesSnapshot = snapshotMemories();
                         }
                         storyLog.splice(_editIndex, 0, removed);
@@ -1149,8 +1229,7 @@ Return ONLY the edited message with corrected tags. No explanations.`;
                                 persistStoryLog();
                             }
                             if (oldRawAi) {
-                                applyMemoryTagsFromText(oldRawAi, ts);
-                                parseNarration(oldRawAi);
+                                processAiResponse(oldRawAi, ts);
                             }
                         } catch {}
                         if (bubble) bubble.innerHTML = bubblePrevHtml || formatText(newText);
@@ -1230,6 +1309,7 @@ Return ONLY the edited message with corrected tags. No explanations.`;
                 if (!text || isProcessing) return;
 
                 // Add user message
+                clearRetryVariantSession();
                 appendMessage("user", text);
                 addToLog("user", text);
                 input.value = "";
@@ -1239,9 +1319,6 @@ Return ONLY the edited message with corrected tags. No explanations.`;
                 isProcessing = true;
                 document.getElementById("send-btn").disabled = true;
                 showTyping();
-
-                // Advance time slightly
-                addMinutes(5);
 
                 try {
                     const { display, rawAi } = await callAI(text);
@@ -1265,6 +1342,8 @@ Return ONLY the edited message with corrected tags. No explanations.`;
                     return;
                 }
                 if (isProcessing || storyLog.length === 0) return;
+
+                ensureRetryVariantSessionForLatestAi();
 
                 // Remove trailing bot response if present, then regenerate from last user line.
                 if (storyLog.length && storyLog[storyLog.length - 1].role === "bot") {
@@ -1291,6 +1370,9 @@ Return ONLY the edited message with corrected tags. No explanations.`;
                     hideTyping();
                     appendMessage("ai", display);
                     addToLog("bot", display, { rawAi });
+                    const botEntry = storyLog[storyLog.length - 1];
+                    if (botEntry) addRetryVariant(botEntry.timestamp, rawAi, display);
+                    updateRetrySwitcherUI();
                 } catch (err) {
                     hideTyping();
                     appendMessage("ai", "Sorry, I couldn't process that. Please try again.");
@@ -1303,6 +1385,7 @@ Return ONLY the edited message with corrected tags. No explanations.`;
 
             // Continue the conversation (send empty message to get more content)
             async function continueLast() {
+                clearRetryVariantSession();
                 if (isEditing) {
                     showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
                     return;
@@ -1335,6 +1418,7 @@ Return ONLY the edited message with corrected tags. No explanations.`;
 
             // Erase the last chat message (user or bot) and roll back date/memories
             function eraseLast() {
+                clearRetryVariantSession();
                 if (isEditing) {
                     showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
                     return;
@@ -1409,8 +1493,8 @@ Return ONLY the edited message with corrected tags. No explanations.`;
                 }
 
                 const logTs = Date.now();
-                applyMemoryTagsFromText(raw, logTs);
-                const display = parseNarration(raw);
+                raw = stripTimeDateTags(raw);
+                const display = processAiResponse(raw, logTs);
                 return { display, rawAi: String(raw || "") };
             }
 
@@ -1443,6 +1527,10 @@ Return ONLY the edited message with corrected tags. No explanations.`;
                     activeChar?.appearance,
                     activeChar?.personality
                 ].filter(Boolean).join("; ");
+
+                const charSecretBlock = activeChar?.secrets && Array.isArray(activeChar.secrets) && activeChar.secrets.length
+                    ? `- Secrets: ${activeChar.secrets.map((s) => String(s).trim()).filter(Boolean).join("; ")}`
+                    : "";
 
                 // Build relationship description
                 let relationText = "";
@@ -1479,24 +1567,18 @@ Return ONLY the edited message with corrected tags. No explanations.`;
 
                 const tagRulesWithTags = `
 # METADATA TAGS (MANDATORY when you output tags yourself)
-- End every reply with exactly one final tag: [[TIME: HH:MM]] (24-hour clock).
-- If the calendar date changes, add [[DATE: DD.MM.YYYY]] before the final TIME tag.
 - For lasting facts, add [[Memory:ID|short text]] using ONLY these IDs:
   - Character: ${activeChar?.id || "CHAR_ID"} (${activeChar?.title || "Character"})
   - Player: ${activePlayer?.id || "PLAYER_ID"} (${playerName})
-- Relative time: [[Time:+30]], [[Day:+1]], [[Month:+1]], [[Year:+1]] when time passes in the scene.
-- Put Memory/relative/DATE tags before the final [[TIME: ...]] tag.`;
+- Do NOT use date or time tags.`;
 
                 const tagRulesNoTags = `
 # CONTROL OUTPUT (AI CHECK ON)
 - Output ONLY in-character text (dialogue and narration). Do NOT output bracket tags.
-- A second-pass AI will add [[TIME]], [[DATE]], and [[Memory]] tags.`;
+- A second-pass AI will add [[Memory]] tags when needed.`;
 
                 return `[SYSTEM INSTRUCTIONS]
 You are ${activeChar?.title || "the AI character"}, having a conversation with ${playerName} (the user).
-
-Current date: ${formatCurrentDateStr()}
-Current time: ${currentDate.time}
 
 PLAYER (User) [ID: ${activePlayer?.id || "unknown"}]:
 - Name: ${playerName}
@@ -1507,7 +1589,7 @@ ${playerMemBlock}
 YOU (The Character) [ID: ${activeChar?.id || "unknown"}]:
 - Name: ${activeChar?.title || "Character"}
 - Description: ${botDesc}
-${charMemBlock}
+${charSecretBlock ? `${charSecretBlock}\n` : ""}${charMemBlock}
 
 RULES:
 1. Write ONLY in ${aiLang}.
@@ -1525,229 +1607,6 @@ ${useAiCheck ? tagRulesNoTags : tagRulesWithTags}
 OUTPUT FORMAT:
 Provide ONLY your response as the character. No meta commentary.
 [END SYSTEM INSTRUCTIONS]`;
-            }
-
-            // Calendar helpers
-            function isLeapYear(y) {
-                y = parseInt(y, 10) || 0;
-                return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
-            }
-            function daysInMonth(m, y) {
-                m = parseInt(m, 10) || 1;
-                y = parseInt(y, 10) || 1983;
-                if (m === 2) return isLeapYear(y) ? 29 : 28;
-                if (m === 4 || m === 6 || m === 9 || m === 11) return 30;
-                return 31;
-            }
-            function normalizeYMD(d) {
-                d.day = parseInt(d.day || 1, 10);
-                d.month = parseInt(d.month || 1, 10);
-                d.year = parseInt(d.year || 1983, 10);
-                // normalize month to 1..12
-                while (d.month > 12) { d.month -= 12; d.year += 1; }
-                while (d.month < 1) { d.month += 12; d.year -= 1; }
-                // carry overflow days forward
-                let dim = daysInMonth(d.month, d.year);
-                while (d.day > dim) {
-                    d.day -= dim;
-                    d.month += 1;
-                    if (d.month > 12) { d.month = 1; d.year += 1; }
-                    dim = daysInMonth(d.month, d.year);
-                }
-                // carry negative/underflow days backward
-                while (d.day < 1) {
-                    d.month -= 1;
-                    if (d.month < 1) { d.month = 12; d.year -= 1; }
-                    d.day += daysInMonth(d.month, d.year);
-                }
-                return d;
-            }
-
-            function parseNarration(text) {
-                if (!text) return "";
-                let timeChanged = false;
-                let dateChanged = false;
-
-                // Parse [[Time:+XX]], [[Day:+X]], [[Month:+X]], [[Year:+X]], [[Location:XXX]] tags
-                const tagPattern = /\[\[(.*?)\]\]/g;
-                let match;
-
-                while ((match = tagPattern.exec(text)) !== null) {
-                    const content = match[1].trim();
-                    const parts = content.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
-
-                    for (const part of parts) {
-                        const dateMetaPart = part.match(/^DATE\s*:\s*(\d{1,2})\.(\d{1,2})\.(\d{4})$/i);
-                        if (dateMetaPart) {
-                            currentDate.day = parseInt(dateMetaPart[1], 10);
-                            currentDate.month = parseInt(dateMetaPart[2], 10);
-                            currentDate.year = parseInt(dateMetaPart[3], 10);
-                            dateChanged = true;
-                            continue;
-                        }
-
-                        const timeMetaPart = part.match(/^TIME\s*:\s*(\d{1,2}:\d{2})$/i);
-                        if (timeMetaPart) {
-                            currentDate.time = timeMetaPart[1];
-                            timeChanged = true;
-                            continue;
-                        }
-
-                        // Parse relative time: [[Time:+XX]] or [[Time:-XX]]
-                        const timeMatch = part.match(/^Time\s*:\s*([+-]?\d+(?::\d{2})?)$/i);
-                        if (timeMatch) {
-                            const valueStr = timeMatch[1];
-                            if (valueStr.includes(":")) {
-                                currentDate.time = valueStr;
-                            } else {
-                                const mins = parseInt(valueStr);
-                                const [h, m] = currentDate.time.split(":").map(Number);
-                                let total = h * 60 + m + mins;
-                                while (total < 0) total += 24 * 60;
-                                total = total % (24 * 60);
-                                const nh = Math.floor(total / 60);
-                                const nm = total % 60;
-                                currentDate.time = `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
-                            }
-                            timeChanged = true;
-                            continue;
-                        }
-
-                        // Parse relative day: [[Day:+X]] or [[Day:-X]]
-                        const dayMatch = part.match(/^Day\s*:\s*([+-]?\d+)$/i);
-                        if (dayMatch) {
-                            const val = parseInt(dayMatch[1]);
-                            if (dayMatch[1].startsWith("+") || dayMatch[1].startsWith("-")) {
-                                currentDate.day = (currentDate.day || 1) + val;
-                            } else {
-                                currentDate.day = val;
-                            }
-                            dateChanged = true;
-                            continue;
-                        }
-
-                        // Parse relative month: [[Month:+X]] or [[Month:-X]]
-                        const monthMatch = part.match(/^Month\s*:\s*([+-]?\d+)$/i);
-                        if (monthMatch) {
-                            const val = parseInt(monthMatch[1]);
-                            if (monthMatch[1].startsWith("+") || monthMatch[1].startsWith("-")) {
-                                let m = (currentDate.month || 1) + val;
-                                let y = currentDate.year || 1983;
-                                while (m > 12) { m -= 12; y++; }
-                                while (m < 1) { m += 12; y--; }
-                                currentDate.month = m;
-                                currentDate.year = y;
-                            } else {
-                                currentDate.month = (val > 0 && val <= 12) ? val : (currentDate.month || 1);
-                            }
-                            dateChanged = true;
-                            continue;
-                        }
-
-                        // Parse year: [[Year:+X]] or [[Year:XXXX]]
-                        const yearMatch = part.match(/^Year\s*:\s*([+-]?\d+)$/i);
-                        if (yearMatch) {
-                            const val = parseInt(yearMatch[1]);
-                            if (yearMatch[1].startsWith("+") || yearMatch[1].startsWith("-")) {
-                                currentDate.year = (currentDate.year || 1983) + val;
-                            } else {
-                                currentDate.year = val;
-                            }
-                            dateChanged = true;
-                            continue;
-                        }
-
-                        // Parse location: [[Location:XXX]]
-                        const locMatch = part.match(/^Location\s*:\s*["']?(.+?)["']?$/i);
-                        if (locMatch) {
-                            // Location tag - could be used in future
-                            continue;
-                        }
-                    }
-                }
-
-                const dateBlockMatch = text.match(/\[\[\s*DATE\s*:\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\s*\]\]/i);
-                if (dateBlockMatch) {
-                    currentDate.day = parseInt(dateBlockMatch[1], 10);
-                    currentDate.month = parseInt(dateBlockMatch[2], 10);
-                    currentDate.year = parseInt(dateBlockMatch[3], 10);
-                    normalizeYMD(currentDate);
-                    dateChanged = true;
-                }
-
-                const metaTimeMatch = text.match(/\[\[\s*TIME\s*:\s*([0-2]?\d:\d{2})\s*\]\]\s*$/i);
-                if (metaTimeMatch) {
-                    currentDate.time = metaTimeMatch[1];
-                    timeChanged = true;
-                }
-
-                // Normalize date if changed
-                if (dateChanged) {
-                    normalizeYMD(currentDate);
-                }
-
-                // Parse date in text: {Day}.{Month} or {Day}.{Month}.{Year} (but not in parentheses)
-                // Only match if not preceded by '(' or '（'
-                const dateMatch = text.match(/(?<![\(\（])\{(\d{1,2})\}\s*\.\s*\{(\d{1,2})\}(?:\s*\.\s*\{(\d{4})\})?/);
-                if (dateMatch) {
-                    const day = parseInt(dateMatch[1]);
-                    const month = parseInt(dateMatch[2]);
-                    const year = dateMatch[3] ? parseInt(dateMatch[3]) : (currentDate.year || 1983);
-                    if (month > 0 && month <= 12) {
-                        currentDate.day = day;
-                        currentDate.month = month;
-                        currentDate.year = year;
-                        normalizeYMD(currentDate);
-                        dateChanged = true;
-                    }
-                }
-
-                // Parse time in text: 00:00 or 0;00 (but not in parentheses)
-                // Only match if not preceded by '(' or '（'
-                const timeMatch2 = text.match(/(?<![\(\（])(\d{1,2})[:;](\d{2})/);
-                if (timeMatch2) {
-                    const h = parseInt(timeMatch2[1]);
-                    const m = parseInt(timeMatch2[2]);
-                    if (h >= 0 && h < 24 && m >= 0 && m < 60) {
-                        currentDate.time = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-                        timeChanged = true;
-                    }
-                }
-
-                // Update display and save if changed
-                if (timeChanged || dateChanged) {
-                    updateTimeDisplay();
-                    saveDate();
-                }
-
-                // Remove all [[...]] tags from output
-                text = text.replace(/\[\[.*?\]\]/g, "").trim();
-                return text;
-            }
-
-            function addMinutes(minutes) {
-                const [hh, mm] = (currentDate.time || "00:00").split(":").map(Number);
-                let total = hh * 60 + mm + (minutes || 0);
-                const dayLen = 24 * 60;
-                let daysDelta = Math.floor(total / dayLen);
-                let rest = total % dayLen;
-                if (rest < 0) { rest += dayLen; daysDelta -= 1; }
-                const nh = Math.floor(rest / 60);
-                const nm = rest % 60;
-                currentDate.time = `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
-                currentDate.day = (currentDate.day || 1) + daysDelta;
-                normalizeYMD(currentDate);
-                updateTimeDisplay();
-                saveDate();
-            }
-
-            function updateTimeDisplay() {
-                const timeStr = `${currentDate.day}.${currentDate.month}.${currentDate.year} ${currentDate.time}`;
-                document.getElementById("header-time").textContent = timeStr;
-            }
-
-            function saveDate() {
-                sessionStorage.setItem("storyki_starting_date", JSON.stringify(currentDate));
             }
 
             function loadBackground() {
@@ -1795,7 +1654,6 @@ Provide ONLY your response as the character. No meta commentary.
                 sessionStorage.removeItem("storyki_storylog");
                 sessionStorage.removeItem("storyki_active_character");
                 sessionStorage.removeItem("storyki_active_player");
-                sessionStorage.removeItem("storyki_starting_date");
 
                 window.location.href = "../index.html";
             }
