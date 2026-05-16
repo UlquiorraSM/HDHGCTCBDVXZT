@@ -492,6 +492,15 @@
                     }
                 }
 
+                // If the player was not restored from sessionStorage, infer from story cards
+                if (!activePlayer && storyCards.length > 0) {
+                    activePlayer = storyCards.find(c => c.id !== activeChar.id && c.id !== charId && c.name) ||
+                                   storyCards.find(c => c.id !== activeChar.id && c.id !== charId);
+                    if (activePlayer) {
+                        console.info("[OCGame] Reconstructed activePlayer from story cards", activePlayer.id);
+                    }
+                }
+
                 // Load story log
                 storyLog = JSON.parse(sessionStorage.getItem(STORY_LOG_KEY) || "[]");
 

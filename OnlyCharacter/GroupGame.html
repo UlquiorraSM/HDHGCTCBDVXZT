@@ -1130,10 +1130,9 @@
                 return storyLog
                     .slice(-maxMessages)
                     .map((e) => {
-                        const role =
-                            e.role === "user"
-                                ? activePlayer?.name || "Player"
-                                : activeChar?.title || "Character";
+                        const role = e.role === "user"
+                            ? activePlayer?.name || "Player"
+                            : e.speaker?.title || e.speaker?.name || activeChar?.title || "Character";
                         return `${role}: ${e.content || ""}`;
                     })
                     .join("\n");
@@ -1297,22 +1296,24 @@ Return ONLY the repaired narration with tags.`;
 
                 storyLog.forEach(entry => {
                     const isUser = entry.role === "user";
-                    appendMessage(isUser ? "user" : "ai", entry.content, false);
+                    appendMessage(isUser ? "user" : "ai", entry.content, false, entry.speaker);
                 });
 
                 scrollToBottom();
             }
 
-            function appendMessage(role, text, animate = true) {
+            function appendMessage(role, text, animate = true, speaker = null) {
                 const container = document.getElementById("chat-scroll");
                 const row = document.createElement("div");
                 row.className = `msg-row ${role}`;
 
                 const avatar = document.createElement("div");
                 avatar.className = `msg-avatar ${role}`;
-                avatar.innerHTML = role === "user"
-                    ? getPlayerAvatar(activePlayer)
-                    : getAvatarForChar(activeChar);
+                if (role === "user") {
+                    avatar.innerHTML = getPlayerAvatar(activePlayer);
+                } else {
+                    avatar.innerHTML = getAvatarForChar(speaker || activeChar);
+                }
 
                 const bubble = document.createElement("div");
                 bubble.className = "msg-bubble";
@@ -1340,14 +1341,39 @@ Return ONLY the repaired narration with tags.`;
                 container.scrollTop = container.scrollHeight;
             }
 
+            function getCurrentSpeaker() {
+                if (activeGroup) {
+                    return activeNpc || activeChar;
+                }
+                return activeChar;
+            }
+
+            function serializeSpeaker(speaker) {
+                if (!speaker || typeof speaker !== 'object') return null;
+                return {
+                    id: speaker.id,
+                    title: speaker.title,
+                    name: speaker.name,
+                    coverUrl: speaker.coverUrl,
+                    image: speaker.image,
+                    appearance: speaker.appearance,
+                    generally: speaker.generally,
+                    personality: speaker.personality,
+                };
+            }
+
             function addToLog(role, content, extra = {}) {
-                storyLog.push({
+                const entry = {
                     role,
                     content,
                     timestamp: Date.now(),
                     memoriesSnapshot: snapshotMemories(),
                     ...extra,
-                });
+                };
+                if (role === "bot") {
+                    entry.speaker = serializeSpeaker(getCurrentSpeaker());
+                }
+                storyLog.push(entry);
                 persistStoryLog();
             }
 
