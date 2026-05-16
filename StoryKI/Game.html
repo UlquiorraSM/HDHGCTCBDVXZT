@@ -3606,107 +3606,125 @@
                 return getVisitedLocations().includes(locId);
             }
 
-            function buildSmartLocationContext() {
+            function findParentLocationById(locId, cards) {
+                if (!locId) return null;
+                const arr = Array.isArray(cards) ? cards : getCards();
+                for (const card of arr) {
+                    if (!card || card.genre !== "location" || !card.sublocations) continue;
+                    for (const key of Object.keys(card.sublocations)) {
+                        const ids = card.sublocations[key];
+                        if (Array.isArray(ids) && ids.includes(locId)) return card;
+                    }
+                }
+                return null;
+            }
+
+            function getSublocationIdsFromLoc(loc) {
+                const ids = [];
+                if (!loc || !loc.sublocations) return ids;
+                Object.values(loc.sublocations).forEach((arr) => {
+                    if (Array.isArray(arr)) arr.forEach((id) => ids.push(id));
+                });
+                return ids;
+            }
+
+            function formatLocationPromptEntry(loc) {
+                if (!loc) return "";
+                const name = loc.title || "Unnamed";
+                const id = loc.id || "";
+                const desc = String(loc.description || "").trim();
+                let line = `- Name: ${name}\n  ID: ${id}`;
+                if (desc) line += `\n  Description: ${desc}`;
+                return line;
+            }
+
+            function getLocationsMatchedByPlayerTags(playerText, cards) {
+                if (!playerText) return [];
+                const text = _normalizeText(playerText);
+                const words = text.split(/\s+/).filter((w) => w.length >= 2);
+                if (!words.length) return [];
+
+                const arr = Array.isArray(cards) ? cards : getCards();
+                const matched = [];
+                const seen = new Set();
+
+                const taggableLocs = arr.filter((c) => {
+                    if (!c || c.genre !== "location") return false;
+                    const sub = String(c.locationSub || c.locationSubType || "").toLowerCase();
+                    if (sub !== "building" && sub !== "custom") return false;
+                    return Array.isArray(c.tags) && c.tags.length > 0;
+                });
+
+                for (const loc of taggableLocs) {
+                    const cardTags = (loc.tags || []).map((t) => _normalizeText(t)).filter(Boolean);
+                    let hit = false;
+                    for (const tag of cardTags) {
+                        if (tag.length < 2) continue;
+                        for (const w of words) {
+                            if (w.includes(tag) || tag.includes(w)) {
+                                hit = true;
+                                break;
+                            }
+                        }
+                        if (hit) break;
+                    }
+                    if (hit && loc.id && !seen.has(loc.id)) {
+                        seen.add(loc.id);
+                        matched.push(loc);
+                    }
+                }
+                return matched;
+            }
+
+            function buildSmartLocationContext(playerInput = null) {
                 try {
                     const cards = getCards();
                     const locations = cards.filter((c) => c.genre === "location");
                     if (!currentLocationId || locations.length === 0) return "";
 
-                    const current = locations.find(l => l.id === currentLocationId);
+                    const current = locations.find((l) => l.id === currentLocationId);
                     if (!current) return "";
 
-                    // Get ancestors (parent regions)
-                    const ancestors = [];
-                    let parent = current;
-                    while (parent) {
-                        ancestors.push(parent);
-                        const nextParent = cards.find((c) => {
-                            if (c.genre !== "location" || !c.sublocations) return false;
-                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(parent.id));
+                    const included = new Set();
+                    const sections = [];
+
+                    const pushSection = (title, locs) => {
+                        const items = (locs || []).filter((l) => l && l.id && !included.has(l.id));
+                        if (!items.length) return;
+                        sections.push(`## ${title}`);
+                        items.forEach((loc) => {
+                            included.add(loc.id);
+                            sections.push(formatLocationPromptEntry(loc));
                         });
-                        parent = nextParent;
+                        sections.push("");
+                    };
+
+                    const parent = findParentLocationById(currentLocationId, cards);
+                    const grandparent = parent ? findParentLocationById(parent.id, cards) : null;
+
+                    pushSection("CURRENT LOCATION", [current]);
+                    if (parent) pushSection("PARENT LOCATION", [parent]);
+                    if (grandparent) pushSection("PARENT REGION", [grandparent]);
+
+                    if (parent) {
+                        const siblingIds = getSublocationIdsFromLoc(parent).filter((id) => id !== currentLocationId);
+                        const siblings = siblingIds
+                            .map((id) => locations.find((l) => l.id === id))
+                            .filter(Boolean);
+                        pushSection("SIBLING LOCATIONS", siblings);
                     }
 
-                    // Get immediate children (sublocations)
-                    const children = [];
-                    if (current.sublocations) {
-                        Object.values(current.sublocations).forEach(arr => {
-                            if (Array.isArray(arr)) {
-                                arr.forEach(id => {
-                                    const child = locations.find(l => l.id === id);
-                                    if (child) children.push(child);
-                                });
-                            }
-                        });
-                    }
+                    const childIds = getSublocationIdsFromLoc(current);
+                    const children = childIds
+                        .map((id) => locations.find((l) => l.id === id))
+                        .filter(Boolean);
+                    pushSection("SUBLOCATIONS", children);
 
-                    const contextLines = [];
-                    contextLines.push("\n# WORLD LOCATIONS (Smart Visibility)\n");
+                    const tagMatched = getLocationsMatchedByPlayerTags(playerInput, cards);
+                    pushSection("MENTIONED LOCATIONS (Tag match)", tagMatched);
 
-                    // ZONE 1: Current Location (FULL DETAILS)
-                    contextLines.push("## CURRENT LOCATION (Full Details)\n");
-                    const curType = (current.locationDetail || current.locationSub || "Location").toUpperCase();
-                    contextLines.push(`- ${current.title} (${curType})`);
-                    if (current.description) contextLines.push(`  Description: ${current.description}`);
-                    if (current.lore) contextLines.push(`  Lore: ${current.lore}`);
-
-                    // Residents at current location
-                    if (current.residents && current.residents.length > 0) {
-                        const chars = cards.filter(c => c.genre === "character");
-                        current.residents.forEach(resId => {
-                            const char = chars.find(c => c.id === resId);
-                            if (char) {
-                                const isDead = (char.status || "Alive") === "Dead";
-                                const label = isDead ? "Dead Resident" : "Resident";
-                                contextLines.push(`  * ${label}: ${char.title} (${char.raceName || "Character"})`);
-                            }
-                        });
-                    }
-
-                    // ZONE 2: Visited Ancestors (Summary only)
-                    const visitedAncestors = ancestors.filter(a => a.id !== current.id && isLocationVisited(a.id));
-                    if (visitedAncestors.length > 0) {
-                        contextLines.push("\n## KNOWN REGIONS (Previously Visited)\n");
-                        visitedAncestors.forEach(loc => {
-                            const type = (loc.locationDetail || loc.locationSub || "Location").toUpperCase();
-                            contextLines.push(`- ${loc.title} (${type})${loc.description ? `: ${loc.description.substring(0, 60)}...` : ""}`);
-                        });
-                    }
-
-                    // ZONE 2b: Unvisited Ancestors (Name only)
-                    const unvisitedAncestors = ancestors.filter(a => a.id !== current.id && !isLocationVisited(a.id));
-                    if (unvisitedAncestors.length > 0) {
-                        contextLines.push("\n## UNKNOWN PARENT REGIONS\n");
-                        unvisitedAncestors.forEach(loc => {
-                            contextLines.push(`- ${loc.title} [ID: ${loc.id}] (Region known but never visited)`);
-                        });
-                    }
-
-                    // ZONE 3: Sublocations (Children) - Always show as "discoverable"
-                    if (children.length > 0) {
-                        contextLines.push("\n## SUBLOCATIONS (Can be entered)\n");
-                        children.forEach(child => {
-                            const isChildVisited = isLocationVisited(child.id);
-                            const childType = (child.locationDetail || child.locationSub || "Location").toUpperCase();
-                            if (isChildVisited) {
-                                contextLines.push(`- ${child.title} (${childType}) - Visited: ${child.description ? child.description.substring(0, 50) + "..." : "No description"}`);
-                            } else {
-                                contextLines.push(`- ${child.title} (${childType}) - Not yet explored`);
-                            }
-                        });
-                    }
-
-                    // ZONE 4: All other locations (not in hierarchy) - minimal info
-                    const knownIds = new Set([current.id, ...ancestors.map(a => a.id), ...children.map(c => c.id)]);
-                    const otherVisited = locations.filter(l => !knownIds.has(l.id) && isLocationVisited(l.id));
-                    if (otherVisited.length > 0) {
-                        contextLines.push("\n## OTHER VISITED LOCATIONS\n");
-                        otherVisited.forEach(loc => {
-                            contextLines.push(`- ${loc.title} [ID: ${loc.id}]`);
-                        });
-                    }
-
-                    return contextLines.join("\n") + "\n";
+                    if (!sections.length) return "";
+                    return "\n# WORLD LOCATIONS\n" + sections.join("\n");
                 } catch (e) {
                     console.error("Smart location context error", e);
                     return "";
@@ -3986,6 +4004,17 @@
                     if (filteredNearbyLines.length > 0) {
                         contextLines.push("## NEARBY NPCs (Name only)\n");
                         contextLines.push(...filteredNearbyLines);
+                        contextLines.push("");
+                    }
+
+                    const deadInfoLines = getDeadNpcInfoLines().filter((block) => {
+                        const m = String(block).match(/\n\s*ID:\s*([A-Za-z0-9\-_]+)/);
+                        const id = m ? m[1] : null;
+                        return id ? !presentSet.has(id) : true;
+                    });
+                    if (deadInfoLines.length > 0) {
+                        contextLines.push("## DEAD NPCs\n");
+                        contextLines.push(...deadInfoLines);
                         contextLines.push("");
                     }
 
@@ -4821,7 +4850,7 @@
                 const curLocPath = getCurrentLocationPath();
                 const curLocName = document.getElementById("header-location")?.textContent || "Unknown Location";
                 
-                const worldHierarchy = buildSmartLocationContext();
+                const worldHierarchy = buildSmartLocationContext(playerInput);
                 const charContext = buildCharacterContext(playerInput);
                 const raceContext = buildRaceContext();
                 const speciesContext = buildSpeciesPresenceContext();
@@ -5043,7 +5072,7 @@ Your entire output must be in ${aiLang} - no exceptions.
 - If a resident NPC truly dies in the scene, append a death tag BEFORE the final metadata block.
 - Syntax:
   [[Death:NPC_ID|Cause of death]]
-- Use the exact NPC ID shown in the PRESENT CHARACTERS or DEAD RESIDENTS lists.
+- Use the exact NPC ID shown in the PRESENT NPCs or DEAD NPCs lists.
 - Use one death tag per dead NPC.
 - Only use this for NPCs, never for the player.
 
@@ -5425,33 +5454,23 @@ ${killedInstructionNoTags}`;
             }
 
             function isLocationVisible(locId) {
-                if (!activeChar || !locId) return false;
-                if (!currentLocationId) return false;
+                if (!locId || !currentLocationId) return false;
                 if (locId === currentLocationId) return true;
 
                 const cards = getCards();
+                const parent = findParentLocationById(currentLocationId, cards);
+                const grandparent = parent ? findParentLocationById(parent.id, cards) : null;
 
-                // Check if it's an ancestor of current location
-                let current = cards.find(c => c.id === currentLocationId);
-                while (current) {
-                    const parent = cards.find((c) => {
-                        if (c.genre !== "location" || !c.sublocations) return false;
-                        return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
-                    });
-                    if (parent) {
-                        if (parent.id === locId) return true;
-                        current = parent;
-                    } else {
-                        break;
-                    }
+                if (parent && parent.id === locId) return true;
+                if (grandparent && grandparent.id === locId) return true;
+
+                if (parent) {
+                    const siblings = getSublocationIdsFromLoc(parent);
+                    if (siblings.includes(locId) && locId !== currentLocationId) return true;
                 }
 
-                // Check if it's a child (sublocation) of current location
-                const currentLoc = cards.find(c => c.id === currentLocationId);
-                if (currentLoc && currentLoc.sublocations) {
-                    const allChildren = Object.values(currentLoc.sublocations).flat();
-                    if (allChildren.includes(locId)) return true;
-                }
+                const currentLoc = cards.find((c) => c.id === currentLocationId);
+                if (currentLoc && getSublocationIdsFromLoc(currentLoc).includes(locId)) return true;
 
                 return false;
             }
@@ -5573,33 +5592,71 @@ ${killedInstructionNoTags}`;
                     .map((c) => c.title || c.id);
             }
 
+            function _getNearbyResidentNpcIds(wantDead) {
+                if (!currentLocationId) return [];
+                const cards = getCards();
+                const here = cards.find((c) => c.genre === "location" && c.id === currentLocationId);
+                if (!here) return [];
+                const siblings = getSiblingLocations ? getSiblingLocations() : [];
+                const nearbyLocs = [here, ...(Array.isArray(siblings) ? siblings : [])].filter(Boolean);
+                const nearbyLocIds = new Set(nearbyLocs.map((l) => l.id));
+                const residentIds = new Set();
+                nearbyLocs.forEach((loc) => {
+                    if (Array.isArray(loc.residents)) loc.residents.forEach((id) => residentIds.add(id));
+                });
+                const scheduleNow = computeSchoolPresenceNow();
+                const scheduledByNpc = scheduleNow.byNpc || new Map();
+                const result = [];
+                residentIds.forEach((id) => {
+                    const c = cards.find((card) => card.genre === "character" && card.id === id);
+                    if (!c) return;
+                    const isDead = (c.status || "Alive") === "Dead";
+                    if (wantDead ? !isDead : isDead) return;
+                    const sched = scheduledByNpc.get(c.id);
+                    if (sched && sched.schoolId && !nearbyLocIds.has(sched.schoolId)) return;
+                    result.push(c.id);
+                });
+                return result;
+            }
+
             function getNearbyNpcIdsFromWorld() {
                 try {
-                    if (!currentLocationId) return [];
-                    const cards = getCards();
-                    const here = cards.find(c => c.genre === "location" && c.id === currentLocationId);
-                    if (!here) return [];
-                    const siblings = getSiblingLocations ? getSiblingLocations() : [];
-                    const nearbyLocs = [here, ...(Array.isArray(siblings) ? siblings : [])].filter(Boolean);
-                    const nearbyLocIds = new Set(nearbyLocs.map(l => l.id));
-                    const residentIds = new Set();
-                    nearbyLocs.forEach(loc => {
-                        if (Array.isArray(loc.residents)) loc.residents.forEach(id => residentIds.add(id));
-                    });
-                    const scheduleNow = computeSchoolPresenceNow();
-                    const scheduledByNpc = scheduleNow.byNpc || new Map();
-                    const result = [];
-                    residentIds.forEach(id => {
-                        const c = cards.find(card => card.genre === "character" && card.id === id);
-                        if (!c) return;
-                        if ((c.status || "Alive") === "Dead") return;
-                        const sched = scheduledByNpc.get(c.id);
-                        if (sched && sched.schoolId && !nearbyLocIds.has(sched.schoolId)) return;
-                        result.push(c.id);
-                    });
-                    return result;
+                    return _getNearbyResidentNpcIds(false);
                 } catch (e) {
                     console.warn("getNearbyNpcIdsFromWorld failed", e);
+                    return [];
+                }
+            }
+
+            function getNearbyDeadNpcIdsFromWorld() {
+                try {
+                    return _getNearbyResidentNpcIds(true);
+                } catch (e) {
+                    console.warn("getNearbyDeadNpcIdsFromWorld failed", e);
+                    return [];
+                }
+            }
+
+            function formatDeadNpcPromptEntry(npc) {
+                if (!npc) return "";
+                const name = npc.title || npc.id || "Unknown";
+                const id = npc.id || "";
+                const deadReason = String(npc.deathCause || "").trim() || "(unknown)";
+                return `- Name: ${name}\n  ID: ${id}\n  DeadReason: ${deadReason}`;
+            }
+
+            function getDeadNpcInfoLines() {
+                try {
+                    const ids = getNearbyDeadNpcIdsFromWorld();
+                    if (!ids.length) return [];
+                    const cards = getCards();
+                    return ids
+                        .map((id) => cards.find((c) => c.genre === "character" && c.id === id))
+                        .filter(Boolean)
+                        .map((npc) => formatDeadNpcPromptEntry(npc))
+                        .filter(Boolean);
+                } catch (e) {
+                    console.warn("getDeadNpcInfoLines failed", e);
                     return [];
                 }
             }
@@ -6591,55 +6648,15 @@ ${killedInstructionNoTags}`;
             }
 
             function getMatchedLocationCardsFromPlayerText(playerText) {
-                if (!playerText) return [];
-                const text = _normalizeText(playerText);
-                const words = text.split(/\s+/).filter((w) => w.length >= 2);
-                if (words.length === 0) return [];
-
-                const cards = getCards();
-                const curId = currentLocationId || "";
-                const matched = [];
-                const seen = new Set();
-
-                const locs = cards.filter((c) => {
-                    if (!c || c.genre !== "location") return false;
-                    if (c.id && c.id === curId) return false;
-                    if (c.id && _isAnySublocationId(c.id, cards)) return false;
-                    const sub = c.locationSub || c.locationSubType || "";
-                    if (!(sub === "building" || sub === "custom")) return false;
-                    return Array.isArray(c.tags) && c.tags.length > 0;
-                });
-
-                for (const loc of locs) {
-                    const cardTags = (loc.tags || []).map((t) => _normalizeText(t)).filter(Boolean);
-                    const hitTags = [];
-                    for (const tag of cardTags) {
-                        if (tag.length < 2) continue;
-                        for (const w of words) {
-                            if (w.includes(tag) || tag.includes(w)) { hitTags.push(tag); break; }
-                        }
-                    }
-                    const uniq = [...new Set(hitTags)];
-                    if (uniq.length > 0) {
-                        const id = loc.id || loc.title || JSON.stringify(loc);
-                        if (seen.has(id)) continue;
-                        seen.add(id);
-                        matched.push({ card: loc, matchedTags: uniq });
-                    }
-                }
-
-                return matched;
+                const cards = getLocationsMatchedByPlayerTags(playerText, getCards());
+                return cards.map((card) => ({ card, matchedTags: [] }));
             }
 
             function showMatchedLocationsFromTags(playerText) {
                 const matched = getMatchedLocationCardsFromPlayerText(playerText);
                 if (!matched.length) return;
                 addSystemDivider("ERWÄHNTE ORTE (Tags)", false);
-                const lines = matched.map(({ card }) => {
-                    const name = card.title || card.id || "Unknown";
-                    const desc = String(card.description || "").trim();
-                    return desc ? `- ${name}: ${desc}` : `- ${name}`;
-                });
+                const lines = matched.map(({ card }) => formatLocationPromptEntry(card));
                 appendBubble("ai", lines.join("\n"));
             }
 
@@ -6669,13 +6686,9 @@ ${killedInstructionNoTags}`;
                     return rel.relation || "Stranger (Unknown)";
                 };
 
-                // Filter for Race, Location (Building/Custom) and Character cards with tags.
+                // Filter for Race and Character cards with tags (locations handled in buildSmartLocationContext).
                 const taggableCards = cards.filter(c => {
                     if (c.genre === "race" && Array.isArray(c.tags) && c.tags.length > 0) return true;
-                    if (c.genre === "location" && Array.isArray(c.tags) && c.tags.length > 0) {
-                        const sub = c.locationSub || c.locationSubType || "";
-                        return sub === "building" || sub === "custom";
-                    }
                     if (c.genre === "character" && Array.isArray(c.tags) && c.tags.length > 0) return true;
                     return false;
                 });
@@ -8450,20 +8463,7 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
             ═══════════════════════════════════════ */
             function findParentLocationOfCurrent() {
                 if (!currentLocationId) return null;
-                const cards = getCards();
-                const currentLoc = cards.find(c => c.id === currentLocationId);
-                if (!currentLoc) return null;
-                // Find parent by checking all locations with sublocations
-                for (const card of cards) {
-                    if (card.genre !== "location" || !card.sublocations) continue;
-                    for (const key of Object.keys(card.sublocations)) {
-                        const arr = card.sublocations[key];
-                        if (Array.isArray(arr) && arr.includes(currentLocationId)) {
-                            return card;
-                        }
-                    }
-                }
-                return null;
+                return findParentLocationById(currentLocationId, getCards());
             }
 
             function getSiblingLocations() {
