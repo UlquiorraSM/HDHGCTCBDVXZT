@@ -4450,11 +4450,24 @@
             function saveGame() {
                 try {
                     const scenarios = getScenarios();
-                    const worldsCheck = scenarios.filter(x => !x.worldId);
-                    if (worldsCheck.length === 0) {
-                        alert("Currently, there are no worlds to save.");
+                    const allCharacters = JSON.parse(localStorage.getItem("storyki_characters") || "[]");
+                    const standaloneCharacters = JSON.parse(localStorage.getItem("storyki_standalone_characters") || "[]");
+                    const playerCharacters = JSON.parse(localStorage.getItem("storyki_player_characters") || "[]");
+                    const characterGroups = JSON.parse(localStorage.getItem("storyki_character_groups") || "[]");
+                    const settingsData = JSON.parse(localStorage.getItem("storyki_settings") || "{}");
+
+                    const hasExportData = settingsData && Object.keys(settingsData).length > 0
+                        || allCharacters.length > 0
+                        || standaloneCharacters.length > 0
+                        || playerCharacters.length > 0
+                        || characterGroups.length > 0
+                        || scenarios.length > 0;
+
+                    if (!hasExportData) {
+                        alert("Derzeit gibt es keine Daten zum Speichern.");
                         return;
                     }
+
                     function pruneEmptyDeep(v) {
                         if (Array.isArray(v)) {
                             const arr = v.map(pruneEmptyDeep).filter(x => x !== undefined);
@@ -4508,14 +4521,14 @@
                             set("schoolClasses", card.schoolClasses);
                             set("shopSchedule", card.shopSchedule);
                             set("shopWorkers", card.shopWorkers);
-                        set("transportDestinations", card.transportDestinations);
+                            set("transportDestinations", card.transportDestinations);
                             set("states", card.states);
                             if (Array.isArray(card.memories)) {
-                            const memsLoc = card.memories.map(m => {
-                                const mm = { ...(m || {}) };
-                                if (mm && typeof mm === "object" && Object.prototype.hasOwnProperty.call(mm, "level")) delete mm.level;
-                                return mm;
-                            });
+                                const memsLoc = card.memories.map(m => {
+                                    const mm = { ...(m || {}) };
+                                    if (mm && typeof mm === "object" && Object.prototype.hasOwnProperty.call(mm, "level")) delete mm.level;
+                                    return mm;
+                                });
                                 set("memories", memsLoc);
                             }
                         } else if (g === "race") {
@@ -4581,10 +4594,16 @@
                         return pruneEmptyDeep(out) || {};
                     }
                     const worlds = scenarios.filter(x => !x.worldId);
+                    const worldStories = scenarios.filter(x => x.worldId);
                     const exportPayload = {
                         version: 1,
-                        type: "all_worlds_export",
+                        type: "storyki_full_export",
                         exportedAt: new Date().toISOString(),
+                        settings: settingsData,
+                        standaloneCharacters,
+                        characters: allCharacters,
+                        playerCharacters,
+                        characterGroups,
                         worlds: worlds.map(w => ({
                             id: w.id,
                             name: w.name,
@@ -4594,7 +4613,7 @@
                                 cards: (w.data?.cards || []).map(sanitizeCard),
                                 settings: w.data?.settings || {}
                             },
-                            stories: scenarios
+                            stories: worldStories
                                 .filter(s => s.worldId === w.id)
                                 .map(s => ({
                                     id: s.id,
@@ -4620,13 +4639,13 @@
                     const a = document.createElement("a");
                     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
                     a.href = url;
-                    a.download = `StoryKI_AllWorlds_${timestamp}.json`;
+                    a.download = `StoryKI_FullExport_${timestamp}.json`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                     
-                    console.log("All worlds saved successfully");
+                    console.log("All game data saved successfully");
                 } catch (e) {
                     console.error("Failed to save game", e);
                     alert("Fehler beim Speichern des Spielstands.");
