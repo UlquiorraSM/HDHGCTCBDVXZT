@@ -1436,6 +1436,7 @@
             const CURRENT_STORY_ID_KEY = "storyki_current_story_id"; // for session
             const ANCHORED_WORLD_CHANGES_KEY = "storyki_anchored_world_changes"; // for session
             const UNIVERSE_UPLOADS_KEY = "storyki_universe_uploaded_worlds";
+            const LAST_VIEW_MODE_KEY = "storyki_last_view_mode";
             let _selectedWorld = null;
             let _selectedCharacter = null;
             let _viewMode = 'worlds'; // 'worlds' oder 'characters'
@@ -2007,6 +2008,7 @@
             
             function toggleViewMode() {
                 _viewMode = _viewMode === 'worlds' ? 'characters' : 'worlds';
+                localStorage.setItem(LAST_VIEW_MODE_KEY, _viewMode);
                 const btn = document.getElementById('view-mode-btn');
                 const title = document.getElementById('scenarios-title');
                 const searchInput = document.getElementById('world-search');
@@ -4817,6 +4819,7 @@
                 const previousView = sessionStorage.getItem("storyki_previous_view");
                 if (previousView && (previousView === "worlds" || previousView === "characters")) {
                     _viewMode = previousView;
+                    localStorage.setItem(LAST_VIEW_MODE_KEY, _viewMode);
                     // Button-Text und UI anpassen
                     const btn = document.getElementById('view-mode-btn');
                     const title = document.getElementById('scenarios-title');
@@ -4840,6 +4843,29 @@
                     }
                     // Gespeicherten View löschen nach der Wiederherstellung
                     sessionStorage.removeItem("storyki_previous_view");
+                } else {
+                    const lastView = localStorage.getItem(LAST_VIEW_MODE_KEY);
+                    if (lastView === 'worlds' || lastView === 'characters') {
+                        _viewMode = lastView;
+                    }
+                    const btn = document.getElementById('view-mode-btn');
+                    const title = document.getElementById('scenarios-title');
+                    const searchInput = document.getElementById('world-search');
+                    const hintEl = document.getElementById('no-scenarios-hint');
+                    const playerBtnRow = document.getElementById('player-btn-row');
+                    if (_viewMode === 'characters') {
+                        if (btn) btn.textContent = 'Switch to Worlds';
+                        if (title) title.textContent = 'Your Characters';
+                        if (searchInput) searchInput.placeholder = 'Searching for characters...';
+                        if (hintEl) hintEl.textContent = 'No character found. Create a new one with "Create Character".';
+                        if (playerBtnRow) playerBtnRow.style.display = 'flex';
+                    } else {
+                        if (btn) btn.textContent = 'Switch to Character';
+                        if (title) title.textContent = 'Your Worlds';
+                        if (searchInput) searchInput.placeholder = 'Searching for worlds...';
+                        if (hintEl) hintEl.textContent = 'No world available. Create a new one with "Create World".';
+                        if (playerBtnRow) playerBtnRow.style.display = 'none';
+                    }
                 }
                 renderScenarios();
                 refreshSeeUrlsButton();
