@@ -3318,6 +3318,21 @@
                         <option value="social">Social</option>
                     </select>
                 </div>
+                <div class="form-group" id="skill-tags-group" style="display:none;">
+                    <label class="form-label" style="font-size: 12px; color: rgba(255,255,255,0.4);">Tags (Bullet points for AI, max 10)</label>
+                    <div class="item-tag-container" id="skill-tags-container"></div>
+                    <div class="item-tag-input-wrapper">
+                        <input
+                            type="text"
+                            class="form-input"
+                            id="f-skill-tag-input"
+                            placeholder="Add a tag and press Enter..."
+                            onkeydown="if(event.key === 'Enter') addGenericTag('skill')"
+                        />
+                        <button type="button" class="subloc-btn" onclick="addGenericTag('skill')" style="margin-top:0; width:auto; padding:0 15px;">Add</button>
+                    </div>
+                    <div class="item-tag-count" id="skill-tag-count">0 / 10 tags</div>
+                </div>
 
                 <!-- Family Introduction & Date (Family only) -->
                 <div id="family-intro-section" style="display:none;">
@@ -4246,6 +4261,7 @@
             let ctxTargetId = null; // for context-menu
             let raceTags = []; // for race tags
             let loreTags = []; // for lore tags
+            let skillTags = []; // for skill tags
             let locationTags = []; // for location tags (building & custom)
             let characterTags = []; // for character tags
             let familyMembersTemp = []; // for family members
@@ -5928,6 +5944,8 @@
                             ? card.tags.find((t) => ["combat", "magic", "social"].includes((t || "").toLowerCase()))
                             : "";
                         if (categoryEl) categoryEl.value = categoryFromCard || categoryFromTags || "";
+                        skillTags = card.tags ? [...card.tags] : [];
+                        renderGenericTags("skill");
                     }
 
                     // restore species data
@@ -5964,6 +5982,14 @@
                     } else {
                         raceTags = [];
                         renderGenericTags("race");
+                    }
+                    // restore skill tags
+                    if (card.genre === "skill") {
+                        skillTags = card.tags ? [...card.tags] : [];
+                        renderGenericTags("skill");
+                    } else {
+                        skillTags = [];
+                        renderGenericTags("skill");
                     }
                     // restore location tags
                     if (card.genre === "location") {
@@ -6334,6 +6360,12 @@
                     updateFamilyMembersTags();
                     populateFamilyRaceSelect();
                     populateFamilySpawnLocations();
+                }
+
+                // Show / hide Skill Tags block
+                const skillTagsGroup = document.getElementById("skill-tags-group");
+                if (skillTagsGroup) {
+                    skillTagsGroup.style.display = type === "skill" ? "block" : "none";
                 }
 
                 // Show / hide Lore block
@@ -7336,6 +7368,7 @@
                 const inputId = type === "race" ? "f-race-tag-input" :
                                type === "lore" ? "f-lore-tag-input" :
                                type === "location" ? "f-location-tag-input" :
+                               type === "skill" ? "f-skill-tag-input" :
                                "f-character-tag-input";
                 const input = document.getElementById(inputId);
                 const tag = input.value.trim();
@@ -7344,6 +7377,7 @@
                 let tagArray = type === "race" ? raceTags :
                                type === "lore" ? loreTags :
                                type === "location" ? locationTags :
+                               type === "skill" ? skillTags :
                                characterTags;
                 if (tagArray.length >= 10) {
                     showToast("Maximum 10 tags allowed.", "rgba(180, 60, 60, 0.9)");
@@ -7362,6 +7396,7 @@
                 if (type === "race") raceTags = raceTags.filter((t) => t !== tag);
                 else if (type === "lore") loreTags = loreTags.filter((t) => t !== tag);
                 else if (type === "location") locationTags = locationTags.filter((t) => t !== tag);
+                else if (type === "skill") skillTags = skillTags.filter((t) => t !== tag);
                 else characterTags = characterTags.filter((t) => t !== tag);
                 renderGenericTags(type);
             }
@@ -7370,15 +7405,18 @@
                 const containerId = type === "race" ? "race-tags-container" :
                                     type === "lore" ? "lore-tags-container" :
                                     type === "location" ? "location-tags-container" :
+                                    type === "skill" ? "skill-tags-container" :
                                     "character-tags-container";
                 const countId = type === "race" ? "race-tag-count" :
                                 type === "lore" ? "lore-tag-count" :
                                 type === "location" ? "location-tag-count" :
+                                type === "skill" ? "skill-tag-count" :
                                 "character-tag-count";
                 const container = document.getElementById(containerId);
                 const tagArray = type === "race" ? raceTags :
                                  type === "lore" ? loreTags :
                                  type === "location" ? locationTags :
+                                 type === "skill" ? skillTags :
                                  characterTags;
 
                 if (!container) return;
@@ -7397,6 +7435,7 @@
             }
 
             function addLoreTag() { addGenericTag("lore"); }
+            function addSkillTag() { addGenericTag("skill"); }
 
             function addCursePrompt(ctx) {
                 curseCtx = ctx;
@@ -8910,7 +8949,9 @@
                                         ? [...locationTags]
                                         : type === "character"
                                           ? [...characterTags]
-                                        : (Array.isArray(prev.tags) ? [...prev.tags] : []),
+                                          : type === "skill"
+                                            ? [...skillTags]
+                                            : (Array.isArray(prev.tags) ? [...prev.tags] : []),
                             canBeSpawn,
                             ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
                             ...(type === "location" && prev.distances && Object.keys(prev.distances).length ? { distances: prev.distances } : {}),
@@ -8989,7 +9030,9 @@
                                     ? [...locationTags]
                                     : type === "character"
                                       ? [...characterTags]
-                                    : [],
+                                      : type === "skill"
+                                        ? [...skillTags]
+                                        : [],
                         relations: type === "character" ? [...relationSelections] : [],
                         secrets: type === "character" ? [...secretSelections] : [],
                         ...(type === "character" ? { traits } : {}),

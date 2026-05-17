@@ -7142,10 +7142,18 @@ ${killedInstructionNoTags}`;
                     return rel.relation || "Stranger (Unknown)";
                 };
 
-                // Filter for Race and Character cards with tags (locations handled in buildSmartLocationContext).
+                // Filter for Race, Character, Location, Skill and Lore cards with tags.
                 const taggableCards = cards.filter(c => {
                     if (c.genre === "race" && Array.isArray(c.tags) && c.tags.length > 0) return true;
                     if (c.genre === "character" && Array.isArray(c.tags) && c.tags.length > 0) return true;
+                    if (c.genre === "skill" && Array.isArray(c.tags) && c.tags.length > 0) return true;
+                    if (c.genre === "lore" && Array.isArray(c.tags) && c.tags.length > 0) {
+                        return String(c.loreMode || "").toLowerCase() === "tags";
+                    }
+                    if (c.genre === "location" && Array.isArray(c.tags) && c.tags.length > 0) {
+                        const sub = String(c.locationSub || c.locationSubType || "").toLowerCase();
+                        return sub === "building" || sub === "custom";
+                    }
                     return false;
                 });
 
@@ -7197,6 +7205,15 @@ ${killedInstructionNoTags}`;
                                 result += `  Known Secrets (learned from others): ${knownSecrets.join(" | ")}\n`;
                             }
                         }
+                    } else if (card.genre === "location") {
+                        const desc = (card.description || "").substring(0, 200);
+                        result += `- Location: ${card.title || card.id} [ID: ${card.id}] (matched tags: ${displayTags})\n`;
+                        if (desc) result += `  Description: ${desc}\n`;
+                    } else if (card.genre === "race" || card.genre === "skill" || card.genre === "lore") {
+                        const desc = (card.description || card.loreText || "").substring(0, 200);
+                        const kind = card.genre.charAt(0).toUpperCase() + card.genre.slice(1);
+                        result += `- ${kind}: ${card.title || card.id} [ID: ${card.id}] (matched tags: ${displayTags})\n`;
+                        if (desc) result += `  Description: ${desc}\n`;
                     } else {
                         const desc = (card.description || "").substring(0, 200);
                         result += `- ${card.title}${desc ? ": " + desc : ""} (matched tags: ${displayTags})\n`;
@@ -8088,7 +8105,6 @@ Return ONLY the repaired narration with tags.`;
                     console.log("[DEBUG] Triggered memories:", Array.from(relevantMemoriesMap.entries()).map(([npcId, mems]) => ({ npcId, count: mems.length, memories: mems.map(m => ({ date: m.date || "", text: String(m.text || "").slice(0, 120) })) })));
                 }
                 console.log("[DEBUG] Active NPC random memory selection:", _lastActiveNpcMemorySelection ? _lastActiveNpcMemorySelection.selection.map(m => ({ npcId: m.npcId, date: m.date, text: String(m.text || "").slice(0, 100) })) : []);
-                try { showMatchedLocationsFromTags(text); } catch {}
 
                 try {
                     currentNarrationTs = Date.now();
