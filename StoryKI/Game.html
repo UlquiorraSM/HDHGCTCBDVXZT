@@ -7850,6 +7850,10 @@ Return ONLY the repaired narration with tags.`;
 
                         cleaned = cleaned.replace(activeTagRegex, "").trim();
                         cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+                        const strippedText = cleaned.replace(/\[\[[\s\S]*?\]\]/g, "").trim();
+                        if (!strippedText) {
+                            return narrationText;
+                        }
                         cleaned = cleaned.replace(/\[\[\s*TIME\s*:[\s\S]*?\]\]\s*$/i, (timeBlock) => {
                             return `${normalizedTag}\n\n${timeBlock.trim()}`;
                         }).trim();
