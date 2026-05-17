@@ -5315,6 +5315,25 @@ ${killedInstructionNoTags}`;
                         lines.push(`  * ${n}: ${rel}`);
                     });
                 }
+
+                const cards = getCards();
+                const skills = Array.isArray(activeChar.skills) ? activeChar.skills.slice() : [];
+                if (skills.length === 0 && activeChar.skillId) {
+                    const skillCard = cards.find(c => c && c.genre === "skill" && c.id === activeChar.skillId);
+                    if (skillCard) {
+                        skills.push({ id: skillCard.id, title: skillCard.title || skillCard.name || "Skill", description: skillCard.description || "" });
+                    }
+                }
+
+                if (skills.length > 0) {
+                    lines.push("- SKILLS:");
+                    skills.forEach((skill) => {
+                        const title = skill.title || skill.name || skill.skillName || "Unknown Skill";
+                        const desc = skill.description || skill.desc || skill.skillDesc || "";
+                        lines.push(`  * ${title}${desc ? `: ${desc}` : ""}`);
+                    });
+                }
+
                 return lines.join("\n");
             }
 

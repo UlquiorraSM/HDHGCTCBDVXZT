@@ -630,6 +630,13 @@
                             <span style="margin-right:8px;">👥</span> Manage Relations
                         </button>
                     </div>
+                    <div class="section" id="family-tools-section" style="display:none;">
+                        <div class="section-title">Tools</div>
+                        <div id="family-char-skill-tags" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+                        <button type="button" class="btn btn-secondary" onclick="showFamilySkillsScene()" style="width:100%;">
+                            <span style="margin-right:8px;">🛠️</span> Skills
+                        </button>
+                    </div>
                     
                     <div class="btn-group">
                         <button class="btn btn-secondary" onclick="backToFamilySelect()">Back</button>
@@ -692,6 +699,30 @@
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="hideRelationsScene()">Cancel</button>
                     <button class="btn btn-primary" onclick="confirmRelations()">Done</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="screen-skills" class="screen">
+            <div class="top-nav">
+                <button class="nav-back-btn" onclick="hideSkillsScene()">←</button>
+                <span class="nav-title">Select Skills</span>
+                <div class="nav-count" id="skills-count">0</div>
+            </div>
+            <div class="page-content">
+                <h1 class="page-title">Choose Skills</h1>
+                <p class="page-subtitle">Select skills to assign to this character</p>
+                <div class="section">
+                    <div class="section-title">Available Skills</div>
+                    <div id="skill-selection-list" class="item-list"></div>
+                    <div id="skill-selection-empty" class="empty-state" style="display:none;">
+                        <p>No skills are defined yet.</p>
+                        <p style="font-size:12px; margin-top:8px;">Create skill cards in the Story Card editor first.</p>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="hideSkillsScene()">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmFamilySkills()">Done</button>
                 </div>
             </div>
         </div>
@@ -981,7 +1012,10 @@
             document.getElementById('family-char-month').value = '1';
             document.getElementById('family-char-appearance').value = '';
             familyBornRelations = [];
+            familyBornSkills = [];
             renderRelationTags('family');
+            renderFamilySkillTags();
+            updateFamilyToolsSection();
             loadBackground();
             
             document.getElementById('family-select-step').style.display = 'none';
@@ -992,7 +1026,10 @@
             document.getElementById('family-select-step').style.display = 'block';
             document.getElementById('family-char-create-step').style.display = 'none';
             familyBornRelations = [];
+            familyBornSkills = [];
             renderRelationTags('family');
+            renderFamilySkillTags();
+            updateFamilyToolsSection();
             selectedFamilyId = null;
             selectedFamilyData = null;
             loadBackground();
@@ -1057,6 +1094,7 @@
                 introduction: selectedFamilyData.introduction || '',
                 startingDate: inheritedStartDate,
                 relations: combinedRelations,
+                skills: familyBornSkills.map(skill => ({ id: skill.id, title: skill.title })),
                 spawnLocationId: inheritedSpawnId,
                 spawnId: inheritedSpawnId,
                 currentLocationId: inheritedSpawnId,
@@ -1255,6 +1293,7 @@
         let relationPickerTemp = []; // Temporary storage for relations being edited
         let newCharRelations = []; // Final relations for new character
         let familyBornRelations = []; // Extra (non-family) relations for family-born flow
+        let familyBornSkills = []; // Selected skills for born-in-family flow
         let relationEditorSource = 'new'; // "new" | "family"
         
         function getRelationTypeOptions(source) {
@@ -1502,7 +1541,90 @@
                 `;
             }).join('');
         }
-        
+
+        function getFamilySkillCards() {
+            const cards = JSON.parse(sessionStorage.getItem('storyki_storycards') || '[]');
+            return cards.filter(c => c.genre === 'skill');
+        }
+
+        function updateFamilyToolsSection() {
+            const section = document.getElementById('family-tools-section');
+            if (!section) return;
+            const skills = getFamilySkillCards();
+            section.style.display = skills.length > 0 ? 'block' : 'none';
+        }
+
+        function showFamilySkillsScene() {
+            renderFamilySkillSelection();
+            showScreen('screen-skills');
+        }
+
+        function hideSkillsScene() {
+            showScreen('screen-family-born');
+        }
+
+        function renderFamilySkillSelection() {
+            const skills = getFamilySkillCards();
+            const list = document.getElementById('skill-selection-list');
+            const empty = document.getElementById('skill-selection-empty');
+            const count = document.getElementById('skills-count');
+            if (!list || !empty || !count) return;
+            count.textContent = String(familyBornSkills.length || 0);
+            if (skills.length === 0) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            list.innerHTML = skills.map(skill => {
+                const selected = familyBornSkills.some(s => s.id === skill.id);
+                const buttonText = selected ? 'Remove' : 'Add';
+                const activeStyle = selected ? 'background:rgba(74,144,226,0.12); border-color:#4a90e2;' : '';
+                return `
+                    <div class="item-card" style="display:flex; justify-content:space-between; align-items:center; ${activeStyle}">
+                        <div style="flex:1; min-width:0;">
+                            <div class="item-card-title">${escapeHtml(skill.title || skill.name || 'Skill')}</div>
+                            <div class="item-card-subtitle">${escapeHtml(skill.description || '')}</div>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="toggleFamilyBornSkill('${skill.id}')">${buttonText}</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleFamilyBornSkill(skillId) {
+            const skills = getFamilySkillCards();
+            const skill = skills.find(s => s.id === skillId);
+            if (!skill) return;
+            const existingIndex = familyBornSkills.findIndex(s => s.id === skillId);
+            if (existingIndex >= 0) {
+                familyBornSkills.splice(existingIndex, 1);
+            } else {
+                familyBornSkills.push({ id: skill.id, title: skill.title || skill.name || 'Skill' });
+            }
+            renderFamilySkillSelection();
+            renderFamilySkillTags();
+        }
+
+        function renderFamilySkillTags() {
+            const container = document.getElementById('family-char-skill-tags');
+            if (!container) return;
+            if (!familyBornSkills.length) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = familyBornSkills.map(skill => `
+                <span style="background:rgba(139,90,43,0.12); border:1px solid rgba(139,90,43,0.24); border-radius:20px; padding:6px 12px; font-size:12px; color:#f4d03f;">
+                    ${escapeHtml(skill.title)}
+                </span>
+            `).join('');
+        }
+
+        function confirmFamilySkills() {
+            renderFamilySkillTags();
+            hideSkillsScene();
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             // Set default dates
