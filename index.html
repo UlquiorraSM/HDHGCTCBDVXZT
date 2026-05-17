@@ -4720,6 +4720,7 @@
                             set("skillName", card.skillName);
                             set("spawnId", card.spawnId);
                             set("currentLocationId", card.currentLocationId);
+                            set("locationLock", card.locationLock);
                             if (card.unusedDaysCounter !== undefined && card.unusedDaysCounter !== null) out.unusedDaysCounter = Math.max(0, parseInt(card.unusedDaysCounter, 10) || 0);
                             if (card.unusedDaysCounterLastSyncDayCount !== undefined && card.unusedDaysCounterLastSyncDayCount !== null) out.unusedDaysCounterLastSyncDayCount = parseInt(card.unusedDaysCounterLastSyncDayCount, 10) || 0;
                             if (card.unusedDaysCounterStartDayCount !== undefined && card.unusedDaysCounterStartDayCount !== null) out.unusedDaysCounterStartDayCount = parseInt(card.unusedDaysCounterStartDayCount, 10) || 0;
