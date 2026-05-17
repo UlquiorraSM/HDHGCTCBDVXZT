@@ -993,7 +993,7 @@
             
             <div id="scenarios-wrap" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
                 <div id="scenarios-title" style="color:#fff; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; opacity:.85;">
-                    Worlds
+                    Your Worlds
                 </div>
 
                 <!-- World Search Bar -->
@@ -1095,6 +1095,16 @@
                         style="width: auto; min-width: 150px; padding: 12px 16px; cursor: pointer;"
                     >
                         <option value="">All Genres</option>
+                    </select>
+                    <select
+                        id="all-characters-type"
+                        class="search-input"
+                        onchange="renderAllCharacters()"
+                        style="width: auto; min-width: 150px; padding: 12px 16px; cursor: pointer; display: none;"
+                    >
+                        <option value="all">All</option>
+                        <option value="characters">Characters</option>
+                        <option value="groups">Groups</option>
                     </select>
                 </div>
                 <div id="all-characters-grid"></div>
@@ -1340,6 +1350,29 @@
                 <div class="conf-actions" style="margin-top: 16px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                     <button class="conf-btn conf-btn-cancel" onclick="closeGroupCreateOverlay()">Cancel</button>
                     <button class="conf-btn conf-btn-save" id="group-play-btn" onclick="createGroupAndPlay()" disabled>Play</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group Configuration Overlay -->
+        <div id="group-config-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:3000; backdrop-filter:blur(10px);">
+            <div class="conf-panel" style="max-width:600px; width:95%; max-height:90vh; overflow:auto;">
+                <h2>Group Configuration</h2>
+                <div class="conf-group">
+                    <label class="conf-label">Group Name</label>
+                    <input id="group-config-name" class="conf-input" type="text" placeholder="Enter group name" />
+                </div>
+                <div class="conf-group">
+                    <label class="conf-label">Group Cover URL</label>
+                    <input id="group-config-cover" class="conf-input" type="text" placeholder="https://..." />
+                </div>
+                <div class="conf-group">
+                    <label class="conf-label">Group Background URL</label>
+                    <input id="group-config-background" class="conf-input" type="text" placeholder="https://..." />
+                </div>
+                <div class="conf-actions" style="margin-top: 16px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                    <button class="conf-btn conf-btn-cancel" onclick="closeGroupConfigOverlay()">Cancel</button>
+                    <button class="conf-btn conf-btn-save" onclick="saveGroupConfig()">Save</button>
                 </div>
             </div>
         </div>
@@ -2449,7 +2482,8 @@
                 hintEl.style.display = "none";
                 
                 const isMobile = window.innerWidth <= 700;
-                const visibleCount = Math.min(allCharacters.length + 1, 4); // +1 für Create-Button, max 4
+                const totalItems = allGroups.length + allCharacters.length;
+                const visibleCount = Math.min(totalItems, 4);
                 listEl.style.margin = "0 auto";
                 listEl.style.maxWidth = "100%";
                 listEl.style.width = "auto";
@@ -2484,7 +2518,6 @@
                 createCard.appendChild(createText);
                 createCard.onclick = () => createCharacter();
                 listEl.appendChild(createCard);
-                allGroups.forEach((group) => listEl.appendChild(buildGroupCardElement(group)));
 
                 if (!allCharacters.length && !allGroups.length) {
                     if (!searchTerm) {
@@ -2494,23 +2527,34 @@
                     return;
                 }
 
-                allCharacters.slice(0, 4).forEach(c => {
+                const previewItems = [
+                    ...allGroups.map(group => ({ type: "group", item: group })),
+                    ...allCharacters.map(character => ({ type: "character", item: character }))
+                ].slice(0, 4);
+
+                previewItems.forEach(({ type, item }) => {
+                    if (type === "group") {
+                        listEl.appendChild(buildGroupCardElement(item));
+                        return;
+                    }
+
+                    const c = item;
                     const card = document.createElement("div");
                     card.className = "world-card";
-                    
+
                     const coverUrl = (c?.coverUrl || c?.image || "").trim();
                     if (coverUrl) {
                         card.style.backgroundImage = `linear-gradient(rgba(10,10,15,.55), rgba(10,10,15,.55)), url("${coverUrl}")`;
                     } else {
                         card.style.backgroundImage = "linear-gradient(rgba(10,10,15,.55), rgba(10,10,15,.55)), url('https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp')";
                     }
-                    
+
                     const header = document.createElement("div");
                     header.style.cssText = "display:flex; flex-direction:column; gap:6px; margin-bottom: 5px;";
-                    
+
                     const nameRow = document.createElement("div");
                     nameRow.style.cssText = "display:flex; align-items:center; gap:8px; width:100%; min-width:0;";
-                    
+
                     const name = document.createElement("div");
                     name.textContent = c.title || "Unnamed Character";
                     name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
@@ -2589,8 +2633,8 @@
                     listEl.appendChild(card);
                 });
                 
-                // Show all card for characters if more than 4
-                if (allCharacters.length > 4) {
+                // Show all card for characters/groups if more than 4 total items
+                if (totalItems > 4) {
                     const allCard = document.createElement("div");
                     allCard.className = "world-card";
                     const name = document.createElement("div");
@@ -2843,7 +2887,53 @@
                 const overlay = document.getElementById("group-create-overlay");
                 if (overlay) overlay.style.display = "none";
             }
-            
+
+            let _activeGroupConfigId = null;
+            function openGroupConfigOverlay(group) {
+                if (!group || !group.id) return;
+                _activeGroupConfigId = group.id;
+                document.getElementById("group-config-name").value = group.title || "";
+                document.getElementById("group-config-cover").value = group.coverUrl || "";
+                document.getElementById("group-config-background").value = group.backgroundUrl || "";
+                document.getElementById("group-config-overlay").style.display = "flex";
+            }
+
+            function closeGroupConfigOverlay() {
+                _activeGroupConfigId = null;
+                const overlay = document.getElementById("group-config-overlay");
+                if (overlay) overlay.style.display = "none";
+            }
+
+            function saveGroupConfig() {
+                if (!_activeGroupConfigId) return;
+                const groups = getCharacterGroups();
+                const index = groups.findIndex((g) => g.id === _activeGroupConfigId);
+                if (index === -1) return;
+                const group = groups[index];
+                group.title = (document.getElementById("group-config-name").value || "").trim() || group.title || "Unnamed Group";
+                group.coverUrl = (document.getElementById("group-config-cover").value || "").trim();
+                group.backgroundUrl = (document.getElementById("group-config-background").value || "").trim();
+                group.updatedAt = Date.now();
+                groups[index] = group;
+                setCharacterGroups(groups);
+                renderScenarios();
+                renderAllCharacters();
+
+                const activeGroupData = sessionStorage.getItem("storyki_active_group");
+                if (activeGroupData) {
+                    try {
+                        const activeGroup = JSON.parse(activeGroupData);
+                        if (activeGroup && activeGroup.id === group.id) {
+                            sessionStorage.setItem("storyki_active_group", JSON.stringify(group));
+                        }
+                    } catch (e) {
+                        // ignore invalid session copy
+                    }
+                }
+
+                closeGroupConfigOverlay();
+            }
+
             function toggleGroupList() {
                 const container = document.getElementById("group-list-container");
                 if (!container) return;
@@ -3003,7 +3093,14 @@
             function buildGroupCardElement(group) {
                 const card = document.createElement("div");
                 card.className = "world-card";
-                card.style.backgroundImage = "linear-gradient(135deg, rgba(75, 100, 160, 0.85), rgba(50, 40, 70, 0.85))";
+                if (group.coverUrl) {
+                    card.style.backgroundImage = `linear-gradient(135deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.65)), url("${group.coverUrl}")`;
+                    card.style.backgroundSize = "cover";
+                    card.style.backgroundPosition = "center";
+                    card.style.backgroundRepeat = "no-repeat";
+                } else {
+                    card.style.backgroundImage = "linear-gradient(135deg, rgba(75, 100, 160, 0.85), rgba(50, 40, 70, 0.85))";
+                }
                 const title = document.createElement("div");
                 title.textContent = group.title || "Unnamed Group";
                 title.style.cssText = "color:#fff; font-weight:700; font-size:15px; margin-bottom:10px;";
@@ -3018,6 +3115,12 @@
                 playBtn.style.cssText = "padding:8px 6px; font-size:12px; flex:1;";
                 playBtn.textContent = "Play";
                 playBtn.onclick = () => { openGroupPlay(group); };
+                const configBtn = document.createElement("button");
+                configBtn.type = "button";
+                configBtn.className = "menu-button";
+                configBtn.style.cssText = "padding:8px 6px; font-size:12px; flex:1; background: rgba(80, 120, 180, 0.85);";
+                configBtn.textContent = "Conf";
+                configBtn.onclick = () => openGroupConfigOverlay(group);
                 const delBtn = document.createElement("button");
                 delBtn.type = "button";
                 delBtn.className = "menu-button";
@@ -3031,6 +3134,7 @@
                     renderAllCharacters();
                 };
                 btnRow.appendChild(playBtn);
+                btnRow.appendChild(configBtn);
                 btnRow.appendChild(delBtn);
                 card.appendChild(title);
                 card.appendChild(subtitle);
@@ -3637,8 +3741,10 @@
                 const grid = document.getElementById("all-characters-grid");
                 const qEl = document.getElementById("all-characters-search");
                 const genreEl = document.getElementById("all-characters-genre");
+                const typeEl = document.getElementById("all-characters-type");
                 const q = (qEl ? qEl.value : "").toLowerCase().trim();
                 const selectedGenre = (genreEl ? genreEl.value : "").trim();
+                const selectedType = (typeEl ? typeEl.value : "all").trim();
                 
                 grid.innerHTML = "";
                 let chars = getStandaloneCharacters();
@@ -3646,6 +3752,14 @@
                 
                 // Update genre dropdown with available genres
                 updateGenreDropdown();
+                
+                // Show type filter only when there is at least one group
+                if (typeEl) {
+                    typeEl.style.display = groups.length ? "inline-flex" : "none";
+                    if (!groups.length && selectedType !== "all") {
+                        typeEl.value = "all";
+                    }
+                }
                 
                 // Text search filter
                 if (q) {
@@ -3667,6 +3781,13 @@
                         if (c.genre && c.genre.trim() === selectedGenre) return true;
                         return false;
                     });
+                }
+
+                // Type filter
+                if (selectedType === "characters") {
+                    groups = [];
+                } else if (selectedType === "groups") {
+                    chars = [];
                 }
                 
                 // Sort: favorites first, then by title
