@@ -2201,8 +2201,20 @@ Provide ONLY your response as the character. No meta commentary.
                 }
 
                 // Fall back to settings or default
+                let groupBackgroundUrl = null;
+                const groupData = sessionStorage.getItem("storyki_active_group");
+                if (groupData) {
+                    try {
+                        const parsedGroup = JSON.parse(groupData);
+                        if (parsedGroup && parsedGroup.backgroundUrl) {
+                            groupBackgroundUrl = parsedGroup.backgroundUrl;
+                        }
+                    } catch (e) {
+                        groupBackgroundUrl = null;
+                    }
+                }
                 const settings = getSettings();
-                const url = charBackgroundUrl || settings.backgroundUrl || "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
+                const url = groupBackgroundUrl || charBackgroundUrl || settings.backgroundUrl || "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
                 document.getElementById("bg-layer").style.backgroundImage = `url(${url})`;
             }
 
