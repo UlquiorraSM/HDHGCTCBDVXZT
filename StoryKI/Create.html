@@ -2056,6 +2056,17 @@
             #lore-view.visible {
                 display: flex;
             }
+            /* ─── Traits View (matches Lore layout) ─── */
+            #traits-view {
+                display: none;
+                position: relative;
+                z-index: 1;
+                flex-direction: column;
+                height: 100vh;
+                align-items: center;
+                width: 100%;
+            }
+            #traits-view.visible { display: flex; }
             .lore-scroll {
                 flex: 1;
                 overflow-y: auto;
@@ -2858,6 +2869,9 @@
                             <button type="button" class="subloc-btn relation-btn" id="tool-btn-skills" onclick="showSkillsScene()">
                                 <span class="subloc-icon">🛠️</span> Skills
                             </button>
+                            <button type="button" class="subloc-btn relation-btn" id="tool-btn-traits" onclick="openTraits()">
+                                <span class="subloc-icon">✨</span> Traits
+                            </button>
                             <button type="button" class="subloc-btn relation-btn" id="tool-btn-level" onclick="showLevelScene()" style="display:none;">
                                 <span class="subloc-icon">📈</span> Level
                             </button>
@@ -2875,13 +2889,6 @@
                         <div class="relation-tags" id="char-secret-tags"></div>
                         <button type="button" class="subloc-btn relation-btn" onclick="showSecretsScene()">
                             <span class="subloc-icon">🕵️</span> Secrets
-                        </button>
-                    </div>
-                    <div id="char-skill-group" style="margin-top: 14px; display:none;">
-                        <label class="form-label">Skills</label>
-                        <div class="relation-tags" id="char-skill-tag"></div>
-                        <button type="button" class="subloc-btn relation-btn" onclick="showSkillsScene()">
-                            <span class="subloc-icon">🛠️</span> Skills
                         </button>
                     </div>
                 </div>
@@ -3302,6 +3309,15 @@
                         placeholder="Describe this entry..."
                     ></textarea>
                 </div>
+                <div class="form-group" id="skill-category-group" style="display:none;">
+                    <label class="form-label">Skill Category</label>
+                    <select class="form-select" id="f-skill-category">
+                        <option value="">Select a category...</option>
+                        <option value="combat">Combat</option>
+                        <option value="magic">Magic</option>
+                        <option value="social">Social</option>
+                    </select>
+                </div>
 
                 <!-- Family Introduction & Date (Family only) -->
                 <div id="family-intro-section" style="display:none;">
@@ -3515,6 +3531,23 @@
                         Save Lore
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Traits view -->
+        <div id="traits-view">
+            <nav class="top-nav">
+                <button class="nav-back-btn" onclick="closeTraits()" title="Back">&#8592;</button>
+                <div class="nav-pills" id="traits-nav-pills"></div>
+                <div class="nav-count" id="traits-nav-count">0</div>
+                <div class="nav-label" id="traits-nav-label"></div>
+            </nav>
+            <div class="lore-scroll" style="padding:14px;">
+                <div id="traits-list"></div>
+            </div>
+            <div class="lore-actions">
+                <button class="btn-cancel" onclick="closeTraits()">Cancel</button>
+                <button class="btn-save" onclick="closeTraits()">Save Traits</button>
             </div>
         </div>
 
@@ -3907,10 +3940,45 @@
                     <h2>Assign Skill</h2>
                     <span class="entry-badge badge-character">SKILL</span>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Available Skills</label>
-                    <div id="skills-list" class="student-list"></div>
+
+                <!-- Currently Selected Section -->
+                <div class="form-group" id="skills-current-section" style="display:none; background:rgba(76,175,80,0.1); border-left:3px solid #4caf50; padding:14px; border-radius:8px; margin-bottom:16px;">
+                    <label class="form-label" style="color:#4caf50;">Currently Assigned</label>
+                    <div id="skills-current-tag" style="display:flex; gap:8px; align-items:center;">
+                        <div style="font-weight:600; font-size:14px;" id="skills-current-name"></div>
+                        <button type="button" style="padding:4px 10px; border-radius:6px; border:1px solid #4caf50; background:transparent; color:#4caf50; cursor:pointer; font-size:12px; font-weight:600;" onclick="clearSkillSelection()">Clear</button>
+                    </div>
                 </div>
+
+                <div class="form-group">
+                    <label class="form-label">🔍 Search Skills</label>
+                    <div style="position:relative; margin-bottom:12px;">
+                        <input 
+                            type="text" 
+                            id="skills-search-input"
+                            class="form-input"
+                            placeholder="Search by name or description..."
+                            style="padding-left:40px;"
+                            onkeyup="filterSkillsList()"
+                        />
+                        <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#4ea8de; font-size:16px; pointer-events:none;">🔍</span>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                        <button type="button" class="nav-pill" style="padding:6px 12px; font-size:12px;" onclick="showAllSkills()" id="skill-filter-all">All</button>
+                        <button type="button" class="nav-pill" style="padding:6px 12px; font-size:12px; opacity:0.6;" onclick="filterSkillsByTag('combat')" id="skill-filter-combat">⚔️ Combat</button>
+                        <button type="button" class="nav-pill" style="padding:6px 12px; font-size:12px; opacity:0.6;" onclick="filterSkillsByTag('magic')" id="skill-filter-magic">✨ Magic</button>
+                        <button type="button" class="nav-pill" style="padding:6px 12px; font-size:12px; opacity:0.6;" onclick="filterSkillsByTag('social')" id="skill-filter-social">💬 Social</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Available Skills <span id="skills-filtered-count" style="opacity:0.6; font-size:12px;"></span></label>
+                    <div id="skills-list" class="student-list" style="max-height:400px; overflow-y:auto;"></div>
+                    <div id="skills-no-results" style="display:none; text-align:center; padding:20px; color:rgba(255,255,255,0.5); font-size:14px;">
+                        No skills found
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button class="btn-cancel" onclick="showFormView()">← Back</button>
                     <button class="btn-save" onclick="confirmSkills()">Done</button>
@@ -4184,6 +4252,12 @@
             let curseTags = []; // for curse tags
             let curseTemp = [];
             let curseCtx = null;
+            // Traits definitions and selection state
+            const TRAITS = [
+                { id: "outside", name: "Outside", description: "This NPC hangs around outside a lot and spends very little time at home during the day." },
+                { id: "owl", name: "Owl", description: "This NPC sleeps during the day and is often awake at night." }
+            ];
+            let traitSelections = []; // array of trait ids selected for the current editing card
 
             const FAMILY_MEMBER_RELATIONS = [
                 "Relative",
@@ -5329,55 +5403,173 @@
                 return getCards().filter(c => c.genre === "skill");
             }
             function updateSkillGroupVisibility() {
-                const grp = document.getElementById("char-skill-group");
                 const btn = document.getElementById("tool-btn-skills");
                 const hasSkills = getSkills().length > 0;
-                if (grp) grp.style.display = hasSkills ? "block" : "none";
                 if (btn) btn.style.display = hasSkills ? "inline-flex" : "none";
             }
+            let skillsCurrentFilter = "all"; // tracks current filter
+
             function showSkillsScene() {
                 const list = document.getElementById("skills-list");
                 const skills = getSkills();
                 if (!skills.length) { showToast("No skills available.", "#c04040"); return; }
+                
                 document.getElementById("skills-count").textContent = skills.length;
+                document.getElementById("skills-search-input").value = "";
+                skillsCurrentFilter = "all";
+                
+                // Update current selection display
+                updateSkillsCurrentDisplay();
+                
+                // Render all skills
                 list.innerHTML = "";
+                renderSkillsListFull(skills);
+                
+                // Reset filters
+                document.querySelectorAll("[id^='skill-filter-']").forEach(btn => btn.style.opacity = btn.id === "skill-filter-all" ? "1" : "0.6");
+                
+                document.getElementById("form-view").style.display = "none";
+                document.getElementById("skills-view").style.display = "flex";
+            }
+
+            function updateSkillsCurrentDisplay() {
+                const section = document.getElementById("skills-current-section");
+                const nameEl = document.getElementById("skills-current-name");
+                if (!selectedSkillId) {
+                    if (section) section.style.display = "none";
+                    return;
+                }
+                const all = getCards();
+                const sk = all.find(c => c.id === selectedSkillId);
+                if (sk && section && nameEl) {
+                    nameEl.textContent = escHtml(sk.title);
+                    section.style.display = "block";
+                } else if (section) {
+                    section.style.display = "none";
+                }
+            }
+
+            function renderSkillsListFull(skills) {
+                const list = document.getElementById("skills-list");
+                const noResults = document.getElementById("skills-no-results");
+                
+                if (!skills || skills.length === 0) {
+                    noResults.style.display = "block";
+                    list.innerHTML = "";
+                    return;
+                }
+                
+                noResults.style.display = "none";
+                list.innerHTML = "";
+                document.getElementById("skills-filtered-count").textContent = `(${skills.length})`;
+                
                 skills.forEach(sk => {
                     const row = document.createElement("div");
                     row.className = "student-item";
                     row.style.gap = "8px";
+                    row.style.cursor = "pointer";
+                    row.style.padding = "12px";
+                    row.style.borderRadius = "8px";
+                    row.style.transition = "background 0.2s";
+                    
                     const rb = document.createElement("input");
                     rb.type = "radio";
                     rb.name = "skill-radio";
                     rb.value = sk.id;
                     rb.checked = (sk.id === selectedSkillId);
-                    rb.onchange = () => { skillTempId = rb.value; };
+                    rb.style.cursor = "pointer";
+                    rb.onchange = () => { skillTempId = rb.value; updateSkillsCurrentDisplay(); };
+                    
                     const label = document.createElement("div");
-                    label.innerHTML = `<div style="font-weight:700;">${escHtml(sk.title)}</div>${sk.description ? `<div style="opacity:.8; font-size:12px;">${escHtml(sk.description)}</div>` : ""}`;
+                    label.style.flex = "1";
+                    label.innerHTML = `
+                        <div style="font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span>${escHtml(sk.title)}</span>
+                            ${(() => {
+                                const category = (sk.skillCategory || "").toString();
+                                const tagCategory = Array.isArray(sk.tags)
+                                    ? sk.tags.find((t) => ["combat", "magic", "social"].includes((t || "").toLowerCase()))
+                                    : "";
+                                const displayCategory = category || tagCategory || "";
+                                return displayCategory ? `<span style="font-size:11px; opacity:.75; text-transform:uppercase; letter-spacing:0.04em;">${escHtml(displayCategory)}</span>` : "";
+                            })()}
+                        </div>
+                        ${sk.description ? `<div style="opacity:.7; font-size:12px; line-height:1.4;">${escHtml(sk.description)}</div>` : ""}
+                    `;
+                    
                     row.appendChild(rb);
                     row.appendChild(label);
-                    row.onclick = (e)=>{ if(e.target!==rb){ rb.checked = true; skillTempId = rb.value; } };
+                    
+                    row.onmouseenter = () => {
+                        row.style.background = "rgba(255,255,255,0.08)";
+                    };
+                    row.onmouseleave = () => {
+                        row.style.background = "transparent";
+                    };
+                    row.onclick = (e) => {
+                        if (e.target !== rb && !e.target.matches("input")) {
+                            rb.checked = true;
+                            skillTempId = rb.value;
+                            updateSkillsCurrentDisplay();
+                        }
+                    };
+                    
                     list.appendChild(row);
                 });
-                document.getElementById("form-view").style.display = "none";
-                document.getElementById("skills-view").style.display = "flex";
             }
+
+            function filterSkillsList() {
+                const input = document.getElementById("skills-search-input").value.toLowerCase();
+                const skills = getSkills();
+                
+                let filtered = skills;
+                
+                // Apply tag filter
+                if (skillsCurrentFilter !== "all") {
+                    filtered = filtered.filter(sk => {
+                        const tags = Array.isArray(sk.tags) ? sk.tags.map((t) => t.toLowerCase()) : [];
+                        const category = (sk.skillCategory || "").toLowerCase();
+                        return tags.includes(skillsCurrentFilter) || category === skillsCurrentFilter;
+                    });
+                }
+
+                // Apply search filter
+                if (input.trim()) {
+                    filtered = filtered.filter(sk => {
+                        const title = (sk.title || "").toLowerCase();
+                        const desc = (sk.description || "").toLowerCase();
+                        return title.includes(input) || desc.includes(input);
+                    });
+                }
+                
+                renderSkillsListFull(filtered);
+            }
+
+            function filterSkillsByTag(tag) {
+                skillsCurrentFilter = tag;
+                document.querySelectorAll("[id^='skill-filter-']").forEach(btn => btn.style.opacity = "0.6");
+                document.getElementById(`skill-filter-${tag}`).style.opacity = "1";
+                filterSkillsList();
+            }
+
+            function showAllSkills() {
+                skillsCurrentFilter = "all";
+                document.getElementById("skills-search-input").value = "";
+                document.querySelectorAll("[id^='skill-filter-']").forEach(btn => btn.style.opacity = btn.id === "skill-filter-all" ? "1" : "0.6");
+                const skills = getSkills();
+                renderSkillsListFull(skills);
+            }
+
+            function clearSkillSelection() {
+                selectedSkillId = "";
+                skillTempId = "";
+                updateSkillsCurrentDisplay();
+                filterSkillsList();
+            }
+
             function confirmSkills() {
                 if (skillTempId) selectedSkillId = skillTempId;
-                renderSkillTag();
                 showFormView();
-            }
-            function renderSkillTag() {
-                const wrap = document.getElementById("char-skill-tag");
-                if (!wrap) return;
-                wrap.innerHTML = "";
-                if (!selectedSkillId) return;
-                const all = getCards();
-                const sk = all.find(c => c.id === selectedSkillId);
-                if (!sk) return;
-                const tag = document.createElement("div");
-                tag.className = "relation-tag";
-                tag.innerHTML = `<span>${escHtml(sk.title)}</span>`;
-                wrap.appendChild(tag);
             }
 
             /* ─────────────────────────────────────────
@@ -5712,7 +5904,6 @@
                         applyCharacterLevelData(card);
                         updatePfpPreview();
                         selectedSkillId = card.skillId || "";
-                        renderSkillTag();
                         updateSkillGroupVisibility();
                         // restore relations
                         relationSelections = Array.isArray(card.relations) ? [...card.relations] : [];
@@ -5722,10 +5913,21 @@
                         renderSecretTags();
                         characterTags = card.tags ? [...card.tags] : [];
                         renderGenericTags("character");
+                        // restore trait selections (array of trait ids)
+                        traitSelections = Array.isArray(card.traits) ? [...card.traits] : [];
                     } else {
                         resetCharacterFields();
                         characterTags = [];
                         renderGenericTags("character");
+                    }
+
+                    if (card.genre === "skill") {
+                        const categoryEl = document.getElementById("f-skill-category");
+                        const categoryFromCard = (card.skillCategory || "").toLowerCase();
+                        const categoryFromTags = Array.isArray(card.tags)
+                            ? card.tags.find((t) => ["combat", "magic", "social"].includes((t || "").toLowerCase()))
+                            : "";
+                        if (categoryEl) categoryEl.value = categoryFromCard || categoryFromTags || "";
                     }
 
                     // restore species data
@@ -5845,6 +6047,8 @@
                         document.getElementById("f-type").value = t;
                     })();
                     document.getElementById("f-description").value = "";
+                    const skillCategoryEl = document.getElementById("f-skill-category");
+                    if (skillCategoryEl) skillCategoryEl.value = "";
                     resetNameGen();
                     loreData = "";
                     updateLoreSummary();
@@ -6144,6 +6348,7 @@
                 const descGrp = document.getElementById("description-group");
                 const familyIntro = document.getElementById("family-intro-section");
                 const descLabel = document.getElementById("description-label");
+                const skillCategoryGroup = document.getElementById("skill-category-group");
                 if (descGrp) {
                     if (type === "family") {
                         descGrp.style.display = "none";
@@ -6153,6 +6358,9 @@
                         if (familyIntro) familyIntro.style.display = "none";
                         if (descLabel) descLabel.textContent = "Description";
                     }
+                }
+                if (skillCategoryGroup) {
+                    skillCategoryGroup.style.display = type === "skill" ? "block" : "none";
                 }
 
                 // Show / hide Species XP group based on Level System availability
@@ -6886,6 +7094,63 @@
                     wordCount;
                 closeLore();
                 showToast("Lore saved!");
+            }
+
+            // Traits scene
+            function openTraits() {
+                // prepare nav
+                const charName = document.getElementById("f-name").value.trim() || "Character";
+                document.getElementById("traits-nav-label").textContent = charName.toUpperCase();
+                const pills = document.getElementById("traits-nav-pills");
+                pills.innerHTML = "";
+                const lbl = document.createElement("span");
+                lbl.style.cssText = "color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;padding:7px 4px;";
+                lbl.textContent = "TRAITS";
+                pills.appendChild(lbl);
+
+                renderTraitsScene();
+
+                document.getElementById("form-view").classList.remove("visible");
+                document.getElementById("traits-view").classList.add("visible");
+            }
+
+            function closeTraits() {
+                document.getElementById("traits-view").classList.remove("visible");
+                document.getElementById("form-view").classList.add("visible");
+            }
+
+            function renderTraitsScene() {
+                const list = document.getElementById("traits-list");
+                if (!list) return;
+                list.innerHTML = "";
+                TRAITS.forEach(t => {
+                    const row = document.createElement("div");
+                    row.style.cssText = "display:flex; flex-direction:column; gap:6px; padding:8px; border-radius:8px; background:rgba(0,0,0,0.12); margin-bottom:8px;";
+                    const top = document.createElement("div");
+                    top.style.cssText = "display:flex; align-items:center; gap:10px;";
+                    const chk = document.createElement("input");
+                    chk.type = "checkbox";
+                    chk.checked = traitSelections.includes(t.id);
+                    chk.onchange = () => toggleTraitSelection(t.id);
+                    top.appendChild(chk);
+                    const name = document.createElement("div");
+                    name.textContent = t.name;
+                    name.style.cssText = "font-weight:700; color:#fff;";
+                    top.appendChild(name);
+                    row.appendChild(top);
+                    const desc = document.createElement("div");
+                    desc.textContent = t.description;
+                    desc.style.cssText = "color:rgba(255,255,255,0.75); font-size:13px;";
+                    row.appendChild(desc);
+                    list.appendChild(row);
+                });
+            }
+
+            function toggleTraitSelection(id) {
+                const idx = traitSelections.indexOf(id);
+                if (idx >= 0) traitSelections.splice(idx, 1);
+                else traitSelections.push(id);
+                renderTraitsScene();
             }
 
             /* Insert markdown helpers */
@@ -8508,6 +8773,8 @@
 
                 // Character Level data
                 const levelData = type === "character" ? getCharacterLevelData() : null;
+                // Traits selection for characters
+                const traits = type === "character" ? [...traitSelections] : [];
 
                 let cards = getCards();
 
@@ -8666,11 +8933,13 @@
                             pfpUrl,
                             curseTags: currentCurseTags,
                             description: desc,
+                            ...(type === "skill" ? { skillCategory: document.getElementById("f-skill-category")?.value || "" } : {}),
                             ...(systemData ? { systemConfig: systemData } : {}),
                             ...(speciesXpData ? { xpReward: speciesXpData.xpReward } : {}),
                             ...(levelData ? { levelData } : {}),
                             relations: type === "character" ? [...relationSelections] : [],
                             secrets: type === "character" ? [...secretSelections] : [],
+                            ...(type === "character" ? { traits } : {}),
                             ...(type === "family" ? { familyMembers: [...familyMembersTemp] } : {}),
                             ...(type === "family" ? { spawnLocationId: document.getElementById("f-family-spawn-location")?.value || "" } : {}),
                             ...(type === "family" ? { familyRaceId: familyRaceId } : {}),
@@ -8723,8 +8992,10 @@
                                     : [],
                         relations: type === "character" ? [...relationSelections] : [],
                         secrets: type === "character" ? [...secretSelections] : [],
+                        ...(type === "character" ? { traits } : {}),
                         skillId: type === "character" ? (selectedSkillId || "") : "",
                         skillName: type === "character" ? ((getCards().find(c => c.id === selectedSkillId) || {}).title || "") : "",
+                        skillCategory: type === "skill" ? (document.getElementById("f-skill-category")?.value || "") : "",
                         nameGenerator,
                         lore,
                         skincolorAllowed,

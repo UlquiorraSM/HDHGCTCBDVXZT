@@ -2191,7 +2191,8 @@
                 const d = activeChar.startingDate;
 
                 let [h, m] = (d.time || "00:00").split(":").map(Number);
-                let totalMins = h * 60 + m + (mins || 0);
+                const prevTotalMins = h * 60 + m;
+                let totalMins = prevTotalMins + (mins || 0);
                 const dayLen = 24 * 60;
                 let daysDelta = Math.floor(totalMins / dayLen);
                 let rest = totalMins % dayLen;
@@ -2201,6 +2202,7 @@
                 d.time = `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
                 d.day = (d.day || 1) + daysDelta;
                 normalizeYMD(d);
+                processNearbyNpcHourlyUpdate(prevTotalMins, mins || 0);
                 syncNpcInactivityCounters();
                 updateNPCBirthdays(d);
                 updatePlayerBirthday(d);
@@ -2533,6 +2535,23 @@
                         const speciesId = killedTag[1].trim();
                         const recipientsStr = killedTag[2].trim();
                         processKillCommand(speciesId, recipientsStr);
+                        continue;
+                    }
+                    const npcLocationSetTag = content.match(/^NPCLocationSet\s*:\s*([A-Za-z0-9\-_]+)\s*,\s*([\s\S]+)\s*,\s*([0-9]+)$/i);
+                    if (npcLocationSetTag) {
+                        const npcRef = npcLocationSetTag[1].trim();
+                        const textValue = sanitizeTagValue(npcLocationSetTag[2]);
+                        const lockNumber = sanitizeTagValue(npcLocationSetTag[3]);
+                        const npcId = resolveNpcIdFromRef(npcRef);
+                        if (npcId && currentLocationId && textValue && lockNumber) {
+                            setNpcLocationLock(npcId, currentLocationId, textValue, lockNumber, currentNarrationTs);
+                        }
+                        continue;
+                    }
+                    const npcLocationDeleteTag = content.match(/^NPCLocationDelete\s*:\s*([0-9]+)$/i);
+                    if (npcLocationDeleteTag) {
+                        const lockNumber = npcLocationDeleteTag[1].trim();
+                        deleteNpcLocationLockByNumber(lockNumber, currentNarrationTs);
                         continue;
                     }
                     // Handle SecretRevelation tags: [[SecretRevelation:NPC_ID|Secret text]]
@@ -3887,7 +3906,19 @@
                 });
             }
 
-            function buildSmartCharacterContext(playerInput = null) {
+            let _lastActiveNpcMemorySelection = null;
+
+            function _normalizeMemoryKey(text) {
+                return String(text || "").trim().toLowerCase().replace(/\s+/g, " ");
+            }
+
+            function getActiveNpcMemorySelectionKey(playerText, activeNpcIds) {
+                const normText = _normalizeMemoryKey(playerText);
+                const sortedIds = Array.isArray(activeNpcIds) ? [...activeNpcIds].sort().join(",") : "";
+                return `${normText}||${sortedIds}`;
+            }
+
+            function buildSmartCharacterContext(playerInput = null, relevantMemoriesMap = new Map()) {
                 try {
                     const cards = getCards();
                     if (!currentLocationId) return "";
@@ -3932,6 +3963,15 @@
                             if (c.description) contextLines.push(`  Description: ${c.description}`);
                             if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
 
+                            const skillCard = c.skillId ? cards.find((s) => s && s.genre === "skill" && s.id === c.skillId) : null;
+                            const skillName = c.skillName || (skillCard && skillCard.title) || "";
+                            if (skillName) {
+                                contextLines.push(`  Skill: ${skillName}`);
+                                if (skillCard && skillCard.description) {
+                                    contextLines.push(`  Skill Description: ${skillCard.description}`);
+                                }
+                            }
+
                             const ins = Array.isArray(c.insights) ? c.insights : [];
                             if (ins.length > 0) {
                                 contextLines.push(`  Insights (always remember):`);
@@ -3947,26 +3987,41 @@
                             const latest = allMems.slice(-5);
                             let matched = [];
                             if (playerInput && presentNPCs.length > 0) {
-                                const { keywords } = extractPlayerSpeechKeywords(playerInput);
-                                const { dateFilters, dayFilters } = parseDateReferences(playerInput);
-                                matched = searchMemoriesForNpc(c, keywords, dateFilters, dayFilters) || [];
+                                if (relevantMemoriesMap && relevantMemoriesMap.has(c.id)) {
+                                    matched = relevantMemoriesMap.get(c.id) || [];
+                                } else {
+                                    const { keywords } = extractPlayerSpeechKeywords(playerInput);
+                                    const { dateFilters, dayFilters } = parseDateReferences(playerInput);
+                                    matched = searchMemoriesForNpc(c, keywords, dateFilters, dayFilters) || [];
+                                }
                             }
 
-                            if (latest.length || matched.length) {
-                                const seen = new Set();
-                                const latestUnique = latest.filter(m => {
-                                    const k = _memoryKey(m);
-                                    if (seen.has(k)) return false;
-                                    seen.add(k);
-                                    return true;
-                                });
-                                const matchedUnique = matched.filter(m => {
-                                    const k = _memoryKey(m);
-                                    if (seen.has(k)) return false;
-                                    seen.add(k);
-                                    return true;
-                                });
+                            const randomSelection = getOrCreateActiveNpcMemorySelection(playerInput, presentIds, relevantMemoriesMap);
+                            const randomForNpc = Array.isArray(randomSelection)
+                                ? randomSelection.filter((m) => m.npcId === c.id)
+                                : [];
 
+                            const seen = new Set();
+                            const latestUnique = latest.filter(m => {
+                                const k = _memoryKey(m);
+                                if (seen.has(k)) return false;
+                                seen.add(k);
+                                return true;
+                            });
+                            const matchedUnique = matched.filter(m => {
+                                const k = _memoryKey(m);
+                                if (seen.has(k)) return false;
+                                seen.add(k);
+                                return true;
+                            });
+                            const randomUnique = randomForNpc.filter(m => {
+                                if (!m || !m.key) return false;
+                                if (seen.has(m.key)) return false;
+                                seen.add(m.key);
+                                return true;
+                            });
+
+                            if (latestUnique.length || matchedUnique.length || randomUnique.length) {
                                 if (latestUnique.length) {
                                     contextLines.push(`  Memories (latest 5):`);
                                     latestUnique.slice(-5).forEach(m => {
@@ -3983,6 +4038,14 @@
                                         const txt = m && typeof m === "object" ? (m.text || "") : String(m || "");
                                         const line = `${meta ? meta : (m?.date || "")}`.trim();
                                         contextLines.push(`    [${line}] ${short(txt, 160)}`);
+                                    });
+                                }
+                                if (randomUnique.length) {
+                                    contextLines.push(`  Memories (random selection):`);
+                                    randomUnique.slice(0, 3).forEach(m => {
+                                        const dateStr = m.date ? ` [${m.date}]` : "";
+                                        const memo = String(m.text || "").replace(/\s+/g, " ").trim();
+                                        contextLines.push(`    ${dateStr} ${short(memo, 160)}`);
                                     });
                                 }
                             } else {
@@ -4026,8 +4089,8 @@
             }
 
             // Legacy function - kept for compatibility
-            function buildCharacterContext(playerInput = null) {
-                return buildSmartCharacterContext(playerInput);
+            function buildCharacterContext(playerInput = null, relevantMemoriesMap = new Map()) {
+                return buildSmartCharacterContext(playerInput, relevantMemoriesMap);
             }
 
             function buildRaceContext() {
@@ -4674,12 +4737,11 @@
                 const idx = _weekdayMon0(day, month, year);
                 return names[idx] || "Monday";
             }
-            function computeSchoolPresenceNow() {
+            function computeSchoolPresenceAtMinute(nowMin) {
                 try {
                     const cards = getCards();
                     const d = activeChar?.startingDate || {};
                     const wday = _weekdayMon0(d.day, d.month, d.year);
-                    const nowMin = _timeToMinutes(d.time || "00:00");
                     const schools = cards.filter(
                         (c) =>
                             c.genre === "location" &&
@@ -4687,14 +4749,16 @@
                             (c.locationDetail || "").toLowerCase() === "school",
                     );
                     const characters = cards.filter((c) => c.genre === "character");
-                    const byNpc = new Map(); // npcId -> { schoolId, schoolTitle, className }
+                    const byNpc = new Map(); // npcId -> { schoolId, schoolTitle, className, schoolStartMin, schoolEndMin }
                     let context = "\nSCHEDULED NPC PRESENCE (Current time):\n";
                     schools.forEach((school) => {
                         const sched = school.schoolSchedule || null;
                         let isOpen = false;
+                        let startMin = 0;
+                        let endMin = 0;
                         if (sched && Array.isArray(sched.days)) {
-                            const startMin = _timeToMinutes(sched.start || "08:00");
-                            const endMin = _timeToMinutes(sched.end || "16:00");
+                            startMin = _timeToMinutes(sched.start || "08:00");
+                            endMin = _timeToMinutes(sched.end || "16:00");
                             isOpen = !!sched.days[wday] && nowMin >= startMin && nowMin < endMin;
                         }
                         if (!isOpen) return;
@@ -4714,11 +4778,26 @@
                                 .filter(Boolean)
                                 .join(", ");
                             context += `  * ${cls.name || "Class " + (idx + 1)} | Teacher: ${tName} | Students: ${studs || "—"}\n`;
-                            // Fill lookup to constrain presence
-                            if (t && cls.teacherId) byNpc.set(cls.teacherId, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" });
+                            if (t && cls.teacherId) {
+                                byNpc.set(cls.teacherId, {
+                                    schoolId: school.id,
+                                    schoolTitle: school.title,
+                                    className: cls.name || "",
+                                    schoolStartMin: startMin,
+                                    schoolEndMin: endMin,
+                                });
+                            }
                             (cls.studentIds || []).forEach((sid) => {
                                 const ch = characters.find((c) => c.id === sid && (c.status || "Alive") !== "Dead");
-                                if (ch) byNpc.set(sid, { schoolId: school.id, schoolTitle: school.title, className: cls.name || "" });
+                                if (ch) {
+                                    byNpc.set(sid, {
+                                        schoolId: school.id,
+                                        schoolTitle: school.title,
+                                        className: cls.name || "",
+                                        schoolStartMin: startMin,
+                                        schoolEndMin: endMin,
+                                    });
+                                }
                             });
                         });
                     });
@@ -4728,6 +4807,12 @@
                     console.error("schedule compute error", e);
                     return { byNpc: new Map(), context: "" };
                 }
+            }
+
+            function computeSchoolPresenceNow() {
+                const d = activeChar?.startingDate || {};
+                const nowMin = _timeToMinutes(d.time || "00:00");
+                return computeSchoolPresenceAtMinute(nowMin);
             }
 
             function computeShopPresenceNow() {
@@ -4841,7 +4926,7 @@
                 }
             }
 
-            function buildSystemPrompt(playerInput = null) {
+            function buildSystemPrompt(playerInput = null, relevantMemoriesMap = new Map()) {
                 const d = activeChar?.startingDate || {};
                 const curDate = `${String(d.day || 1).padStart(2, "0")}.${String(d.month || 1).padStart(2, "0")}.${d.year || 1983}`;
                 const curTime = d.time || "00:00";
@@ -4851,7 +4936,7 @@
                 const curLocName = document.getElementById("header-location")?.textContent || "Unknown Location";
                 
                 const worldHierarchy = buildSmartLocationContext(playerInput);
-                const charContext = buildCharacterContext(playerInput);
+                const charContext = buildCharacterContext(playerInput, relevantMemoriesMap);
                 const raceContext = buildRaceContext();
                 const speciesContext = buildSpeciesPresenceContext();
                 const playerContext = buildPlayerContext();
@@ -4863,6 +4948,7 @@
                     ? `\n# CUSTOM / BUILDING LOCATION IDS (valid targets for [[Memory:LOCATION_ID|text]] only)\n${customBuildingLocLinesForMemory.join("\n")}\n`
                     : "";
                 const locationStateContext = buildLocationStateContext();
+                const npcLocationLockContext = getNpcLocationLockContext();
                 const locationCurseContext = buildLocationCurseContext();
                 const locationDistanceContext = buildLocationDistanceContext();
                 const nearbyForestsContext = buildNearbyForestsContext();
@@ -4993,6 +5079,7 @@ ${eventsContext}
 ${locationMemoryContext}
 ${locationMemoryTagTargetsBlock}
 ${locationStateContext}
+${npcLocationLockContext}
 ${locationDistanceContext}
 ${nearbyForestsContext}
 ${relationshipSummary}
@@ -5044,6 +5131,8 @@ Your entire output must be in ${aiLang} - no exceptions.
 - When your narration changes a location’s persistent state, append a single control tag BEFORE the metadata block.
 - Syntax: [[LocState:key=value]] or with expiry [[LocState:key=value;ttl=19d]]. Multiple pairs may be separated by semicolons.
 - Examples: [[LocState:door=broken]] , [[LocState:gum_spot=present;ttl=30d]]
+- For NPCs held or locked to a location, use [[NPCLocationSet:NPC_ID,Text,Number]]. This creates a location lock entry for the current location.
+- Remove a lock when the NPC escapes or dies with [[NPCLocationDelete:Number]]. If the same NPC gets another NPCLocationSet at a different location, the old lock is automatically overwritten.
 
 # ACTIVE NPC TAG (MANDATORY - DEFINES PRESENT NPCs)
 - PRESENT NPCs are ONLY the NPCs you mark as active with this tag.
@@ -5146,6 +5235,7 @@ ${eventsContext}
 ${locationMemoryContext}
 ${locationMemoryTagTargetsBlock}
 ${locationStateContext}
+${npcLocationLockContext}
 ${locationDistanceContext}
 ${nearbyForestsContext}
 ${relationshipSummary}
@@ -5616,12 +5706,175 @@ ${killedInstructionNoTags}`;
                     if (sched && sched.schoolId && !nearbyLocIds.has(sched.schoolId)) return;
                     result.push(c.id);
                 });
+
+                // Include characters whose currentLocationId places them nearby even if they are not listed as a resident.
+                cards.forEach((c) => {
+                    if (!c || c.genre !== "character" || !c.id) return;
+                    if (residentIds.has(c.id)) return;
+                    const isDead = (c.status || "Alive") === "Dead";
+                    if (wantDead ? !isDead : isDead) return;
+                    const locId = getCharacterEffectiveLocationId(c, cards);
+                    if (!locId || !nearbyLocIds.has(locId)) return;
+                    const sched = scheduledByNpc.get(c.id);
+                    if (sched && sched.schoolId && !nearbyLocIds.has(sched.schoolId)) return;
+                    result.push(c.id);
+                });
+
                 return result;
+            }
+
+            function getCharacterEffectiveLocationId(character, cards) {
+                if (!character || character.genre !== "character") return "";
+                const lockLocationId = String(character.locationLock?.locationId || "").trim();
+                if (lockLocationId) return lockLocationId;
+                const primary = String(character.currentLocationId || character.spawnLocationId || character.spawnId || "").trim();
+                if (primary) return primary;
+                const fallback = cards.find((c) => c && c.genre === "location" && Array.isArray(c.residents) && c.residents.includes(character.id));
+                return fallback ? fallback.id : "";
+            }
+
+            function getCharacterEffectiveLocationCard(character, cards) {
+                const locId = getCharacterEffectiveLocationId(character, cards);
+                if (!locId) return null;
+                return cards.find((c) => c && c.genre === "location" && c.id === locId) || null;
+            }
+
+            function getNpcLocationLocks() {
+                try {
+                    const cards = getCards();
+                    return cards
+                        .filter((c) => c && c.genre === "character" && c.id && c.locationLock && c.locationLock.locationId)
+                        .map((npc) => ({
+                            npcId: npc.id,
+                            locationId: String(npc.locationLock.locationId || "").trim(),
+                            text: String(npc.locationLock.text || "").trim(),
+                            number: String(npc.locationLock.number || "").trim(),
+                        }))
+                        .filter((lock) => lock.npcId && lock.locationId && lock.number);
+                } catch (e) {
+                    console.warn("getNpcLocationLocks failed", e);
+                    return [];
+                }
+            }
+
+            function setNpcLocationLock(npcId, locationId, text, number, anchorTs = null) {
+                if (!npcId || !locationId || !text || !number) return false;
+                try {
+                    const cards = getCards();
+                    const npc = cards.find((c) => c && c.genre === "character" && c.id === npcId);
+                    if (!npc) return false;
+                    
+                    // Remember the old lock state for rollback
+                    const oldLock = npc.locationLock ? JSON.parse(JSON.stringify(npc.locationLock)) : null;
+                    if (anchorTs) {
+                        rememberAnchoredWorldChange(anchorTs, {
+                            type: "npcLocationLock",
+                            npcId: npcId,
+                            previousLock: oldLock,
+                            newLock: { locationId: String(locationId).trim(), text: String(text).trim(), number: String(number).trim() }
+                        });
+                    }
+                    
+                    npc.locationLock = {
+                        locationId: String(locationId).trim(),
+                        text: String(text).trim(),
+                        number: String(number).trim(),
+                        ts: anchorTs || Date.now(),
+                    };
+                    Storage.set(CARDS_KEY, JSON.stringify(cards));
+                    return true;
+                } catch (e) {
+                    console.warn("setNpcLocationLock failed", e);
+                    return false;
+                }
+            }
+
+            function deleteNpcLocationLockByNumber(number, anchorTs = null) {
+                if (!number) return false;
+                try {
+                    const cards = getCards();
+                    let changed = false;
+                    cards.forEach((c) => {
+                        if (!c || c.genre !== "character" || !c.locationLock) return;
+                        if (String(c.locationLock.number || "").trim() === String(number).trim()) {
+                            // Remember old lock for rollback
+                            if (anchorTs) {
+                                rememberAnchoredWorldChange(anchorTs, {
+                                    type: "npcLocationLock",
+                                    npcId: c.id,
+                                    previousLock: JSON.parse(JSON.stringify(c.locationLock)),
+                                    newLock: null
+                                });
+                            }
+                            delete c.locationLock;
+                            changed = true;
+                        }
+                    });
+                    if (changed) {
+                        Storage.set(CARDS_KEY, JSON.stringify(cards));
+                    }
+                    return changed;
+                } catch (e) {
+                    console.warn("deleteNpcLocationLockByNumber failed", e);
+                    return false;
+                }
+            }
+
+            function getNpcLocationLockContext() {
+                try {
+                    if (!currentLocationId) return "";
+                    const cards = getCards();
+                    const ancestors = [];
+                    let current = cards.find((c) => c.id === currentLocationId);
+                    if (!current) return "";
+                    while (current) {
+                        ancestors.push(current);
+                        const parent = cards.find((c) => {
+                            if (c.genre !== "location" || !c.sublocations) return false;
+                            return Object.values(c.sublocations).some((arr) => (arr || []).includes(current.id));
+                        });
+                        current = parent;
+                    }
+                    const ancestorIds = new Set(ancestors.map((loc) => loc.id));
+                    const locks = cards
+                        .filter((c) => c && c.genre === "character" && c.locationLock && ancestorIds.has(String(c.locationLock.locationId || "")))
+                        .map((npc) => {
+                            const lock = npc.locationLock;
+                            const loc = cards.find((c) => c.genre === "location" && c.id === lock.locationId);
+                            return {
+                                npcId: npc.id,
+                                npcName: npc.title || npc.id,
+                                locationName: loc ? loc.title : lock.locationId,
+                                locationId: lock.locationId,
+                                text: String(lock.text || "").trim(),
+                                number: String(lock.number || "").trim(),
+                            };
+                        })
+                        .filter((entry) => entry.npcId && entry.locationId && entry.number);
+                    if (locks.length === 0) return "";
+                    const lines = ["\nNPC LOCATION LOCKS (current area and parent regions):"];
+                    locks.forEach((entry) => {
+                        lines.push(`- ${entry.npcName} [ID: ${entry.npcId}] locked at ${entry.locationName} [ID: ${entry.locationId}] — ${entry.text} (Lock# ${entry.number})`);
+                    });
+                    return lines.join("\n") + "\n";
+                } catch (e) {
+                    console.warn("buildNpcLocationLockContext failed", e);
+                    return "";
+                }
+            }
+
+            function isCharacterAtHouseOrResidentLocation(character, cards) {
+                const loc = getCharacterEffectiveLocationCard(character, cards);
+                if (!loc) return false;
+                const isResident = Array.isArray(loc.residents) && loc.residents.includes(character.id);
+                const isHouse = String(loc.locationSub || "").toLowerCase() === "building" && String(loc.locationDetail || "").toLowerCase() === "house";
+                return isResident || isHouse;
             }
 
             function getNearbyNpcIdsFromWorld() {
                 try {
-                    return _getNearbyResidentNpcIds(false);
+                    const activeSet = new Set(getPresentNpcIds());
+                    return _getNearbyResidentNpcIds(false).filter((id) => !activeSet.has(id));
                 } catch (e) {
                     console.warn("getNearbyNpcIdsFromWorld failed", e);
                     return [];
@@ -5634,6 +5887,124 @@ ${killedInstructionNoTags}`;
                 } catch (e) {
                     console.warn("getNearbyDeadNpcIdsFromWorld failed", e);
                     return [];
+                }
+            }
+
+            function processNearbyNpcHourlyUpdate(prevMinutes, minsAdded) {
+                const cards = getCards();
+                if (!cards || cards.length === 0 || !activeChar) return;
+
+                const dayLen = 24 * 60;
+                const normalizedPrev = ((prevMinutes % dayLen) + dayLen) % dayLen;
+                const tickCount = Math.max(0, Math.floor((normalizedPrev + minsAdded) / 60) - Math.floor(normalizedPrev / 60));
+                if (tickCount <= 0) return;
+
+                let changed = false;
+                for (let tick = 1; tick <= tickCount; tick++) {
+                    const tickMinute = normalizedPrev + tick * 60;
+                    const nowMin = ((tickMinute % dayLen) + dayLen) % dayLen;
+                    const scheduleNow = computeSchoolPresenceAtMinute(nowMin);
+                    const scheduledByNpc = scheduleNow.byNpc || new Map();
+                    const hour = Math.floor(nowMin / 60);
+                    const isDay = hour >= 6 && hour < 22;
+
+                    cards.forEach((card) => {
+                        if (!card || card.genre !== "character" || (card.status || "Alive") === "Dead") return;
+                        // Skip automatic positioning if NPC is location-locked
+                        if (card.locationLock && card.locationLock.locationId) {
+                            return;
+                        }
+                        const traits = Array.isArray(card.traits) ? card.traits : [];
+                        const isOutsideTrait = traits.includes("outside");
+                        const isOwlTrait = traits.includes("owl");
+                        const slot = scheduledByNpc.get(card.id);
+                        const attendance = card.schoolAttendance || null;
+                        let state = String(card.awakeState || "Awake");
+
+                        const isAttendingSchool = attendance && attendance.status === "attending" && nowMin < attendance.releaseMin;
+                        const shouldKeepSchoolState = attendance && attendance.status === "attending" && nowMin < attendance.releaseMin;
+                        const shouldClearSchoolState = attendance && nowMin >= (attendance.releaseMin || 0);
+
+                        if (shouldClearSchoolState) {
+                            if (attendance.previousLocationId && attendance.previousLocationId !== card.currentLocationId) {
+                                card.currentLocationId = attendance.previousLocationId;
+                            }
+                            delete card.schoolAttendance;
+                            changed = true;
+                        }
+
+                        if (isAttendingSchool) {
+                            state = "Awake";
+                            if (card.currentLocationId !== attendance.schoolId) {
+                                card.currentLocationId = attendance.schoolId;
+                                changed = true;
+                            }
+                        } else if (slot) {
+                            const releaseMin = slot.schoolEndMin + 60;
+                            if (!attendance || attendance.schoolId !== slot.schoolId || nowMin >= (attendance.releaseMin || 0)) {
+                                const roll = Math.random();
+                                const attend = roll < 0.85;
+                                card.schoolAttendance = {
+                                    schoolId: slot.schoolId,
+                                    status: attend ? "attending" : "skipped",
+                                    schoolStartMin: slot.schoolStartMin,
+                                    schoolEndMin: slot.schoolEndMin,
+                                    releaseMin,
+                                    previousLocationId: card.currentLocationId,
+                                };
+                                changed = true;
+                            }
+                            if (card.schoolAttendance.status === "attending") {
+                                state = "Awake";
+                                if (card.currentLocationId !== slot.schoolId) {
+                                    card.currentLocationId = slot.schoolId;
+                                    changed = true;
+                                }
+                            }
+                        } else {
+                            const locationCard = getCharacterEffectiveLocationCard(card, cards);
+                            const atHouseOrResident = isCharacterAtHouseOrResidentLocation(card, cards);
+                            const isAwake = state === "Awake";
+
+                            if (isOwlTrait && atHouseOrResident) {
+                                const sleepChance = isDay ? 0.5 : 0.15;
+                                const wakeChance = isDay ? 0.35 : 0.15;
+                                if (isAwake) {
+                                    if (Math.random() < sleepChance) state = "Sleeping";
+                                } else {
+                                    if (Math.random() < wakeChance) state = "Awake";
+                                }
+                            } else {
+                                if (isAwake) {
+                                    const sleepChance = atHouseOrResident && !isDay ? 0.2 : 0.08;
+                                    if (Math.random() < sleepChance) state = "Sleeping";
+                                } else {
+                                    const wakeChance = isDay ? 0.25 : 0.08;
+                                    if (Math.random() < wakeChance) state = "Awake";
+                                }
+                            }
+
+                            if (state === "Awake" && locationCard) {
+                                const parentLoc = findParentLocationById(locationCard.id, cards);
+                                if (parentLoc) {
+                                    const outsideChance = isOutsideTrait ? 0.5 : 0.1;
+                                    if (Math.random() < outsideChance) {
+                                        card.currentLocationId = parentLoc.id;
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (card.awakeState !== state) {
+                            card.awakeState = state;
+                            changed = true;
+                        }
+                    });
+                }
+
+                if (changed) {
+                    saveCards(cards);
                 }
             }
 
@@ -5669,6 +6040,7 @@ ${killedInstructionNoTags}`;
                     const here = cards.find(c => c.genre === "location" && c.id === currentLocationId);
                     const siblings = getSiblingLocations ? getSiblingLocations() : [];
                     const nearbyLocs = [here, ...(Array.isArray(siblings) ? siblings : [])].filter(Boolean);
+                    const nearbyLocIds = new Set(nearbyLocs.map((l) => l.id));
                     const locByNpc = new Map();
                     nearbyLocs.forEach(loc => {
                         (loc.residents || []).forEach(id => {
@@ -5679,7 +6051,18 @@ ${killedInstructionNoTags}`;
                         .map(id => {
                             const npc = cards.find(c => c.genre === "character" && c.id === id);
                             if (!npc) return null;
-                            const loc = locByNpc.get(id);
+                            let loc = locByNpc.get(id);
+                            if (!loc) {
+                                const effectiveLoc = getCharacterEffectiveLocationCard(npc, cards);
+                                if (effectiveLoc) {
+                                    if (nearbyLocIds.has(effectiveLoc.id)) {
+                                        loc = effectiveLoc;
+                                    } else {
+                                        const parent = findParentLocationById(effectiveLoc.id, cards);
+                                        if (parent && nearbyLocIds.has(parent.id)) loc = parent;
+                                    }
+                                }
+                            }
                             const locName = loc ? (loc.title || loc.id) : "";
                             const name = npc.title || id;
                             const race = npc.raceName || "Unknown Race";
@@ -6027,6 +6410,63 @@ ${killedInstructionNoTags}`;
                 });
                 
                 return result;
+            }
+
+            function getOrCreateActiveNpcMemorySelection(playerInput, presentNpcIds, relevantMemoriesMap = new Map()) {
+                const key = getActiveNpcMemorySelectionKey(playerInput, presentNpcIds);
+                if (_lastActiveNpcMemorySelection && _lastActiveNpcMemorySelection.key === key) {
+                    return _lastActiveNpcMemorySelection.selection;
+                }
+
+                const cards = getCards();
+                const selected = [];
+
+                (presentNpcIds || []).forEach((npcId) => {
+                    const npc = cards.find((c) => c && c.genre === "character" && c.id === npcId);
+                    if (!npc || !Array.isArray(npc.memories) || npc.memories.length === 0) return;
+
+                    const existingKeys = new Set();
+                    const latest = npc.memories.slice(-5);
+                    latest.forEach(m => existingKeys.add(_memoryKey(m)));
+                    const matched = Array.isArray(relevantMemoriesMap.get(npcId)) ? relevantMemoriesMap.get(npcId) : [];
+                    matched.forEach(m => existingKeys.add(_memoryKey(m)));
+
+                    const pool = npc.memories
+                        .map((mem) => ({
+                            npcId,
+                            npcName: npc.title || npc.id,
+                            text: String(mem.text || "").trim(),
+                            date: mem.date || "",
+                            key: _memoryKey(mem),
+                        }))
+                        .filter((item) => item.text && !existingKeys.has(item.key));
+
+                    const chosen = [];
+                    while (chosen.length < 3 && pool.length > 0) {
+                        const idx = Math.floor(Math.random() * pool.length);
+                        const item = pool.splice(idx, 1)[0];
+                        if (!chosen.some((c) => c.key === item.key)) {
+                            chosen.push(item);
+                        }
+                    }
+                    selected.push(...chosen);
+                });
+
+                _lastActiveNpcMemorySelection = { key, selection: selected };
+                return selected;
+            }
+
+            function buildActiveNpcRandomMemoryContext(playerInput, presentNpcIds) {
+                const selection = getOrCreateActiveNpcMemorySelection(playerInput, presentNpcIds);
+                if (!selection || selection.length === 0) return "";
+                let text = "\n### ACTIVE NPC RANDOM MEMORIES ###\n";
+                selection.forEach((mem) => {
+                    const dateStr = mem.date ? ` [${mem.date}]` : "";
+                    const npcLabel = mem.npcName ? `${mem.npcName} (${mem.npcId})` : mem.npcId;
+                    const memo = String(mem.text || "").replace(/\s+/g, " ").trim();
+                    text += `- ${npcLabel}${dateStr}: ${memo}\n`;
+                });
+                return text;
             }
 
             function addNpcMemoriesFromPending(narrativeText, anchorTs = null) {
@@ -6415,6 +6855,18 @@ ${killedInstructionNoTags}`;
                         changed = true;
                     });
                     pendingChanges.forEach((change) => {
+                        if (!change || change.type !== "npcLocationLock" || !change.npcId) return;
+                        const npc = cards.find((c) => c.genre === "character" && c.id === change.npcId);
+                        if (!npc) return;
+                        // Restore the previous lock state
+                        if (change.previousLock) {
+                            npc.locationLock = { ...change.previousLock };
+                        } else {
+                            delete npc.locationLock;
+                        }
+                        changed = true;
+                    });
+                    pendingChanges.forEach((change) => {
                         if (!change || change.type !== "eventExpired" || !change.locId || !change.bucket) return;
                         const loc = cards.find((c) => c.genre === "location" && c.id === change.locId);
                         if (!loc) return;
@@ -6662,11 +7114,15 @@ ${killedInstructionNoTags}`;
 
             // Build context for cards whose tags match words in the player's message.
             // Supports Race, Location (Building/Custom) and Character cards.
-            function buildTagMatchedContext(playerText) {
-                if (!playerText) return "";
+            function getTagMatchedContextData(playerText) {
+                const data = {
+                    context: "",
+                    matched: []
+                };
+                if (!playerText) return data;
                 const text = _normalizeText(playerText);
                 const words = text.split(/\s+/).filter(w => w.length >= 2);
-                if (words.length === 0) return "";
+                if (words.length === 0) return data;
 
                 const cards = getCards();
                 const matched = [];
@@ -6715,7 +7171,7 @@ ${killedInstructionNoTags}`;
                     }
                 }
 
-                if (matched.length === 0) return "";
+                if (matched.length === 0) return data;
 
                 // Build context string
                 let result = "\n### MENTIONED TOPICS ###\n";
@@ -6746,7 +7202,13 @@ ${killedInstructionNoTags}`;
                         result += `- ${card.title}${desc ? ": " + desc : ""} (matched tags: ${displayTags})\n`;
                     }
                 });
-                return result;
+                data.context = result;
+                data.matched = matched;
+                return data;
+            }
+
+            function buildTagMatchedContext(playerText) {
+                return getTagMatchedContextData(playerText).context;
             }
 
             function _stripQuotedSegments(text) {
@@ -7614,9 +8076,18 @@ Return ONLY the repaired narration with tags.`;
                 const typing = appendTypingIndicator();
                 try { updatePresentNPCs(); } catch {}
 
-                const systemInst = buildSystemPrompt(text);
+                const presentIds = getPresentNpcIds();
+                const relevantMemoriesMap = getRelevantMemoriesForInput(text, presentIds);
+                const systemInst = buildSystemPrompt(text, relevantMemoriesMap);
                 consumeActiveSceneNpcDetailTurns();
-                const tagMatchedContext = buildTagMatchedContext(text);
+                _lastActiveNpcMemorySelection = null;
+                const tagMatchedData = getTagMatchedContextData(text);
+                const tagMatchedContext = tagMatchedData.context;
+                console.log("[DEBUG] Tag-matched cards:", tagMatchedData.matched.map(({ card, tags }) => ({ id: card.id, title: card.title, genre: card.genre, tags })));
+                if (relevantMemoriesMap.size > 0) {
+                    console.log("[DEBUG] Triggered memories:", Array.from(relevantMemoriesMap.entries()).map(([npcId, mems]) => ({ npcId, count: mems.length, memories: mems.map(m => ({ date: m.date || "", text: String(m.text || "").slice(0, 120) })) })));
+                }
+                console.log("[DEBUG] Active NPC random memory selection:", _lastActiveNpcMemorySelection ? _lastActiveNpcMemorySelection.selection.map(m => ({ npcId: m.npcId, date: m.date, text: String(m.text || "").slice(0, 100) })) : []);
                 try { showMatchedLocationsFromTags(text); } catch {}
 
                 try {
@@ -7834,9 +8305,17 @@ Return ONLY the repaired narration with tags.`;
                         : lastUserEntry.text)
                     : "";
                 
-                const systemInst = buildSystemPrompt(lastUserText);
+                const presentIds = getPresentNpcIds();
+                const relevantMemoriesMap = getRelevantMemoriesForInput(lastUserText, presentIds);
+                const systemInst = buildSystemPrompt(lastUserText, relevantMemoriesMap);
                 // Kein consumeActiveSceneNpcDetailTurns hier: dieselbe Spielerzeile hat beim Senden schon −1 gezählt; Retry wäre sonst doppelter Abzug.
-                const tagMatchedContext = buildTagMatchedContext(lastUserText);
+                const tagMatchedData = getTagMatchedContextData(lastUserText);
+                const tagMatchedContext = tagMatchedData.context;
+                console.log("[DEBUG] Retry Tag-matched cards:", tagMatchedData.matched.map(({ card, tags }) => ({ id: card.id, title: card.title, genre: card.genre, tags })));
+                if (relevantMemoriesMap.size > 0) {
+                    console.log("[DEBUG] Retry Triggered memories:", Array.from(relevantMemoriesMap.entries()).map(([npcId, mems]) => ({ npcId, count: mems.length, memories: mems.map(m => ({ date: m.date || "", text: String(m.text || "").slice(0, 120) })) })));
+                }
+                console.log("[DEBUG] Retry Active NPC random memory selection:", _lastActiveNpcMemorySelection ? _lastActiveNpcMemorySelection.selection.map(m => ({ npcId: m.npcId, date: m.date, text: String(m.text || "").slice(0, 100) })) : []);
 
                 try {
                     currentNarrationTs = Date.now();
