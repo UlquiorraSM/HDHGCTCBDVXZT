@@ -1175,10 +1175,11 @@
                     <span>Chat Room</span>
                     <button class="menu-button" onclick="closeChat()" style="padding:8px 12px; font-size:12px;">Close</button>
                 </div>
-                <div id="chat-messages" class="chat-messages"></div>
-                <div class="chat-input-row">
-                    <textarea id="chat-input" class="chat-input" placeholder="Schreibe eine Nachricht..." rows="2"></textarea>
-                    <button class="chat-send-button" onclick="sendChatMessage()">Senden</button>
+                <div id="comment-plugin-shell" style="flex:1; min-height:400px; display:flex; flex-direction:column;">
+                    <div id="comments-plugin-root" style="flex:1; min-height:340px;"></div>
+                    <div id="comments-plugin-fallback" class="comments-plugin-fallback" style="padding:18px; color:rgba(255,255,255,0.75); font-size:13px; display:none;">
+                        Comment Plugin wurde nicht gefunden. Bitte lade das Plugin oder prüfe, ob `commentsPlugin` verfügbar ist.
+                    </div>
                 </div>
             </div>
         </div>
@@ -1359,45 +1360,43 @@
                         window.location.href = url;
                     }
                 };
-                let chatMessages = [];
-
-                function openChat() {
+                window.openChat = function() {
                     document.getElementById('main-menu').style.display = 'none';
                     document.getElementById('chat-overlay').style.display = 'flex';
-                    if (!chatMessages.length) {
-                        chatMessages.push({ text: 'Willkommen im Chatroom! Schreibe unten eine Nachricht.', self: false });
-                    }
-                    renderChatMessages();
-                    document.getElementById('chat-input').focus();
-                }
+                    setTimeout(initializeCommentPlugin, 0);
+                };
 
-                function closeChat() {
+                window.closeChat = function() {
                     document.getElementById('chat-overlay').style.display = 'none';
                     document.getElementById('main-menu').style.display = 'flex';
-                }
+                };
 
-                function renderChatMessages() {
-                    const container = document.getElementById('chat-messages');
-                    container.innerHTML = '';
-                    chatMessages.slice(-50).forEach((message) => {
-                        const el = document.createElement('div');
-                        el.className = 'chat-message' + (message.self ? ' self' : '');
-                        el.textContent = message.text;
-                        container.appendChild(el);
-                    });
-                    container.scrollTop = container.scrollHeight;
-                }
-
-                function sendChatMessage() {
-                    const input = document.getElementById('chat-input');
-                    const text = input.value.trim();
-                    if (!text) {
+                function initializeCommentPlugin() {
+                    const root = document.getElementById('comments-plugin-root');
+                    const fallback = document.getElementById('comments-plugin-fallback');
+                    if (!root || !fallback) {
                         return;
                     }
-                    chatMessages.push({ text, self: true });
-                    input.value = '';
-                    renderChatMessages();
-                    input.focus();
+                    if (window.commentsPlugin) {
+                        fallback.style.display = 'none';
+                        try {
+                            root.innerHTML = '';
+                            commentsPlugin({
+                                width: '100%',
+                                height: 420,
+                                commentPlaceholderText: 'Schreibe eine Nachricht...',
+                                submitButtonText: 'Senden',
+                                forceColorScheme: 'dark',
+                                containerStyle: 'width:100%; height:100%;',
+                            });
+                        } catch (error) {
+                            console.warn('Comment Plugin initialization failed:', error);
+                            fallback.style.display = 'block';
+                        }
+                    } else {
+                        root.innerHTML = '';
+                        fallback.style.display = 'block';
+                    }
                 }
 
                 document.addEventListener('keydown', function(event) {
