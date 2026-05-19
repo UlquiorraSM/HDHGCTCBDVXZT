@@ -1992,7 +1992,7 @@
                     const cards = getCards();
                     const loc = cards.find(c => c && c.genre === "location" && c.id === currentLocationId);
                     const sub = String(loc?.locationSub || "").toLowerCase().trim();
-                    return sub === "custom";
+                    return sub === "custom" || sub === "";
                 } catch {
                     return false;
                 }
@@ -2012,10 +2012,43 @@
                     return [];
                 }
             }
+            function _getActiveLocationEventsForCurrent() {
+                try {
+                    const ancestors = _getAncestorsForCurrent();
+                    const nowDay = _nowDayKey();
+                    const result = [];
+                    ancestors.forEach(loc => {
+                        if (!loc || loc.genre !== "location") return;
+                        const sub = String(loc.locationSub || "").toLowerCase().trim();
+                        if (sub !== "custom" && sub !== "") return;
+                        const ev = loc.events || null;
+                        if (!ev || !Array.isArray(ev["custom"])) return;
+                        ev["custom"].forEach(e => {
+                            if (!e || e.day == null || e.month == null || e.year == null) return;
+                            const eventDay = _eventDayKey(e);
+                            const deltaDays = eventDay - nowDay;
+                            if (e.type === "secret" && deltaDays !== 0) return;
+                            const dateStr = `${String(e.day||0).padStart(2, "0")}.${String(e.month||0).padStart(2, "0")}.${e.year||0}`;
+                            const text = `${loc.title}: ${String(e.description || "").trim()}`;
+                            result.push({
+                                displayDate: dateStr,
+                                text,
+                                dayCount: eventDay,
+                                timeValue: _timeToMinutes(e.time || "00:00")
+                            });
+                        });
+                    });
+                    return result.sort((a, b) => (a.dayCount - b.dayCount) || (a.timeValue - b.timeValue));
+                } catch {
+                    return [];
+                }
+            }
             function updateHeaderEvent() {
                 const el = document.getElementById("header-event");
                 if (!el) return;
-                const list = _getActiveScheduledEventsForCurrent();
+                const scheduled = _getActiveScheduledEventsForCurrent();
+                const locationEvents = _getActiveLocationEventsForCurrent();
+                const list = [...scheduled, ...locationEvents];
                 if (!list.length) {
                     el.textContent = "";
                     el.style.display = "none";
@@ -4350,7 +4383,9 @@
                     contextLines.push("\nLOCATION EVENTS (Current area and parent regions):");
                     const nowDay = _nowDayKey();
                     ancestors.forEach(loc => {
-                        if (loc.genre !== "location" || loc.locationSub !== "custom") return;
+                        if (loc.genre !== "location") return;
+                        const sub = String(loc.locationSub || "").toLowerCase().trim();
+                        if (sub !== "custom" && sub !== "") return;
                         const ev = loc.events || null;
                         if (!ev) return;
                         const lists = [];
@@ -4361,9 +4396,10 @@
                         if (normalized.length === 0) return;
                         contextLines.push(`- ${loc.title}:`);
                         normalized.forEach(e => {
-                            const type = (e.type === "secret") ? "SECRET EVENT" : "PUBLIC EVENT";
                             const eventDay = _eventDayKey(e);
                             const deltaDays = eventDay - nowDay;
+                            if (e.type === "secret" && deltaDays !== 0) return;
+                            const type = (e.type === "secret") ? "SECRET EVENT" : "PUBLIC EVENT";
                             let phase = "PAST";
                             if (deltaDays > 0) phase = "UPCOMING";
                             else if (deltaDays === 0) phase = "TODAY";
