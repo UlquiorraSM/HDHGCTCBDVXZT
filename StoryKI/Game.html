@@ -2505,8 +2505,12 @@
                                 setActiveSceneNpcIds([]);
                             } else {
                                 const nearby = getNearbyNpcIdsFromWorld();
-                                const nearbySet = new Set(Array.isArray(nearby) ? nearby : []);
-                                const restrictSet = nearbySet.size > 0 ? nearbySet : null;
+                                const present = getPresentNpcIds();
+                                const allowSet = new Set([
+                                    ...(Array.isArray(nearby) ? nearby : []),
+                                    ...(Array.isArray(present) ? present : []),
+                                ]);
+                                const restrictSet = allowSet.size > 0 ? allowSet : null;
                                 const ids = payload
                                     .split(/[,;]+/)
                                     .map(s => String(s || "").trim())
@@ -5246,6 +5250,7 @@ Your entire output must be in ${aiLang} - no exceptions.
 # NPC & LOCATION MEMORY TAGS (MANDATORY WHEN CONTINUITY MATTERS)
 - Add Memory tags ONLY when they help long-term continuity (important action, meaningful decision, new fact, promise, conflict, discovery, relationship shift, item gained/lost, secret revealed, injury, plan, clear emotional milestone, **or a lasting change / situation at a Custom or Building location**).
 - Do NOT add Memory tags for trivial filler (greetings, tiny talk, vague reactions, or routine one-liners) unless it changes the story state.
+- Do not create a single catch-all Memory tag for the whole scene. If the narration contains no important lasting change, add no Memory tags at all.
 - **Character (present / acting NPCs):**
   - Syntax: [[Memory:NPC_ID|Short memory text]] (space after colon is allowed)
   - Use the exact NPC character ID from the CHARACTERS section.
@@ -5818,6 +5823,7 @@ ${killedInstructionNoTags}`;
                 const scheduledByNpc = scheduleNow.byNpc || new Map();
                 const result = [];
                 residentIds.forEach((id) => {
+                    if (activeChar && activeChar.id === id) return;
                     const c = cards.find((card) => card.genre === "character" && card.id === id);
                     if (!c) return;
                     const isDead = (c.status || "Alive") === "Dead";
@@ -5830,6 +5836,7 @@ ${killedInstructionNoTags}`;
                 // Include characters whose currentLocationId places them nearby even if they are not listed as a resident.
                 cards.forEach((c) => {
                     if (!c || c.genre !== "character" || !c.id) return;
+                    if (activeChar && activeChar.id === c.id) return;
                     if (residentIds.has(c.id)) return;
                     const isDead = (c.status || "Alive") === "Dead";
                     if (wantDead ? !isDead : isDead) return;
@@ -5994,7 +6001,9 @@ ${killedInstructionNoTags}`;
             function getNearbyNpcIdsFromWorld() {
                 try {
                     const activeSet = new Set(getPresentNpcIds());
-                    return _getNearbyResidentNpcIds(false).filter((id) => !activeSet.has(id));
+                    return _getNearbyResidentNpcIds(false)
+                        .filter((id) => !activeSet.has(id))
+                        .filter((id) => !(activeChar && activeChar.id === id));
                 } catch (e) {
                     console.warn("getNearbyNpcIdsFromWorld failed", e);
                     return [];
@@ -7769,6 +7778,7 @@ ${recentMemBlockVal}
 - If the **same core fact** for the **same ID** is already present on the **same Date** (even hours earlier — e.g. the same kiss, promise, imprisonment in the cellar, barricaded door), **do not** emit a second tag that only repeats it; **omit** the duplicate or **replace** the narration-side implication so no redundant tag is needed.
 - Only add a new memory on the same Date + same ID if the text records a **clearly new** development (not a paraphrase or trivial rewording of the same beat).
 - A new **calendar Date** may justify a follow-up memory if the story truly progressed; still avoid pointless repetition.
+- Do not add [[Memory:...]] tags just because an NPC spoke or a scene continued. Use Memory tags only for clear, lasting continuity facts. If nothing important changed, omit Memory tags entirely.
 
 # YOUR TASK (PRIORITIES):
 1) Tags first: Repair and add ALL required control tags (this is your main job).
