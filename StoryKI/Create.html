@@ -852,30 +852,6 @@
                 align-items: center;
                 justify-content: center;
                 padding: 0 8px;
-            }
-            /* ─── Map Scene (same layout) ─── */
-            #map-view {
-                position: fixed;
-                inset: 0;
-                display: flex;
-                flex-direction: column;
-                z-index: 1000;
-            }
-            #map-view .form-scroll {
-                flex: 1;
-                overflow-y: auto;
-                width: 100%;
-                max-width: 1000px;
-                padding: 0 24px 40px 24px;
-                margin: 0 auto;
-            }
-            #map-view .nav-title {
-                flex: 1;
-                font-size: 13px;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-                color: rgba(255, 255, 255, 0.5);
-                padding: 7px 4px;
                 text-align: center;
             }
             /* ─── Events Scene (same layout) ─── */
@@ -3105,23 +3081,6 @@
                     </select>
                 </div>
 
-                <div class="form-group" id="location-map-group" style="display:none">
-                    <label class="form-label">Map</label>
-                    <div class="tools-row">
-                        <button
-                            type="button"
-                            class="subloc-btn"
-                            id="location-map-btn"
-                            onclick="showMapScene()"
-                        >
-                            <span class="subloc-icon">🗺️</span>
-                            Map
-                        </button>
-                    </div>
-                    <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px;">
-                        Define distances from this location to its sibling sublocations.
-                    </div>
-                </div>
 
                 <div class="form-group" id="other-tools-group" style="display:none">
                     <label class="form-label">Tools</label>
@@ -3861,9 +3820,26 @@
                     <span class="entry-badge badge-buildings">SCHOOL</span>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Class Name</label>
-                    <input type="text" class="form-input" id="class-name" placeholder="e.g. Class 1A">
+                <div class="form-two-col">
+                    <div class="form-group">
+                        <label class="form-label">Class Label</label>
+                        <input type="text" class="form-input" id="class-name-prefix" placeholder="e.g. Class, Klasse">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Class Number</label>
+                        <select class="form-select" id="class-name-number-select">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-two-col">
@@ -3874,13 +3850,28 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Students</label>
-                        <input type="text" class="form-input" id="class-students-search" placeholder="Search students..." style="margin-bottom:8px;">
-                        <div id="class-students-list" class="student-list"></div>
+                        <label class="form-label">Visibility</label>
+                        <select class="form-select" id="class-visibility-select">
+                            <option value="Location">Location</option>
+                            <option value="School">School</option>
+                        </select>
+                        <div style="margin-top:8px; font-size:12px; color: rgba(255,255,255,0.7); line-height:1.4;">
+                            Location: shown when the current location is the school, a sibling building/location, or the parent location.
+                            <br>
+                            School: shown only when the current location is the school itself.
+                        </div>
                     </div>
                 </div>
-                <div class="form-actions" style="margin-top: 12px;">
-                    <button class="btn-save" onclick="classAdd()">+ Add Class</button>
+
+                <div class="form-group">
+                    <label class="form-label">Students</label>
+                    <input type="text" class="form-input" id="class-students-search" placeholder="Search students..." style="margin-bottom:8px;">
+                    <div id="class-students-list" class="student-list"></div>
+                </div>
+
+                <div class="form-actions" style="margin-top: 12px; justify-content: flex-start; gap: 12px; flex-wrap: wrap;">
+                    <button class="btn-save" type="button" id="class-add-button" onclick="classAdd()">+ Add Class</button>
+                    <button class="btn-cancel" type="button" id="class-cancel-button" onclick="resetClassEntryForm()" style="display:none;">Cancel</button>
                 </div>
 
                 <div class="form-group">
@@ -4052,34 +4043,6 @@
                 <div class="form-actions">
                     <button class="btn-cancel" onclick="showFormView()">← Back</button>
                     <button class="btn-save" onclick="confirmLevel()">Done</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══════════════════════════════
-             MAP DISTANCES SCENE (Location)
-        ══════════════════════════════ -->
-        <div id="map-view" style="display: none;">
-            <nav class="top-nav">
-                <button class="nav-back-btn" onclick="showFormView()" title="Back">
-                    ←
-                </button>
-                <span class="nav-title">MAP DISTANCES</span>
-                <div class="nav-count" id="map-count">0</div>
-            </nav>
-
-            <div class="form-scroll">
-                <div class="form-title-row">
-                    <h2>Map Distances</h2>
-                    <span class="entry-badge badge-location">LOCATION</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Siblings</label>
-                    <div id="map-rows" class="relation-rows"></div>
-                </div>
-                <div class="form-actions">
-                    <button class="btn-cancel" onclick="showFormView()">← Back</button>
-                    <button class="btn-save" onclick="confirmMapScene()">Done</button>
                 </div>
             </div>
         </div>
@@ -4672,7 +4635,6 @@
                 const lvl = document.getElementById("level-view");
                 const ev = document.getElementById("events-view");
                 const wrk = document.getElementById("work-view");
-                const map = document.getElementById("map-view");
                 const cur = document.getElementById("curse-view");
                 const varv = document.getElementById("variants-view");
                 const varl = document.getElementById("variants-list-view");
@@ -4683,14 +4645,12 @@
                 if (lvl) lvl.style.display = "none";
                 if (ev) ev.style.display = "none";
                 if (wrk) wrk.style.display = "none";
-                if (map) map.style.display = "none";
                 if (cur) cur.style.display = "none";
                 if (varv) varv.style.display = "none";
                 if (varl) varl.style.display = "none";
                 document.getElementById("form-view").style.display = "flex";
                 relationPickerTemp = [];
                 secretTemp = [];
-                mapTemp = [];
             }
 
             function confirmRelations() {
@@ -5407,6 +5367,7 @@
             // classesSelections: [{ name, teacherId, studentIds[] }]
             let classesSelections = [];
             let classesTemp = [];
+            let currentClassEditIndex = -1;
             let currentStudentSelection = new Set();
 
             /* ─────────────────────────────────────────
@@ -5695,6 +5656,23 @@
                 });
                 return cards.filter(c => c.genre === "character" && residentIds.has(c.id));
             }
+            function parseClassName(name) {
+                const value = (name || "").trim();
+                if (!value) return { prefix: "Class", number: "1" };
+                const parts = value.split(" ");
+                const last = parts[parts.length - 1];
+                if (/^[1-9]$|^10$/.test(last)) {
+                    return {
+                        prefix: parts.slice(0, -1).join(" ") || "Class",
+                        number: last,
+                    };
+                }
+                return { prefix: value, number: "1" };
+            }
+            function buildClassName(prefix, number) {
+                const base = (prefix || "").trim();
+                return `${base || "Class"} ${number || "1"}`.trim();
+            }
             function populateClassSelectors() {
                 const npcs = getAvailableNPCsForSchool();
                 const teacherSel = document.getElementById("class-teacher-select");
@@ -5702,44 +5680,41 @@
                 const searchEl = document.getElementById("class-students-search");
                 if (!teacherSel || !studentsList) return;
                 const currentTeacher = teacherSel.value || "";
-                // Current chosen students
                 const selectedStudents = currentStudentSelection;
-                // Build exclusion sets from already created temp classes
-                const usedAsTeacher = new Set(classesTemp.map(c => c.teacherId).filter(Boolean));
+                const editingClassIndex = currentClassEditIndex >= 0 && currentClassEditIndex < classesTemp.length ? currentClassEditIndex : -1;
+                const usedAsTeacher = new Set();
                 const usedAsStudent = new Set();
-                classesTemp.forEach(c => (c.studentIds || []).forEach(id => usedAsStudent.add(id)));
-                const usedAny = new Set([...usedAsTeacher, ...usedAsStudent]);
-
-                // Teacher list: all NPCs not used in any class AND not currently picked as student in this class
+                classesTemp.forEach((c, idx) => {
+                    if (idx === editingClassIndex) return;
+                    if (c.teacherId) usedAsTeacher.add(c.teacherId);
+                    (c.studentIds || []).forEach(id => usedAsStudent.add(id));
+                });
+                
                 teacherSel.innerHTML = `<option value="">Select teacher...</option>`;
                 npcs.forEach(n => {
-                    if (usedAny.has(n.id) && n.id !== currentTeacher) return;
+                    if ((usedAsTeacher.has(n.id) || usedAsStudent.has(n.id)) && n.id !== currentTeacher) return;
                     if (selectedStudents.has(n.id)) return; // cannot be both in same class
                     const optT = document.createElement("option");
                     optT.value = n.id;
                     optT.textContent = n.title;
                     teacherSel.appendChild(optT);
                 });
-                // Restore selection if still present
                 if (currentTeacher) teacherSel.value = currentTeacher;
 
-                // Students list: NPCs not used in any class AND not current teacher
                 const filter = (searchEl?.value || "").toLowerCase().trim();
                 studentsList.innerHTML = "";
                 npcs.forEach(n => {
-                    if (usedAny.has(n.id)) return;
+                    if (usedAsTeacher.has(n.id) || usedAsStudent.has(n.id)) return;
                     if (teacherSel.value && n.id === teacherSel.value) return;
                     if (filter && !n.title.toLowerCase().includes(filter)) return;
                     const row = document.createElement("div");
                     row.className = "student-item";
                     row.onclick = (e) => {
-                        // avoid toggling twice when clicking checkbox directly
                         if (e.target && e.target.tagName === "INPUT") return;
                         const cb = row.querySelector("input[type='checkbox']");
                         cb.checked = !cb.checked;
                         if (cb.checked) currentStudentSelection.add(n.id);
                         else currentStudentSelection.delete(n.id);
-                        // Exclude newly selected students from teacher dropdown
                         populateClassSelectors();
                     };
                     const cb = document.createElement("input");
@@ -5758,29 +5733,73 @@
                 });
             }
             function showClassesScene() {
-                classesTemp = classesSelections.map(cls => ({ name: cls.name, teacherId: cls.teacherId || "", studentIds: [...(cls.studentIds || [])] }));
+                classesTemp = classesSelections.map(cls => ({
+                    name: cls.name,
+                    teacherId: cls.teacherId || "",
+                    studentIds: [...(cls.studentIds || [])],
+                    visibility: cls.visibility || "Location",
+                }));
                 document.getElementById("classes-count").textContent = classesTemp.length;
                 document.getElementById("form-view").style.display = "none";
                 document.getElementById("classes-view").style.display = "flex";
-                currentStudentSelection = new Set();
-                populateClassSelectors();
+                resetClassEntryForm();
                 const teacherSel = document.getElementById("class-teacher-select");
                 const searchEl = document.getElementById("class-students-search");
                 if (teacherSel) teacherSel.onchange = () => populateClassSelectors();
                 if (searchEl) searchEl.oninput = () => populateClassSelectors();
                 renderClassRows();
             }
+            function resetClassEntryForm() {
+                currentClassEditIndex = -1;
+                document.getElementById("class-name-prefix").value = "";
+                document.getElementById("class-name-number-select").value = "1";
+                document.getElementById("class-teacher-select").value = "";
+                document.getElementById("class-visibility-select").value = "Location";
+                document.getElementById("class-students-search").value = "";
+                currentStudentSelection = new Set();
+                document.getElementById("class-add-button").textContent = "+ Add Class";
+                document.getElementById("class-cancel-button").style.display = "none";
+                populateClassSelectors();
+            }
+            function editClass(idx) {
+                const cls = classesTemp[idx];
+                if (!cls) return;
+                currentClassEditIndex = idx;
+                const parsed = parseClassName(cls.name || "");
+                document.getElementById("class-name-prefix").value = parsed.prefix;
+                document.getElementById("class-name-number-select").value = parsed.number;
+                document.getElementById("class-teacher-select").value = cls.teacherId || "";
+                document.getElementById("class-visibility-select").value = cls.visibility || "Location";
+                document.getElementById("class-students-search").value = "";
+                currentStudentSelection = new Set(cls.studentIds || []);
+                document.getElementById("class-add-button").textContent = "Save Class";
+                document.getElementById("class-cancel-button").style.display = "inline-flex";
+                populateClassSelectors();
+                renderClassRows();
+            }
             function classAdd() {
-                const name = (document.getElementById("class-name").value || "").trim();
+                const prefix = (document.getElementById("class-name-prefix").value || "").trim();
+                const number = document.getElementById("class-name-number-select").value || "1";
+                const name = buildClassName(prefix, number);
                 const teacherId = document.getElementById("class-teacher-select").value || "";
+                const visibility = document.getElementById("class-visibility-select").value || "Location";
                 const studentIds = Array.from(currentStudentSelection);
                 if (!name) { showToast("Please enter class name.", "#c04040"); return; }
-                classesTemp.push({ name, teacherId, studentIds });
-                document.getElementById("class-name").value = "";
-                currentStudentSelection = new Set();
+                const normalized = name.toLowerCase().trim();
+                const duplicateIndex = classesTemp.findIndex((c, idx) => idx !== currentClassEditIndex && (c.name || "").toLowerCase().trim() === normalized);
+                if (duplicateIndex !== -1) {
+                    showToast("A class with this name already exists.", "#c04040");
+                    return;
+                }
+                const classData = { name, teacherId, studentIds, visibility };
+                if (currentClassEditIndex >= 0 && currentClassEditIndex < classesTemp.length) {
+                    classesTemp[currentClassEditIndex] = classData;
+                } else {
+                    classesTemp.push(classData);
+                }
+                resetClassEntryForm();
                 document.getElementById("classes-count").textContent = classesTemp.length;
                 renderClassRows();
-                // Refresh selectors to enforce availability rules for next classes
                 document.getElementById("class-teacher-select").value = "";
                 populateClassSelectors();
             }
@@ -5796,23 +5815,33 @@
                 classesTemp.forEach((cls, idx) => {
                     const teacherName = (cards.find(c => c.id === cls.teacherId) || {}).title || "—";
                     const count = cls.studentIds ? cls.studentIds.length : 0;
+                    const visibilityLabel = cls.visibility || "Location";
                     const div = document.createElement("div");
                     div.className = "relation-row";
                     div.innerHTML = `
                         <div class="relation-row-header">
                             <span class="relation-target-name">${escHtml(cls.name)}</span>
-                            <button class="relation-row-remove" onclick="classRemove(${idx})">Remove</button>
+                            <div style="display:flex; gap:8px;">
+                                <button class="relation-row-remove" onclick="editClass(${idx})">Edit</button>
+                                <button class="relation-row-remove" onclick="classRemove(${idx})">Remove</button>
+                            </div>
                         </div>
                         <div class="relation-controls" style="flex-direction:column; gap:6px;">
                             <div><strong>Teacher:</strong> ${escHtml(teacherName)}</div>
                             <div><strong>Students:</strong> ${count}</div>
+                            <div><strong>Visibility:</strong> ${escHtml(visibilityLabel)}</div>
                         </div>
                     `;
                     rows.appendChild(div);
                 });
             }
             function confirmClasses() {
-                classesSelections = classesTemp.map(c => ({ name: c.name, teacherId: c.teacherId, studentIds: [...(c.studentIds || [])] }));
+                classesSelections = classesTemp.map(c => ({
+                    name: c.name,
+                    teacherId: c.teacherId,
+                    studentIds: [...(c.studentIds || [])],
+                    visibility: c.visibility || "Location",
+                }));
                 showFormView();
             }
 
@@ -6122,95 +6151,6 @@
                 }
             }
 
-            // Map distances scene
-            let mapTemp = []; // [{ id, name, value, unit }]
-            function showMapScene() {
-                try {
-                    if (!editingId) return;
-                    const cards = getCards();
-                    const current = cards.find(c => c.id === editingId);
-                    if (!current || current.genre !== "location") return;
-                    const parent = cards.find(c => c.genre === "location" && c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(editingId)));
-                    if (!parent) { showToast("No parent found for this sublocation.", "#c04040"); return; }
-                    const sibIdsRaw = Object.values(parent.sublocations || {}).flat().filter(id => id !== editingId);
-                    const existingLocIds = new Set(cards.filter(c => c.genre === "location").map(c => c.id));
-                    const sibIds = sibIdsRaw.filter(id => existingLocIds.has(id));
-                    if (sibIds.length === 0) { showToast("No sibling sublocations to map.", "#c04040"); return; }
-                    const dist = current.distances || {};
-                    mapTemp = sibIds.map(id => {
-                        const sib = cards.find(c => c.id === id);
-                        const entry = dist[id];
-                        let value = "";
-                        let unit = "km";
-                        if (typeof entry === "number") { value = String(entry); unit = "km"; }
-                        else if (entry && typeof entry === "object") {
-                            value = String(entry.value ?? "");
-                            unit = entry.unit === "m" ? "m" : "km";
-                        }
-                        return { id, name: (sib?.title || id), value, unit };
-                    });
-                    document.getElementById("map-count").textContent = mapTemp.length;
-                    document.getElementById("form-view").style.display = "none";
-                    document.getElementById("map-view").style.display = "flex";
-                    renderMapRows();
-                } catch (e) {
-                    console.error("Map scene error", e);
-                }
-            }
-            function renderMapRows() {
-                const rows = document.getElementById("map-rows");
-                rows.innerHTML = "";
-                mapTemp.forEach((r, idx) => {
-                    const div = document.createElement("div");
-                    div.className = "relation-row";
-                    div.innerHTML = `
-                        <div class="relation-row-header">
-                            <span class="relation-target-name">${escHtml(r.name)}</span>
-                        </div>
-                        <div class="relation-controls">
-                            <input type="number" min="0" step="0.1" class="form-input" style="max-width:140px;" value="${escHtml(r.value)}" onchange="mapUpdateValue(${idx}, this.value)" />
-                            <select class="relation-select" style="max-width:120px;" onchange="mapUpdateUnit(${idx}, this.value)">
-                                <option value="km" ${r.unit === "km" ? "selected" : ""}>km</option>
-                                <option value="m" ${r.unit === "m" ? "selected" : ""}>m</option>
-                            </select>
-                        </div>
-                    `;
-                    rows.appendChild(div);
-                });
-            }
-            function mapUpdateValue(idx, val) { mapTemp[idx].value = val; }
-            function mapUpdateUnit(idx, val) { mapTemp[idx].unit = (val === "m" ? "m" : "km"); }
-            function confirmMapScene() {
-                try {
-                    const cards = getCards();
-                    const curIdx = cards.findIndex(c => c.id === editingId);
-                    if (curIdx === -1) { showFormView(); return; }
-                    const current = { ...cards[curIdx] };
-                    const out = {};
-                    mapTemp.forEach(r => {
-                        const v = parseFloat(r.value);
-                        if (!isNaN(v) && v >= 0) out[r.id] = { value: v, unit: r.unit };
-                    });
-                    current.distances = out;
-                    cards[curIdx] = current;
-                    // synchronize symmetric distances
-                    Object.keys(out).forEach(sid => {
-                        const sibIdx = cards.findIndex(c => c.id === sid);
-                        if (sibIdx === -1) return;
-                        const sib = { ...cards[sibIdx] };
-                        if (sib.genre !== "location") return;
-                        sib.distances = sib.distances || {};
-                        sib.distances[current.id] = { value: out[sid].value, unit: out[sid].unit };
-                        cards[sibIdx] = sib;
-                    });
-                    saveCards(cards);
-                    showToast("Distances saved.");
-                    showFormView();
-                } catch (e) {
-                    console.error("Map confirm error", e);
-                }
-            }
-
             function setLocationBackground() {
                 try {
                     if (!editingId) {
@@ -6404,26 +6344,12 @@
                 const locGroup = document.getElementById("location-sub-group");
                 const buildingGroup =
                     document.getElementById("building-sub-group");
-                const mapGroup = document.getElementById("location-map-group");
 
                 if (type === "location") {
                     locGroup.style.display = "block";
-                    // Show Map button only if current card is sublocation and has sibling sublocations
-                    (function(){
-                        if (!mapGroup) return;
-                        const isSub = isSublocationOfAnything(editingId);
-                        if (!isSub) { mapGroup.style.display = "none"; return; }
-                        // find parent and siblings
-                        const cards = getCards();
-                        const parent = cards.find(c => c.genre === "location" && c.sublocations && Object.values(c.sublocations).some(arr => (arr||[]).includes(editingId)));
-                        if (!parent) { mapGroup.style.display = "none"; return; }
-                        const sibIds = Object.values(parent.sublocations || {}).flat().filter(id => id !== editingId);
-                        mapGroup.style.display = sibIds.length > 0 ? "block" : "none";
-                    })();
                 } else {
                     locGroup.style.display = "none";
                     buildingGroup.style.display = "none";
-                    if (mapGroup) mapGroup.style.display = "none";
                     if (locationTagsGroup) locationTagsGroup.style.display = "none";
                     // Hide any location-specific tool sections that may still be visible
                     const otherTools = document.getElementById("other-tools-group");
@@ -6579,7 +6505,12 @@
                         if (e) e.value = schoolSchedule.end;
                     }
                     if (card.locationDetail === "school" && Array.isArray(card.schoolClasses)) {
-                        classesSelections = card.schoolClasses.map(c => ({ name: c.name, teacherId: c.teacherId || "", studentIds: [...(c.studentIds || [])] }));
+                        classesSelections = card.schoolClasses.map(c => ({
+                            name: c.name,
+                            teacherId: c.teacherId || "",
+                            studentIds: [...(c.studentIds || [])],
+                            visibility: c.visibility || "Location",
+                        }));
                     } else {
                         classesSelections = [];
                     }
@@ -8654,7 +8585,12 @@
                     type === "location" &&
                     locationSub === "building" &&
                     locationDetail === "school"
-                        ? classesSelections.map(c => ({ name: c.name, teacherId: c.teacherId || "", studentIds: [...(c.studentIds || [])] }))
+                        ? classesSelections.map(c => ({
+                            name: c.name,
+                            teacherId: c.teacherId || "",
+                            studentIds: [...(c.studentIds || [])],
+                            visibility: c.visibility || "Location",
+                        }))
                         : null;
                 const zivilEventsData =
                     type === "location"

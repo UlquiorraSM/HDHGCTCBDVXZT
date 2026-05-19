@@ -3647,6 +3647,22 @@
                 return ids;
             }
 
+            function isSchoolClassVisibleAtCurrentLocation(cls, schoolLoc, currentLocationId, cards) {
+                if (!cls || !schoolLoc || !currentLocationId) return false;
+                const visibility = String(cls.visibility || "Location").trim();
+                if (visibility.toLowerCase() === "school") {
+                    return currentLocationId === schoolLoc.id;
+                }
+                if (currentLocationId === schoolLoc.id) return true;
+                const parent = findParentLocationById(schoolLoc.id, cards);
+                if (parent && currentLocationId === parent.id) return true;
+                if (parent) {
+                    const siblingIds = getSublocationIdsFromLoc(parent).filter((id) => id !== schoolLoc.id);
+                    if (siblingIds.includes(currentLocationId)) return true;
+                }
+                return false;
+            }
+
             function formatLocationPromptEntry(loc) {
                 if (!loc) return "";
                 const name = loc.title || "Unnamed";
@@ -3655,6 +3671,36 @@
                 let line = `- Name: ${name}\n  ID: ${id}`;
                 if (desc) line += `\n  Description: ${desc}`;
                 return line;
+            }
+
+            function getAllDescendantLocationIds(loc, cards, seen = new Set()) {
+                const ids = [];
+                if (!loc || !loc.sublocations) return ids;
+                for (const childIds of Object.values(loc.sublocations)) {
+                    if (!Array.isArray(childIds)) continue;
+                    childIds.forEach((id) => {
+                        if (!id || seen.has(id)) return;
+                        seen.add(id);
+                        ids.push(id);
+                        const childLoc = cards.find((c) => c.id === id && c.genre === "location");
+                        if (childLoc) {
+                            ids.push(...getAllDescendantLocationIds(childLoc, cards, seen));
+                        }
+                    });
+                }
+                return ids;
+            }
+
+            function locationOrDescendantsHaveSchool(loc, cards) {
+                if (!loc) return false;
+                const ids = new Set([loc.id, ...getAllDescendantLocationIds(loc, cards)]);
+                return cards.some(
+                    (c) =>
+                        c.genre === "location" &&
+                        String(c.locationSub || "").toLowerCase() === "building" &&
+                        String(c.locationDetail || "").toLowerCase() === "school" &&
+                        ids.has(c.id),
+                );
             }
 
             function getLocationsMatchedByPlayerTags(playerText, cards) {
@@ -3725,12 +3771,14 @@
                     if (parent) pushSection("PARENT LOCATION", [parent]);
                     if (grandparent) pushSection("PARENT REGION", [grandparent]);
 
+                    let visibleLocations = [current];
                     if (parent) {
                         const siblingIds = getSublocationIdsFromLoc(parent).filter((id) => id !== currentLocationId);
                         const siblings = siblingIds
                             .map((id) => locations.find((l) => l.id === id))
                             .filter(Boolean);
                         pushSection("SIBLING LOCATIONS", siblings);
+                        visibleLocations = visibleLocations.concat(siblings);
                     }
 
                     const childIds = getSublocationIdsFromLoc(current);
@@ -3738,9 +3786,15 @@
                         .map((id) => locations.find((l) => l.id === id))
                         .filter(Boolean);
                     pushSection("SUBLOCATIONS", children);
+                    visibleLocations = visibleLocations.concat(children);
 
                     const tagMatched = getLocationsMatchedByPlayerTags(playerInput, cards);
                     pushSection("MENTIONED LOCATIONS (Tag match)", tagMatched);
+
+                    const hasSchoolNearby = visibleLocations.some((loc) => locationOrDescendantsHaveSchool(loc, cards));
+                    if (!hasSchoolNearby) {
+                        sections.push(`([${current.title || "Current Location"}] has no schools)`);
+                    }
 
                     if (!sections.length) return "";
                     return "\n# WORLD LOCATIONS\n" + sections.join("\n");
@@ -3835,9 +3889,19 @@
                                 const end = loc.schoolSchedule.end || "16:00";
                                 str += `${indent}  School Schedule: ${openDays || "—"} | ${start} - ${end}\n`;
                             }
-                            if (Array.isArray(loc.schoolClasses) && loc.schoolClasses.length > 0) {
+                            const visibleClasses = Array.isArray(loc.schoolClasses)
+                                ? loc.schoolClasses.filter((cls) =>
+                                      isSchoolClassVisibleAtCurrentLocation(
+                                          cls,
+                                          loc,
+                                          currentLocationId,
+                                          cards,
+                                      ),
+                                  )
+                                : [];
+                            if (visibleClasses.length > 0) {
                                 str += `${indent}  Classes:\n`;
-                                loc.schoolClasses.forEach((cls, idx) => {
+                                visibleClasses.forEach((cls, idx) => {
                                     const t = characters.find(c => c.id === cls.teacherId);
                                     const tName = t ? t.title : (cls.teacherId ? "(Unknown)" : "—");
                                     const studs = (cls.studentIds || [])
@@ -3918,6 +3982,35 @@
                 return `${normText}||${sortedIds}`;
             }
 
+            function formatCharacterRelationList(character, cards) {
+                if (!character || !Array.isArray(character.relations) || character.relations.length === 0) return [];
+                const lines = [];
+                const seen = new Set();
+                for (const rel of character.relations) {
+                    if (!rel || !rel.relation) continue;
+                    let label = rel.relation;
+                    if (label === "Family") label = rel.familySub || "Family";
+                    if (!label) continue;
+
+                    let targetName = "";
+                    if (rel.targetName) {
+                        targetName = String(rel.targetName).trim();
+                    } else if (rel.targetId) {
+                        const target = cards.find((c) => c && c.id === rel.targetId);
+                        targetName = target ? String(target.title || target.id).trim() : String(rel.targetId).trim();
+                    }
+                    if (!targetName) continue;
+
+                    const entry = `${label}: ${targetName}`;
+                    if (!seen.has(entry)) {
+                        seen.add(entry);
+                        lines.push(entry);
+                        if (lines.length >= 8) break;
+                    }
+                }
+                return lines;
+            }
+
             function buildSmartCharacterContext(playerInput = null, relevantMemoriesMap = new Map()) {
                 try {
                     const cards = getCards();
@@ -3962,6 +4055,11 @@
                             if (c.personality) contextLines.push(`  Personality: ${c.personality}`);
                             if (c.description) contextLines.push(`  Description: ${c.description}`);
                             if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
+
+                            const relationLines = formatCharacterRelationList(c, cards);
+                            if (relationLines.length > 0) {
+                                contextLines.push(`  Relations: ${relationLines.join(", ")}`);
+                            }
 
                             const skillCard = c.skillId ? cards.find((s) => s && s.genre === "skill" && s.id === c.skillId) : null;
                             const skillName = c.skillName || (skillCard && skillCard.title) || "";
@@ -4765,9 +4863,12 @@
                         const classes = Array.isArray(school.schoolClasses)
                             ? school.schoolClasses
                             : [];
-                        if (classes.length === 0) return;
+                        const visibleClasses = classes.filter((cls) =>
+                            isSchoolClassVisibleAtCurrentLocation(cls, school, currentLocationId, cards),
+                        );
+                        if (visibleClasses.length === 0) return;
                         context += `- ${school.title}: OPEN. Classes running now.\n`;
-                        classes.forEach((cls, idx) => {
+                        visibleClasses.forEach((cls, idx) => {
                             const t = characters.find((c) => c.id === cls.teacherId && (c.status || "Alive") !== "Dead");
                             const tName = t ? t.title : (cls.teacherId ? "(Unknown)" : "—");
                             const studs = (cls.studentIds || [])
