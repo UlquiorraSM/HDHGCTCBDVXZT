@@ -1565,6 +1565,29 @@
             function setScenarios(list) {
                 localStorage.setItem(SCENARIOS_KEY, JSON.stringify(list));
             }
+            function computeWorldSignature(world) {
+                if (!world || !world.data) return null;
+                try {
+                    const cards = Array.isArray(world.data.cards) ? world.data.cards : [];
+                    const signatureCards = cards.map(c => ({
+                        id: c.id,
+                        updatedAt: c.updatedAt || 0,
+                        title: c.title || "",
+                        genre: c.genre || "",
+                        version: c.version || ""
+                    }));
+                    return JSON.stringify({ cards: signatureCards, settings: world.data.settings || {} });
+                } catch {
+                    return null;
+                }
+            }
+            function isStoryOutdated(story) {
+                if (!story || !story.worldId || !story.worldSignature) return false;
+                const world = getScenarios().find(x => x.id === story.worldId && !x.worldId);
+                if (!world) return false;
+                const current = computeWorldSignature(world);
+                return current && current !== story.worldSignature;
+            }
             
             let _preloadedBg = new Map();
 
@@ -4012,13 +4035,23 @@
                     name.style.cssText = "color:#fff; font-weight:700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
                     nameRow.appendChild(name);
                     
+                    const outdated = isStoryOutdated(s);
+                    if (outdated) {
+                        const badge = document.createElement("span");
+                        badge.textContent = "Outdated";
+                        badge.style.cssText = "color:#ffdd55; font-size:11px; font-weight:700; background:rgba(150,50,0,.35); padding:2px 6px; border-radius:999px; white-space:nowrap;";
+                        nameRow.appendChild(badge);
+                    }
+                    
                     header.appendChild(nameRow);
                     
                     const actions = document.createElement("div");
                     actions.style.cssText = "display:flex; flex-direction:column; gap:8px; margin-top: auto;";
                     
+                    const isOutdated = isStoryOutdated(s);
                     const playBtn = document.createElement("button");
-                    playBtn.textContent = "Continue";
+                    playBtn.textContent = isOutdated ? "Continue (Outdated)" : "Continue";
+                    playBtn.title = isOutdated ? "This story is based on an older version of the world." : "Continue";
                     playBtn.className = "menu-button";
                     playBtn.style.cssText = "padding:8px 10px; font-size:12px; align-self:stretch;";
                     playBtn.onclick = () => { resumeStory(s); };
@@ -4286,6 +4319,8 @@
                         targetStory = scenarios.find(x => x.id === currentStoryId);
                     }
 
+                    const world = worldId ? getScenarios().find(x => x.id === worldId && !x.worldId) : null;
+                    const worldSignature = world ? computeWorldSignature(world) : null;
                     const mergeStorySettingsForSave = (baseSettings, existingStorySettings) => {
                         const merged = { ...(baseSettings || {}) };
                         const existing = existingStorySettings || {};
@@ -4299,6 +4334,9 @@
                         const mergedStorySettings = mergeStorySettingsForSave(settings, targetStory.data?.settings);
                         targetStory.updatedAt = Date.now();
                         targetStory.signature = sig;
+                        if (worldSignature && !targetStory.worldSignature) {
+                            targetStory.worldSignature = worldSignature;
+                        }
                         targetStory.data = { cards, characters: chars, log, settings: mergedStorySettings, anchoredWorldChanges };
 
                         // Wenn der Charakter-Name im Story-Titel sein soll:
@@ -4327,6 +4365,7 @@
                             createdAt: Date.now(),
                             updatedAt: Date.now(),
                             signature: sig,
+                            worldSignature: worldSignature,
                             data: { cards, characters: chars, log, settings, anchoredWorldChanges }
                         };
 
@@ -4420,16 +4459,6 @@
                      const now = Date.now();
                      scenarios[idx].updatedAt = now;
                      scenarios[idx].lastUsedAt = now; // Bearbeitung zählt als Nutzung
-                     
-                     // Auch alle Stories dieser Welt aktualisieren
-                     scenarios.forEach(s => {
-                         if (s.worldId === _confWorldId) {
-                             if (!s.data.settings) s.data.settings = {};
-                             s.data.settings.backgroundUrl = newBg;
-                             s.updatedAt = now;
-                         }
-                     });
-                     
                      setScenarios(scenarios);
                      renderScenarios();
                      closeWorldConf();
