@@ -366,6 +366,18 @@
                                     <input class="input" type="url" id="background-url" placeholder="https://...">
                                 </div>
                             </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">Develop Mode</div>
+                                    <div class="setting-help">Show the Dev button in the game only when this is ON.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="develop-mode">
+                                        <option value="off" selected>OFF</option>
+                                        <option value="on">ON</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -489,6 +501,7 @@
                 const data = JSON.parse(settings);
                 // Allgemein
                 document.getElementById('background-url').value = data.backgroundUrl || 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp';
+                document.getElementById('develop-mode').value = data.developMode || 'off';
                 
                 // KI-Einstellungen
                 document.getElementById('text-size').value = data.textSize || 'normal';
@@ -501,6 +514,7 @@
             } else {
                 // Standard-Hintergrund anwenden
                 document.getElementById('background-url').value = 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp';
+                document.getElementById('develop-mode').value = 'off';
                 document.getElementById('ai-check').value = '1';
                 document.getElementById('nsfw-block').value = 'off';
                 applyBackground(true);
@@ -537,6 +551,7 @@
             const settings = {
                 // Allgemein
                 backgroundUrl: document.getElementById('background-url').value,
+                developMode: document.getElementById('develop-mode').value,
                 
                 // KI-Einstellungen
                 textSize: document.getElementById('text-size').value,
@@ -626,6 +641,7 @@
         function hasUnsavedChanges() {
             const currentSettings = {
                 backgroundUrl: document.getElementById('background-url').value,
+                developMode: document.getElementById('develop-mode').value,
                 textSize: document.getElementById('text-size').value,
                 aiLanguage: document.getElementById('ai-language').value,
                 perspective: document.getElementById('ai-perspective').value,

@@ -1253,7 +1253,21 @@
             #subloc-picker.visible {
                 display: flex;
             }
-            .subloc-picker-panel {
+            #house-rooms-scene {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 3100;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(4px);
+            }
+            #house-rooms-scene.visible {
+                display: flex;
+            }
+            .subloc-picker-panel,
+            .house-rooms-panel {
                 background: rgba(20, 20, 20, 0.98);
                 border: 1.5px solid rgba(255, 255, 255, 0.13);
                 border-radius: 14px;
@@ -1286,6 +1300,18 @@
                 transition: color 0.15s;
             }
             .subloc-picker-close:hover {
+                color: #fff;
+            }
+            .house-rooms-close {
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.5);
+                font-size: 22px;
+                cursor: pointer;
+                line-height: 1;
+                transition: color 0.15s;
+            }
+            .house-rooms-close:hover {
                 color: #fff;
             }
             .subloc-picker-search {
@@ -2308,6 +2334,38 @@
                 margin: 6px 0 12px 0;
                 flex-wrap: wrap;
             }
+            .house-room-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 12px 14px;
+                margin-top: 10px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                background: rgba(24, 24, 24, 0.9);
+            }
+            .house-room-info {
+                flex: 1;
+                min-width: 0;
+            }
+            .house-room-info strong {
+                display: block;
+                margin-bottom: 4px;
+                font-size: 14px;
+                color: #fff;
+            }
+            .house-room-info div {
+                color: rgba(255, 255, 255, 0.75);
+                font-size: 13px;
+                white-space: pre-line;
+            }
+            .house-room-actions {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
 
             /* RacialCiv tags (shown in form) */
             .racial-tags {
@@ -2712,6 +2770,14 @@
                         ></textarea>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Clothes</label>
+                        <textarea
+                            class="form-textarea"
+                            id="f-char-clothes"
+                            placeholder="Describe the character's clothing..."
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Personality</label>
                         <textarea
                             class="form-textarea"
@@ -2754,7 +2820,7 @@
                         </div>
                     </div>
                     <div class="form-two-col">
-                        <div class="form-group">
+                        <div class="form-group" id="char-race-group">
                             <label class="form-label">Race</label>
                             <select class="form-select" id="f-char-race">
                                 <option value="">Select race...</option>
@@ -2991,6 +3057,13 @@
                                 <span style="color:rgba(255,255,255,.7); font-size:12px;">Enabled</span>
                             </label>
                         </div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:10px 12px; border:1px solid rgba(255,255,255,.1); border-radius:10px; background:rgba(255,255,255,.03);">
+                            <span style="color:#fff; font-size:13px;">Fantasy Races</span>
+                            <label class="switch" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="checkbox" id="system-fantasy-races-enabled" onchange="updateFantasyRacesVisibility()">
+                                <span style="color:rgba(255,255,255,.7); font-size:12px;">Enabled</span>
+                            </label>
+                        </div>
                         <div class="tools-row" id="system-level-btn-row">
                             <button
                                 type="button"
@@ -3173,6 +3246,9 @@
                         <div class="tools-row" id="tools-section-building" style="display:none">
                             <button type="button" class="subloc-btn" onclick="setLocationBackground()">
                                 <span class="subloc-icon">🖼️</span> Background
+                            </button>
+                            <button type="button" class="subloc-btn" id="house-rooms-button" onclick="openHouseRoomsScene()" style="display:none">
+                                <span class="subloc-icon">🚪</span> Rooms
                             </button>
                         </div>
                     </div>
@@ -4098,6 +4174,41 @@
             </div>
         </div>
 
+        <!-- ── HOUSE ROOMS SCENE ── -->
+        <div id="house-rooms-scene">
+            <div class="house-rooms-panel">
+                <div class="subloc-picker-header">
+                    <span class="subloc-picker-title">House Rooms</span>
+                    <button class="house-rooms-close" onclick="closeHouseRoomsScene()">
+                        &#10005;
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Room Name</label>
+                    <input type="text" class="form-input" id="f-house-room-name" placeholder="Room name" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Room Description</label>
+                    <textarea class="form-textarea" id="f-house-room-desc" rows="4" placeholder="Room description"></textarea>
+                </div>
+                <div class="form-actions" style="margin-top: 8px; gap: 8px;">
+                    <button type="button" class="subloc-btn" onclick="saveHouseRoom()">
+                        <span class="subloc-icon">➕</span> <span id="house-room-button-label">Add Room</span>
+                    </button>
+                    <button type="button" class="subloc-btn" onclick="resetHouseRoomForm()">
+                        <span class="subloc-icon">✖</span> Clear
+                    </button>
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label class="form-label">Rooms List</label>
+                    <div id="house-rooms-list"></div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-cancel" onclick="closeHouseRoomsScene()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ── RACIAL CIVILIZATION PICKER ── -->
         <div id="racial-picker">
             <div class="racial-panel">
@@ -4231,6 +4342,8 @@
             let curseTags = []; // for curse tags
             let curseTemp = [];
             let curseCtx = null;
+            let houseRooms = [];
+            let houseRoomEditIndex = -1;
             // Traits definitions and selection state
             const TRAITS = [
                 { id: "outside", name: "Outside", description: "This NPC hangs around outside a lot and spends very little time at home during the day." },
@@ -5918,6 +6031,8 @@
                     if (card.genre === "character") {
                         document.getElementById("f-char-appearance").value =
                             card.appearance || "";
+                        document.getElementById("f-char-clothes").value =
+                            card.clothes || "";
                         document.getElementById("f-char-personality").value =
                             card.personality || "";
                         document.getElementById("f-char-age").value =
@@ -6077,6 +6192,13 @@
                     onTypeChange();
                     if (card.genre === "location") {
                         applyLocationSubtype(card);
+                        if (card.locationDetail === "house") {
+                            houseRooms = Array.isArray(card.houseRooms) ? card.houseRooms.map((r) => ({ ...r })) : [];
+                        } else {
+                            houseRooms = [];
+                        }
+                        resetHouseRoomForm();
+                        renderHouseRooms();
                         // restore canBeSpawn for all location types
                         const spawnGrp = document.getElementById("spawn-check-group");
                         if (spawnGrp) {
@@ -6109,6 +6231,9 @@
                     updateLoreSummary();
                     skincolorData = [];
                     updateSkincolorSummary();
+                    houseRooms = [];
+                    resetHouseRoomForm();
+                    renderHouseRooms();
 
                     document.getElementById("form-id-row").textContent = "";
                     document.getElementById("btn-save").textContent = "Create";
@@ -6137,6 +6262,8 @@
                     document.getElementById("f-type").value === "race"
                         ? "block"
                         : "none";
+                updateRaceTypeOptionVisibility();
+                updateCharacterRaceFieldVisibility();
 
                 // Switch views
                 document.getElementById("app").style.display = "none";
@@ -6215,6 +6342,7 @@
 
             function resetCharacterFields() {
                 document.getElementById("f-char-appearance").value = "";
+                document.getElementById("f-char-clothes").value = "";
                 document.getElementById("f-char-personality").value = "";
                 document.getElementById("f-char-age").value = "";
                 document.getElementById("f-char-gender").value = "male";
@@ -6289,6 +6417,7 @@
                 document.getElementById("character-block").style.display =
                     type === "character" ? "block" : "none";
                 if (type === "character") updateSkillGroupVisibility();
+                updateCharacterRaceFieldVisibility();
                 // Show / hide Species block
                 document.getElementById("species-block").style.display =
                     type === "species" ? "block" : "none";
@@ -6468,6 +6597,96 @@
                 if (sub !== "transport") {
                     transportDestinations = [];
                 }
+                const roomsBtn = document.getElementById("house-rooms-button");
+                const isHouse = sub === "house";
+                if (roomsBtn) roomsBtn.style.display = isHouse ? "inline-flex" : "none";
+                if (!isHouse) {
+                    closeHouseRoomsScene();
+                }
+            }
+
+            function openHouseRoomsScene() {
+                const scene = document.getElementById("house-rooms-scene");
+                if (!scene) return;
+                scene.classList.add("visible");
+                renderHouseRooms();
+            }
+
+            function closeHouseRoomsScene() {
+                const scene = document.getElementById("house-rooms-scene");
+                if (!scene) return;
+                scene.classList.remove("visible");
+                houseRoomEditIndex = -1;
+                resetHouseRoomForm();
+            }
+
+            function resetHouseRoomForm() {
+                houseRoomEditIndex = -1;
+                document.getElementById("f-house-room-name").value = "";
+                document.getElementById("f-house-room-desc").value = "";
+                const label = document.getElementById("house-room-button-label");
+                if (label) label.textContent = "Add Room";
+            }
+
+            function renderHouseRooms() {
+                const list = document.getElementById("house-rooms-list");
+                if (!list) return;
+                if (!houseRooms.length) {
+                    list.innerHTML = '<div style="color: rgba(255,255,255,0.55); font-size: 13px;">No rooms yet. Use the Rooms button above to add one.</div>';
+                    return;
+                }
+                list.innerHTML = houseRooms
+                    .map((room, idx) => {
+                        return `
+                            <div class="house-room-row">
+                                <div class="house-room-info">
+                                    <strong>${escHtml(room.name)}</strong>
+                                    <div>${escHtml(room.description)}</div>
+                                </div>
+                                <div class="house-room-actions">
+                                    <button type="button" class="subloc-btn" onclick="editHouseRoom(${idx})">Edit</button>
+                                    <button type="button" class="subloc-btn" onclick="deleteHouseRoom(${idx})">Delete</button>
+                                </div>
+                            </div>
+                        `;
+                    })
+                    .join("");
+            }
+
+            function saveHouseRoom() {
+                const name = document.getElementById("f-house-room-name").value.trim();
+                const description = document.getElementById("f-house-room-desc").value.trim();
+                if (!name) {
+                    showToast("Please enter a room name.", "#c04040");
+                    return;
+                }
+                const room = { name, description };
+                if (houseRoomEditIndex >= 0 && houseRoomEditIndex < houseRooms.length) {
+                    houseRooms[houseRoomEditIndex] = room;
+                } else {
+                    houseRooms.push(room);
+                }
+                resetHouseRoomForm();
+                renderHouseRooms();
+            }
+
+            function editHouseRoom(idx) {
+                if (idx < 0 || idx >= houseRooms.length) return;
+                const room = houseRooms[idx];
+                document.getElementById("f-house-room-name").value = room.name || "";
+                document.getElementById("f-house-room-desc").value = room.description || "";
+                houseRoomEditIndex = idx;
+                const label = document.getElementById("house-room-button-label");
+                if (label) label.textContent = "Update Room";
+            }
+
+            function deleteHouseRoom(idx) {
+                if (idx < 0 || idx >= houseRooms.length) return;
+                houseRooms.splice(idx, 1);
+                if (houseRoomEditIndex === idx) {
+                    resetHouseRoomForm();
+                }
+                renderHouseRooms();
             }
 
             function getLocationSubtype() {
@@ -6792,22 +7011,62 @@
                 if (type !== "system") return null;
 
                 const createNewCharacterEnabled = document.getElementById("system-create-character-enabled")?.checked !== false;
+                const fantasyRacesEnabled = document.getElementById("system-fantasy-races-enabled")?.checked === true;
                 const levelSystemEnabled = document.getElementById("level-system-enabled").checked;
                 if (!levelSystemEnabled) {
                     return {
                         levelSystemEnabled: false,
-                        createNewCharacterEnabled
+                        createNewCharacterEnabled,
+                        fantasyRacesEnabled
                     };
                 }
 
                 return {
                     levelSystemEnabled: true,
                     createNewCharacterEnabled,
+                    fantasyRacesEnabled: document.getElementById("system-fantasy-races-enabled")?.checked === true,
                     levelMin: parseInt(document.getElementById("level-min").value) || 1,
                     levelMax: parseInt(document.getElementById("level-max").value) || 100,
                     expBase: parseInt(document.getElementById("exp-base").value) || 100,
                     expIncrement: parseInt(document.getElementById("exp-increment").value) || 100
                 };
+            }
+
+            function isFantasyRacesEnabled() {
+                const toggle = document.getElementById("system-fantasy-races-enabled");
+                if (toggle) {
+                    return toggle.checked === true;
+                }
+                const cards = getCards();
+                const systemCard = cards.find(c => c.genre === "system" && c.systemConfig?.fantasyRacesEnabled);
+                return !!systemCard;
+            }
+
+            function updateRaceTypeOptionVisibility() {
+                const raceOption = document.querySelector('#f-type option[value="race"]');
+                if (!raceOption) return;
+                const enabled = isFantasyRacesEnabled();
+                raceOption.hidden = !enabled;
+                if (!enabled && document.getElementById("f-type").value === "race") {
+                    document.getElementById("f-type").value = "";
+                }
+            }
+
+            function updateFantasyRacesVisibility() {
+                updateRaceTypeOptionVisibility();
+                updateCharacterRaceFieldVisibility();
+            }
+
+            function updateCharacterRaceFieldVisibility() {
+                const raceGroup = document.getElementById("char-race-group");
+                if (!raceGroup) return;
+                const type = document.getElementById("f-type").value;
+                const show = type === "character" && isFantasyRacesEnabled();
+                raceGroup.style.display = show ? "block" : "none";
+                if (!show) {
+                    const raceSel = document.getElementById("f-char-race");
+                    if (raceSel) raceSel.value = "";
+                }
             }
 
             function applySystemData(card) {
@@ -6825,6 +7084,12 @@
                 if (createBtnToggle) {
                     createBtnToggle.checked = config?.createNewCharacterEnabled !== false;
                 }
+                const fantasyRacesToggle = document.getElementById("system-fantasy-races-enabled");
+                if (fantasyRacesToggle) {
+                    fantasyRacesToggle.checked = config?.fantasyRacesEnabled === true;
+                }
+                updateRaceTypeOptionVisibility();
+                updateCharacterRaceFieldVisibility();
                 if (config && config.levelSystemEnabled) {
                     document.getElementById("level-system-enabled").checked = true;
                     document.getElementById("level-minmax-section").style.display = "block";
@@ -8669,6 +8934,10 @@
                         : (type === "species"
                             ? document.getElementById("f-species-appearance").value.trim()
                             : "");
+                const clothes =
+                    type === "character"
+                        ? document.getElementById("f-char-clothes").value.trim()
+                        : "";
                 const personality =
                     type === "character"
                         ? document.getElementById("f-char-personality").value.trim()
@@ -8693,8 +8962,10 @@
                         ? (document.getElementById("f-char-race").value || "")
                         : "";
                 const raceName =
-                    type === "character" && raceId
-                        ? ((getCards().find(c => c.id === raceId) || {}).title || "")
+                    type === "character"
+                        ? (raceId
+                              ? ((getCards().find(c => c.id === raceId) || {}).title || "")
+                              : (isFantasyRacesEnabled() ? "" : "Human"))
                         : "";
                 const familyRaceId =
                     type === "family"
@@ -8888,6 +9159,7 @@
                                           : type === "skill"
                                             ? [...skillTags]
                                             : (Array.isArray(prev.tags) ? [...prev.tags] : []),
+                            ...(type === "location" && locationDetail === "house" ? { houseRooms: houseRooms.map((r) => ({ ...r })) } : {}),
                             canBeSpawn,
                             ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
                             ...(type === "location" && prev.distances && Object.keys(prev.distances).length ? { distances: prev.distances } : {}),
@@ -8897,6 +9169,7 @@
                             loreMode,
                             skincolorAllowed,
                             appearance,
+                            clothes,
                             personality,
                             generally,
                             age,
@@ -8969,6 +9242,7 @@
                                       : type === "skill"
                                         ? [...skillTags]
                                         : [],
+                        ...(type === "location" && locationDetail === "house" ? { houseRooms: houseRooms.map((r) => ({ ...r })) } : {}),
                         relations: type === "character" ? [...relationSelections] : [],
                         secrets: type === "character" ? [...secretSelections] : [],
                         ...(type === "character" ? { traits } : {}),
@@ -8981,6 +9255,7 @@
                         loreText,
                         loreMode,
                         appearance,
+                        clothes,
                         personality,
                         generally,
                         age,
@@ -9302,15 +9577,6 @@
                         // Nur die Karten der Welt aktualisieren. Welt-Settings NICHT überschreiben.
                         scenarios[idx].data.cards = cards;
                         scenarios[idx].updatedAt = Date.now();
-                        
-                        // Auch alle zugehörigen Stories aktualisieren (nur Karten)
-                        scenarios.forEach(s => {
-                            if (s.worldId === worldId) {
-                                s.data.cards = cards;
-                                s.updatedAt = Date.now();
-                            }
-                        });
-                        
                         localStorage.setItem("storyki_scenarios", JSON.stringify(scenarios));
                     }
                     

@@ -192,6 +192,248 @@
                 font-size: 12px;
                 text-transform: capitalize;
             }
+            .stats-relation-action {
+                border: 1px solid rgba(255,255,255,0.18);
+                background: rgba(255,255,255,0.08);
+                color: #fff;
+                border-radius: 10px;
+                padding: 6px 12px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: background 0.2s, border-color 0.2s;
+                flex-shrink: 0;
+            }
+            .stats-relation-action:hover {
+                background: rgba(255,255,255,0.14);
+                border-color: rgba(255,255,255,0.3);
+            }
+            .npc-info-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.85);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 2600;
+                backdrop-filter: blur(10px);
+            }
+            .npc-info-overlay.show {
+                display: flex;
+            }
+            .npc-info-panel {
+                width: 100%;
+                max-width: 520px;
+                max-height: 90vh;
+                overflow-y: auto;
+                background: rgba(18,18,24,0.98);
+                border: 1px solid rgba(255,255,255,0.14);
+                border-radius: 20px;
+                padding: 24px;
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+            }
+            .npc-info-header {
+                display: flex;
+                gap: 14px;
+                align-items: center;
+            }
+            .npc-info-avatar {
+                width: 74px;
+                height: 74px;
+                border-radius: 20px;
+                overflow: hidden;
+                flex-shrink: 0;
+                background: rgba(255,255,255,0.06);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px;
+                color: rgba(255,255,255,0.85);
+            }
+            .npc-info-title {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .npc-info-title strong {
+                font-size: 20px;
+                color: #fff;
+            }
+            .npc-info-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 10px;
+                color: rgba(255,255,255,0.75);
+                font-size: 13px;
+            }
+            .npc-info-row span {
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 10px;
+                padding: 8px 10px;
+            }
+            .npc-info-section {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .npc-info-section-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .npc-info-section-controls {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .npc-info-section-title {
+                color: rgba(255,255,255,0.55);
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .npc-info-button {
+                padding: 6px 12px;
+                font-size: 12px;
+                border: 1px solid rgba(255,255,255,0.18);
+                border-radius: 10px;
+                background: rgba(255,255,255,0.08);
+                color: #fff;
+                cursor: pointer;
+                transition: background 0.2s, border-color 0.2s;
+                white-space: nowrap;
+            }
+            .npc-info-button:hover {
+                background: rgba(255,255,255,0.14);
+                border-color: rgba(255,255,255,0.28);
+            }
+            .npc-memory-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.88);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 2700;
+                backdrop-filter: blur(12px);
+            }
+            .npc-memory-overlay.show {
+                display: flex;
+            }
+            .npc-memory-panel {
+                width: 100%;
+                max-width: 560px;
+                max-height: 90vh;
+                overflow-y: auto;
+                background: rgba(18,18,24,0.98);
+                border: 1px solid rgba(255,255,255,0.16);
+                border-radius: 22px;
+                padding: 22px;
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+            }
+            .npc-memory-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 14px;
+            }
+            .npc-memory-title {
+                color: #fff;
+                font-size: 18px;
+                font-weight: 700;
+            }
+            .npc-memory-search {
+                width: 100%;
+                min-height: 40px;
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 12px;
+                padding: 10px 14px;
+                background: rgba(255,255,255,0.05);
+                color: #fff;
+                font-size: 14px;
+                outline: none;
+            }
+            .npc-memory-count {
+                color: rgba(255,255,255,0.65);
+                font-size: 13px;
+            }
+            .npc-memory-list {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .npc-memory-item {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                padding: 14px 16px;
+                border-radius: 16px;
+                background: rgba(255,255,255,0.04);
+                border: 1px solid rgba(255,255,255,0.08);
+            }
+            .npc-memory-meta {
+                display: flex;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 10px;
+                color: rgba(255,255,255,0.55);
+                font-size: 12px;
+            }
+            .npc-memory-text {
+                color: rgba(255,255,255,0.92);
+                white-space: pre-wrap;
+                line-height: 1.6;
+                font-size: 14px;
+            }
+            .npc-info-relations-list.horizontal {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .npc-info-relations-list.horizontal .npc-info-relations-item {
+                flex: 1 1 calc(50% - 8px);
+            }
+            .npc-info-section-content {
+                color: rgba(255,255,255,0.9);
+                font-size: 14px;
+                line-height: 1.6;
+                padding: 14px 16px;
+                background: rgba(255,255,255,0.04);
+                border-radius: 14px;
+                min-height: 42px;
+                white-space: pre-wrap;
+            }
+            .npc-info-relations-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .npc-info-relations-item {
+                display: flex;
+                justify-content: space-between;
+                gap: 10px;
+                align-items: center;
+                padding: 10px 12px;
+                border-radius: 12px;
+                background: rgba(255,255,255,0.04);
+                border: 1px solid rgba(255,255,255,0.08);
+            }
+            .npc-info-relations-item span:first-child {
+                color: rgba(255,255,255,0.9);
+                font-size: 13px;
+            }
+            .npc-info-relations-item span:last-child {
+                color: rgba(255,255,255,0.55);
+                font-size: 12px;
+            }
             .stats-no-relations {
                 color: rgba(255, 255, 255, 0.4);
                 font-size: 13px;
@@ -242,6 +484,19 @@
                 color: rgba(255, 255, 255, 0.9);
                 letter-spacing: 0.05em;
                 text-transform: uppercase;
+            }
+            #header-location-rooms {
+                font-size: 10px;
+                color: rgba(255, 255, 255, 0.65);
+                line-height: 1.35;
+                margin-top: 6px;
+                display: none;
+                white-space: normal;
+                text-align: center;
+                max-width: 360px;
+            }
+            #header-location-rooms .header-location-room-row {
+                margin-top: 4px;
             }
             #header-time {
                 font-size: 11px;
@@ -1053,8 +1308,9 @@
 
                 <div id="header-info">
                     <div id="header-location">—</div>
-                    <div id="header-event" style="display:none;"></div>
-                    <div id="header-time">—</div>
+                <div id="header-location-rooms"></div>
+                <div id="header-event" style="display:none;"></div>
+                <div id="header-time">—</div>
                 </div>
 
                 <div id="char-badge">
@@ -1167,7 +1423,10 @@
 
                 <!-- Appearance -->
                 <div id="stats-appearance-section" style="display:flex; flex-direction:column; gap:8px;">
-                    <div style="color:rgba(255,255,255,.5); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Appearance</div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <div style="color:rgba(255,255,255,.5); font-size:12px; text-transform:uppercase; letter-spacing:1px;">Appearance</div>
+                        <button id="stats-appearance-edit-btn" onclick="editStatsAppearance()" style="display:none; padding:6px 12px; border:none; border-radius:8px; background:rgba(100,180,255,0.15); color:#aad8ff; font-size:12px; cursor:pointer;">Edit</button>
+                    </div>
                     <div id="stats-appearance" style="color:rgba(255,255,255,.85); font-size:14px; line-height:1.6; padding:14px 16px; background:rgba(255,255,255,.05); border-radius:10px; min-height:60px;">—</div>
                 </div>
 
@@ -1199,6 +1458,76 @@
                         <!-- Skills will be rendered here -->
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div id="npc-info-overlay" class="npc-info-overlay">
+            <div class="npc-info-panel">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                    <div style="color:#fff; font-weight:700; font-size:20px;">NPC Details</div>
+                    <button onclick="closeNpcInfoOverlay()" style="width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1); color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
+                </div>
+                <div class="npc-info-header">
+                    <div class="npc-info-avatar" id="npc-info-avatar">?</div>
+                    <div class="npc-info-title">
+                        <strong id="npc-info-name">Unknown</strong>
+                        <div id="npc-info-race" style="color:rgba(255,255,255,0.55); font-size:13px;">—</div>
+                    </div>
+                </div>
+                <div class="npc-info-row">
+                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                        <span id="npc-info-age">Age: —</span>
+                        <span id="npc-info-birthdate">Birthdate: —</span>
+                        <span id="npc-info-relation">Relation: —</span>
+                    </div>
+                    <button id="npc-info-memory-button" class="npc-info-button" onclick="openNpcMemoryOverlay()" style="display:none;">Memory</button>
+                </div>
+                <div class="npc-info-section">
+                    <div class="npc-info-section-title">Appearance</div>
+                    <div class="npc-info-section-content" id="npc-info-appearance">—</div>
+                </div>
+                <div class="npc-info-section">
+                    <div class="npc-info-section-header">
+                        <div class="npc-info-section-title">Clothes</div>
+                        <button id="npc-info-edit-clothes-button" class="npc-info-button" onclick="editNpcClothes()" style="display:none;">Edit</button>
+                    </div>
+                    <div class="npc-info-section-content" id="npc-info-clothes">—</div>
+                </div>
+                <div class="npc-info-section">
+                    <div class="npc-info-section-title">Personality</div>
+                    <div class="npc-info-section-content" id="npc-info-personality">—</div>
+                </div>
+                <div class="npc-info-section">
+                    <div class="npc-info-section-header">
+                        <div class="npc-info-section-title">Relations to others</div>
+                        <div class="npc-info-section-controls">
+                            <select id="npc-info-relations-filter-select" onchange="toggleNpcInfoRelationsFilter()" style="background:rgba(40,40,40,0.9); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; font-size:11px; padding:4px 8px; cursor:pointer;">
+                                <option value="all">All</option>
+                                <option value="relations">Relations</option>
+                                <option value="family">Family</option>
+                            </select>
+                            <select id="npc-info-relations-layout-select" onchange="toggleNpcInfoRelationsLayout()" style="background:rgba(40,40,40,0.9); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; font-size:11px; padding:4px 8px; cursor:pointer;">
+                                <option value="vertical">1x...</option>
+                                <option value="horizontal">2x...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="npc-info-relations-list" id="npc-info-related-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="npc-memory-overlay" class="npc-memory-overlay">
+            <div class="npc-memory-panel">
+                <div class="npc-memory-header">
+                    <div>
+                        <div class="npc-memory-title">NPC Memories</div>
+                        <div id="npc-memory-count" class="npc-memory-count">—</div>
+                    </div>
+                    <button onclick="closeNpcMemoryOverlay()" style="width:32px; height:32px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.1); color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
+                </div>
+                <input id="npc-memory-search" class="npc-memory-search" type="text" placeholder="Filter memories..." oninput="filterNpcMemories()">
+                <div id="npc-memory-list" class="npc-memory-list"></div>
             </div>
         </div>
 
@@ -1244,6 +1573,8 @@
             const PENDING_MESSAGE_KEY = "storyki_pending_message";
             const RELATIONS_LAYOUT_KEY = "storyki_relations_layout";
             const RELATIONS_FILTER_KEY = "storyki_relations_filter";
+            const NPC_INFO_RELATIONS_LAYOUT_KEY = "storyki_npc_info_relations_layout";
+            const NPC_INFO_RELATIONS_FILTER_KEY = "storyki_npc_info_relations_filter";
             const ACTIVE_SCENE_NPCS_KEY = "storyki_active_scene_npcs";
             /** Turns an „Szene aktiv“-Detail für die UI / Kontext; pro Spieler-Nachricht −1 (Retry zählt nicht doppelt). */
             const ACTIVE_SCENE_NPC_DETAIL_TURNS = 5;
@@ -1628,6 +1959,212 @@
 
                 sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
                 return true;
+            }
+
+            function updateNpcClothes(npcId, clothesText, anchorTs = null) {
+                const id = String(npcId || "").trim();
+                const clothes = String(clothesText || "").trim();
+                if (!id || !clothes) return false;
+                const cards = getCards();
+                const npc = cards.find((c) => c.genre === "character" && c.id === id);
+                if (!npc) return false;
+                npc.clothes = clothes;
+                sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                try {
+                    const overlay = document.getElementById("npc-info-overlay");
+                    if (overlay && overlay.dataset.currentNpcId === id) {
+                        renderNpcInfoOverlay(id);
+                    }
+                } catch {}
+                return true;
+            }
+
+            function editNpcClothes() {
+                if (!isDeveloperModeEnabled()) return;
+                const overlay = document.getElementById("npc-info-overlay");
+                if (!overlay) return;
+                const npcId = overlay.dataset.currentNpcId;
+                if (!npcId) return;
+                const cards = getCards();
+                const npc = cards.find((c) => c.genre === "character" && c.id === npcId);
+                if (!npc) return;
+                const current = npc.clothes ? String(npc.clothes) : "Naked";
+                const updated = window.prompt(`Edit clothes for ${npc.title || npc.id || "NPC"}:`, current);
+                if (updated === null) return;
+                const clothesText = String(updated).trim() || "Naked";
+                if (updateNpcClothes(npcId, clothesText)) {
+                    renderNpcInfoOverlay(npcId);
+                }
+            }
+
+            function openNpcMemoryOverlay() {
+                const overlay = document.getElementById("npc-memory-overlay");
+                const infoOverlay = document.getElementById("npc-info-overlay");
+                if (!overlay || !infoOverlay) return;
+                const npcId = String(infoOverlay.dataset.currentNpcId || "").trim();
+                if (!npcId) return;
+                overlay.dataset.currentNpcId = npcId;
+                const searchInput = document.getElementById("npc-memory-search");
+                if (searchInput) searchInput.value = "";
+                renderNpcMemoryOverlay(npcId, "");
+                overlay.classList.add("show");
+            }
+
+            function closeNpcMemoryOverlay() {
+                const overlay = document.getElementById("npc-memory-overlay");
+                if (!overlay) return;
+                overlay.classList.remove("show");
+            }
+
+            function filterNpcMemories() {
+                const overlay = document.getElementById("npc-memory-overlay");
+                if (!overlay) return;
+                const npcId = String(overlay.dataset.currentNpcId || "").trim();
+                if (!npcId) return;
+                const searchInput = document.getElementById("npc-memory-search");
+                const filterText = searchInput ? String(searchInput.value || "").trim() : "";
+                renderNpcMemoryOverlay(npcId, filterText);
+            }
+
+            function renderNpcMemoryOverlay(npcId, filterText) {
+                const cards = getCards();
+                const npc = cards.find((c) => c.genre === "character" && c.id === npcId);
+                const listEl = document.getElementById("npc-memory-list");
+                const countEl = document.getElementById("npc-memory-count");
+                if (!listEl || !countEl) return;
+                listEl.innerHTML = "";
+                if (!npc) {
+                    countEl.textContent = "No NPC selected.";
+                    return;
+                }
+                const normFilter = String(filterText || "").trim().toLowerCase();
+                const memories = Array.isArray(npc.memories) ? npc.memories.slice() : [];
+                const insights = Array.isArray(npc.insights) ? npc.insights.slice() : [];
+                const rows = [];
+                memories.forEach((m) => {
+                    if (!m || typeof m !== "object") return;
+                    const text = String(m.text || "").trim();
+                    const date = String(m.date || "").trim();
+                    const time = String(m.time || "").trim();
+                    const line = `${date} ${time} ${text}`.toLowerCase();
+                    if (normFilter && !line.includes(normFilter)) return;
+                    rows.push({ type: "Memory", date, time, text, logTs: m.logTs });
+                });
+                insights.forEach((m) => {
+                    if (!m || typeof m !== "object") return;
+                    const text = String(m.text || "").trim();
+                    const date = String(m.date || "").trim();
+                    const time = String(m.time || "").trim();
+                    const line = `${date} ${time} ${text}`.toLowerCase();
+                    if (normFilter && !line.includes(normFilter)) return;
+                    rows.push({ type: "Insight", date, time, text, logTs: m.logTs });
+                });
+                if (rows.length === 0) {
+                    const empty = document.createElement("div");
+                    empty.className = "npc-memory-item";
+                    empty.innerHTML = `<div class="npc-memory-meta">No memories found.</div>`;
+                    listEl.appendChild(empty);
+                } else {
+                    rows.sort((a, b) => {
+                        const ta = a.logTs != null ? Number(a.logTs) : 0;
+                        const tb = b.logTs != null ? Number(b.logTs) : 0;
+                        return tb - ta;
+                    });
+                    rows.forEach((row) => {
+                        const item = document.createElement("div");
+                        item.className = "npc-memory-item";
+                        const meta = document.createElement("div");
+                        meta.className = "npc-memory-meta";
+                        meta.innerHTML = `<span>${row.type}</span><span>${row.date || "Unknown date"}${row.time ? ` • ${row.time}` : ""}</span>`;
+                        if (isDeveloperModeEnabled()) {
+                            const editButton = document.createElement("button");
+                            editButton.className = "npc-info-button";
+                            editButton.textContent = "Edit";
+                            editButton.style.marginLeft = "10px";
+                            editButton.style.fontSize = "11px";
+                            editButton.style.padding = "4px 10px";
+                            editButton.onclick = (e) => {
+                                e.stopPropagation();
+                                editNpcMemoryEntry(npcId, row.logTs);
+                            };
+                            meta.appendChild(editButton);
+                        }
+                        const text = document.createElement("div");
+                        text.className = "npc-memory-text";
+                        text.textContent = row.text || "(no text)";
+                        item.appendChild(meta);
+                        item.appendChild(text);
+                        listEl.appendChild(item);
+                    });
+                }
+                countEl.textContent = `${rows.length} saved item${rows.length === 1 ? "" : "s"}`;
+            }
+
+            function editNpcMemoryEntry(npcId, logTs) {
+                if (!isDeveloperModeEnabled()) return;
+                if (!npcId || logTs == null) return;
+                const cards = getCards();
+                const npc = cards.find((c) => c.genre === "character" && c.id === npcId);
+                if (!npc) return;
+                const memory = Array.isArray(npc.memories)
+                    ? npc.memories.find((m) => m && m.logTs === logTs)
+                    : null;
+                const insight = Array.isArray(npc.insights)
+                    ? npc.insights.find((m) => m && m.logTs === logTs)
+                    : null;
+                const entry = memory || insight;
+                if (!entry) return;
+                const current = String(entry.text || "");
+                const updated = window.prompt(`Edit memory text:`, current);
+                if (updated === null) return;
+                const newText = String(updated).trim();
+                if (newText === current) return;
+                if (!newText) {
+                    if (typeof showToast === "function") {
+                        showToast("Memory text darf nicht leer sein.", "rgba(180,60,60,0.85)");
+                    }
+                    return;
+                }
+                const changed = updateNpcMemoryText(npcId, logTs, newText);
+                if (changed) {
+                    renderNpcMemoryOverlay(npcId, document.getElementById("npc-memory-search")?.value || "");
+                    if (typeof showToast === "function") {
+                        showToast("NPC memory updated.", "rgba(60,140,60,0.95)");
+                    }
+                }
+            }
+
+            function updateNpcMemoryText(npcId, logTs, newText) {
+                if (!npcId || logTs == null) return false;
+                try {
+                    const cards = getCards();
+                    const npc = cards.find((c) => c.genre === "character" && c.id === npcId);
+                    if (!npc) return false;
+                    let changed = false;
+                    if (Array.isArray(npc.memories)) {
+                        npc.memories.forEach((m) => {
+                            if (m && m.logTs === logTs) {
+                                m.text = newText;
+                                changed = true;
+                            }
+                        });
+                    }
+                    if (Array.isArray(npc.insights)) {
+                        npc.insights.forEach((m) => {
+                            if (m && m.logTs === logTs) {
+                                m.text = newText;
+                                changed = true;
+                            }
+                        });
+                    }
+                    if (changed) {
+                        sessionStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+                    }
+                    return changed;
+                } catch (e) {
+                    console.warn("updateNpcMemoryText failed", e);
+                    return false;
+                }
             }
 
             function getActiveCharDisplayName() {
@@ -2278,6 +2815,15 @@
                 }
             }
 
+            function isDeveloperModeEnabled() {
+                try {
+                    const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                    return String(settings.developMode || "off").toLowerCase() === "on";
+                } catch {
+                    return false;
+                }
+            }
+
             function applyHardcoreModeUI() {
                 if (!isHardcoreModeEnabled()) return;
                 ['retry-btn', 'edit-btn', 'erase-btn'].forEach((id) => {
@@ -2288,6 +2834,18 @@
                     btn.disabled = true;
                     btn.classList.add('locked');
                 });
+            }
+
+            function applyDevModeUI() {
+                const btn = document.getElementById('dev-present-btn');
+                if (!btn) return;
+                if (isDeveloperModeEnabled()) {
+                    btn.hidden = false;
+                    btn.style.removeProperty('display');
+                } else {
+                    btn.hidden = true;
+                    btn.style.setProperty('display', 'none', 'important');
+                }
             }
 
             function isOpeningNarrationProtected() {
@@ -2563,6 +3121,16 @@
                         const deathCause = deathTag[2].trim();
                         if (applyNpcDeath(npcId, deathCause, currentNarrationTs)) {
                             npcDeathsChanged = true;
+                        }
+                        continue;
+                    }
+                    const clothesTag = content.match(/^Clothes\s*:\s*([^,]+)\s*,\s*([\s\S]+)$/i);
+                    if (clothesTag) {
+                        const npcRef = clothesTag[1].trim();
+                        const clothesText = sanitizeTagValue(clothesTag[2]);
+                        const npcId = resolveNpcIdFromRef(npcRef);
+                        if (npcId && clothesText) {
+                            updateNpcClothes(npcId, clothesText, currentNarrationTs);
                         }
                         continue;
                     }
@@ -3007,6 +3575,22 @@
             function computeSig(cards, chars, log, settings, worldId) {
                 return JSON.stringify({ w: worldId, c: cards.length, ch: chars.length, l: log.length, s: Object.keys(settings || {}).length });
             }
+            function computeWorldSignature(world) {
+                if (!world || !world.data) return null;
+                try {
+                    const cards = Array.isArray(world.data.cards) ? world.data.cards : [];
+                    const signatureCards = cards.map(c => ({
+                        id: c.id,
+                        updatedAt: c.updatedAt || 0,
+                        title: c.title || "",
+                        genre: c.genre || "",
+                        version: c.version || ""
+                    }));
+                    return JSON.stringify({ cards: signatureCards, settings: world.data.settings || {} });
+                } catch {
+                    return null;
+                }
+            }
             function mergeStorySettingsForSave(baseSettings, existingStorySettings) {
                 const merged = { ...(baseSettings || {}) };
                 const existing = existingStorySettings || {};
@@ -3042,6 +3626,7 @@
                         createdAt: Date.now(),
                         updatedAt: Date.now(),
                         signature: computeSig(cards, chars, log, mergedStorySettings, worldId),
+                        worldSignature: computeWorldSignature(world),
                         official: false,
                         data: { cards, characters: chars, log, settings: mergedStorySettings, anchoredWorldChanges }
                     };
@@ -4089,6 +4674,7 @@
                             if (secrets.length > 0) contextLines.push(`  Secrets: ${secrets.join(" | ")}`);
                             if (knownSecrets.length > 0) contextLines.push(`  Known Secrets (learned from others): ${knownSecrets.join(" | ")}`);
                             if (c.appearance) contextLines.push(`  Appearance: ${c.appearance}`);
+                            contextLines.push(`  Clothes: ${c.clothes ? c.clothes : "Naked"}`);
                             if (c.personality) contextLines.push(`  Personality: ${c.personality}`);
                             if (c.description) contextLines.push(`  Description: ${c.description}`);
                             if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
@@ -5661,6 +6247,39 @@ ${killedInstructionNoTags}`;
                 try { loadBackground(); } catch {}
                 updateTravelButtonVisibility(); // Show/hide travel button based on transport building
                 updateMoveButtonVisibility();
+                try { renderHeaderLocationRooms(); } catch (e) { console.warn("renderHeaderLocationRooms failed", e); }
+            }
+
+            function renderHeaderLocationRooms() {
+                const roomsEl = document.getElementById("header-location-rooms");
+                if (!roomsEl) return;
+                if (!currentLocationId) {
+                    roomsEl.style.display = "none";
+                    roomsEl.innerHTML = "";
+                    return;
+                }
+                const cards = getCards();
+                const loc = cards.find((c) => c.genre === "location" && c.id === currentLocationId);
+                if (!loc) {
+                    roomsEl.style.display = "none";
+                    roomsEl.innerHTML = "";
+                    return;
+                }
+                const isHouse = String(loc.locationSub || "").toLowerCase() === "building" && String(loc.locationDetail || "").toLowerCase() === "house";
+                const rooms = Array.isArray(loc.houseRooms) ? loc.houseRooms : [];
+                if (!isHouse || rooms.length === 0) {
+                    roomsEl.style.display = "none";
+                    roomsEl.innerHTML = "";
+                    return;
+                }
+                roomsEl.innerHTML = rooms
+                    .map((room) => {
+                        const title = escHtml(String(room.name || "").trim());
+                        const description = escHtml(String(room.description || "").trim());
+                        return `<div class="header-location-room-row"><strong>${title || "Room"}</strong>${description ? `: ${description}` : ""}</div>`;
+                    })
+                    .join("");
+                roomsEl.style.display = "block";
             }
 
             /* ═══════════════════════════════════════
@@ -6178,7 +6797,11 @@ ${killedInstructionNoTags}`;
                 const name = npc.title || npc.id || "Unknown";
                 const id = npc.id || "";
                 const deadReason = String(npc.deathCause || "").trim() || "(unknown)";
-                return `- Name: ${name}\n  ID: ${id}\n  DeadReason: ${deadReason}`;
+                const lines = [`- Name: ${name}`, `  ID: ${id}`];
+                if (npc.appearance) lines.push(`  Appearance: ${npc.appearance}`);
+                if (npc.clothes) lines.push(`  Clothes: ${npc.clothes}`);
+                lines.push(`  DeadReason: ${deadReason}`);
+                return lines.join("\n");
             }
 
             function getDeadNpcInfoLines() {
@@ -7119,40 +7742,109 @@ ${killedInstructionNoTags}`;
                 }
             }
             function showNPCInfo(id) {
+                openNpcInfoOverlay(id);
+            }
+
+            function openNpcInfoOverlay(id) {
+                renderNpcInfoOverlay(id);
+                const overlay = document.getElementById("npc-info-overlay");
+                if (overlay) overlay.classList.add("show");
+            }
+
+            function closeNpcInfoOverlay() {
+                const overlay = document.getElementById("npc-info-overlay");
+                if (overlay) overlay.classList.remove("show");
+            }
+
+            function renderNpcInfoOverlay(id) {
                 const cards = getCards();
                 const npc = cards.find((c) => c.id === id);
-                if (!npc) return;
+                const overlay = document.getElementById("npc-info-overlay");
+                if (!npc || !overlay) return;
 
-                // Simple alert for now, could be a modal
-                let info = `${npc.title}\n`;
-                if (npc.raceName) info += `Race: ${npc.raceName}\n`;
-                if (npc.gender) info += `Gender: ${npc.gender}\n`;
-                if (npc.age) info += `Age: ${npc.age}\n`;
-                if (npc.status) info += `Status: ${npc.status}\n`;
-                info += `Unused Days Counter: ${Math.max(0, parseInt(npc.unusedDaysCounter, 10) || 0)}\n`;
-                if (npc.status === "Dead" && npc.deathCause) info += `Death: ${npc.deathCause}\n`;
-                if (npc.personality) info += `\nPersonality:\n${npc.personality}\n`;
-                if (npc.appearance) info += `\nAppearance:\n${npc.appearance}\n`;
-                const mem = Array.isArray(npc.memories) ? npc.memories.slice(-3) : [];
-                if (mem.length > 0) {
-                    info += `\nMemories (latest):\n`;
-                    mem.forEach((m) => {
-                        const meta = `${m.date || ""} ${m.time || ""} @ ${m.location || ""}`.trim();
-                        const txt = String(m.text || "").trim();
-                        info += `- ${meta}${txt ? ` — ${txt}` : ""}\n`;
-                    });
+                const name = npc.title || npc.id || "Unknown";
+                document.getElementById("npc-info-name").textContent = name;
+                document.getElementById("npc-info-race").textContent = npc.raceName ? `Race: ${npc.raceName}` : "Race: —";
+                const ageText = npc.age ? `Age: ${npc.age}` : "Age: —";
+                const bd = readBirthdate(npc);
+                const birthText = bd && bd.day && bd.month ? `Birthdate: ${bd.day}.${bd.month}` : "Birthdate: —";
+                const relationText = `Relation: ${getNpcRelationToPlayer(npc)}`;
+                document.getElementById("npc-info-age").textContent = ageText;
+                document.getElementById("npc-info-birthdate").textContent = birthText;
+                document.getElementById("npc-info-relation").textContent = relationText;
+
+                const avatarEl = document.getElementById("npc-info-avatar");
+                if (avatarEl) {
+                    avatarEl.innerHTML = "";
+                    if (npc.pfpUrl) {
+                        const img = document.createElement("img");
+                        img.src = npc.pfpUrl;
+                        img.alt = name;
+                        img.style.width = "100%";
+                        img.style.height = "100%";
+                        img.style.objectFit = "cover";
+                        avatarEl.appendChild(img);
+                    } else {
+                        avatarEl.textContent = name.charAt(0) || "?";
+                    }
                 }
-                const insights = Array.isArray(npc.insights) ? npc.insights : [];
-                if (insights.length > 0) {
-                    info += `\nInsights:\n`;
-                    insights.slice(-12).forEach((m) => {
-                        const meta = `${m.date || ""} ${m.time || ""}`.trim();
-                        const txt = String(m.text || "").trim();
-                        info += `- ${meta}${txt ? ` — ${txt}` : ""}\n`;
-                    });
+
+                document.getElementById("npc-info-appearance").textContent = npc.appearance || "No appearance details available.";
+                document.getElementById("npc-info-clothes").textContent = npc.clothes ? npc.clothes : "Naked";
+                document.getElementById("npc-info-personality").textContent = npc.personality || "No personality details available.";
+
+                const editClothesButton = document.getElementById("npc-info-edit-clothes-button");
+                if (editClothesButton) {
+                    editClothesButton.style.display = isDeveloperModeEnabled() ? "inline-flex" : "none";
                 }
-                
-                alert(info);
+                const memoryButton = document.getElementById("npc-info-memory-button");
+                if (memoryButton) {
+                    memoryButton.style.display = "inline-flex";
+                }
+
+                const relatedList = document.getElementById("npc-info-related-list");
+                const filterSelect = document.getElementById("npc-info-relations-filter-select");
+                const layoutSelect = document.getElementById("npc-info-relations-layout-select");
+                if (overlay) {
+                    overlay.dataset.currentNpcId = id;
+                }
+
+                const relationFilter = filterSelect ? filterSelect.value : "all";
+                const relations = Array.isArray(npc.relations) ? npc.relations.filter(r => r && r.targetId && r.targetId !== activeChar?.id) : [];
+                const familyRelations = relations.filter(rel => rel.relation === "Family");
+                const nonFamilyRelations = relations.filter(rel => rel.relation && rel.relation !== "Family");
+
+                let visibleRelations = relations;
+                let emptyLabel = "No other relations";
+                if (relationFilter === "family") {
+                    visibleRelations = familyRelations;
+                    emptyLabel = "No family relations";
+                } else if (relationFilter === "relations") {
+                    visibleRelations = nonFamilyRelations;
+                    emptyLabel = "No other relations";
+                }
+
+                if (relatedList) {
+                    relatedList.innerHTML = "";
+                    relatedList.classList.toggle("horizontal", layoutSelect && layoutSelect.value === "horizontal");
+                    if (visibleRelations.length === 0) {
+                        relatedList.innerHTML = `<div class="stats-no-relations">${emptyLabel}</div>`;
+                    } else {
+                        visibleRelations.forEach((rel) => {
+                            const item = document.createElement("div");
+                            item.className = "npc-info-relations-item";
+                            const targetName = rel.targetName || rel.targetId || "Unknown";
+                            const label = rel.relation === "Family" ? (rel.familySub || "Family") : (rel.relation || "Relation");
+                            const left = document.createElement("span");
+                            left.textContent = targetName;
+                            const right = document.createElement("span");
+                            right.textContent = label;
+                            item.appendChild(left);
+                            item.appendChild(right);
+                            relatedList.appendChild(item);
+                        });
+                    }
+                }
             }
 
             const DEFAULT_AI_TIMEOUT_MS = 120000;
@@ -9523,6 +10215,11 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                     document.getElementById("stats-age").textContent = "—";
                     document.getElementById("stats-birthdate").textContent = "";
                     document.getElementById("stats-appearance").textContent = "No character data available.";
+                    const appearanceEditBtn = document.getElementById("stats-appearance-edit-btn");
+                    if (appearanceEditBtn) {
+                        appearanceEditBtn.hidden = true;
+                        appearanceEditBtn.style.setProperty("display", "none", "important");
+                    }
                     document.getElementById("stats-relations-list").innerHTML = '<div class="stats-no-relations">No relations</div>';
                     return;
                 }
@@ -9544,6 +10241,12 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
 
                 // Appearance
                 document.getElementById("stats-appearance").textContent = activeChar.appearance || "No appearance description available.";
+                const appearanceEditBtn = document.getElementById("stats-appearance-edit-btn");
+                if (appearanceEditBtn) {
+                    const enabled = isDeveloperModeEnabled();
+                    appearanceEditBtn.hidden = !enabled;
+                    appearanceEditBtn.style.setProperty("display", enabled ? "" : "none", "important");
+                }
 
                 // Relations
                 renderStatsRelations();
@@ -9553,6 +10256,17 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
 
                 // Level & XP
                 renderStatsLevel();
+            }
+
+            function editStatsAppearance() {
+                if (!activeChar || !isDeveloperModeEnabled()) return;
+                const current = activeChar.appearance || "";
+                const updated = prompt("Edit player appearance:", current);
+                if (updated === null) return;
+                activeChar.appearance = String(updated).trim();
+                saveActiveCharacter();
+                renderStatsPanel();
+                showToast("Appearance updated.", "rgba(70,130,220,0.95)");
             }
 
             function renderStatsRelations() {
@@ -9595,21 +10309,40 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                     const npcName = npc.title || "Unknown";
                     const relationLabel = rel.relation === "Family" ? (rel.familySub || "Family") : (rel.relation || "Relation");
                     
-                    // Avatar: either profile picture or nothing
-                    let avatarHtml = "";
+                    const avatar = document.createElement("div");
+                    avatar.className = "stats-relation-avatar";
                     if (npc.pfpUrl) {
-                        avatarHtml = `<div class="stats-relation-avatar"><img src="${escHtml(npc.pfpUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" /></div>`;
+                        const img = document.createElement("img");
+                        img.src = npc.pfpUrl;
+                        img.alt = "";
+                        img.style.width = "100%";
+                        img.style.height = "100%";
+                        img.style.objectFit = "cover";
+                        img.style.borderRadius = "50%";
+                        avatar.appendChild(img);
                     } else {
-                        avatarHtml = `<div class="stats-relation-avatar" style="background:transparent;border:none;"></div>`;
+                        avatar.textContent = npcName.charAt(0) || "?";
                     }
 
-                    item.innerHTML = `
-                        ${avatarHtml}
-                        <div class="stats-relation-info">
-                            <div class="stats-relation-name">${escHtml(npcName)}</div>
-                            <div class="stats-relation-type">${escHtml(relationLabel)}</div>
-                        </div>
-                    `;
+                    const info = document.createElement("div");
+                    info.className = "stats-relation-info";
+                    const nameEl = document.createElement("div");
+                    nameEl.className = "stats-relation-name";
+                    nameEl.textContent = npcName;
+                    const typeEl = document.createElement("div");
+                    typeEl.className = "stats-relation-type";
+                    typeEl.textContent = relationLabel;
+                    info.appendChild(nameEl);
+                    info.appendChild(typeEl);
+
+                    const button = document.createElement("button");
+                    button.className = "stats-relation-action";
+                    button.textContent = "View";
+                    button.onclick = () => openNpcInfoOverlay(npc.id);
+
+                    item.appendChild(avatar);
+                    item.appendChild(info);
+                    item.appendChild(button);
                     container.appendChild(item);
                 });
             }
@@ -9652,6 +10385,44 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
             function restoreRelationsFilter() {
                 const saved = Storage.get(RELATIONS_FILTER_KEY);
                 const select = document.getElementById("relations-filter-select");
+                if (saved && select) {
+                    select.value = saved;
+                }
+            }
+
+            function toggleNpcInfoRelationsLayout() {
+                const select = document.getElementById("npc-info-relations-layout-select");
+                if (!select) return;
+                Storage.set(NPC_INFO_RELATIONS_LAYOUT_KEY, select.value);
+                const overlay = document.getElementById("npc-info-overlay");
+                const npcId = overlay?.dataset.currentNpcId;
+                if (npcId) renderNpcInfoOverlay(npcId);
+            }
+
+            function toggleNpcInfoRelationsFilter() {
+                const select = document.getElementById("npc-info-relations-filter-select");
+                if (!select) return;
+                Storage.set(NPC_INFO_RELATIONS_FILTER_KEY, select.value);
+                const overlay = document.getElementById("npc-info-overlay");
+                const npcId = overlay?.dataset.currentNpcId;
+                if (npcId) renderNpcInfoOverlay(npcId);
+            }
+
+            function restoreNpcInfoRelationsLayout() {
+                const saved = Storage.get(NPC_INFO_RELATIONS_LAYOUT_KEY);
+                const select = document.getElementById("npc-info-relations-layout-select");
+                const list = document.getElementById("npc-info-related-list");
+                if (saved && select) {
+                    select.value = saved;
+                }
+                if (saved && list) {
+                    list.classList.toggle("horizontal", saved === "horizontal");
+                }
+            }
+
+            function restoreNpcInfoRelationsFilter() {
+                const saved = Storage.get(NPC_INFO_RELATIONS_FILTER_KEY);
+                const select = document.getElementById("npc-info-relations-filter-select");
                 if (saved && select) {
                     select.value = saved;
                 }
@@ -9884,6 +10655,7 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                     }
                 });
                 applyHardcoreModeUI();
+                applyDevModeUI();
             }
             function showToast(msg, bg = "rgba(40,140,80,0.95)") {
                 const t = document.getElementById("toast");
@@ -9948,6 +10720,7 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
             ═══════════════════════════════════════ */
             window.addEventListener("load", () => {
                 applyHardcoreModeUI();
+                applyDevModeUI();
                 loadBackground();
                 let _bgIntervalId = setInterval(loadBackground, 5000);
                 document.addEventListener("visibilitychange", () => {
@@ -9982,6 +10755,8 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                     // Restore relations UI preferences
                     restoreRelationsFilter();
                     restoreRelationsLayout();
+                    restoreNpcInfoRelationsFilter();
+                    restoreNpcInfoRelationsLayout();
                     // Ensure initial age baselines are set
                     try {
                         const d0 = (char && char.startingDate) ? char.startingDate : null;
