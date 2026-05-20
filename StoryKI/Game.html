@@ -7902,7 +7902,7 @@ ${killedInstructionNoTags}`;
                 }
             }
 
-            const DEFAULT_AI_TIMEOUT_MS = 240000;
+            const DEFAULT_AI_TIMEOUT_MS = 480000;
             function _isAiTimeoutError(err) {
                 const s = String(err || "").toLowerCase();
                 return s.includes("zu lange") || s.includes("timeout") || s.includes("stale");
