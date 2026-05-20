@@ -6640,7 +6640,7 @@
                         return `
                             <div class="house-room-row">
                                 <div class="house-room-info">
-                                    <strong>${escHtml(room.name)}</strong>
+                                    <strong>${escHtml(room.name)}</strong> <span style="font-size:12px; opacity:0.7;">[ID: ${escHtml(room.id || "")}]</span>
                                     <div>${escHtml(room.description)}</div>
                                 </div>
                                 <div class="house-room-actions">
@@ -6660,7 +6660,12 @@
                     showToast("Please enter a room name.", "#c04040");
                     return;
                 }
-                const room = { name, description };
+                const existingRoom = houseRoomEditIndex >= 0 && houseRoomEditIndex < houseRooms.length ? houseRooms[houseRoomEditIndex] : null;
+                const room = {
+                    id: existingRoom?.id || generateId(),
+                    name,
+                    description,
+                };
                 if (houseRoomEditIndex >= 0 && houseRoomEditIndex < houseRooms.length) {
                     houseRooms[houseRoomEditIndex] = room;
                 } else {
@@ -9159,7 +9164,7 @@
                                           : type === "skill"
                                             ? [...skillTags]
                                             : (Array.isArray(prev.tags) ? [...prev.tags] : []),
-                            ...(type === "location" && locationDetail === "house" ? { houseRooms: houseRooms.map((r) => ({ ...r })) } : {}),
+                            ...(type === "location" && locationDetail === "house" ? { houseRooms: houseRooms.map((r) => ({ ...r, id: r.id || generateId() })) } : {}),
                             canBeSpawn,
                             ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
                             ...(type === "location" && prev.distances && Object.keys(prev.distances).length ? { distances: prev.distances } : {}),
@@ -9242,7 +9247,7 @@
                                       : type === "skill"
                                         ? [...skillTags]
                                         : [],
-                        ...(type === "location" && locationDetail === "house" ? { houseRooms: houseRooms.map((r) => ({ ...r })) } : {}),
+                        ...(type === "location" && locationDetail === "house" ? { houseRooms: houseRooms.map((r) => ({ ...r, id: r.id || generateId() })) } : {}),
                         relations: type === "character" ? [...relationSelections] : [],
                         secrets: type === "character" ? [...secretSelections] : [],
                         ...(type === "character" ? { traits } : {}),

@@ -1618,6 +1618,7 @@
             let isBusy = false;
             let activeChar = null;
             let currentLocationId = null;
+            let currentRoom = null;
             let isFirstMessageProtected = false;
             let isEditing = false;
             let _editRow = null;
@@ -5586,8 +5587,12 @@
                 if (!currentLocationId) return "Unknown Location";
                 try {
                     const cards = getCards();
-                    const currentLoc = cards.find((c) => c.id === currentLocationId);
+                    let currentLoc = cards.find((c) => c.id === currentLocationId);
                     if (!currentLoc) return "Unknown Location";
+                    const houseRoomContext = resolveLocationHouseRoom(currentLocationId);
+                    if (houseRoomContext.houseId && houseRoomContext.roomId) {
+                        currentLoc = cards.find((c) => c.id === houseRoomContext.houseId) || currentLoc;
+                    }
 
                     const path = [];
                     let current = currentLoc;
@@ -5610,6 +5615,44 @@
                     console.error("Path error", e);
                     return "Unknown Location";
                 }
+            }
+
+            function resolveLocationHouseRoom(locId) {
+                const cards = getCards();
+                if (!locId) return { houseId: "", roomId: "" };
+                const loc = cards.find((c) => c.genre === "location" && c.id === locId);
+                if (!loc) return { houseId: "", roomId: "" };
+                const sub = String(loc.locationSub || "").toLowerCase();
+                const detail = String(loc.locationDetail || "").toLowerCase();
+                if (sub === "building" && detail === "house") {
+                    return { houseId: loc.id, roomId: "" };
+                }
+                const parent = findParentLocationById(locId, cards);
+                if (parent && String(parent.locationSub || "").toLowerCase() === "building" && String(parent.locationDetail || "").toLowerCase() === "house") {
+                    return { houseId: parent.id, roomId: loc.id };
+                }
+                return { houseId: "", roomId: "" };
+            }
+
+            function getVisibleLocationTitle() {
+                const cards = getCards();
+                if (!currentLocationId) return "Unknown Location";
+                const currentLoc = cards.find((c) => c.id === currentLocationId);
+                if (!currentLoc) return "Unknown Location";
+                const { houseId, roomId } = resolveLocationHouseRoom(currentLocationId);
+                if (houseId && roomId) {
+                    const house = cards.find((c) => c.id === houseId);
+                    return house ? (house.title || "Unknown Location") : (currentLoc.title || "Unknown Location");
+                }
+                return currentLoc.title || "Unknown Location";
+            }
+
+            function getCurrentLocationTag() {
+                const { houseId, roomId } = resolveLocationHouseRoom(currentLocationId);
+                if (houseId && roomId) return `[[Location:${houseId},${roomId}]]`;
+                if (houseId) return `[[Location:${houseId}]]`;
+                if (currentLocationId) return `[[Location:${currentLocationId}]]`;
+                return "";
             }
 
             function getAiLanguageSpec(aiLanguageCode) {
@@ -5660,7 +5703,9 @@
                 const curWeekday = _weekdayNameEn(d.day || 1, d.month || 1, d.year || 1983);
                 
                 const curLocPath = getCurrentLocationPath();
-                const curLocName = document.getElementById("header-location")?.textContent || "Unknown Location";
+                const curLocName = getVisibleLocationTitle();
+                const curLocTag = getCurrentLocationTag();
+                const curRoomId = currentRoom || "None";
                 
                 const worldHierarchy = buildSmartLocationContext(playerInput);
                 const charContext = buildCharacterContext(playerInput, relevantMemoriesMap);
@@ -5787,6 +5832,8 @@ CRITICAL: NPC Secrets define their TRUE behavior, not their public facade. If an
 - TIME: ${curTime}
 - WEEKDAY: ${curWeekday}
 - CURRENT LOCATION: ${curLocName}
+- CURRENT LOCATION TAG: ${curLocTag || "None"}
+- CURRENT ROOM ID: ${curRoomId}
 - LOCATION PATH: ${curLocPath}
 ${locationCurseContext}- PRESENT NPCs: ${presentNPCs || "None"}
 - PRESENT SPECIES: ${presentSpecies || "None"}
@@ -6221,8 +6268,15 @@ ${killedInstructionNoTags}`;
                 const el = document.getElementById("header-location");
                 if (card) {
                     currentLocationId = card.id;
+                    const locationContext = resolveLocationHouseRoom(card.id, cards);
+                    currentRoom = locationContext.roomId || null;
                     if (activeChar) activeChar.currentLocationId = card.id; // Save to activeChar
-                    if (el) el.textContent = card.title.toUpperCase(); // Fixed: Show TITLE, not ID
+                    if (el) {
+                        const visibleTitle = locationContext.houseId && locationContext.roomId
+                            ? (cards.find((c) => c.id === locationContext.houseId)?.title || card.title)
+                            : card.title;
+                        el.textContent = visibleTitle.toUpperCase();
+                    }
                     // Track discovered location and its chain
                     addDiscoveredLocation(card.id);
                     // Track visited for smart location context
@@ -6232,6 +6286,7 @@ ${killedInstructionNoTags}`;
                     // Fallback: If no card found, keep the text but try to find a parent if possible
                     // Or just keep the text and null the ID (AI will lose character context)
                     currentLocationId = null;
+                    currentRoom = null;
                     if (activeChar) activeChar.currentLocationId = null; // Save to activeChar
                     if (el) el.textContent = nameOrId.toUpperCase();
                     console.warn(`[Location] No card found for: ${nameOrId}`);
@@ -6274,9 +6329,8 @@ ${killedInstructionNoTags}`;
                 }
                 roomsEl.innerHTML = rooms
                     .map((room) => {
-                        const title = escHtml(String(room.name || "").trim());
-                        const description = escHtml(String(room.description || "").trim());
-                        return `<div class="header-location-room-row"><strong>${title || "Room"}</strong>${description ? `: ${description}` : ""}</div>`;
+                        const roomId = escHtml(String(room.id || "").trim());
+                        return `<div class="header-location-room-row"><strong>Room ID:</strong> ${roomId || "unknown"}</div>`;
                     })
                     .join("");
                 roomsEl.style.display = "block";
@@ -8151,7 +8205,7 @@ ${killedInstructionNoTags}`;
                 }
                 return "";
             }
-            function buildHistoryLinesCombined(firstCount = 10, lastCount = 5) {
+            function buildHistoryLinesCombined(firstCount = 10, lastCount = 7) {
                 const first = chatHistory.slice(0, Math.max(0, firstCount));
                 const last = chatHistory.slice(-Math.max(0, lastCount));
                 const merged = first.concat(last);
@@ -8162,7 +8216,7 @@ ${killedInstructionNoTags}`;
                     })
                     .join("\n");
             }
-            function buildNarratorPrompt(systemInst, tagContext = "", extraNote = "", firstCount = 10, lastCount = 5) {
+            function buildNarratorPrompt(systemInst, tagContext = "", extraNote = "", firstCount = 10, lastCount = 7) {
                 const MAX_PROMPT_CHARS = 6900;
                 const marker = "\n\n### STORY LOG ###\n";
                 const _compactSystemInstForBudget = (s, maxChars) => {
@@ -8358,6 +8412,10 @@ ${killedInstructionNoTags}`;
                 const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
                 const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
                 const levelSystemActive = isLevelSystemActive();
+                const nsfwBlockOn = String(settings.nsfwBlock || "off").toLowerCase() === "on";
+                const nsfwValidationInstruction = nsfwBlockOn
+                    ? `# NSFW BLOCK (ONLY WHEN NEEDED)\n- If the repaired response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY [[NSFW]] and nothing else.\n\n`
+                    : "";
                 const formatHistoryEntry = (e) => {
                     if (!e) return "";
                     if (typeof e === "string") return String(e || "").trim();
@@ -8501,12 +8559,14 @@ ${customBuildingLocBlockVal}
 # RECENT SAVED MEMORIES (15 newest — already stored on NPC or Custom/Building location cards)
 ${recentMemBlockVal}
 
-# DUPLICATE MEMORY AVOIDANCE (STRICT)
+${nsfwValidationInstruction}# DUPLICATE MEMORY AVOIDANCE (STRICT)
 - Before adding any [[Memory:ID|text]] (or comma form), compare **ID**, **Date** (DD.MM.YYYY), and the **gist** of the memory **Text** against the list above.
 - If the **same core fact** for the **same ID** is already present on the **same Date** (even hours earlier — e.g. the same kiss, promise, imprisonment in the cellar, barricaded door), **do not** emit a second tag that only repeats it; **omit** the duplicate or **replace** the narration-side implication so no redundant tag is needed.
 - Only add a new memory on the same Date + same ID if the text records a **clearly new** development (not a paraphrase or trivial rewording of the same beat).
 - A new **calendar Date** may justify a follow-up memory if the story truly progressed; still avoid pointless repetition.
 - Do not add [[Memory:...]] tags just because an NPC spoke or a scene continued. Use Memory tags only for clear, lasting continuity facts. If nothing important changed, omit Memory tags entirely.
+- When writing any [[Memory:...]] tag text that refers to the player, use the player's exact current name: ${playerName}. Do not use generic labels like "Player" or "User" inside memory text.
+- If the narration describes an NPC removing or changing clothing, add or repair a Clothes command tag before the final metadata block. Syntax: [[Clothes:NPC_ID,description of new clothing or state]].
 
 # YOUR TASK (PRIORITIES):
 1) Tags first: Repair and add ALL required control tags (this is your main job).
@@ -8718,6 +8778,17 @@ Return ONLY the repaired narration with tags.`;
                         if (!/\[\[\s*ActiveNPCs?\s*:/i.test(cleaned)) {
                             cleaned = `${cleaned}\n\n${normalizedTag}`.trim();
                         }
+                        try {
+                            const memoryPlayerName = String(playerName || "").trim();
+                            if (memoryPlayerName && memoryPlayerName !== "Player") {
+                                cleaned = cleaned.replace(/\[\[\s*Memory\s*:\s*([A-Za-z0-9\-_]+)\s*\|\s*([^\]]*?)\]\]/gi, (full, id, content) => {
+                                    return `[[Memory:${id}|${content.replace(/\b(User|Player)\b/gi, memoryPlayerName)}]]`;
+                                });
+                                cleaned = cleaned.replace(/\[\[\s*Memory\s*:\s*([A-Za-z0-9\-_]+)\s*,([^\]]*?)\]\]/gi, (full, id, content) => {
+                                    return `[[Memory:${id},${content.replace(/\b(User|Player)\b/gi, memoryPlayerName)}]]`;
+                                });
+                            }
+                        } catch {}
                     } catch {}
                     return cleaned || narrationText;
                 } catch (e) {
