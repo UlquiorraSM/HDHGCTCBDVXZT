@@ -1259,6 +1259,7 @@
                 .act-btn { padding: 7px 12px; font-size: 12px; }
                 .welcome-card { padding: 24px 20px; width: 94%; }
                 #char-badge { display: none !important; }
+                #header-location-rooms { display: none !important; }
             }
 
         </style>
@@ -8412,6 +8413,7 @@ ${killedInstructionNoTags}`;
                 const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
                 const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
                 const levelSystemActive = isLevelSystemActive();
+                const playerName = getActiveCharDisplayName();
                 const nsfwBlockOn = String(settings.nsfwBlock || "off").toLowerCase() === "on";
                 const nsfwValidationInstruction = nsfwBlockOn
                     ? `# NSFW BLOCK (ONLY WHEN NEEDED)\n- If the repaired response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY [[NSFW]] and nothing else.\n\n`
