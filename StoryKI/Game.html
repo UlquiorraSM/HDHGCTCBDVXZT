@@ -7902,7 +7902,7 @@ ${killedInstructionNoTags}`;
                 }
             }
 
-            const DEFAULT_AI_TIMEOUT_MS = 120000;
+            const DEFAULT_AI_TIMEOUT_MS = 240000;
             function _isAiTimeoutError(err) {
                 const s = String(err || "").toLowerCase();
                 return s.includes("zu lange") || s.includes("timeout") || s.includes("stale");
@@ -8349,6 +8349,7 @@ ${killedInstructionNoTags}`;
                     validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
                     let rawAiUsed = validatedResponse;
                     const cleanResponse = processAICommands(validatedResponse);
+                    const firstPendingMemoryTargets = Array.isArray(window._pendingMemoryTargets) ? [...window._pendingMemoryTargets] : [];
                     let finalText = "";
                     if (cleanResponse === NSFW_BLOCKED_TOKEN) {
                         finalText = NSFW_BLOCKED_TEXT;
@@ -8372,7 +8373,11 @@ ${killedInstructionNoTags}`;
                                 }
                             }
                             validatedResponse2 = normalizeActiveNpcTagInAiText(validatedResponse2);
+                            const pendingBeforeSecondPass = Array.isArray(window._pendingMemoryTargets) ? [...window._pendingMemoryTargets] : firstPendingMemoryTargets;
                             const clean2 = processAICommands(validatedResponse2);
+                            if ((!Array.isArray(window._pendingMemoryTargets) || window._pendingMemoryTargets.length === 0) && pendingBeforeSecondPass.length > 0) {
+                                window._pendingMemoryTargets = pendingBeforeSecondPass;
+                            }
                             rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
                         }
