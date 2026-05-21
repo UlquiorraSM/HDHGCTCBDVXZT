@@ -8421,7 +8421,7 @@ ${killedInstructionNoTags}`;
                 const playerName = getActiveCharDisplayName();
                 const nsfwBlockOn = String(settings.nsfwBlock || "off").toLowerCase() === "on";
                 const nsfwValidationInstruction = nsfwBlockOn
-                    ? `# NSFW BLOCK (ONLY WHEN NEEDED)\n- If the repaired response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY [[NSFW]] and nothing else.\n\n`
+                    ? `2x. NSFW block (only when needed)\n   - If the repaired response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY [[NSFW]] and nothing else.\n\n`
                     : "";
                 const formatHistoryEntry = (e) => {
                     if (!e) return "";
@@ -8603,9 +8603,6 @@ ${nsfwValidationInstruction}# DUPLICATE MEMORY AVOIDANCE (STRICT)
 
 2. You MUST check and repair the control tags:
 
-2x. NSFW block (only when needed)
-   - If the repaired response would contain explicit sexual, abusive, or offensive NSFW content, output ONLY [[NSFW]] and nothing else.
-
 2a. **[[TIME: HH:MM]]** or **[[TIME: HH:MM, LOCATION: "Place"]]** - MUST exist at the END (FINAL TAG)
    - Format must be EXACT: [[TIME: 14:15]]
    - Time must be valid (00:00-23:59)
@@ -8624,20 +8621,9 @@ ${nsfwValidationInstruction}# DUPLICATE MEMORY AVOIDANCE (STRICT)
    - The memory text must be short, explicit, and in ${targetLanguage}.
    - Output separate Memory tags for each distinct NPC or location that needs continuity — but **always** apply **DUPLICATE MEMORY AVOIDANCE** against the "RECENT SAVED MEMORIES" list above.
 
-2c. **[[NPC_ID:Friend]]**, **[[NPC_ID:Spouse]]**, **[[NPC_ID:Lover]]**, **[[NPC_ID:Enemy]]**
-   - Add one if the narration/context clearly establishes or updates that relation to the player
-   - ONLY use these four labels
-   - NEVER use them for family members
-   - NEVER output a family tag
+2c. **[[Death:ID|Cause]]** - Only if an NPC died
 
-2d. **[[LocState:key=value]]** - Check if location state changed
-   - Only add if something physical changed (door broken, item placed, etc.)
-
-2e. **[[Death:ID|Cause]]** - Only if an NPC died
-
-2f. **[[SecretRevelation:NPC_ID|Secret text]]** - Add if a secret was explicitly revealed
-
-2g. **[[ActiveNPCs:NPC_ID1,NPC_ID2]]** or **[[ActiveNPCs:none]]** (STRICT)
+2d. **[[ActiveNPCs:NPC_ID1,NPC_ID2]]** or **[[ActiveNPCs:none]]** (STRICT)
    - MUST exist exactly once in the output, BEFORE the final [[TIME: ...]] tag.
    - NPC_IDs must come from Available NPCs list above (use IDs).
    - ActiveNPCs MUST include every NPC that spoke/acted/reacted OR received an **NPC** [[Memory:NPC_ID|...]] / [[Memory:NPC_ID,...]] tag (do not treat location Memory IDs as NPCs).
@@ -8650,24 +8636,16 @@ ${nsfwValidationInstruction}# DUPLICATE MEMORY AVOIDANCE (STRICT)
    **When [[ActiveNPCs:none]] IS allowed:**
    - "Present NPCs" is "None" AND "Currently scene-active NPC IDs" is "(none)" AND no on-screen NPCs are implied, OR the narration clearly states nobody else remains in the scene.
 
-2h. Relative time change tags (only when time actually advances in the narration)
+2e. Relative time change tags (only when time actually advances in the narration)
    - If the narration clearly implies time passing (walking, searching, resting, a conversation, "later", "after a while", etc.), add exactly ONE minimal relative time tag BEFORE the final [[TIME: ...]] tag.
    - Allowed forms: [[Time:+5]], [[Time:+10]], [[Time:+30]] (minutes), or [[Day:+1]], [[Week:+1]], [[Month:+1]], [[Year:+1]].
    - If you add a relative time tag that changes the clock time, the final [[TIME: ...]] tag MUST reflect the resulting time after applying it.
    - If the narration explicitly sets a clock time, you may omit a relative time tag and only set the final [[TIME: ...]] tag accordingly.
 
-2i. Killed tag (ONLY when Level System Active is YES and a species is killed)
+2f. Killed tag (ONLY when Level System Active is YES and a species is killed)
    - If the narration clearly describes a species being killed by the player or NPCs, add one [[Killed:Species_ID:Recipients]] tag BEFORE the final [[TIME: ...]] tag.
    - Species_ID must be from Present Species list above (use the ID).
    - Recipients must be "Player" and/or NPC IDs (from Available NPC IDs) based on who killed it.
-
-2j. **[[Event:DD.MM.YYYY,Text]]** (ONLY when clearly implied)
-   - Use this ONLY when the narration explicitly establishes a persistent event/reminder the player should see when they are in a CUSTOM location.
-   - Example triggers: someone says they will stay overnight here; a meeting/appointment is set to happen here on a specific date; a deadline for something happening here.
-   - Date MUST be a real calendar date. If the event happens today, use Current Date.
-   - Text must be short, factual, and permanent-looking (no quotes). It will be shown as an IMPORTANT banner under the Location until the date passes.
-   - Syntax MUST be EXACT with a comma after the date:
-     [[Event:28.06.2026,Pinkie will stay overnight here.]]
 
 3. Tag order rules:
    - Put all tags (including relative time change and Killed tags) BEFORE the final [[TIME: ...]] tag, except the final [[TIME: ...]] tag itself
