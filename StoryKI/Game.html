@@ -3429,6 +3429,55 @@
                 return data;
             }
 
+            function _extractCreateCharacterCommand(text) {
+                if (!text) return null;
+                const match = String(text).match(/\[\[\s*CreateCharacter\s*:\s*([\s\S]*?)\]\]/i);
+                return match ? String(match[1] || "").trim() : null;
+            }
+
+            async function _runCreateCharacterCommand(infoText, generatedMessage) {
+                if (!infoText) return null;
+                const prompt = `Du bist eine NPC-Erstellungs-KI für eine interaktive Geschichte. Erstelle basierend auf diesem Info-Text und der bereits generierten Nachricht einen neuen Charakter. Antwortet ausschließlich mit einer einzigen Karte im folgenden Format ohne zusätzlichen Text:\n[[Type:Character,Name:Vorname Nachname,Appearance:...,Personality:...,Age:...,Birthdate:DD.MM.YYYY,Gender:...,Race:Human,Relations:NPC-ID=Mother,NPC-ID=Father]]\n\nVerwende die Felder Name, Appearance, Personality, Age, Birthdate, Gender und Race. Wenn die Herkunft nicht klar ist, setze Race auf Human.\n\nInfo-Text:\n${infoText}\n\nGenerierte Nachricht:\n${generatedMessage}\n`;
+                try {
+                    const response = await askAIWithRetry(prompt);
+                    const cardTag = _extractCardTagContent(response);
+                    if (!cardTag) return null;
+                    const def = _parseCreateCardDefinition(cardTag);
+                    if (!def) return null;
+                    const card = _createCharacterCardFromDefinition(def, currentLocationId);
+                    if (!card) return null;
+                    const cards = getCards();
+                    cards.push(card);
+                    const loc = cards.find((c) => c && c.genre === "location" && c.id === currentLocationId);
+                    if (loc) {
+                        if (!Array.isArray(loc.residents)) loc.residents = [];
+                        if (!loc.residents.includes(card.id)) loc.residents.push(card.id);
+                    }
+                    Storage.set(CARDS_KEY, JSON.stringify(cards));
+                    const activeIds = Array.isArray(getActiveSceneNpcIds()) ? getActiveSceneNpcIds() : [];
+                    setActiveSceneNpcIds([...new Set([...activeIds, card.id])], ACTIVE_SCENE_NPC_DETAIL_TURNS, { mergeFromTag: true });
+                    try { updatePresentNPCs(); } catch {}
+                    try { showToast(`Charakter erstellt: ${card.title}`, "rgba(40,140,80,0.95)"); } catch {}
+                    appendBubble("ai", `${card.title} got created`);
+                    try {
+                        addToStoryLog("Narrator", `${card.title} got created`, Date.now(), { rawAi: "" });
+                    } catch (e) {
+                        console.warn("Could not log creation status message", e);
+                    }
+                    return card;
+                } catch (e) {
+                    console.warn("CreateCharacter command failed", e);
+                    return null;
+                }
+            }
+
+            function _awaitPendingCreateCharacterCommand() {
+                if (!window._pendingCreateCharacterPromise) return Promise.resolve();
+                return window._pendingCreateCharacterPromise.finally(() => {
+                    window._pendingCreateCharacterPromise = null;
+                });
+            }
+
             function _buildRelationsFromDefinition(relationsText) {
                 if (!relationsText) return [];
                 return String(relationsText || "").split(/,\s*(?=[^,=]+=)/).map((entry) => {
@@ -3495,14 +3544,25 @@
                 if (!aiResponse) {
                     return aiResponse;
                 }
+                const createCharInfo = _extractCreateCharacterCommand(aiResponse);
                 const hasCreateCommand = /\[\[\s*Create\s*\]\]/i.test(aiResponse);
                 const hasTypeCard = /\[\[\s*Type\s*:\s*Character\b/i.test(aiResponse);
-                if (!hasCreateCommand && !hasTypeCard) {
+                if (!createCharInfo && !hasCreateCommand && !hasTypeCard) {
                     return aiResponse;
                 }
-                let cleaned = aiResponse.replace(/\[\[\s*Create\s*\]\]/gi, "").trim();
+                let cleaned = String(aiResponse);
+                if (createCharInfo) {
+                    cleaned = cleaned.replace(/\[\[\s*CreateCharacter\s*:[\s\S]*?\]\]/gi, "").trim();
+                }
+                cleaned = cleaned.replace(/\[\[\s*Create\s*\]\]/gi, "").trim();
                 let cardTagContent = _extractCardTagContent(cleaned);
-                if (!cardTagContent) {
+                if (!cardTagContent && createCharInfo) {
+                    const generatedMessage = cleaned;
+                    window._pendingCreateCharacterPromise = _runCreateCharacterCommand(createCharInfo, generatedMessage).finally(() => {
+                        window._pendingCreateCharacterPromise = null;
+                    });
+                }
+                if (!cardTagContent && !createCharInfo) {
                     const cards = getCards();
                     const existingChars = cards
                         .filter((c) => c && c.genre === "character" && c.id)
@@ -6078,9 +6138,11 @@ Your entire output must be in ${aiLang} - no exceptions.
 
 # CARD CREATION COMMAND (OPTIONAL)
 - If the story should introduce a newly generated NPC as a story card, include the hidden command [[Create]] immediately before a single card definition tag.
-- Use this exact creation format:
+- If the second AI recognizes a character that does not yet exist in the current scene or nearby list, use the hidden command [[CreateCharacter:Info text]] instead of changing the visible narration.
+- The info text should explain which character must be created and why. The system will send the current AI message immediately, lock all buttons, and run a secondary AI to create the new character card.
+- Use this exact creation format when creating a card directly:
   [[Type:Character,Name:First Last,Appearance:...,Personality:...,Age:...,Gender:...,Race:Human,Relations:NPC-ID=Mother,NPC-ID=Father]]
-- Use known NPC IDs for relations when available. The [[Create]] command is hidden from normal narration and is used by the game engine to create the new character card before the scene is shown.
+- Use known NPC IDs for relations when available. The [[Create]] or [[CreateCharacter]] commands are hidden from normal narration and are used by the game engine to create the new character card before the scene is shown.
 
 # ACTIVE NPC TAG (MANDATORY - DEFINES PRESENT NPCs)
 - PRESENT NPCs are ONLY the NPCs you mark as active with this tag.
@@ -9282,6 +9344,7 @@ Return ONLY the repaired narration with tags.`;
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
+                    await _awaitPendingCreateCharacterCommand();
                     unlockAllButtons(); // Unlock buttons when generation is complete
                     currentNarrationTs = null;
                 }
@@ -9504,6 +9567,7 @@ Return ONLY the repaired narration with tags.`;
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
+                    await _awaitPendingCreateCharacterCommand();
                     unlockAllButtons(); // Unlock buttons when retry is complete
                     currentNarrationTs = null;
                 }
@@ -9606,6 +9670,7 @@ Return ONLY the repaired narration with tags.`;
                     isBusy = false;
                     setSendDisabled(false);
                     setStatus(true);
+                    await _awaitPendingCreateCharacterCommand();
                     unlockAllButtons(); // Unlock buttons when continue is complete
                     currentNarrationTs = null;
                 }
