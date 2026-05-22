@@ -3372,6 +3372,168 @@
                 return text.replace(/\[\[[\s\S]*?\]\]/g, "").replace(/\s+/g, " ").trim();
             }
 
+            function _resolveCharacterIdByRef(ref) {
+                if (!ref) return "";
+                const raw = String(ref || "").trim();
+                if (!raw) return "";
+                const cards = getCards();
+                const chars = cards.filter((c) => c && c.genre === "character" && c.id);
+                const exactId = chars.find((c) => c.id === raw);
+                if (exactId) return exactId.id;
+                const norm = (s) => String(s || "").toLowerCase().replace(/[“”„"']/g, "").replace(/\s+/g, " ").trim();
+                const normalized = norm(raw);
+                if (!normalized) return "";
+                const exactTitle = chars.find((c) => norm(c.title) === normalized);
+                if (exactTitle) return exactTitle.id;
+                const exactFirst = chars.find((c) => norm(c.firstName) === normalized);
+                if (exactFirst) return exactFirst.id;
+                const exactFull = chars.find((c) => norm([c.firstName, c.lastName].filter(Boolean).join(" ")) === normalized);
+                if (exactFull) return exactFull.id;
+                const exactLast = chars.find((c) => norm(c.lastName) === normalized);
+                if (exactLast) return exactLast.id;
+                return "";
+            }
+
+            function _extractCardTagContent(text) {
+                if (!text) return null;
+                const rx = /\[\[([\s\S]*?)\]\]/g;
+                let match;
+                while ((match = rx.exec(String(text))) !== null) {
+                    const inner = String(match[1] || "").trim();
+                    if (/^\s*Type\s*:/i.test(inner)) {
+                        return inner;
+                    }
+                }
+                return null;
+            }
+
+            function _parseCreateCardDefinition(tagContent) {
+                if (!tagContent) return null;
+                const data = {};
+                const keyRx = /\b(Type|Name|Appearance|Personality|Age|Gender|Race|Relations|Status)\s*:\s*/gi;
+                const matches = [];
+                let match;
+                while ((match = keyRx.exec(tagContent)) !== null) {
+                    matches.push({ key: match[1], index: match.index });
+                }
+                for (let i = 0; i < matches.length; i++) {
+                    const current = matches[i];
+                    const next = matches[i + 1];
+                    const start = current.index + current.key.length + 1;
+                    const end = next ? next.index : tagContent.length;
+                    let value = tagContent.slice(start, end).trim();
+                    if (value.endsWith(",")) value = value.slice(0, -1).trim();
+                    data[current.key] = value;
+                }
+                if (!data.Type) return null;
+                return data;
+            }
+
+            function _buildRelationsFromDefinition(relationsText) {
+                if (!relationsText) return [];
+                return String(relationsText || "").split(/,\s*(?=[^,=]+=)/).map((entry) => {
+                    const parts = entry.split(/=\s*/);
+                    if (!parts.length) return null;
+                    const targetRef = parts[0].trim();
+                    const relLabel = parts.slice(1).join("=").trim() || "Friend";
+                    const targetId = _resolveCharacterIdByRef(targetRef) || targetRef;
+                    const targetName = targetId === targetRef ? targetRef : (getCards().find((c) => c.id === targetId)?.title || targetRef);
+                    const familyRoles = /^(Mother|Father|Daughter|Son|Sister|Brother|Parent|Spouse)$/i;
+                    if (familyRoles.test(relLabel)) {
+                        return {
+                            targetId,
+                            targetName,
+                            relation: "Family",
+                            familySub: relLabel
+                        };
+                    }
+                    return {
+                        targetId,
+                        targetName,
+                        relation: relLabel,
+                        familySub: relLabel
+                    };
+                }).filter(Boolean);
+            }
+
+            function _createCharacterCardFromDefinition(definition, locationId) {
+                if (!definition || String(definition.Type || "").toLowerCase() !== "character") return null;
+                const title = String(definition.Name || definition.name || "Unnamed").trim();
+                const parts = title.split(" ").filter(Boolean);
+                const firstName = parts.length ? parts[0] : "Unknown";
+                const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+                const age = parseInt(definition.Age, 10) || 0;
+                const birthdate = age > 0 ? buildBirthdateFromAge(age, activeChar?.startingDate?.year || new Date().getFullYear()) : null;
+                const raceName = String(definition.Race || "Human").trim();
+                const relations = _buildRelationsFromDefinition(definition.Relations);
+                const card = {
+                    id: generateId(),
+                    genre: "character",
+                    title,
+                    firstName,
+                    lastName,
+                    gender: String(definition.Gender || "").trim(),
+                    age,
+                    birthdate,
+                    raceName: raceName || "Human",
+                    appearance: String(definition.Appearance || "").trim(),
+                    personality: String(definition.Personality || "").trim(),
+                    clothes: "",
+                    status: "Alive",
+                    secrets: [],
+                    relations,
+                    isPlayable: false,
+                    spawnId: locationId || "",
+                    currentLocationId: locationId || "",
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+                return card;
+            }
+
+            async function handleCreateTagForAiResponse(aiResponse, sourceText) {
+                if (!aiResponse || !/\[\[\s*Create\s*\]\]/i.test(aiResponse)) {
+                    return aiResponse;
+                }
+                let cleaned = aiResponse.replace(/\[\[\s*Create\s*\]\]/gi, "").trim();
+                let cardTagContent = _extractCardTagContent(cleaned);
+                if (!cardTagContent) {
+                    const cards = getCards();
+                    const existingChars = cards
+                        .filter((c) => c && c.genre === "character" && c.id)
+                        .slice(0, 12)
+                        .map((c) => `- ID: ${c.id}, Name: ${c.title || c.name || "Unnamed"}`)
+                        .join("\n");
+                    const prompt = `Du bist eine Karten-Erstellungs-KI für eine interaktive Story. Basierend auf dieser Nachricht und dem aktuellen Story-Kontext sollst du eine neue Charakterkarte anlegen. Antworte nur mit einer einzigen Karte im folgenden Format ohne zusätzlichen Text:\n[[Type:Character,Name:Ashley Geodo,Appearance:Long black hair, whiteskin,Personality:Friendly, Tsundere,Age:18,Gender:Female,Relations:NPC-ID=Mother,NPC-ID=Father]]\n\nWenn du bekannte NPCs einbeziehen kannst, verwende ihre ID oder ihren Namen.\n\nAktuelle Nachricht:\n${cleaned}\n\nBekannte Charaktere:\n${existingChars}`;
+                    try {
+                        const createResponse = await askAIWithRetry(prompt);
+                        const extracted = _extractCardTagContent(createResponse);
+                        if (extracted) {
+                            cardTagContent = extracted;
+                        }
+                    } catch (e) {
+                        console.warn("Create card AI call failed", e);
+                    }
+                }
+                if (cardTagContent) {
+                    const def = _parseCreateCardDefinition(cardTagContent);
+                    const card = _createCharacterCardFromDefinition(def, currentLocationId);
+                    if (card) {
+                        const cards = getCards();
+                        cards.push(card);
+                        const loc = cards.find((c) => c && c.genre === "location" && c.id === currentLocationId);
+                        if (loc) {
+                            if (!Array.isArray(loc.residents)) loc.residents = [];
+                            if (!loc.residents.includes(card.id)) loc.residents.push(card.id);
+                        }
+                        Storage.set(CARDS_KEY, JSON.stringify(cards));
+                        console.log("Created new AI-generated story card:", card);
+                        try { showToast(`Neue Karte erstellt: ${card.title}`, "rgba(40,140,80,0.95)"); } catch {}
+                    }
+                }
+                return cleaned;
+            }
+
             function handleCommand(key, val) {
                 if (!activeChar) return;
                 if (!activeChar.startingDate) activeChar.startingDate = {};
@@ -8347,6 +8509,7 @@ ${killedInstructionNoTags}`;
                     }
                     removeTypingIndicator();
                     validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
+                    validatedResponse = await handleCreateTagForAiResponse(validatedResponse, "");
                     let rawAiUsed = validatedResponse;
                     const cleanResponse = processAICommands(validatedResponse);
                     const firstPendingMemoryTargets = Array.isArray(window._pendingMemoryTargets) ? [...window._pendingMemoryTargets] : [];
@@ -8373,6 +8536,7 @@ ${killedInstructionNoTags}`;
                                 }
                             }
                             validatedResponse2 = normalizeActiveNpcTagInAiText(validatedResponse2);
+                            validatedResponse2 = await handleCreateTagForAiResponse(validatedResponse2, "");
                             const pendingBeforeSecondPass = Array.isArray(window._pendingMemoryTargets) ? [...window._pendingMemoryTargets] : firstPendingMemoryTargets;
                             const clean2 = processAICommands(validatedResponse2);
                             if ((!Array.isArray(window._pendingMemoryTargets) || window._pendingMemoryTargets.length === 0) && pendingBeforeSecondPass.length > 0) {
@@ -9055,6 +9219,7 @@ Return ONLY the repaired narration with tags.`;
                     
                     // Now process the validated response (this removes the tags)
                     validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
+                    validatedResponse = await handleCreateTagForAiResponse(validatedResponse, text);
                     let cleanResponse = processAICommands(validatedResponse);
                     let rawAiUsed = validatedResponse;
                     
@@ -9081,6 +9246,7 @@ Return ONLY the repaired narration with tags.`;
                                 }
                             }
                             validatedResponse2 = normalizeActiveNpcTagInAiText(validatedResponse2);
+                            validatedResponse2 = await handleCreateTagForAiResponse(validatedResponse2, text);
                             const clean2 = processAICommands(validatedResponse2);
                             rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
@@ -9276,6 +9442,7 @@ Return ONLY the repaired narration with tags.`;
                         }
                     }
                     validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
+                    validatedResponse = await handleCreateTagForAiResponse(validatedResponse, lastUserText);
                     let rawAiUsed = validatedResponse;
                     const cleanR = processAICommands(validatedResponse);
                     let finalText = "";
@@ -9301,6 +9468,7 @@ Return ONLY the repaired narration with tags.`;
                                 }
                             }
                             validatedResponse2 = normalizeActiveNpcTagInAiText(validatedResponse2);
+                            validatedResponse2 = await handleCreateTagForAiResponse(validatedResponse2, lastUserText);
                             const clean2 = processAICommands(validatedResponse2);
                             rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
@@ -9378,6 +9546,7 @@ Return ONLY the repaired narration with tags.`;
                         }
                     }
                     validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
+                    validatedResponse = await handleCreateTagForAiResponse(validatedResponse, lastUserText);
                     let rawAiUsed = validatedResponse;
                     const cleanR = processAICommands(validatedResponse);
                     let finalText = "";
@@ -9403,6 +9572,7 @@ Return ONLY the repaired narration with tags.`;
                                 }
                             }
                             validatedResponse2 = normalizeActiveNpcTagInAiText(validatedResponse2);
+                            validatedResponse2 = await handleCreateTagForAiResponse(validatedResponse2, lastUserText);
                             const clean2 = processAICommands(validatedResponse2);
                             rawAiUsed = validatedResponse2;
                             finalText = clean2 === NSFW_BLOCKED_TOKEN ? NSFW_BLOCKED_TEXT : uniqueSentences(clean2);
@@ -9757,6 +9927,7 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                         const reconciledRaw = await reconcileTagsAfterNarratorEdit(newText, oldRawAi, playerMsgForReconcile);
                         let validatedResponse = String(reconciledRaw || "").trim();
                         validatedResponse = normalizeActiveNpcTagInAiText(validatedResponse);
+                        validatedResponse = await handleCreateTagForAiResponse(validatedResponse, playerMsgForReconcile);
                         
                         currentNarrationTs = ts;
                         const clean = processAICommands(validatedResponse);
