@@ -3431,12 +3431,12 @@
 
             function _extractCreateCharacterCommand(text) {
                 if (!text) return null;
-                const match = String(text).match(/\[\[\s*CreateCharacter\s*:\s*([\s\S]*?)\]\]/i);
-                return match ? String(match[1] || "").trim() : null;
+                const match = String(text).match(/\[\[\s*CreateCharacter(?:\s*:\s*([\s\S]*?))?\]\]/i);
+                if (!match) return null;
+                return match[1] == null ? "" : String(match[1] || "").trim();
             }
 
             async function _runCreateCharacterCommand(infoText, generatedMessage) {
-                if (!infoText) return null;
                 const prompt = `Du bist eine NPC-Erstellungs-KI für eine interaktive Geschichte. Erstelle basierend auf diesem Info-Text und der bereits generierten Nachricht einen neuen Charakter. Antwortet ausschließlich mit einer einzigen Karte im folgenden Format ohne zusätzlichen Text:\n[[Type:Character,Name:Vorname Nachname,Appearance:...,Personality:...,Age:...,Birthdate:DD.MM.YYYY,Gender:...,Race:Human,Relations:NPC-ID=Mother,NPC-ID=Father]]\n\nVerwende die Felder Name, Appearance, Personality, Age, Birthdate, Gender und Race. Wenn die Herkunft nicht klar ist, setze Race auf Human.\n\nInfo-Text:\n${infoText}\n\nGenerierte Nachricht:\n${generatedMessage}\n`;
                 try {
                     const response = await askAIWithRetry(prompt);
@@ -3547,16 +3547,16 @@
                 const createCharInfo = _extractCreateCharacterCommand(aiResponse);
                 const hasCreateCommand = /\[\[\s*Create\s*\]\]/i.test(aiResponse);
                 const hasTypeCard = /\[\[\s*Type\s*:\s*Character\b/i.test(aiResponse);
-                if (!createCharInfo && !hasCreateCommand && !hasTypeCard) {
+                if (createCharInfo === null && !hasCreateCommand && !hasTypeCard) {
                     return aiResponse;
                 }
                 let cleaned = String(aiResponse);
-                if (createCharInfo) {
-                    cleaned = cleaned.replace(/\[\[\s*CreateCharacter\s*:[\s\S]*?\]\]/gi, "").trim();
+                if (createCharInfo !== null) {
+                    cleaned = cleaned.replace(/\[\[\s*CreateCharacter(?:\s*:\s*[\s\S]*?)?\]\]/gi, "").trim();
                 }
                 cleaned = cleaned.replace(/\[\[\s*Create\s*\]\]/gi, "").trim();
                 let cardTagContent = _extractCardTagContent(cleaned);
-                if (!cardTagContent && createCharInfo) {
+                if (!cardTagContent && createCharInfo !== null) {
                     const generatedMessage = cleaned;
                     window._pendingCreateCharacterPromise = _runCreateCharacterCommand(createCharInfo, generatedMessage).finally(() => {
                         window._pendingCreateCharacterPromise = null;
@@ -6291,6 +6291,7 @@ Your entire output must be in ${aiLang} - no exceptions.
 # CONTROL OUTPUT RULE (MANDATORY)
 - Output ONLY the narration text (storytelling).
 - Do NOT output any bracketed control syntax, any metadata block, or any special formatting lines.
+- If a second AI recognizes a character that does not yet exist in the current scene or nearby list, use the hidden command [[CreateCharacter:Info text]] instead of changing the visible narration.
 - If you need to create a new story character card because a new character has appeared that does not exist in either ActiveNPC or NearbyNPC, the only permitted syntax in parentheses is the hidden card creation pair: [[Create]].
 - A second-pass system will add time/location metadata, NPC activation, memories, and other control data.
 
