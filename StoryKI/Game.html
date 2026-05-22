@@ -3492,7 +3492,12 @@
             }
 
             async function handleCreateTagForAiResponse(aiResponse, sourceText) {
-                if (!aiResponse || !/\[\[\s*Create\s*\]\]/i.test(aiResponse)) {
+                if (!aiResponse) {
+                    return aiResponse;
+                }
+                const hasCreateCommand = /\[\[\s*Create\s*\]\]/i.test(aiResponse);
+                const hasTypeCard = /\[\[\s*Type\s*:\s*Character\b/i.test(aiResponse);
+                if (!hasCreateCommand && !hasTypeCard) {
                     return aiResponse;
                 }
                 let cleaned = aiResponse.replace(/\[\[\s*Create\s*\]\]/gi, "").trim();
@@ -6071,6 +6076,12 @@ Your entire output must be in ${aiLang} - no exceptions.
 - For NPCs held or locked to a location, use [[NPCLocationSet:NPC_ID,Text,Number]]. This creates a location lock entry for the current location.
 - Remove a lock when the NPC escapes or dies with [[NPCLocationDelete:Number]]. If the same NPC gets another NPCLocationSet at a different location, the old lock is automatically overwritten.
 
+# CARD CREATION COMMAND (OPTIONAL)
+- If the story should introduce a newly generated NPC as a story card, include the hidden command [[Create]] immediately before a single card definition tag.
+- Use this exact creation format:
+  [[Type:Character,Name:First Last,Appearance:...,Personality:...,Age:...,Gender:...,Race:Human,Relations:NPC-ID=Mother,NPC-ID=Father]]
+- Use known NPC IDs for relations when available. The [[Create]] command is hidden from normal narration and is used by the game engine to create the new character card before the scene is shown.
+
 # ACTIVE NPC TAG (MANDATORY - DEFINES PRESENT NPCs)
 - PRESENT NPCs are ONLY the NPCs you mark as active with this tag.
 - Output EXACTLY ONE of these tags in EVERY response, BEFORE the final [[TIME: ...]] tag:
@@ -6218,6 +6229,7 @@ Your entire output must be in ${aiLang} - no exceptions.
 # CONTROL OUTPUT RULE (MANDATORY)
 - Output ONLY the narration text (storytelling).
 - Do NOT output any bracketed control syntax, any metadata block, or any special formatting lines.
+- If you need to create a new story character card because a new character has appeared that does not exist in either ActiveNPC or NearbyNPC, the only permitted syntax in parentheses is the hidden card creation pair: [[Create]].
 - A second-pass system will add time/location metadata, NPC activation, memories, and other control data.
 
 ${nsfwInstructionNoTags}
