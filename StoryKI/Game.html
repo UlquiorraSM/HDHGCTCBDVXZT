@@ -3410,7 +3410,7 @@
             function _parseCreateCardDefinition(tagContent) {
                 if (!tagContent) return null;
                 const data = {};
-                const keyRx = /\b(Type|Name|Appearance|Personality|Age|Gender|Race|Relations|Status)\s*:\s*/gi;
+                const keyRx = /\b(Type|Name|Appearance|Personality|Age|Birthdate|Gender|Race|Relations|Status)\s*:\s*/gi;
                 const matches = [];
                 let match;
                 while ((match = keyRx.exec(tagContent)) !== null) {
@@ -3427,6 +3427,14 @@
                 }
                 if (!data.Type) return null;
                 return data;
+            }
+
+            function buildBirthdateFromAge(age, currentYear) {
+                const numericAge = parseInt(age, 10);
+                const year = parseInt(currentYear, 10) || new Date().getFullYear();
+                if (!numericAge || numericAge <= 0) return null;
+                const birthYear = year - numericAge;
+                return `01.01.${birthYear}`;
             }
 
             function _extractCreateCharacterCommand(text) {
@@ -3534,7 +3542,8 @@
                 const firstName = parts.length ? parts[0] : "Unknown";
                 const lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
                 const age = parseInt(definition.Age, 10) || 0;
-                const birthdate = age > 0 ? buildBirthdateFromAge(age, activeChar?.startingDate?.year || new Date().getFullYear()) : null;
+                const explicitBirthdate = String(definition.Birthdate || "").trim();
+                const birthdate = explicitBirthdate || (age > 0 ? buildBirthdateFromAge(age, activeChar?.startingDate?.year || new Date().getFullYear()) : null);
                 const raceName = String(definition.Race || "Human").trim();
                 const relations = _buildRelationsFromDefinition(definition.Relations);
                 const card = {
