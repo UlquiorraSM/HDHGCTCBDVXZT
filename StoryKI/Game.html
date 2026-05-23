@@ -8805,7 +8805,12 @@ ${customBuildingLocBlockVal}
 # RECENT SAVED MEMORIES (15 newest — already stored on NPC or Custom/Building location cards)
 ${recentMemBlockVal}
 
-${nsfwValidationInstruction}# DUPLICATE MEMORY AVOIDANCE (STRICT)
+${nsfwValidationInstruction}# CREATE CHARACTER RULE (MANDATORY)
+- If the second-pass AI recognizes a character mention that is not already present in Present NPCs, Nearby NPCs, or ActiveNPCs, it MUST NOT add that new character to the visible narration.
+- Instead, emit the hidden command [[CreateCharacter:Info text]] explaining which new character should be created and why. This command is used by the game engine to create the NPC card before the scene is shown.
+- Do NOT output any visible card information or character metadata in the narration itself when creating a new NPC; use [[CreateCharacter:...]] only.
+
+# DUPLICATE MEMORY AVOIDANCE (STRICT)
 - Before adding any [[Memory:ID|text]] (or comma form), compare **ID**, **Date** (DD.MM.YYYY), and the **gist** of the memory **Text** against the list above.
 - If the **same core fact** for the **same ID** is already present on the **same Date** (even hours earlier — e.g. the same kiss, promise, imprisonment in the cellar, barricaded door), **do not** emit a second tag that only repeats it; **omit** the duplicate or **replace** the narration-side implication so no redundant tag is needed.
 - Only add a new memory on the same Date + same ID if the text records a **clearly new** development (not a paraphrase or trivial rewording of the same beat).
