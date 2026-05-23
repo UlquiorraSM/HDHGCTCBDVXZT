@@ -3436,12 +3436,34 @@
                 return match[1] == null ? "" : String(match[1] || "").trim();
             }
 
+            function _detectPotentialNewCharacterName(text) {
+                if (!text) return null;
+                const cards = getCards();
+                const knownNames = cards
+                    .filter((c) => c && c.genre === "character" && c.title)
+                    .map((c) => String(c.title).trim().toLowerCase());
+                const regex = /\b(?:das ist|das war|sie ist|er ist|sein name ist|ihr name ist|dies ist|das ist die|das ist der|das ist eine|das ist ein)\s+([A-ZÄÖÜ][A-Za-zäöüÄÖÜß]+(?:\s+[A-ZÄÖÜ][A-Za-zäöüÄÖÜß]+)*)/gi;
+                let match;
+                while ((match = regex.exec(String(text))) !== null) {
+                    const name = String(match[1] || "").trim();
+                    if (!name) continue;
+                    if (!knownNames.includes(name.toLowerCase())) {
+                        return name;
+                    }
+                }
+                return null;
+            }
+
             async function _runCreateCharacterCommand(infoText, generatedMessage) {
                 const prompt = `Du bist eine NPC-Erstellungs-KI für eine interaktive Geschichte. Erstelle basierend auf diesem Info-Text und der bereits generierten Nachricht einen neuen Charakter. Antwortet ausschließlich mit einer einzigen Karte im folgenden Format ohne zusätzlichen Text:\n[[Type:Character,Name:Vorname Nachname,Appearance:...,Personality:...,Age:...,Birthdate:DD.MM.YYYY,Gender:...,Race:Human,Relations:NPC-ID=Mother,NPC-ID=Father]]\n\nVerwende die Felder Name, Appearance, Personality, Age, Birthdate, Gender und Race. Wenn die Herkunft nicht klar ist, setze Race auf Human.\n\nInfo-Text:\n${infoText}\n\nGenerierte Nachricht:\n${generatedMessage}\n`;
                 try {
                     const response = await askAIWithRetry(prompt);
+                    console.log("[DEBUG] _runCreateCharacterCommand AI response:", response, { infoText, generatedMessage });
                     const cardTag = _extractCardTagContent(response);
-                    if (!cardTag) return null;
+                    if (!cardTag) {
+                        console.warn("[DEBUG] _runCreateCharacterCommand did not return a card tag", response);
+                        return null;
+                    }
                     const def = _parseCreateCardDefinition(cardTag);
                     if (!def) return null;
                     const card = _createCharacterCardFromDefinition(def, currentLocationId);
@@ -3544,11 +3566,21 @@
                 if (!aiResponse) {
                     return aiResponse;
                 }
-                const createCharInfo = _extractCreateCharacterCommand(aiResponse);
+                console.log("[DEBUG] handleCreateTagForAiResponse input:", aiResponse, { sourceText });
+                let createCharInfo = _extractCreateCharacterCommand(aiResponse);
                 const hasCreateCommand = /\[\[\s*Create\s*\]\]/i.test(aiResponse);
                 const hasTypeCard = /\[\[\s*Type\s*:\s*Character\b/i.test(aiResponse);
+                console.log("[DEBUG] CreateCharacter parse:", { createCharInfo, hasCreateCommand, hasTypeCard });
                 if (createCharInfo === null && !hasCreateCommand && !hasTypeCard) {
-                    return aiResponse;
+                    const potentialName = _detectPotentialNewCharacterName(aiResponse);
+                    if (potentialName) {
+                        const infoText = `Neue Figur \"${potentialName}\" wird erwähnt, ist aber nicht in den vorhandenen NPCs oder Nearby NPCs. Erstelle sie als neuen Charakter.`;
+                        console.log("[DEBUG] fallback CreateCharacter injection for new name", { potentialName, infoText });
+                        aiResponse = `${aiResponse.trim()} [[CreateCharacter:${infoText}]]`;
+                        createCharInfo = infoText;
+                    } else {
+                        return aiResponse;
+                    }
                 }
                 let cleaned = String(aiResponse);
                 if (createCharInfo !== null) {
@@ -3558,6 +3590,7 @@
                 let cardTagContent = _extractCardTagContent(cleaned);
                 if (!cardTagContent && createCharInfo !== null) {
                     const generatedMessage = cleaned;
+                    console.log("[DEBUG] pending CreateCharacter command started", { createCharInfo, generatedMessage });
                     window._pendingCreateCharacterPromise = _runCreateCharacterCommand(createCharInfo, generatedMessage).finally(() => {
                         window._pendingCreateCharacterPromise = null;
                     });
@@ -8809,6 +8842,8 @@ ${nsfwValidationInstruction}# CREATE CHARACTER RULE (MANDATORY)
 - If the second-pass AI recognizes a character mention that is not already present in Present NPCs, Nearby NPCs, or ActiveNPCs, it MUST NOT add that new character to the visible narration.
 - Instead, emit the hidden command [[CreateCharacter:Info text]] explaining which new character should be created and why. This command is used by the game engine to create the NPC card before the scene is shown.
 - Do NOT output any visible card information or character metadata in the narration itself when creating a new NPC; use [[CreateCharacter:...]] only.
+- Example: if the narration introduces a new guest named Tante Lina who is not yet known, append:
+  [[CreateCharacter:Tante Lina ist ein neuer NPC, der beim Familienabend erscheint und erstellt werden muss.]]
 
 # DUPLICATE MEMORY AVOIDANCE (STRICT)
 - Before adding any [[Memory:ID|text]] (or comma form), compare **ID**, **Date** (DD.MM.YYYY), and the **gist** of the memory **Text** against the list above.
@@ -8901,6 +8936,7 @@ Return ONLY the repaired narration with tags.`;
 
                 try {
                     const validatedResponse = await askAIWithRetry(validationPrompt, 2);
+                    console.log("[DEBUG] validateAndFixNarration response:", validatedResponse);
                     if (!validatedResponse) return narrationText;
                     
                     // Clean the response
