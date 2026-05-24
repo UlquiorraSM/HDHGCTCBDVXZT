@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoryKI - Einstellungen</title>
+    <link rel="prefetch" href="../index.html">
+    <link rel="preload" href="../index.html" as="document">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        *::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: "Segoe UI", Arial, sans-serif;
+            overflow-x: hidden;
+        }
+
+        body {
+            min-height: 100vh;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+            background: #050505;
+            position: relative;
+        }
+
+        #bg-layer {
+            position: fixed;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            filter: brightness(0.52);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.84);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 24px;
+            min-height: 100vh;
+            position: relative;
+            z-index: 2;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .title-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .count {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.72);
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn,
+        .input,
+        .select,
+        .settings-tab {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(24, 24, 24, 0.88);
+            color: #fff;
+            font-size: 13px;
+        }
+
+        .btn,
+        .settings-tab {
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn:hover,
+        .settings-tab:hover {
+            background: rgba(50, 50, 50, 0.95);
+        }
+
+        .btn.primary {
+            background: rgba(72, 110, 210, 0.72);
+        }
+
+        .btn.primary:hover {
+            background: rgba(85, 125, 225, 0.88);
+        }
+
+        .btn.danger {
+            background: rgba(140, 45, 45, 0.75);
+        }
+
+        .btn.danger:hover {
+            background: rgba(170, 50, 50, 0.88);
+        }
+
+        .btn.ghost {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .input,
+        .select {
+            outline: none;
+            width: 100%;
+            min-height: 42px;
+            appearance: none;
+        }
+
+        .input:focus,
+        .select:focus {
+            border-color: rgba(112, 150, 255, 0.8);
+        }
+
+        .select option {
+            background: #111;
+            color: #fff;
+        }
+
+        .panel {
+            background: rgba(12, 12, 12, 0.76);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(14px);
+        }
+
+        .panel-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: #fff;
+        }
+
+        .panel-sub {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.65);
+            margin-top: -8px;
+            margin-bottom: 12px;
+        }
+
+        .settings-shell {
+            display: grid;
+            grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.9fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        .tabs-panel {
+            position: sticky;
+            top: 24px;
+        }
+
+        .settings-tabs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .settings-tab {
+            width: 100%;
+            text-align: left;
+        }
+
+        .settings-tab.active {
+            border-color: rgba(110, 150, 255, 0.85);
+            background: rgba(75, 105, 190, 0.18);
+        }
+
+        .ai-subtabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .ai-subtab {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(24, 24, 24, 0.88);
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .ai-subtab.active {
+            border-color: rgba(110, 150, 255, 0.85);
+            background: rgba(75, 105, 190, 0.18);
+        }
+
+        .ai-subsection {
+            display: grid;
+            gap: 14px;
+        }
+
+        .settings-main {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .settings-section {
+            display: none;
+        }
+
+        .settings-section.active {
+            display: block;
+        }
+
+        .settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .section-sub {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.65);
+            margin-bottom: 12px;
+        }
+
+        .setting-item {
+            display: grid;
+            grid-template-columns: minmax(220px, 0.95fr) minmax(240px, 1.05fr);
+            gap: 16px;
+            align-items: center;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.045);
+            border-radius: 14px;
+            transition: all 0.18s ease;
+        }
+
+        .setting-item:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .setting-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .setting-label {
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .setting-help {
+            color: rgba(255, 255, 255, 0.58);
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .setting-control {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            width: 100%;
+        }
+
+        .setting-control .input,
+        .setting-control .select {
+            width: 100%;
+        }
+
+        @media (max-width: 1100px) {
+            .settings-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs-panel {
+                position: static;
+            }
+
+            .settings-tabs {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .settings-tab {
+                width: auto;
+            }
+        }
+
+        @media (max-width: 860px) {
+            .topbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .actions {
+                justify-content: flex-start;
+            }
+
+            .setting-item {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="bg-layer"></div>
+    <div class="container">
+        <div class="topbar">
+            <div class="title-wrap">
+                <div class="title">Settings</div>
+                <div class="count">Configure the website to your liking</div>
+            </div>
+            <div class="actions">
+                <button class="btn" onclick="backToMenu()">← Back</button>
+                <button class="btn danger" onclick="resetSettings()">Reset</button>
+                <button class="btn primary" onclick="saveSettings()">Save</button>
+            </div>
+        </div>
+
+        <div class="settings-shell">
+            <div class="panel tabs-panel">
+                <div class="panel-title">Categories</div>
+                <div class="panel-sub">Switch between appearance and AI-related settings.</div>
+                <div class="settings-tabs">
+                    <button class="settings-tab active" onclick="switchTab('general')">General</button>
+                    <button class="settings-tab" onclick="switchTab('ai')">AI Settings</button>
+                </div>
+            </div>
+
+            <div class="settings-main">
+                <div id="general-section" class="settings-section active">
+                    <div class="panel">
+                        <div class="panel-title">General Settings</div>
+                        <div class="panel-sub">Adjust the visual setup used across StoryKI.</div>
+                        <div class="settings-group">
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">Background URL</div>
+                                    <div class="setting-help">Set the shared background image that appears throughout the app.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input class="input" type="url" id="background-url" placeholder="https://...">
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">Develop Mode</div>
+                                    <div class="setting-help">Show the Dev button in the game only when this is ON.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="develop-mode">
+                                        <option value="off" selected>OFF</option>
+                                        <option value="on">ON</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ai-section" class="settings-section">
+                    <div class="panel">
+                        <div class="panel-title">AI Settings</div>
+                        <div class="panel-sub">Control output length, language and narration perspective separately for World, Character, and Group modes.</div>
+                        <div class="ai-subtabs">
+                            <button class="ai-subtab active" type="button" onclick="switchAiSubTab('world')">World Settings</button>
+                            <button class="ai-subtab" type="button" onclick="switchAiSubTab('character')">Character Settings</button>
+                            <button class="ai-subtab" type="button" onclick="switchAiSubTab('group')">Group Settings</button>
+                        </div>
+
+                        <div id="world-settings-section" class="settings-group ai-subsection">
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">Text Size</div>
+                                    <div class="setting-help">Choose how compact or verbose AI messages should feel in World mode.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="world-text-size">
+                                        <option value="short">Short</option>
+                                        <option value="normal" selected>Normal</option>
+                                        <option value="tall">Tall</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">AI Language</div>
+                                    <div class="setting-help">Define the preferred language for World mode responses.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="world-ai-language">
+                                        <option value="en" selected>English</option>
+                                        <option value="de">German</option>
+                                        <option value="ja">Japanese</option>
+                                        <option value="fr">French</option>
+                                        <option value="es">Spanish</option>
+                                        <option value="it">Italian</option>
+                                        <option value="ru">Russian</option>
+                                        <option value="ko">Korean</option>
+                                        <option value="zh">Chinese</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">Perspective</div>
+                                    <div class="setting-help">Pick how the narration should address the player in World mode.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="world-perspective">
+                                        <option value="narrator" selected>Narrator perspective (You)</option>
+                                        <option value="player">Player perspective (I)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">Create Cards (BETA)</div>
+                                    <div class="setting-help">Enable automatic NPC card creation when new characters appear in World mode.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="create-cards">
+                                        <option value="off" selected>OFF</option>
+                                        <option value="on">ON</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">NSFW Block</div>
+                                    <div class="setting-help">Blocks offensive sexual content in World mode.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="world-nsfw-block">
+                                        <option value="off" selected>OFF</option>
+                                        <option value="on">ON</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="character-settings-section" class="settings-group ai-subsection" style="display:none;">
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">Text Size</div>
+                                    <div class="setting-help">Choose how compact or verbose AI messages should feel in Character mode.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="character-text-size">
+                                        <option value="short">Short</option>
+                                        <option value="normal" selected>Normal</option>
+                                        <option value="tall">Tall</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">AI Language</div>
+                                    <div class="setting-help">Define the preferred language for Character mode responses.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="character-ai-language">
+                                        <option value="en" selected>English</option>
+                                        <option value="de">German</option>
+                                        <option value="ja">Japanese</option>
+                                        <option value="fr">French</option>
+                                        <option value="es">Spanish</option>
+                                        <option value="it">Italian</option>
+                                        <option value="ru">Russian</option>
+                                        <option value="ko">Korean</option>
+                                        <option value="zh">Chinese</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">NSFW Block</div>
+                                    <div class="setting-help">Blocks offensive sexual content in Character mode.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="character-nsfw-block">
+                                        <option value="off" selected>OFF</option>
+                                        <option value="on">ON</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="group-settings-section" class="settings-group ai-subsection" style="display:none;">
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">Text Size</div>
+                                    <div class="setting-help">Choose how compact or verbose AI messages should feel in Group mode.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="group-text-size">
+                                        <option value="short">Short</option>
+                                        <option value="normal" selected>Normal</option>
+                                        <option value="tall">Tall</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">AI Language</div>
+                                    <div class="setting-help">Define the preferred language for Group mode responses.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="group-ai-language">
+                                        <option value="en" selected>English</option>
+                                        <option value="de">German</option>
+                                        <option value="ja">Japanese</option>
+                                        <option value="fr">French</option>
+                                        <option value="es">Spanish</option>
+                                        <option value="it">Italian</option>
+                                        <option value="ru">Russian</option>
+                                        <option value="ko">Korean</option>
+                                        <option value="zh">Chinese</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-copy">
+                                    <div class="setting-label">NSFW Block</div>
+                                    <div class="setting-help">Blocks offensive sexual content in Group mode.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select" id="group-nsfw-block">
+                                        <option value="off" selected>OFF</option>
+                                        <option value="on">ON</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        function switchTab(tabName) {
+            document.querySelectorAll('.settings-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.settings-section').forEach(section => section.classList.remove('active'));
+            const tabButton = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+            const section = document.getElementById(`${tabName}-section`);
+            if (tabButton) tabButton.classList.add('active');
+            if (section) section.classList.add('active');
+        }
+
+        function switchAiSubTab(tabName) {
+            document.querySelectorAll('.ai-subtab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.ai-subsection').forEach(section => section.style.display = 'none');
+            const tabButton = document.querySelector(`[onclick="switchAiSubTab('${tabName}')"]`);
+            const section = document.getElementById(`${tabName}-settings-section`);
+            if (tabButton) tabButton.classList.add('active');
+            if (section) section.style.display = 'grid';
+        }
+        
+        // Zusätzliches Preloading für index.html
+        function preloadPage(url) {
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = url;
+            document.head.appendChild(link);
+        }
+        
+        // Storage Helper (Persistent localStorage instead of sessionStorage)
+        const Storage = {
+            get: (key) => localStorage.getItem(key),
+            set: (key, val) => localStorage.setItem(key, val),
+            remove: (key) => localStorage.removeItem(key),
+            clear: () => localStorage.clear()
+        };
+
+        // Preload
+        window.addEventListener('load', () => {
+            preloadPage('../index.html');
+        });
+        
+        // Einstellungen laden
+        function loadSettings() {
+            const settings = Storage.get('storyki_settings');
+            if (settings) {
+                const data = JSON.parse(settings);
+                if (data.aiCheck !== '2') {
+                    data.aiCheck = '2';
+                    Storage.set('storyki_settings', JSON.stringify(data));
+                }
+                // Allgemein
+                document.getElementById('background-url').value = data.backgroundUrl || 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp';
+                document.getElementById('develop-mode').value = data.developMode || 'off';
+                
+                // KI-Einstellungen
+                document.getElementById('world-text-size').value = data.worldTextSize || data.textSize || 'normal';
+                document.getElementById('character-text-size').value = data.characterTextSize || data.textSize || 'normal';
+                document.getElementById('group-text-size').value = data.groupTextSize || data.textSize || 'normal';
+                document.getElementById('world-ai-language').value = data.worldAiLanguage || data.aiLanguage || 'en';
+                document.getElementById('character-ai-language').value = data.characterAiLanguage || data.aiLanguage || 'en';
+                document.getElementById('group-ai-language').value = data.groupAiLanguage || data.aiLanguage || 'en';
+                document.getElementById('world-perspective').value = data.perspective || 'narrator';
+                document.getElementById('create-cards').value = data.createCards || 'off';
+                document.getElementById('world-nsfw-block').value = data.worldNsfwBlock || data.nsfwBlock || 'off';
+                document.getElementById('character-nsfw-block').value = data.characterNsfwBlock || data.nsfwBlock || 'off';
+                document.getElementById('group-nsfw-block').value = data.groupNsfwBlock || data.nsfwBlock || 'off';
+                
+                applyBackground(true);
+            } else {
+                // Standard-Hintergrund anwenden
+                document.getElementById('background-url').value = 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp';
+                document.getElementById('develop-mode').value = 'off';
+                document.getElementById('world-text-size').value = 'normal';
+                document.getElementById('character-text-size').value = 'normal';
+                document.getElementById('group-text-size').value = 'normal';
+                document.getElementById('world-ai-language').value = 'en';
+                document.getElementById('character-ai-language').value = 'en';
+                document.getElementById('group-ai-language').value = 'en';
+                document.getElementById('world-perspective').value = 'narrator';
+                document.getElementById('create-cards').value = 'off';
+                document.getElementById('world-nsfw-block').value = 'off';
+                document.getElementById('character-nsfw-block').value = 'off';
+                document.getElementById('group-nsfw-block').value = 'off';
+                applyBackground(true);
+            }
+            
+            // Fade in effect
+            setTimeout(() => {
+                document.body.style.opacity = '1';
+            }, 100);
+        }
+        
+        // Hintergrund anwenden
+        function applyBackground(isInitialLoad = false) {
+            const backgroundUrl = document.getElementById('background-url').value;
+            if (backgroundUrl) {
+                const bgLayer = document.getElementById('bg-layer');
+                if (bgLayer) bgLayer.style.backgroundImage = `url(${backgroundUrl})`;
+                
+                // In Storage speichern für andere Seiten
+                const settings = Storage.get('storyki_settings') || '{}';
+                const data = JSON.parse(settings);
+                data.backgroundUrl = backgroundUrl;
+                Storage.set('storyki_settings', JSON.stringify(data));
+                
+                // Event für andere Seiten auslösen (falls sie offen sind)
+                window.dispatchEvent(new CustomEvent('backgroundChanged', { 
+                    detail: { backgroundUrl } 
+                }));
+            }
+        }
+        
+        // Einstellungen speichern
+        function saveSettings() {
+            const settings = {
+                // Allgemein
+                backgroundUrl: document.getElementById('background-url').value,
+                developMode: document.getElementById('develop-mode').value,
+                
+                // KI-Einstellungen
+                textSize: document.getElementById('world-text-size').value,
+                aiLanguage: document.getElementById('world-ai-language').value,
+                perspective: document.getElementById('world-perspective').value,
+                aiCheck: '2',
+                createCards: document.getElementById('create-cards').value,
+                nsfwBlock: document.getElementById('world-nsfw-block').value,
+                
+                // Mode-specific settings
+                worldTextSize: document.getElementById('world-text-size').value,
+                characterTextSize: document.getElementById('character-text-size').value,
+                groupTextSize: document.getElementById('group-text-size').value,
+                worldAiLanguage: document.getElementById('world-ai-language').value,
+                characterAiLanguage: document.getElementById('character-ai-language').value,
+                groupAiLanguage: document.getElementById('group-ai-language').value,
+                worldNsfwBlock: document.getElementById('world-nsfw-block').value,
+                characterNsfwBlock: document.getElementById('character-nsfw-block').value,
+                groupNsfwBlock: document.getElementById('group-nsfw-block').value
+            };
+            
+            Storage.set('storyki_settings', JSON.stringify(settings));
+            applyBackground(false);
+            alert('Einstellungen wurden gespeichert!');
+        }
+        
+        // Einstellungen zurücksetzen
+        function resetSettings() {
+            if (confirm('Möchten Sie wirklich alle Einstellungen auf die Standardwerte zurücksetzen?')) {
+                Storage.remove('storyki_settings');
+                loadSettings();
+                alert('Einstellungen wurden zurückgesetzt.');
+            }
+        }
+        
+        // Debug-Informationen anzeigen
+        function showDebugInfo() {
+            const settings = Storage.get('storyki_settings');
+            console.log('Aktuelle Einstellungen:', settings ? JSON.parse(settings) : 'Keine Einstellungen gefunden');
+            
+            const cards = Storage.get('storyki_storycards');
+            console.log('Anzahl Story Cards:', cards ? JSON.parse(cards).length : 0);
+            
+            const characters = Storage.get('storyki_characters');
+            console.log('Anzahl Charaktere:', characters ? JSON.parse(characters).length : 0);
+        }
+        
+        // Export / Import
+        function exportData() {
+            const data = {
+                settings: JSON.parse(Storage.get('storyki_settings') || '{}'),
+                cards: JSON.parse(Storage.get('storyki_storycards') || '[]'),
+                characters: JSON.parse(Storage.get('storyki_characters') || '[]'),
+                logs: JSON.parse(Storage.get('storyki_storylog') || '[]')
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'storyki_data_export.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function importData(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.settings) Storage.set('storyki_settings', JSON.stringify(data.settings));
+                        if (data.cards) Storage.set('storyki_storycards', JSON.stringify(data.cards));
+                        if (data.characters) Storage.set('storyki_characters', JSON.stringify(data.characters));
+                        if (data.logs) Storage.set('storyki_storylog', JSON.stringify(data.logs));
+                        
+                        loadSettings();
+                        alert('Daten erfolgreich importiert!');
+                    } catch (err) {
+                        alert('Fehler beim Importieren der Datei.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+        
+        // Zurück zum Hauptmenü
+        function backToMenu() {
+            if (hasUnsavedChanges()) {
+                if (confirm('Du hast ungespeicherte Änderungen. Möchtest du diese speichern, bevor du zurückgehst?')) {
+                    saveSettings();
+                }
+            }
+            navigateWithTransition("../index.html");
+        }
+
+        // Prüfen auf ungespeicherte Änderungen
+        function hasUnsavedChanges() {
+            const currentSettings = {
+                backgroundUrl: document.getElementById('background-url').value,
+                developMode: document.getElementById('develop-mode').value,
+                worldTextSize: document.getElementById('world-text-size').value,
+                characterTextSize: document.getElementById('character-text-size').value,
+                groupTextSize: document.getElementById('group-text-size').value,
+                worldAiLanguage: document.getElementById('world-ai-language').value,
+                characterAiLanguage: document.getElementById('character-ai-language').value,
+                groupAiLanguage: document.getElementById('group-ai-language').value,
+                perspective: document.getElementById('world-perspective').value,
+                createCards: document.getElementById('create-cards').value,
+                worldNsfwBlock: document.getElementById('world-nsfw-block').value,
+                characterNsfwBlock: document.getElementById('character-nsfw-block').value,
+                groupNsfwBlock: document.getElementById('group-nsfw-block').value
+            };
+            
+            const savedSettingsRaw = Storage.get('storyki_settings');
+            if (!savedSettingsRaw) return true;
+            
+            const savedSettings = JSON.parse(savedSettingsRaw);
+            
+            // Vergleiche alle Felder
+            return (
+                currentSettings.backgroundUrl !== (savedSettings.backgroundUrl || 'https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp') ||
+                currentSettings.worldTextSize !== (savedSettings.worldTextSize || savedSettings.textSize || 'normal') ||
+                currentSettings.characterTextSize !== (savedSettings.characterTextSize || savedSettings.textSize || 'normal') ||
+                currentSettings.groupTextSize !== (savedSettings.groupTextSize || savedSettings.textSize || 'normal') ||
+                currentSettings.worldAiLanguage !== (savedSettings.worldAiLanguage || savedSettings.aiLanguage || 'en') ||
+                currentSettings.characterAiLanguage !== (savedSettings.characterAiLanguage || savedSettings.aiLanguage || 'en') ||
+                currentSettings.groupAiLanguage !== (savedSettings.groupAiLanguage || savedSettings.aiLanguage || 'en') ||
+                currentSettings.perspective !== (savedSettings.perspective || 'narrator') ||
+                currentSettings.createCards !== (savedSettings.createCards || 'off') ||
+                currentSettings.worldNsfwBlock !== (savedSettings.worldNsfwBlock || savedSettings.nsfwBlock || 'off') ||
+                currentSettings.characterNsfwBlock !== (savedSettings.characterNsfwBlock || savedSettings.nsfwBlock || 'off') ||
+                currentSettings.groupNsfwBlock !== (savedSettings.groupNsfwBlock || savedSettings.nsfwBlock || 'off')
+            );
+        }
+        
+        // Universelle Navigationsfunktion mit Übergang (genau wie in index.html)
+        function navigateWithTransition(url) {
+            // Fade out transition
+            document.body.style.transition = 'opacity 0.4s ease-in-out';
+            document.body.style.opacity = '0';
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 400);
+        }
+        
+        // Cache leeren
+        function clearCache() {
+            if (confirm('Möchtest du wirklich den Cache leeren?')) {
+                Storage.clear();
+                alert('Cache wurde geleert!');
+            }
+        }
+        
+        // Einstellungen exportieren
+        function exportSettings() {
+            const settings = Storage.get('storyki_settings');
+            if (settings) {
+                const blob = new Blob([settings], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'storyki-settings.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            } else {
+                alert('Keine Einstellungen zum Exportieren gefunden.');
+            }
+        }
+        
+        // Einstellungen importieren
+        function importSettings() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const settings = JSON.parse(e.target.result);
+                            Storage.set('storyki_settings', JSON.stringify(settings));
+                            loadSettings();
+                            alert('Einstellungen wurden importiert!');
+                        } catch (err) {
+                            alert('Fehler beim Importieren der Einstellungen.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+        
+        // Event Listener
+        document.getElementById('background-url').addEventListener('input', () => applyBackground(false));
+        
+        // Einstellungen beim Laden laden
+        window.addEventListener('load', loadSettings);
+    </script>
+</body>
+</html>
