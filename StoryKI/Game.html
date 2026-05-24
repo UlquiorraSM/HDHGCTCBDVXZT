@@ -2801,6 +2801,15 @@
                 }
             }
 
+            function isCreateCardsEnabled() {
+                try {
+                    const settings = JSON.parse(Storage.get(SETTINGS_KEY) || "{}");
+                    return String(settings.createCards || "off").toLowerCase() === "on";
+                } catch {
+                    return false;
+                }
+            }
+
             function isHardcoreModeEnabled() {
                 try {
                     const storyId = Storage.get(CURRENT_STORY_ID_KEY);
@@ -3576,6 +3585,13 @@
                     return aiResponse;
                 }
                 console.log("[DEBUG] handleCreateTagForAiResponse input:", aiResponse, { sourceText });
+                if (!isCreateCardsEnabled()) {
+                    return String(aiResponse || "")
+                        .replace(/\[\[\s*CreateCharacter(?:\s*:\s*[\s\S]*?)?\]\]/gi, "")
+                        .replace(/\[\[\s*Create\s*\]\]/gi, "")
+                        .replace(/\[\[\s*Type\s*:\s*Character\b[\s\S]*?\]\]/gi, "")
+                        .trim();
+                }
                 let createCharInfo = _extractCreateCharacterCommand(aiResponse);
                 const hasCreateCommand = /\[\[\s*Create\s*\]\]/i.test(aiResponse);
                 const hasTypeCard = /\[\[\s*Type\s*:\s*Character\b/i.test(aiResponse);
@@ -3686,6 +3702,7 @@
             }
 
             function _genId() { return Math.random().toString(36).slice(2, 10); }
+            function generateId() { return _genId(); }
             function addSpeciesToPartyByRef(ref) {
                 try {
                     const cards = getCards();
@@ -6061,6 +6078,17 @@
 - If a species is killed by the player or NPCs, describe the kill clearly (what died, who killed it) in the narration. A second-pass system will convert this into XP distribution.`
                     : "";
 
+                const createCardsEnabled = isCreateCardsEnabled();
+                const cardCreationInstructionBlock = createCardsEnabled ? `# CARD CREATION COMMAND (OPTIONAL)
+- If the story should introduce a newly generated NPC as a story card, include the hidden command [[Create]] immediately before a single card definition tag.
+- If the second AI recognizes a character that does not yet exist in the current scene or nearby list, use the hidden command [[CreateCharacter:Info text]] instead of changing the visible narration.
+- The info text should explain which character must be created and why, using only clear, scene-specific details.
+- When creating a new character card, include exactly one card definition tag in this format:
+  [[Type:Character,Name:First Last,Appearance:...,Personality:...,Age:...,Birthdate:DD.MM.YYYY,Gender:...,Race:Human]]
+- The hidden commands are for the game engine only and should not appear in the final narration.` : `# CARD CREATION IS DISABLED
+- Do NOT output [[Create]] or [[CreateCharacter:...]].
+- Do NOT output raw [[Type:Character,...]] card definition tags.`;
+
                 // DEBUG: Log the character context to console for verification
                 console.log("[DEBUG] Character Context:", charContext);
                 try {
@@ -6178,13 +6206,7 @@ Your entire output must be in ${aiLang} - no exceptions.
 - For NPCs held or locked to a location, use [[NPCLocationSet:NPC_ID,Text,Number]]. This creates a location lock entry for the current location.
 - Remove a lock when the NPC escapes or dies with [[NPCLocationDelete:Number]]. If the same NPC gets another NPCLocationSet at a different location, the old lock is automatically overwritten.
 
-# CARD CREATION COMMAND (OPTIONAL)
-- If the story should introduce a newly generated NPC as a story card, include the hidden command [[Create]] immediately before a single card definition tag.
-- If the second AI recognizes a character that does not yet exist in the current scene or nearby list, use the hidden command [[CreateCharacter:Info text]] instead of changing the visible narration.
-- The info text should explain which character must be created and why. The system will send the current AI message immediately, lock all buttons, and run a secondary AI to create the new character card.
-- Use this exact creation format when creating a card directly:
-  [[Type:Character,Name:First Last,Appearance:...,Personality:...,Age:...,Gender:...,Race:Human,Relations:NPC-ID=Mother,NPC-ID=Father]]
-- Use known NPC IDs for relations when available. The [[Create]] or [[CreateCharacter]] commands are hidden from normal narration and are used by the game engine to create the new character card before the scene is shown.
+${cardCreationInstructionBlock}
 
 # ACTIVE NPC TAG (MANDATORY - DEFINES PRESENT NPCs)
 - PRESENT NPCs are ONLY the NPCs you mark as active with this tag.
@@ -6333,9 +6355,11 @@ Your entire output must be in ${aiLang} - no exceptions.
 # CONTROL OUTPUT RULE (MANDATORY)
 - Output ONLY the narration text (storytelling).
 - Do NOT output any bracketed control syntax, any metadata block, or any special formatting lines.
-- If a second AI recognizes a character that does not yet exist in the current scene or nearby list, use the hidden command [[CreateCharacter:Info text]] instead of changing the visible narration.
+${createCardsEnabled ? `- If a second AI recognizes a character that does not yet exist in the current scene or nearby list, use the hidden command [[CreateCharacter:Info text]] instead of changing the visible narration.
 - If you need to create a new story character card because a new character has appeared that does not exist in either ActiveNPC or NearbyNPC, the only permitted syntax in parentheses is the hidden card creation pair: [[Create]].
-- A second-pass system will add time/location metadata, NPC activation, memories, and other control data.
+` : `- Card creation is disabled for this session. Do NOT output [[Create]] or [[CreateCharacter:...]].
+- Do NOT output raw [[Type:Character,...]] card definition tags.
+`}- A second-pass system will add time/location metadata, NPC activation, memories, and other control data.
 
 ${nsfwInstructionNoTags}
 

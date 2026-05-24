@@ -627,6 +627,34 @@
                 }
             }
 
+            .name-input-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .name-input-wrapper .form-input {
+                flex: 1;
+            }
+
+            .name-gen-btn {
+                height: 46px;
+                min-width: 42px;
+                padding: 0 12px;
+                border-radius: 9px;
+                border: 1.5px solid rgba(255,255,255,0.15);
+                background: rgba(255,255,255,0.08);
+                color: #fff;
+                font-size: 16px;
+                cursor: pointer;
+                transition: background 0.2s, transform 0.2s;
+            }
+
+            .name-gen-btn:hover {
+                background: rgba(255,255,255,0.15);
+                transform: scale(1.02);
+            }
+
             /* ─── Sublocation Button & Tags ─── */
             .subloc-btn {
                 display: inline-flex;
@@ -879,8 +907,46 @@
                 padding: 7px 4px;
                 text-align: center;
             }
-            #curse-view {
+            #location-generate-view {
                 position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                z-index: 1000;
+                background: rgba(10, 10, 10, 0.98);
+            }
+            #location-generate-view .form-scroll {
+                flex: 1;
+                overflow-y: auto;
+                width: 100%;
+                max-width: 1000px;
+                padding: 0 24px 40px 24px;
+                margin: 0 auto;
+            }
+            #location-generate-view .nav-title {
+                flex: 1;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                color: rgba(255, 255, 255, 0.5);
+                padding: 7px 4px;
+                text-align: center;
+            }
+            #location-generate-view .nav-count {
+                min-width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: rgba(60, 60, 60, 0.85);
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 13px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 8px;
+                text-align: center;
+            }
+            #curse-view {
                 inset: 0;
                 display: flex;
                 flex-direction: column;
@@ -2334,6 +2400,17 @@
                 margin: 6px 0 12px 0;
                 flex-wrap: wrap;
             }
+            #location-generate-panel {
+                width: 100%;
+                max-width: 560px;
+            }
+            #location-generate-panel .form-input,
+            #location-generate-panel .form-select {
+                width: 100%;
+            }
+            #location-generate-panel button.subloc-btn {
+                min-width: 120px;
+            }
             .house-room-row {
                 display: flex;
                 justify-content: space-between;
@@ -2666,6 +2743,50 @@
         </div>
 
         <!-- ══════════════════════════════
+             LOCATION GENERATE SCENE
+        ══════════════════════════════ -->
+        <div id="location-generate-view" style="display:none;">
+            <nav class="top-nav">
+                <button class="nav-back-btn" type="button" onclick="closeLocationGenerateScene()" title="Back">←</button>
+                <span class="nav-title">LOCATION GENERATE</span>
+                <div class="nav-count"> </div>
+            </nav>
+            <div class="form-scroll">
+                <div class="form-title-row">
+                    <h2>Generate NPCs</h2>
+                    <span class="entry-badge badge-locations">CUSTOM</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="location-generate-count">NPC Count</label>
+                    <input
+                        type="number"
+                        id="location-generate-count"
+                        class="form-input"
+                        min="0"
+                        inputmode="numeric"
+                        value="1"
+                        onchange="onLocationGenerateCountChange()"
+                        oninput="onLocationGenerateCountChange()"
+                    />
+                </div>
+                <div id="location-generate-family-house" style="display:none; margin-top: 10px;">
+                    <label class="form-label" style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size: 13px;">
+                        <input
+                            type="checkbox"
+                            id="location-generate-family-house-checkbox"
+                            style="width: 16px; height: 16px;"
+                        />
+                        Generate for each Family a House?
+                    </label>
+                </div>
+                <div class="form-actions" style="margin-top: 18px; display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="btn-cancel" type="button" onclick="closeLocationGenerateScene()">Cancel</button>
+                    <button class="btn-save" type="button" onclick="applyLocationGenerateSettings()">Apply</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
              CURSE SCENE
         ══════════════════════════════ -->
         <div id="curse-view" style="display: none;">
@@ -2693,8 +2814,9 @@
                         <label class="form-label">Detailed Description</label>
                         <textarea class="form-textarea" id="curse-desc-input" placeholder="Describe the effects of the curse..."></textarea>
                     </div>
-                    <div class="form-actions" style="margin-top: 8px;">
+                    <div class="form-actions" style="margin-top: 8px; gap:10px;">
                         <button class="btn-save" onclick="curseAdd()">+ Add Curse</button>
+                        <button type="button" class="btn-cancel" onclick="generateRandomCurse()">Random</button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -2732,12 +2854,24 @@
                 <div class="form-two-col">
                     <div class="form-group">
                         <label class="form-label">Name</label>
-                        <input
-                            type="text"
-                            class="form-input"
-                            id="f-name"
-                            placeholder="Enter a name..."
-                        />
+                        <div class="name-input-wrapper">
+                            <input
+                                type="text"
+                                class="form-input"
+                                id="f-name"
+                                placeholder="Enter a name..."
+                            />
+                            <button
+                                type="button"
+                                class="name-gen-btn"
+                                id="location-name-gen-btn"
+                                onclick="generateRandomLocationName()"
+                                title="Generate random custom location name"
+                                style="display: none;"
+                            >
+                                ?
+                            </button>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -3205,6 +3339,14 @@
                         >
                             <span class="subloc-icon">🖼️</span>
                             Background
+                        </button>
+                        <button
+                            type="button"
+                            class="subloc-btn"
+                            onclick="openLocationGenerateScene()"
+                        >
+                            <span class="subloc-icon">⚙️</span>
+                            Generate
                         </button>
                     </div>
 
@@ -4338,6 +4480,9 @@
             let skillTags = []; // for skill tags
             let locationTags = []; // for location tags (building & custom)
             let characterTags = []; // for character tags
+            let locationNameParts = []; // random custom location name parts from Generate/LocationNames
+            let locationCurseTemplates = []; // random curse templates from Generate/LocationCurses.css
+            let locationGenerateConfig = { npcCount: 0, familyHouse: false }; // persistent location NPC generation config
             let familyMembersTemp = []; // for family members
             let curseTags = []; // for curse tags
             let curseTemp = [];
@@ -4761,6 +4906,8 @@
                 if (cur) cur.style.display = "none";
                 if (varv) varv.style.display = "none";
                 if (varl) varl.style.display = "none";
+                const gen = document.getElementById("location-generate-view");
+                if (gen) gen.style.display = "none";
                 document.getElementById("form-view").style.display = "flex";
                 relationPickerTemp = [];
                 secretTemp = [];
@@ -6413,6 +6560,8 @@
                 document.getElementById("namegen-form-group").style.display =
                     type === "race" ? "block" : "none";
 
+                updateLocationNameGenButtonVisibility();
+
                 // Show / hide Character block
                 document.getElementById("character-block").style.display =
                     type === "character" ? "block" : "none";
@@ -6490,6 +6639,7 @@
                     const shopWorkGrp = document.getElementById("shop-work-group");
                     const sublocCustomGrp = document.getElementById("subloc-custom-group");
                     const resCustomGrp = document.getElementById("resident-custom-group");
+                    const genScene = document.getElementById("location-generate-view");
                     if (otherTools) otherTools.style.display = "none";
                     if (otherToolsRow) otherToolsRow.style.display = "none";
                     if (toolsBd) toolsBd.style.display = "none";
@@ -6499,6 +6649,7 @@
                     if (shopWorkGrp) shopWorkGrp.style.display = "none";
                     if (sublocCustomGrp) sublocCustomGrp.style.display = "none";
                     if (resCustomGrp) resCustomGrp.style.display = "none";
+                    if (genScene) genScene.style.display = "none";
                     document.getElementById("f-location-sub").value = "";
                     document.getElementById("f-building-sub").value = "";
                 }
@@ -6527,6 +6678,19 @@
                 const toolsBd = document.getElementById("tools-section-building");
                 if (toolsBd) toolsBd.style.display = (sub === "building" ? "flex" : "none");
 
+                if (sub !== "custom") {
+                    const genScene = document.getElementById("location-generate-view");
+                    if (genScene) genScene.style.display = "none";
+                    const genCount = document.getElementById("location-generate-count");
+                    if (genCount) genCount.value = "1";
+                    const familyHouse = document.getElementById("location-generate-family-house");
+                    if (familyHouse) familyHouse.style.display = "none";
+                    const familyHouseCheckbox = document.getElementById("location-generate-family-house-checkbox");
+                    if (familyHouseCheckbox) familyHouseCheckbox.checked = false;
+                }
+
+                updateLocationNameGenButtonVisibility();
+
                 if (sub !== "building") {
                     document.getElementById("f-building-sub").value = "";
                     sublocSelections["building"] = [];
@@ -6550,6 +6714,151 @@
                 if (locationTagsGroup) {
                     locationTagsGroup.style.display = (sub === "building" || sub === "custom") ? "block" : "none";
                 }
+            }
+
+            function openLocationGenerateScene() {
+                if (document.getElementById("f-type").value !== "location" || document.getElementById("f-location-sub").value !== "custom") {
+                    showToast("Generate is only available for Location → Custom.", "#c04040");
+                    return;
+                }
+                document.getElementById("form-view").style.display = "none";
+                document.getElementById("location-generate-view").style.display = "flex";
+                document.getElementById("location-generate-count").value = String(locationGenerateConfig.npcCount || 1);
+                const familyHouseCheckbox = document.getElementById("location-generate-family-house-checkbox");
+                if (familyHouseCheckbox) familyHouseCheckbox.checked = !!locationGenerateConfig.familyHouse;
+                onLocationGenerateCountChange();
+            }
+
+            function closeLocationGenerateScene() {
+                document.getElementById("location-generate-view").style.display = "none";
+                document.getElementById("form-view").style.display = "flex";
+            }
+
+            function onLocationGenerateCountChange() {
+                const count = Number(document.getElementById("location-generate-count").value || 0);
+                const familyHouse = document.getElementById("location-generate-family-house");
+                if (!familyHouse) return;
+                familyHouse.style.display = count > 0 ? "block" : "none";
+                if (count <= 0) {
+                    const checkbox = document.getElementById("location-generate-family-house-checkbox");
+                    if (checkbox) checkbox.checked = false;
+                }
+            }
+
+            function applyLocationGenerateSettings() {
+                const count = Number(document.getElementById("location-generate-count").value || 0);
+                const familyHouse = document.getElementById("location-generate-family-house-checkbox");
+                const familyHouseEnabled = familyHouse ? familyHouse.checked : false;
+                locationGenerateConfig.npcCount = count;
+                locationGenerateConfig.familyHouse = familyHouseEnabled;
+                showToast(
+                    `Generate configured: ${count} NPC${count === 1 ? "" : "s"}` +
+                    (familyHouseEnabled ? ", each family gets a house" : ""),
+                    "rgba(80,140,80,0.95)"
+                );
+                closeLocationGenerateScene();
+            }
+
+            function updateLocationNameGenButtonVisibility() {
+                const type = document.getElementById("f-type").value;
+                const sub = document.getElementById("f-location-sub").value;
+                const btn = document.getElementById("location-name-gen-btn");
+                if (!btn) return;
+                btn.style.display = type === "location" && sub === "custom" ? "inline-flex" : "none";
+            }
+
+            function generateRandomLocationName() {
+                if (!locationNameParts.length) {
+                    showToast("Location name list is unavailable.", "#c04040");
+                    return;
+                }
+
+                const first = locationNameParts[Math.floor(Math.random() * locationNameParts.length)];
+                let second = locationNameParts[Math.floor(Math.random() * locationNameParts.length)];
+                if (locationNameParts.length > 1) {
+                    while (second === first) {
+                        second = locationNameParts[Math.floor(Math.random() * locationNameParts.length)];
+                    }
+                }
+
+                document.getElementById("f-name").value = `${first}${second.toLowerCase()}`;
+            }
+
+            function loadLocationNames() {
+                fetch("Generate/LocationNames.css")
+                    .then((response) => response.text())
+                    .then((text) => {
+                        const cleaned = text
+                            .replace(/\/\*[\s\S]*?\*\//g, "")
+                            .trim();
+
+                        locationNameParts = cleaned
+                            .split(/\r?\n/)
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0);
+
+                        if (!locationNameParts.length) {
+                            throw new Error("Location name list is empty");
+                        }
+                    })
+                    .catch((error) => {
+                        console.warn("Failed to load LocationNames.css:", error);
+                        locationNameParts = [
+                            "Si",
+                            "Don",
+                            "Ra",
+                            "Ma",
+                            "Lu",
+                            "Sor",
+                            "Tal",
+                            "Zin",
+                            "Ver",
+                            "Nya",
+                            "Kor",
+                            "El",
+                            "Ha",
+                            "Ira",
+                            "Bo",
+                            "Jun",
+                            "Quo",
+                            "Fen",
+                            "Ro",
+                            "Ari",
+                        ];
+                    });
+            }
+
+            function loadLocationCurses() {
+                fetch("Generate/LocationCurses.css")
+                    .then((response) => response.text())
+                    .then((text) => {
+                        const cleaned = text
+                            .replace(/\/\*[\s\S]*?\*\//g, "")
+                            .trim();
+
+                        locationCurseTemplates = cleaned
+                            .split(/\r?\n/)
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0)
+                            .map((line) => {
+                                const [name, description] = line.split("|").map((part) => (part || "").trim());
+                                return { name: name || "Unnamed Curse", description: description || "A mysterious curse." };
+                            });
+
+                        if (!locationCurseTemplates.length) {
+                            throw new Error("Location curse list is empty");
+                        }
+                    })
+                    .catch((error) => {
+                        console.warn("Failed to load LocationCurses.css:", error);
+                        locationCurseTemplates = [
+                            { name: "Eternal Night", description: "Darkness falls over the land and the sun never rises." },
+                            { name: "Whispering Madness", description: "The cursed hear voices in every shadow, driving them slowly insane." },
+                            { name: "Frostbite Heart", description: "Warmth leaves the body and even love turns cold." },
+                            { name: "Blind Fog", description: "A thick mist clouds sight and memory, making travel dangerous." },
+                            { name: "Hunger of the Deep", description: "Those afflicted feel an unending, ravenous hunger for the unknown." },
+                        ];
+                    });
             }
 
             function onBuildingSubChange() {
@@ -7670,6 +7979,17 @@
                 nameInput.value = "";
                 descInput.value = "";
                 renderCurseRows();
+            }
+
+            function generateRandomCurse() {
+                if (!locationCurseTemplates.length) {
+                    showToast("Curse template list is unavailable.", "rgba(180, 60, 60, 0.9)");
+                    return;
+                }
+
+                const randomCurse = locationCurseTemplates[Math.floor(Math.random() * locationCurseTemplates.length)];
+                document.getElementById("curse-name-input").value = randomCurse.name;
+                document.getElementById("curse-desc-input").value = randomCurse.description;
             }
 
             function renderCurseRows() {
@@ -9166,6 +9486,7 @@
                                             : (Array.isArray(prev.tags) ? [...prev.tags] : []),
                             ...(type === "location" && locationDetail === "house" ? { houseRooms: houseRooms.map((r) => ({ ...r, id: r.id || generateId() })) } : {}),
                             canBeSpawn,
+                            ...(type === "location" ? { generateNpcCount: locationGenerateConfig.npcCount || 0, generateNpcFamilyHouse: !!locationGenerateConfig.familyHouse, generateNpcApplied: false } : {}),
                             ...(sublocations && Object.keys(sublocations).length ? { sublocations } : {}),
                             ...(type === "location" && prev.distances && Object.keys(prev.distances).length ? { distances: prev.distances } : {}),
                             ...(species && Object.keys(species).length ? { species } : {}),
@@ -9247,6 +9568,7 @@
                                       : type === "skill"
                                         ? [...skillTags]
                                         : [],
+                        ...(type === "location" ? { generateNpcCount: locationGenerateConfig.npcCount || 0, generateNpcFamilyHouse: !!locationGenerateConfig.familyHouse, generateNpcApplied: false } : {}),
                         ...(type === "location" && locationDetail === "house" ? { houseRooms: houseRooms.map((r) => ({ ...r, id: r.id || generateId() })) } : {}),
                         relations: type === "character" ? [...relationSelections] : [],
                         secrets: type === "character" ? [...secretSelections] : [],
@@ -9676,6 +9998,8 @@
                     if (settings) Storage.set("storyki_settings", settings);
                 }
                 
+                loadLocationNames();
+                loadLocationCurses();
                 renderList();
 
                 // EXP preview input listeners
