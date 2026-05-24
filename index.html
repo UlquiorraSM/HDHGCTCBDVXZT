@@ -4,8 +4,8 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Story AI</title>
-        <link rel="prefetch" href="StoryKI/Game.html" />
-        <link rel="prefetch" href="StoryKI/settings.html" />
+        <link rel="prefetch" href="World/Game.html" />
+        <link rel="prefetch" href="World/settings.html" />
         <style>
             body {
                 margin: 0;
@@ -1260,6 +1260,10 @@
                     <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px;">When enabled, Retry, Edit and Erase are hidden ingame.</div>
                 </div>
 
+                <div class="conf-group">
+                    <button class="conf-btn conf-btn-save" type="button" onclick="openStoryWorldData()">World Data</button>
+                </div>
+
                 <div class="conf-actions">
                     <button class="conf-btn conf-btn-cancel" onclick="closeStoryConf()">Cancel</button>
                     <button class="conf-btn conf-btn-save" onclick="saveStoryConf()">Save</button>
@@ -2480,7 +2484,7 @@
                 // Save character ID to session and navigate to CharacterCreate.html for editing
                 sessionStorage.setItem("storyki_edit_character_id", charId);
                 sessionStorage.setItem("storyki_previous_view", "characters");
-                navigateWithTransition("OnlyCharacter/CharacterCreate.html");
+                navigateWithTransition("Character/CharacterCreate.html");
             }
 
             function uploadCharacterToUniverse(char) {
@@ -2679,10 +2683,10 @@
             }
             
             function createCharacter() {
-                // Zur OnlyCharacter/CharacterCreate.html navigieren
+                // Zur Character/CharacterCreate.html navigieren
                 // Speichern, dass wir vom Characters-View kommen
                 sessionStorage.setItem("storyki_previous_view", "characters");
-                navigateWithTransition("OnlyCharacter/CharacterCreate.html");
+                navigateWithTransition("Character/CharacterCreate.html");
             }
             
             const PLAYER_CHARS_KEY = "storyki_player_characters";
@@ -2889,7 +2893,7 @@
             function navigateToPlayerCreate() {
                 // Speichern, dass wir vom Characters-View kommen
                 sessionStorage.setItem("storyki_previous_view", "characters");
-                navigateWithTransition("OnlyCharacter/PlayerCreate.html");
+                navigateWithTransition("Character/PlayerCreate.html");
             }
             
             function openGroupCreateOverlay() {
@@ -3114,7 +3118,7 @@
                 }
                 sessionStorage.removeItem("storyki_active_character");
                 closeGroupCreateOverlay();
-                navigateWithTransition("OnlyCharacter/GroupGame.html");
+                navigateWithTransition("Group/GroupGame.html");
             }
             
             function buildGroupCardElement(group) {
@@ -3174,7 +3178,7 @@
                 sessionStorage.removeItem("storyki_active_character");
                 // Note: Player info is preserved if already set from previous session
                 // If no player set yet, GroupGame.html will handle the missing player gracefully
-                navigateWithTransition("OnlyCharacter/GroupGame.html");
+                navigateWithTransition("Group/GroupGame.html");
             }
             
             function selectPlayerCharacter(player) {
@@ -3188,7 +3192,7 @@
                 // Edit-Modus für Player
                 sessionStorage.setItem("storyki_edit_player_id", player.id);
                 sessionStorage.setItem("storyki_previous_view", "characters");
-                navigateWithTransition("OnlyCharacter/PlayerCreate.html");
+                navigateWithTransition("Character/PlayerCreate.html");
             }
             
             function downloadPlayerCharacter(player) {
@@ -3519,11 +3523,11 @@
                 sessionStorage.setItem("storyki_current_story_id", id);
 
                 closeNewCharStoryOverlay();
-                console.log("Navigating to OnlyCharacter/OCGame.html...");
-                // Direkte Navigation wie in StoryKI/CharacterCreate.html
+                console.log("Navigating to Character/OCGame.html...");
+                // Direkte Navigation wie in World/CharacterCreate.html
                 document.body.style.opacity = "0";
                 setTimeout(() => {
-                    window.location.href = "OnlyCharacter/OCGame.html";
+                    window.location.href = "Character/OCGame.html";
                 }, 400);
             }
 
@@ -3583,10 +3587,10 @@
                 // Setze auch in sessionStorage für OCGame.html
                 sessionStorage.setItem("storyki_current_story_id", story.id);
 
-                // Direkte Navigation wie in StoryKI/CharacterCreate.html
+                // Direkte Navigation wie in World/CharacterCreate.html
                 document.body.style.opacity = "0";
                 setTimeout(() => {
-                    window.location.href = "OnlyCharacter/OCGame.html";
+                    window.location.href = "Character/OCGame.html";
                 }, 400);
             }
             
@@ -4083,7 +4087,7 @@
                         novelBtn.className = "menu-button";
                         novelBtn.style.cssText = "padding:8px 0; font-size:14px; flex:1; background: rgba(90, 110, 180, 0.6); border-radius:0;";
                         novelBtn.title = "Light Novel";
-                        novelBtn.onclick = () => { navigateWithTransition(`StoryKI/lightnovel.html?story=${encodeURIComponent(s.id)}`); };
+                        novelBtn.onclick = () => { navigateWithTransition(`World/lightnovel.html?story=${encodeURIComponent(s.id)}`); };
                     }
 
                     const deleteBtn = document.createElement("button");
@@ -4129,6 +4133,20 @@
                 const hardcoreInput = document.getElementById("conf-story-hardcore");
                 if (hardcoreInput) hardcoreInput.value = story.data?.settings?.hardcoreMode === "on" ? "on" : "off";
                 document.getElementById("story-conf-overlay").style.display = "flex";
+            }
+
+            function openStoryWorldData() {
+                if (!_confStoryId) return;
+                const scenarios = getScenarios();
+                const story = scenarios.find(x => x.id === _confStoryId);
+                if (!story) return;
+
+                Storage.set("storyki_storycards", JSON.stringify(story.data?.cards || []));
+                Storage.remove(ANCHORED_WORLD_CHANGES_KEY);
+                Storage.set(SELECTED_WORLD_ID_KEY, _confStoryId);
+
+                closeStoryConf();
+                navigateWithTransition("World/Create.html");
             }
 
             function closeStoryConf() {
@@ -4251,7 +4269,7 @@
                 Storage.set(SELECTED_WORLD_ID_KEY, _selectedWorld.id);
                 Storage.remove(CURRENT_STORY_ID_KEY); // Neue Story, keine ID vorhanden
                 
-                navigateWithTransition("StoryKI/CharacterCreate.html");
+                navigateWithTransition("World/CharacterCreate.html");
             }
 
             function resumeStory(story) {
@@ -4288,7 +4306,7 @@
                 Storage.set(CURRENT_STORY_ID_KEY, story.id);
                 
                 // Direkt zum Spiel
-                navigateWithTransition("StoryKI/Game.html");
+                navigateWithTransition("World/Game.html");
             }
 
             function captureDraftFromSessionIfAny() {
@@ -4395,7 +4413,7 @@
                 Storage.remove(ANCHORED_WORLD_CHANGES_KEY);
                 // Speichern, dass wir vom Worlds-View kommen
                 sessionStorage.setItem("storyki_previous_view", "worlds");
-                navigateWithTransition("StoryKI/Create.html");
+                navigateWithTransition("World/Create.html");
             }
 
             function editWorld(worldId) {
@@ -4413,7 +4431,7 @@
                  // worldId merken, damit Create.html weiß, dass es eine Bearbeitung ist
                  Storage.set(SELECTED_WORLD_ID_KEY, worldId);
                  
-                 navigateWithTransition("StoryKI/Create.html");
+                 navigateWithTransition("World/Create.html");
              }
 
              let _confWorldId = null;
@@ -4620,7 +4638,7 @@
             function openSettings() {
                 // Logik zum Öffnen der Einstellungen
                 console.log("Open Settings");
-                navigateWithTransition("StoryKI/settings.html");
+                navigateWithTransition("World/settings.html");
             }
 
             function saveGame() {
