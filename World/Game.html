@@ -1310,7 +1310,6 @@
                 <div id="header-info">
                     <div id="header-location">—</div>
                 <div id="header-location-rooms"></div>
-                <div id="header-event" style="display:none;"></div>
                 <div id="header-time">—</div>
                 </div>
 
@@ -1549,12 +1548,18 @@
         <div id="dev-present-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,.82); display:none; align-items:center; justify-content:center; z-index:3100; backdrop-filter:blur(8px);">
             <div style="background:rgba(26,26,32,.96); border:1px solid rgba(255,255,255,.15); border-radius:14px; width:min(92vw,700px); max-height:80vh; display:flex; flex-direction:column; overflow:hidden;">
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.12);">
-                    <div style="color:#fff; font-weight:700;">Dev - Present NPCs</div>
+                    <div style="color:#fff; font-weight:700;">Dev System</div>
                     <button id="dev-present-close" style="width:30px; height:30px; border-radius:50%; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.08); color:#fff; cursor:pointer;">×</button>
                 </div>
-                <div style="padding:12px 14px; color:rgba(255,255,255,.85); display:flex; flex-direction:column; gap:10px;">
-                    <div id="dev-present-meta" style="font-size:12px; color:rgba(255,255,255,.65);"></div>
-                    <pre id="dev-present-content" style="margin:0; padding:10px; border-radius:10px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.1); color:#d7ecff; font-size:12px; line-height:1.45; white-space:pre-wrap; overflow:auto;"></pre>
+                <div style="padding:12px 14px; display:flex; flex-direction:column; gap:12px;">
+                    <div id="dev-system-tabs" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" class="dev-system-tab" data-tab="npcs" style="padding:8px 12px; border:none; border-radius:10px; background:rgba(255,255,255,.08); color:#fff; cursor:pointer;">NPCs</button>
+                        <button type="button" class="dev-system-tab" data-tab="location" style="padding:8px 12px; border:none; border-radius:10px; background:rgba(255,255,255,.08); color:#fff; cursor:pointer;">Location</button>
+                        <button type="button" class="dev-system-tab" data-tab="event" style="padding:8px 12px; border:none; border-radius:10px; background:rgba(255,255,255,.08); color:#fff; cursor:pointer;">Event</button>
+                        <button type="button" class="dev-system-tab" data-tab="changes" style="padding:8px 12px; border:none; border-radius:10px; background:rgba(255,255,255,.08); color:#fff; cursor:pointer;">Changes</button>
+                    </div>
+                    <div id="dev-system-meta" style="font-size:12px; color:rgba(255,255,255,.65);"></div>
+                    <div id="dev-system-content" style="flex:1 1 auto; overflow:auto; padding:12px; border-radius:12px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.1); color:#d7ecff; font-size:12px; line-height:1.45; white-space:pre-wrap;"></div>
                 </div>
             </div>
         </div>
@@ -7254,18 +7259,166 @@ ${killedInstructionNoTags}`;
 
             function openDevPresentPopup() {
                 const overlay = document.getElementById("dev-present-overlay");
-                const content = document.getElementById("dev-present-content");
-                const meta = document.getElementById("dev-present-meta");
-                if (!overlay || !content || !meta) return;
-                const snap = buildPresentNpcDebugSnapshot();
-                meta.textContent = `source=${snap.source} | uiCount=${snap.uiCount} | resolvedCount=${snap.resolvedCount} | mismatch=${snap.mismatch ? "yes" : "no"} | location=${currentLocationId || "none"}`;
-                content.textContent = snap.lines.join("\n");
+                if (!overlay) return;
                 overlay.style.display = "flex";
+                const tabs = Array.from(document.querySelectorAll("#dev-system-tabs .dev-system-tab"));
+                tabs.forEach((btn) => {
+                    btn.onclick = () => setDevSystemTab(btn.dataset.tab);
+                });
+                setDevSystemTab("npcs");
             }
 
             function closeDevPresentPopup() {
                 const overlay = document.getElementById("dev-present-overlay");
                 if (overlay) overlay.style.display = "none";
+            }
+
+            function setDevSystemTab(tab) {
+                const buttons = Array.from(document.querySelectorAll("#dev-system-tabs .dev-system-tab"));
+                buttons.forEach((btn) => {
+                    const isActive = btn.dataset.tab === tab;
+                    btn.style.background = isActive ? "#7ec9ff" : "rgba(255,255,255,.08)";
+                    btn.style.color = isActive ? "#111" : "#fff";
+                });
+                renderDevSystemTab(tab);
+            }
+
+            function renderDevSystemTab(tab) {
+                const meta = document.getElementById("dev-system-meta");
+                const content = document.getElementById("dev-system-content");
+                if (!meta || !content) return;
+                meta.textContent = `location=${currentLocationId || "none"}`;
+                if (tab === "npcs") {
+                    content.textContent = buildDevSystemNpcContent();
+                } else if (tab === "location") {
+                    content.textContent = buildDevSystemLocationContent();
+                } else if (tab === "event") {
+                    content.textContent = buildDevSystemEventContent();
+                } else if (tab === "changes") {
+                    content.textContent = buildDevSystemChangesContent();
+                } else {
+                    content.textContent = "Unknown tab.";
+                }
+            }
+
+            function buildDevSystemNpcContent() {
+                const cards = getCards();
+                const presentIds = getPresentNpcIds();
+                const presentLines = presentIds.length
+                    ? presentIds.map((id, idx) => {
+                          const npc = cards.find((c) => c.genre === "character" && c.id === id);
+                          return `${idx + 1}. ${npc ? npc.title || npc.id : id} [${id}]`;
+                      })
+                    : ["(none)"];
+
+                const nearbyLines = getNearbyNpcInfoLines();
+                const nearbyText = nearbyLines.length ? nearbyLines.join("\n") : "(none)";
+
+                const allCharacters = cards.filter((c) => c.genre === "character");
+                const allLines = allCharacters.length
+                    ? allCharacters.map((npc, idx) => {
+                          const loc = getCharacterEffectiveLocationCard(npc, cards);
+                          const locText = loc ? `${loc.title || loc.id}` : "Unknown";
+                          return `${idx + 1}. ${npc.title || npc.id} [${npc.id}] @ ${locText}`;
+                      })
+                    : ["(none)"];
+
+                return [
+                    "=== Present NPCs ===",
+                    ...presentLines,
+                    "\n=== Nearby NPCs ===",
+                    nearbyText,
+                    "\n=== All NPCs ===",
+                    ...allLines,
+                ].join("\n");
+            }
+
+            function buildDevSystemLocationContent() {
+                const cards = getCards();
+                const current = currentLocationId ? cards.find((c) => c.genre === "location" && c.id === currentLocationId) : null;
+                const currentLine = current
+                    ? `Current: ${current.title || current.id} [${current.id}] (sub=${current.locationSub || "?"}, detail=${current.locationDetail || "?"})`
+                    : "Current: none";
+                const parent = currentLocationId ? findParentLocationById(currentLocationId, cards) : null;
+                const parentLine = parent
+                    ? `Parent: ${parent.title || parent.id} [${parent.id}] (sub=${parent.locationSub || "?"})`
+                    : "Parent: none";
+                const siblings = getSiblingLocations();
+                const siblingLines = siblings.length
+                    ? siblings.map((loc, idx) => `${idx + 1}. ${loc.title || loc.id} [${loc.id}]`) 
+                    : ["(none)"];
+                const sublocations = current ? getSublocationIdsFromLoc(current).map((id) => cards.find((c) => c.id === id && c.genre === "location")).filter(Boolean) : [];
+                const subLines = sublocations.length
+                    ? sublocations.map((loc, idx) => `${idx + 1}. ${loc.title || loc.id} [${loc.id}] (sub=${loc.locationSub || "?"})`)
+                    : ["(none)"];
+
+                return [
+                    currentLine,
+                    parentLine,
+                    "\n=== Neighbor Locations ===",
+                    ...siblingLines,
+                    "\n=== Sublocations ===",
+                    ...subLines,
+                ].join("\n");
+            }
+
+            function buildDevSystemEventContent() {
+                const scheduled = _getActiveScheduledEventsForCurrent();
+                const locationEvents = _getActiveLocationEventsForCurrent();
+                const eventLines = [];
+                if (scheduled.length) {
+                    eventLines.push("=== Scheduled Events ===");
+                    scheduled.forEach((ev, idx) => {
+                        eventLines.push(`${idx + 1}. ${ev.display || ev.displayDate || "?"} — ${ev.text || ev.description || "(no description)"}`);
+                    });
+                }
+                if (locationEvents.length) {
+                    eventLines.push("=== Location Events ===");
+                    locationEvents.forEach((ev, idx) => {
+                        eventLines.push(`${idx + 1}. ${ev.displayDate || "?"} — ${ev.text || "(no description)"}`);
+                    });
+                }
+                if (eventLines.length === 0) {
+                    eventLines.push("(none)");
+                }
+                return eventLines.join("\n");
+            }
+
+            function buildDevSystemChangesContent() {
+                const changes = getAnchoredWorldChanges();
+                const keys = Object.keys(changes).sort((a, b) => Number(a) - Number(b));
+                const lines = [];
+                if (!keys.length) {
+                    return "(none)";
+                }
+                keys.forEach((key) => {
+                    const ts = Number(key) || 0;
+                    const date = ts ? new Date(ts).toISOString() : key;
+                    lines.push(`=== Anchor: ${date}`);
+                    const entries = Array.isArray(changes[key]) ? changes[key] : [];
+                    if (!entries.length) {
+                        lines.push("(no entries)");
+                        return;
+                    }
+                    entries.forEach((entry, idx) => {
+                        const base = `- ${entry.type || "unknown"}`;
+                        const details = [];
+                        if (entry.npcId) details.push(`npc=${entry.npcId}`);
+                        if (entry.eventId) details.push(`event=${entry.eventId}`);
+                        if (entry.locId) details.push(`loc=${entry.locId}`);
+                        if (entry.type === "npcLocationLock") {
+                            details.push(`lock=${entry.newLock?.number || "?"}`);
+                        }
+                        if (entry.type === "scheduledEventUpsert") {
+                            details.push(`dayCount=${entry.event?.dayCount || entry.dayCount || "?"}`);
+                        }
+                        if (entry.type === "eventExpired") {
+                            details.push(`bucket=${entry.bucket || "?"}`);
+                        }
+                        lines.push(`${idx + 1}. ${base}${details.length ? ` [${details.join(", ")}]` : ""}`);
+                    });
+                });
+                return lines.join("\n");
             }
 
             function addNpcMemoriesFromNarration(text, anchorTs = null) {
