@@ -1,0 +1,1698 @@
+<!doctype html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>StoryKI – Character Chat</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+            }
+            *::-webkit-scrollbar {
+                width: 4px;
+            }
+            *::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            *::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.12);
+                border-radius: 2px;
+            }
+
+            html, body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                font-family: "Segoe UI", Arial, sans-serif;
+            }
+
+            body {
+                background: #0a0a0a;
+                color: #fff;
+                opacity: 0;
+                transition: opacity 0.4s ease-in-out;
+            }
+
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.52);
+                z-index: 0;
+                pointer-events: none;
+            }
+
+            /* Background Layer */
+            #bg-layer {
+                position: fixed;
+                inset: 0;
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+                z-index: -1;
+                filter: blur(3px) brightness(0.5);
+                transition: background-image 0.6s ease;
+            }
+
+            /* App Shell */
+            #app {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                max-width: 820px;
+                margin: 0 auto;
+            }
+
+            /* Header */
+            #header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 20px;
+                flex-shrink: 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+                background: rgba(8, 8, 8, 0.55);
+                backdrop-filter: blur(16px);
+            }
+
+            .nav-back-btn {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.18);
+                background: rgba(28, 28, 28, 0.75);
+                color: #fff;
+                font-size: 15px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
+            .nav-back-btn:hover {
+                transform: scale(1.05);
+                background: rgba(48, 48, 48, 0.9);
+            }
+
+            #header-info {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                flex: 1;
+            }
+            .header-title {
+                font-size: 15px;
+                font-weight: 600;
+                color: #fff;
+            }
+            /* Chat Area */
+            #chat-scroll {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .msg-row {
+                display: flex;
+                align-items: flex-end;
+                gap: 10px;
+                max-width: 85%;
+                flex-wrap: wrap;
+            }
+            .msg-row.user {
+                align-self: flex-end;
+                flex-direction: row-reverse;
+            }
+            .msg-row.ai {
+                align-self: flex-start;
+            }
+
+            .retry-switcher {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                gap: 8px;
+                width: 100%;
+                flex-basis: 100%;
+                margin-top: 6px;
+            }
+
+            .retry-switcher-btn {
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: rgba(255, 255, 255, 0.08);
+                color: #fff;
+                padding: 6px 12px;
+                border-radius: 999px;
+                cursor: pointer;
+                font-size: 12px;
+                min-width: 36px;
+            }
+
+            .retry-switcher-btn:disabled {
+                opacity: 0.4;
+                cursor: default;
+            }
+
+            .retry-switcher-count {
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 12px;
+                min-width: 42px;
+                text-align: center;
+            }
+
+            .msg-avatar {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                flex-shrink: 0;
+                overflow: hidden;
+            }
+            .msg-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 50%;
+            }
+            .msg-avatar.player {
+                background: rgba(100, 150, 255, 0.3);
+            }
+            .msg-avatar.bot {
+                background: rgba(255, 100, 150, 0.3);
+            }
+
+            .msg-bubble {
+                padding: 12px 16px;
+                border-radius: 18px;
+                font-size: var(--msg-font-size, 14px);
+                line-height: 1.5;
+                max-width: 100%;
+                word-wrap: break-word;
+            }
+            .msg-row.user .msg-bubble {
+                background: rgba(100, 150, 255, 0.25);
+                border: 1px solid rgba(100, 150, 255, 0.3);
+                border-bottom-right-radius: 4px;
+            }
+            .msg-row.ai .msg-bubble {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-bottom-left-radius: 4px;
+            }
+
+            /* Input Area */
+            #input-area {
+                padding: 16px 20px 24px;
+                background: rgba(8, 8, 8, 0.7);
+                backdrop-filter: blur(16px);
+                border-top: 1px solid rgba(255, 255, 255, 0.07);
+            }
+
+            .input-row {
+                display: flex;
+                gap: 10px;
+                max-width: 1000px;
+                margin: 0 auto;
+            }
+
+            #chat-input {
+                flex: 1;
+                padding: 12px 15px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                background: rgba(30, 30, 40, 0.8);
+                color: #fff;
+                font-size: 14px;
+                font-family: inherit;
+                line-height: 1.5;
+                outline: none;
+            }
+
+            #send-btn {
+                padding: 12px 25px;
+                background: rgba(76, 175, 80, 0.85);
+                border: none;
+                border-radius: 8px;
+                color: #fff;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s;
+            }
+
+            #send-btn:hover {
+                background: rgba(76, 175, 80, 1);
+            }
+
+            .action-bar {
+                display: flex;
+                gap: 6px;
+                max-width: 1000px;
+                margin: 8px auto 0 auto;
+            }
+
+            .action-bar button {
+                flex: 1;
+                padding: 6px 12px;
+                font-size: 12px;
+                background: rgba(255,255,255,0.1);
+                border: 1px solid rgba(255,255,255,0.15);
+                color: #fff;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .action-bar button:hover {
+                background: rgba(255,255,255,0.2);
+                transform: none;
+            }
+
+            .action-bar button.locked,
+            .action-bar button:disabled {
+                opacity: 0.45;
+                cursor: not-allowed;
+            }
+
+            .action-bar .btn-save {
+                background: rgba(76, 175, 80, 0.35);
+                border-color: rgba(76, 175, 80, 0.5);
+            }
+
+            .action-bar .btn-cancel {
+                background: rgba(180, 60, 60, 0.35);
+                border-color: rgba(180, 60, 60, 0.5);
+            }
+
+            .typing-dots {
+                display: inline-flex;
+                gap: 4px;
+                align-items: center;
+                min-height: 18px;
+            }
+
+            .typing-dots span {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.65);
+                animation: ocTyping 1.2s infinite ease-in-out;
+            }
+
+            .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+            .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+            @keyframes ocTyping {
+                0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+                40% { opacity: 1; transform: translateY(-3px); }
+            }
+
+            #toast {
+                position: fixed;
+                left: 50%;
+                bottom: 110px;
+                transform: translateX(-50%) translateY(12px);
+                padding: 10px 16px;
+                border-radius: 8px;
+                color: #fff;
+                font-size: 13px;
+                z-index: 200;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.25s, transform 0.25s;
+            }
+
+            #toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+
+            /* Loading indicator */
+            .typing-indicator {
+                display: flex;
+                gap: 4px;
+                padding: 16px;
+            }
+            .typing-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.5);
+                animation: typing 1.4s infinite ease-in-out;
+            }
+            .typing-dot:nth-child(1) { animation-delay: 0s; }
+            .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+            .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+            @keyframes typing {
+                0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+                40% { transform: scale(1); opacity: 1; }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="bg-layer"></div>
+        <div id="app">
+            <div id="header">
+                <button class="nav-back-btn" onclick="goBack()">&#8592;</button>
+                <div id="header-info">
+                    <div class="header-title" id="char-name">Character</div>
+                </div>
+            </div>
+
+            <div id="chat-scroll"></div>
+
+            <div id="input-area">
+                <div class="input-row">
+                    <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea>
+                    <button id="send-btn" onclick="sendMessage()">&#10148;</button>
+                </div>
+                <div class="action-bar">
+                    <button type="button" id="retry-btn" onclick="retryLast()">Retry</button>
+                    <button type="button" id="edit-btn">Edit</button>
+                    <button type="button" id="continue-btn" onclick="continueLast()">Continue</button>
+                    <button type="button" id="erase-btn" onclick="eraseLast()">Erase</button>
+                    <button type="button" id="edit-save-btn" class="btn-save" style="display:none;">Save</button>
+                    <button type="button" id="edit-cancel-btn" class="btn-cancel" style="display:none;">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Storage Keys
+            const SETTINGS_KEY = "storyki_settings";
+            const STORY_LOG_KEY = "storyki_storylog";
+            const CARDS_KEY = "storyki_storycards";
+
+            // State
+            let activeChar = null;
+            let activePlayer = null;
+            let storyLog = [];
+            let isProcessing = false;
+            let storyBaseline = null;
+            let isEditing = false;
+            let _editRow = null;
+            let _editIndex = -1;
+            let _retryVariantSession = null;
+
+            // Init
+            document.addEventListener("DOMContentLoaded", () => {
+                loadBackground();
+                applyUiSettings();
+                initGame();
+                document.body.style.opacity = "1";
+
+                // Input handling
+                const input = document.getElementById("chat-input");
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (isEditing) return;
+                        sendMessage();
+                    }
+                });
+                input.addEventListener("input", () => {
+                    input.style.height = "auto";
+                    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+                });
+
+                document.getElementById("edit-btn").onclick = startEditLastMessage;
+                document.getElementById("edit-save-btn").onclick = saveEditedMessage;
+                document.getElementById("edit-cancel-btn").onclick = cancelEditMessage;
+            });
+
+            function initGame() {
+                // Load active character (the bot)
+                const charId = sessionStorage.getItem("storyki_active_character");
+                if (!charId) {
+                    alert("No character selected");
+                    goBack();
+                    return;
+                }
+
+                // First try to load from story cards (where story data is stored)
+                const storyCards = JSON.parse(sessionStorage.getItem("storyki_storycards") || "[]");
+                activeChar = storyCards.find(c => c.id === charId);
+
+                // If not found, try global characters
+                if (!activeChar) {
+                    const standaloneChars = JSON.parse(localStorage.getItem("storyki_standalone_characters") || "[]");
+                    activeChar = standaloneChars.find(c => c.id === charId);
+                    if (!activeChar) {
+                        const chars = JSON.parse(localStorage.getItem("storyki_characters") || "[]");
+                        activeChar = chars.find(c => c.id === charId);
+                    }
+                }
+
+                if (!activeChar) {
+                    alert("Character not found");
+                    goBack();
+                    return;
+                }
+
+                // Load active player - first from story cards, then from global players
+                const playerData = sessionStorage.getItem("storyki_active_player");
+                if (playerData) {
+                    // Try to parse as JSON (new format with full object)
+                    let playerId = null;
+                    try {
+                        const parsed = JSON.parse(playerData);
+                        if (parsed && typeof parsed === 'object' && parsed.id) {
+                            // New format: full player object stored
+                            activePlayer = parsed;
+                            playerId = parsed.id;
+                        } else {
+                            // Old format: just the ID string
+                            playerId = playerData;
+                        }
+                    } catch (e) {
+                        // Old format: just the ID string (not valid JSON)
+                        playerId = playerData;
+                    }
+
+                    // If we only have ID (old format), look up the full object
+                    if (playerId && !activePlayer) {
+                        // Try story cards first
+                        activePlayer = storyCards.find(c => c.id === playerId);
+                        // Then try global players
+                        if (!activePlayer) {
+                            const players = JSON.parse(localStorage.getItem("storyki_player_characters") || "[]");
+                            activePlayer = players.find(p => p.id === playerId);
+                        }
+                    }
+                }
+
+                // If the player was not restored from sessionStorage, infer from story cards
+                if (!activePlayer && storyCards.length > 0) {
+                    activePlayer = storyCards.find(c => c.id !== activeChar.id && c.id !== charId && c.name) ||
+                                   storyCards.find(c => c.id !== activeChar.id && c.id !== charId);
+                    if (activePlayer) {
+                        console.info("[OCGame] Reconstructed activePlayer from story cards", activePlayer.id);
+                    }
+                }
+
+                // Load story log
+                storyLog = JSON.parse(sessionStorage.getItem(STORY_LOG_KEY) || "[]");
+
+                document.getElementById("char-name").textContent = activeChar.title || "Character";
+
+                if (!Array.isArray(activeChar.memories)) activeChar.memories = [];
+                if (activePlayer && !Array.isArray(activePlayer.memories)) activePlayer.memories = [];
+                storyBaseline = {
+                    memories: snapshotMemories(),
+                };
+
+                renderChat();
+                maybePostIntroduction();
+            }
+
+            function maybePostIntroduction() {
+                if (storyLog.length > 0) return;
+                const intro = String(activeChar?.introduction || "").trim();
+                if (!intro) return;
+                appendMessage("ai", intro);
+                addToLog("bot", intro);
+            }
+
+            function getAvatarForChar(char) {
+                // Check for cover image first
+                const coverUrl = char?.coverUrl || char?.image;
+                if (coverUrl) {
+                    return `<img src="${coverUrl}" alt="" onerror="this.style.display='none';">`;
+                }
+                // Fallback to emoji based on appearance
+                if (!char?.appearance) return "&#129302;";
+                const app = char.appearance.toLowerCase();
+                if (app.includes("female") || app.includes("woman") || app.includes("girl")) return "&#128105;";
+                if (app.includes("male") || app.includes("man") || app.includes("boy")) return "&#128104;";
+                if (app.includes("cat") || app.includes("feline")) return "&#128049;";
+                if (app.includes("dog") || app.includes("wolf")) return "&#128054;";
+                if (app.includes("dragon")) return "&#128009;";
+                if (app.includes("fox")) return "&#129418;";
+                return "&#129302;";
+            }
+
+            function getPlayerAvatar(player) {
+                // Check for cover image first
+                const coverUrl = player?.coverUrl || player?.image;
+                if (coverUrl) {
+                    return `<img src="${coverUrl}" alt="" onerror="this.style.display='none'; this.parentElement.textContent='${(player?.name || 'U')[0].toUpperCase()}';">`;
+                }
+                // Fallback to first letter of name
+                return player?.name ? player.name[0].toUpperCase() : "&#128100;";
+            }
+
+            function applyUiSettings() {
+                try {
+                    const settings = getSettings();
+                    const textSize = settings.textSize || "normal";
+                    const px = textSize === "short" ? "13px" : textSize === "tall" ? "16px" : "14px";
+                    document.documentElement.style.setProperty("--msg-font-size", px);
+                } catch {}
+            }
+
+            function getSettings() {
+                try {
+                    const local = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+                    const session = JSON.parse(sessionStorage.getItem(SETTINGS_KEY) || "{}");
+                    return { ...local, ...session };
+                } catch {
+                    return {};
+                }
+            }
+
+            function isAiCheckEnabled() {
+                try {
+                    return String(getSettings().aiCheck || "1") === "2";
+                } catch {
+                    return false;
+                }
+            }
+
+            function getAiLanguageSpec(aiLanguageCode) {
+                const aiLangMap = {
+                    de: { name: "German", native: "Deutsch", code: "de" },
+                    en: { name: "English", native: "English", code: "en" },
+                    ja: { name: "Japanese", native: "日本語", code: "ja" },
+                    fr: { name: "French", native: "Français", code: "fr" },
+                    es: { name: "Spanish", native: "Español", code: "es" },
+                };
+                return aiLangMap[aiLanguageCode] || aiLangMap.en;
+            }
+
+            function stripControlTags(text) {
+                return String(text || "").replace(/\[\[[\s\S]*?\]\]/g, "").trim();
+            }
+
+            function stripTimeDateTags(text) {
+                return String(text || "").replace(/\[\[\s*(?:TIME|DATE|Time|Day|Month|Year|Location)\s*:[^\]]*\]\]/gi, "").trim();
+            }
+
+            function processAiResponse(raw, logTs) {
+                applyMemoryTagsFromText(raw, logTs);
+                return stripControlTags(raw);
+            }
+
+            function snapshotMemories() {
+                return {
+                    char: JSON.parse(JSON.stringify(activeChar?.memories || [])),
+                    player: JSON.parse(JSON.stringify(activePlayer?.memories || [])),
+                };
+            }
+
+            function restoreMemoriesSnapshot(snap) {
+                if (!snap) return;
+                if (activeChar) activeChar.memories = JSON.parse(JSON.stringify(snap.char || []));
+                if (activePlayer) activePlayer.memories = JSON.parse(JSON.stringify(snap.player || []));
+                persistCardsToSession();
+            }
+
+            function persistCardsToSession() {
+                try {
+                    const cards = JSON.parse(sessionStorage.getItem(CARDS_KEY) || "[]");
+                    if (!cards.length) return;
+                    const updated = cards.map((c) => {
+                        if (activeChar && c.id === activeChar.id) {
+                            return { ...c, memories: activeChar.memories || [] };
+                        }
+                        if (activePlayer && c.id === activePlayer.id) {
+                            return { ...c, memories: activePlayer.memories || [] };
+                        }
+                        return c;
+                    });
+                    sessionStorage.setItem(CARDS_KEY, JSON.stringify(updated));
+                } catch (e) {
+                    console.warn("persistCardsToSession failed", e);
+                }
+            }
+
+            function restoreStateFromLastLogEntry() {
+                const prev = storyLog[storyLog.length - 1];
+                if (prev?.memoriesSnapshot) {
+                    restoreMemoriesSnapshot(prev.memoriesSnapshot);
+                } else if (storyBaseline?.memories) {
+                    restoreMemoriesSnapshot(storyBaseline.memories);
+                }
+            }
+
+            function formatMemoriesForPrompt(entity, label, max = 10) {
+                const mems = (entity?.memories || []).slice(-max);
+                if (!mems.length) return "";
+                const lines = mems.map((m) => {
+                    const when = [m.date, m.time].filter(Boolean).join(" ");
+                    return `- [${when || "?"}] ${m.text || ""}`;
+                });
+                return `\n# ${label} MEMORIES\n${lines.join("\n")}`;
+            }
+
+            function buildOCChatHistoryLines(maxMessages = 15) {
+                return storyLog
+                    .slice(-maxMessages)
+                    .map((e) => {
+                        const role =
+                            e.role === "user"
+                                ? activePlayer?.name || "Player"
+                                : activeChar?.title || "Character";
+                        return `${role}: ${e.content || ""}`;
+                    })
+                    .join("\n");
+            }
+
+            function buildNarratorPrompt(systemInst, userMessage, extraNote = "") {
+                const history = buildOCChatHistoryLines(15);
+                const marker = "\n\n### CHAT LOG (last 15 messages) ###\n";
+                let suffix = "";
+                if (extraNote) suffix += "\n\n" + String(extraNote);
+                if (userMessage === "(continue)") {
+                    suffix += `\n\nContinue the scene naturally with NEW content.\n${activeChar?.title || "Character"}:`;
+                } else if (userMessage) {
+                    suffix += `\n\n${activePlayer?.name || "Player"}: ${userMessage}\n${activeChar?.title || "Character"}:`;
+                } else {
+                    suffix += `\n\n${activeChar?.title || "Character"}:`;
+                }
+                return `${systemInst}${marker}${history}${suffix}`;
+            }
+
+            function resolveMemoryEntityId(ref) {
+                const raw = String(ref || "").trim();
+                if (!raw) return null;
+                if (activeChar?.id === raw) return { entity: activeChar, kind: "char" };
+                if (activePlayer?.id === raw) return { entity: activePlayer, kind: "player" };
+                const charTitle = String(activeChar?.title || "").toLowerCase().trim();
+                const playerName = String(activePlayer?.name || "").toLowerCase().trim();
+                const r = raw.toLowerCase();
+                if (charTitle && r === charTitle) return { entity: activeChar, kind: "char" };
+                if (playerName && r === playerName) return { entity: activePlayer, kind: "player" };
+                return null;
+            }
+
+            function applyMemoryToEntity(entity, text, logTs) {
+                if (!entity || !text) return;
+                if (!Array.isArray(entity.memories)) entity.memories = [];
+                entity.memories.push({
+                    text: String(text).trim(),
+                    logTs: logTs || Date.now(),
+                });
+                if (entity.memories.length > 100) {
+                    entity.memories = entity.memories.slice(-100);
+                }
+            }
+
+            function applyMemoryTagsFromText(text, logTs) {
+                if (!text) return;
+                const tagPattern = /\[\[([\s\S]*?)\]\]/g;
+                let match;
+                while ((match = tagPattern.exec(text)) !== null) {
+                    const content = match[1].trim();
+                    const memMatch = content.match(/^Memory\s*:\s*(.+)$/i);
+                    if (!memMatch) continue;
+                    const payload = memMatch[1].trim();
+                    const pairRegex = /([A-Za-z0-9\-_]+)\s*\|\s*([\s\S]*?)(?=(?:\s*;\s*[A-Za-z0-9\-_]+\s*\|)|$)/g;
+                    let pairMatch;
+                    let found = false;
+                    while ((pairMatch = pairRegex.exec(payload)) !== null) {
+                        const resolved = resolveMemoryEntityId(pairMatch[1].trim());
+                        const memText = String(pairMatch[2] || "").trim();
+                        if (resolved?.entity && memText) {
+                            applyMemoryToEntity(resolved.entity, memText, logTs);
+                            found = true;
+                        }
+                    }
+                    if (!found) {
+                        const comma = payload.indexOf(",");
+                        if (comma > 0) {
+                            const resolved = resolveMemoryEntityId(payload.slice(0, comma).trim());
+                            const memText = payload.slice(comma + 1).trim();
+                            if (resolved?.entity && memText) {
+                                applyMemoryToEntity(resolved.entity, memText, logTs);
+                            }
+                        }
+                    }
+                }
+                persistCardsToSession();
+            }
+
+            async function validateAndFixNarration(narrationText, playerInput) {
+                if (!narrationText || narrationText.length < 12) return narrationText;
+
+                const settings = getSettings();
+                const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
+                const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
+                const charId = activeChar?.id || "";
+                const charName = activeChar?.title || "Character";
+                const playerId = activePlayer?.id || "";
+                const playerName = activePlayer?.name || "Player";
+
+                const recentHistory = buildOCChatHistoryLines(15);
+                const charMemBlock = formatMemoriesForPrompt(activeChar, charName.toUpperCase(), 12);
+                const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName.toUpperCase(), 12);
+
+                const validationPrompt = `You are a SECOND-PASS REPAIR AI for a 1-on-1 character chat. Your main job is to add and fix Memory control tags.
+
+# NARRATION TO REPAIR:
+${narrationText}
+
+# CONTEXT
+- Target language: ${targetLanguage} (code: ${aiLangSpec.code})
+- Player message: "${String(playerInput || "").trim() || "N/A"}"
+- Character: ${charName} [ID: ${charId}]
+- Player: ${playerName} [ID: ${playerId}]
+${charMemBlock}
+${playerMemBlock}
+
+# CHAT LOG (last 15 messages)
+${recentHistory || "(none)"}
+
+# TASK
+1) Add/fix Memory tags when warranted (main job).
+2) Only fix prose if clearly broken (grammar, unclosed quotes). Do not rewrite otherwise.
+3) Do NOT speak or act as the player. Do not quote the player message.
+4) Use ONLY these IDs in Memory tags: ${charId} or ${playerId}.
+5) Do NOT add date, time, or calendar tags.
+
+# REQUIRED TAGS
+- [[Memory:ID|short text]] when the scene creates lasting facts (feelings, promises, secrets learned, important events). Use character or player ID.
+
+# RULES
+- Return ONLY repaired narration with Memory tags. No explanations or markdown fences.
+- If NSFW block is required by policy, output only [[NSFW]].
+- Avoid duplicate memories already listed above for the same ID and same fact.
+- All memory text must be in ${targetLanguage}.
+
+# RESPONSE:
+Return ONLY the repaired narration with tags.`;
+
+                try {
+                    let cleaned = (await askAIWithRetry(validationPrompt, 2)).trim();
+                    cleaned = cleaned.replace(/^```[\s\S]*?\n([\s\S]*?)\n?```$/g, "$1");
+                    cleaned = cleaned.replace(/^```\n?|```$/g, "");
+                    return stripTimeDateTags(cleaned);
+                } catch (err) {
+                    console.warn("[Validation] failed, using original", err);
+                    return narrationText;
+                }
+            }
+
+            function renderChat() {
+                const container = document.getElementById("chat-scroll");
+                container.innerHTML = "";
+
+                storyLog.forEach(entry => {
+                    const isUser = entry.role === "user";
+                    appendMessage(isUser ? "user" : "ai", entry.content, false);
+                });
+
+                scrollToBottom();
+            }
+
+            function appendMessage(role, text, animate = true) {
+                const container = document.getElementById("chat-scroll");
+                const row = document.createElement("div");
+                row.className = `msg-row ${role}`;
+
+                const avatar = document.createElement("div");
+                avatar.className = `msg-avatar ${role}`;
+                avatar.innerHTML = role === "user"
+                    ? getPlayerAvatar(activePlayer)
+                    : getAvatarForChar(activeChar);
+
+                const bubble = document.createElement("div");
+                bubble.className = "msg-bubble";
+                bubble.innerHTML = formatText(text);
+
+                row.appendChild(avatar);
+                row.appendChild(bubble);
+                container.appendChild(row);
+
+                if (animate) scrollToBottom();
+            }
+
+            function formatText(text) {
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/\n/g, "<br>")
+                    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+                    .replace(/\*(.+?)\*/g, "<em>$1</em>");
+            }
+
+            function scrollToBottom() {
+                const container = document.getElementById("chat-scroll");
+                container.scrollTop = container.scrollHeight;
+            }
+
+            function addToLog(role, content, extra = {}) {
+                storyLog.push({
+                    role,
+                    content,
+                    timestamp: Date.now(),
+                    memoriesSnapshot: snapshotMemories(),
+                    ...extra,
+                });
+                persistStoryLog();
+            }
+
+            let _toastTimer = null;
+            function showToast(message, bg = "rgba(40, 40, 40, 0.92)") {
+                let el = document.getElementById("toast");
+                if (!el) {
+                    el = document.createElement("div");
+                    el.id = "toast";
+                    document.body.appendChild(el);
+                }
+                el.textContent = message;
+                el.style.background = bg;
+                el.classList.add("show");
+                if (_toastTimer) clearTimeout(_toastTimer);
+                _toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
+            }
+
+            function _setElDisplay(el, display) {
+                if (!el) return;
+                if (display === "none") {
+                    if (!el.dataset.prevDisplay) {
+                        el.dataset.prevDisplay = el.style.display || "";
+                    }
+                    el.style.display = "none";
+                } else {
+                    const prev = el.dataset.prevDisplay;
+                    el.style.display = display || prev || "";
+                    try { delete el.dataset.prevDisplay; } catch {}
+                }
+            }
+
+            function _removeRetrySwitcherUI() {
+                try {
+                    document.querySelectorAll(".retry-switcher").forEach((el) => el.remove());
+                } catch {}
+            }
+
+            function clearRetryVariantSession() {
+                _retryVariantSession = null;
+                _removeRetrySwitcherUI();
+            }
+
+            function _getLastAiRowEl() {
+                const rows = Array.from(document.querySelectorAll(".msg-row.ai"));
+                return rows.length ? rows[rows.length - 1] : null;
+            }
+
+            function _getRetrySlotKey() {
+                let lastBotIndex = -1;
+                for (let i = storyLog.length - 1; i >= 0; i--) {
+                    if (storyLog[i].role === "bot") {
+                        lastBotIndex = i;
+                        break;
+                    }
+                }
+                if (lastBotIndex === -1) return null;
+                for (let i = lastBotIndex - 1; i >= 0; i--) {
+                    if (storyLog[i].role === "user") {
+                        return storyLog[i].timestamp || null;
+                    }
+                }
+                return null;
+            }
+
+            function ensureRetryVariantSessionForLatestAi() {
+                const slotKey = _getRetrySlotKey();
+                if (!slotKey) return null;
+                if (_retryVariantSession && _retryVariantSession.slotKey !== slotKey) {
+                    clearRetryVariantSession();
+                }
+                if (!_retryVariantSession) {
+                    _retryVariantSession = { slotKey, variants: [], selectedIndex: 0 };
+                }
+
+                const lastBot = (() => {
+                    for (let i = storyLog.length - 1; i >= 0; i--) {
+                        if (storyLog[i].role === "bot") return storyLog[i];
+                    }
+                    return null;
+                })();
+                if (lastBot) {
+                    const exists = _retryVariantSession.variants.some((v) => v && v.ts === lastBot.timestamp);
+                    if (!exists) {
+                        _retryVariantSession.variants.push({
+                            ts: lastBot.timestamp,
+                            rawAi: String(lastBot.rawAi || lastBot.content || ""),
+                            displayText: String(lastBot.content || ""),
+                        });
+                        _retryVariantSession.selectedIndex = _retryVariantSession.variants.length - 1;
+                    }
+                }
+                return _retryVariantSession;
+            }
+
+            function addRetryVariant(ts, rawAi, displayText) {
+                if (!_retryVariantSession) return;
+                const exists = _retryVariantSession.variants.some((v) => v && v.ts === ts);
+                if (!exists) {
+                    _retryVariantSession.variants.push({ ts, rawAi: String(rawAi || ""), displayText: String(displayText || "") });
+                }
+                _retryVariantSession.selectedIndex = Math.max(0, _retryVariantSession.variants.findIndex((v) => v && v.ts === ts));
+            }
+
+            async function applyRetryVariantIndex(newIndex) {
+                if (isProcessing) return;
+                if (!_retryVariantSession) return;
+                const total = _retryVariantSession.variants.length;
+                if (newIndex < 0 || newIndex >= total) return;
+                const target = _retryVariantSession.variants[newIndex];
+                if (!target) return;
+
+                let lastBotIndex = -1;
+                for (let i = storyLog.length - 1; i >= 0; i--) {
+                    if (storyLog[i].role === "bot") {
+                        lastBotIndex = i;
+                        break;
+                    }
+                }
+                if (lastBotIndex === -1) return;
+
+                storyLog[lastBotIndex].content = target.displayText;
+                storyLog[lastBotIndex].rawAi = String(target.rawAi || target.displayText || "");
+                persistStoryLog();
+
+                const row = _getLastAiRowEl();
+                if (row) {
+                    const bubble = row.querySelector(".msg-bubble");
+                    if (bubble) bubble.innerHTML = formatText(target.displayText || "");
+                }
+
+                _retryVariantSession.selectedIndex = newIndex;
+                updateRetrySwitcherUI();
+            }
+
+            function updateRetrySwitcherUI() {
+                _removeRetrySwitcherUI();
+                if (!_retryVariantSession) return;
+                const total = _retryVariantSession.variants.length;
+                if (total < 2) return;
+                const row = _getLastAiRowEl();
+                if (!row) return;
+
+                const bar = document.createElement("div");
+                bar.className = "retry-switcher";
+                const left = document.createElement("button");
+                left.className = "retry-switcher-btn";
+                left.textContent = "<-";
+                const count = document.createElement("div");
+                count.className = "retry-switcher-count";
+                const right = document.createElement("button");
+                right.className = "retry-switcher-btn";
+                right.textContent = "->";
+                const idx = _retryVariantSession.selectedIndex;
+                count.textContent = `${idx + 1}/${total}`;
+                left.disabled = idx <= 0;
+                right.disabled = idx >= total - 1;
+                left.onclick = (e) => { e.stopPropagation(); applyRetryVariantIndex(idx - 1); };
+                right.onclick = (e) => { e.stopPropagation(); applyRetryVariantIndex(idx + 1); };
+                bar.appendChild(left);
+                bar.appendChild(count);
+                bar.appendChild(right);
+                row.appendChild(bar);
+            }
+
+            function enterEditModeUI() {
+                ["send-btn", "retry-btn", "continue-btn", "erase-btn", "edit-btn"].forEach((id) => {
+                    _setElDisplay(document.getElementById(id), "none");
+                });
+                _setElDisplay(document.getElementById("edit-save-btn"), "block");
+                _setElDisplay(document.getElementById("edit-cancel-btn"), "block");
+            }
+
+            function exitEditModeUI() {
+                ["send-btn", "retry-btn", "continue-btn", "erase-btn", "edit-btn"].forEach((id) => {
+                    _setElDisplay(document.getElementById(id), "");
+                });
+                _setElDisplay(document.getElementById("edit-save-btn"), "none");
+                _setElDisplay(document.getElementById("edit-cancel-btn"), "none");
+                ["send-btn", "retry-btn", "continue-btn", "erase-btn", "edit-btn", "edit-save-btn", "edit-cancel-btn"].forEach((id) => {
+                    const b = document.getElementById(id);
+                    if (b) {
+                        b.disabled = false;
+                        b.classList.remove("locked");
+                    }
+                });
+            }
+
+            function lockActionButtons(exceptIds = []) {
+                const except = new Set(exceptIds);
+                ["retry-btn", "continue-btn", "erase-btn", "edit-btn", "send-btn"].forEach((id) => {
+                    if (except.has(id)) return;
+                    const b = document.getElementById(id);
+                    if (b) {
+                        b.disabled = true;
+                        b.classList.add("locked");
+                    }
+                });
+            }
+
+            function restoreWorldStateBeforeIndex(index) {
+                const prev = index > 0 ? storyLog[index - 1] : null;
+                if (prev?.memoriesSnapshot) {
+                    restoreMemoriesSnapshot(prev.memoriesSnapshot);
+                } else if (storyBaseline?.memories) {
+                    restoreMemoriesSnapshot(storyBaseline.memories);
+                }
+            }
+
+            function findPlayerMessageBeforeIndex(index) {
+                for (let i = index - 1; i >= 0; i--) {
+                    const e = storyLog[i];
+                    if (e && e.role === "user") return String(e.content || "").trim();
+                }
+                return "";
+            }
+
+            async function reconcileTagsAfterCharacterEdit(editedText, previousRawAi, playerMessage = null) {
+                const settings = getSettings();
+                const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
+                const targetLanguage = `${aiLangSpec.name} (${aiLangSpec.native})`;
+                const charId = activeChar?.id || "";
+                const charName = activeChar?.title || "Character";
+                const playerId = activePlayer?.id || "";
+                const playerName = activePlayer?.name || "Player";
+                const prevTags = (String(previousRawAi || "").match(/\[\[[\s\S]*?\]\]/g) || [])
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                const prevTagsBlock = prevTags.length ? prevTags.join("\n") : "(none)";
+                const charMemBlock = formatMemoriesForPrompt(activeChar, charName.toUpperCase(), 12);
+                const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName.toUpperCase(), 12);
+                const recentHistory = buildOCChatHistoryLines(15);
+
+                const prompt = `You are a TAG RECONCILIATION AI for an edited character-chat message.
+
+# TARGET LANGUAGE (STRICT)
+Write ALL visible text and memory tag payloads in ${targetLanguage} (${aiLangSpec.code}).
+
+# EDITED MESSAGE (visible text, may lack tags):
+${String(editedText || "").trim()}
+
+# PREVIOUS RAW AI (with old tags):
+${String(previousRawAi || "").trim() || "(empty)"}
+
+# PREVIOUS TAG BLOCKS:
+${prevTagsBlock}
+
+# CONTEXT
+- Player message before this reply: "${String(playerMessage || "").trim() || "N/A"}"
+- Character: ${charName} [ID: ${charId}]
+- Player: ${playerName} [ID: ${playerId}]
+${charMemBlock}
+${playerMemBlock}
+
+# CHAT LOG (last 15)
+${recentHistory || "(none)"}
+
+# TASK
+1) Tags first: Add, change, or remove control tags so they match the edited message.
+2) Keep the edited visible text as-is; only fix obvious typos or unclosed quotes.
+3) Do NOT speak or act as the player.
+4) Memory IDs: only ${charId} or ${playerId}.
+5) Avoid duplicate memories already listed above (same ID + same gist).
+6) Do NOT add date, time, or calendar tags.
+
+# REQUIRED TAGS
+- [[Memory:ID|text]] when warranted
+
+Return ONLY the edited message with corrected Memory tags. No explanations.`;
+
+                let cleaned = (await askAIWithRetry(prompt, 2)).trim();
+                cleaned = cleaned.replace(/^```[\s\S]*?\n([\s\S]*?)\n?```$/g, "$1");
+                cleaned = cleaned.replace(/^```\n?|```$/g, "");
+                return stripTimeDateTags(cleaned);
+            }
+
+            function startEditLastMessage() {
+                if (isProcessing || isEditing || !storyLog.length) return;
+
+                const container = document.getElementById("chat-scroll");
+                const rows = Array.from(container.querySelectorAll(".msg-row")).filter((r) => r.id !== "typing-indicator");
+                if (!rows.length) return;
+
+                const lastRow = rows[rows.length - 1];
+                const bubble = lastRow.querySelector(".msg-bubble");
+                const text = bubble ? bubble.textContent : "";
+                const role = lastRow.classList.contains("user") ? "user" : "bot";
+
+                let idx = -1;
+                for (let i = storyLog.length - 1; i >= 0; i--) {
+                    if (storyLog[i].role === role) {
+                        idx = i;
+                        break;
+                    }
+                }
+                if (idx === -1) return;
+
+                isEditing = true;
+                _editRow = lastRow;
+                _editIndex = idx;
+
+                const input = document.getElementById("chat-input");
+                input.value = text;
+                input.focus();
+                input.style.height = "auto";
+                input.style.height = Math.min(input.scrollHeight, 120) + "px";
+
+                enterEditModeUI();
+                lockActionButtons(["edit-save-btn", "edit-cancel-btn"]);
+            }
+
+            async function saveEditedMessage() {
+                if (!isEditing || _editIndex < 0 || !_editRow) return;
+
+                const input = document.getElementById("chat-input");
+                const newText = (input.value || "").trim();
+                if (!newText) {
+                    showToast("Text cannot be empty.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+
+                const entry = storyLog[_editIndex];
+                const isBotEntry = entry && entry.role === "bot";
+                const useTagAi = isBotEntry && isAiCheckEnabled();
+                const hasRawAi = isBotEntry && typeof entry.rawAi === "string" && entry.rawAi.trim().length > 0;
+
+                if (useTagAi) {
+                    const saveBtn = document.getElementById("edit-save-btn");
+                    const cancelBtn = document.getElementById("edit-cancel-btn");
+                    if (saveBtn) {
+                        saveBtn.disabled = true;
+                        saveBtn.classList.add("locked");
+                    }
+                    _setElDisplay(cancelBtn, "none");
+
+                    const bubble = _editRow.querySelector(".msg-bubble");
+                    const bubblePrevHtml = bubble ? bubble.innerHTML : "";
+                    if (bubble) {
+                        bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+                    }
+
+                    isProcessing = true;
+                    document.getElementById("send-btn").disabled = true;
+                    lockActionButtons(["edit-save-btn"]);
+
+                    const oldRawAi = String(entry.rawAi || "");
+                    const playerMsg = findPlayerMessageBeforeIndex(_editIndex);
+                    const ts = entry.timestamp || Date.now();
+                    const removed = storyLog.splice(_editIndex, 1)[0];
+
+                    try {
+                        restoreWorldStateBeforeIndex(_editIndex);
+
+                        let reconciledRaw;
+                        if (hasRawAi) {
+                            reconciledRaw = await reconcileTagsAfterCharacterEdit(newText, oldRawAi, playerMsg);
+                        } else {
+                            reconciledRaw = await validateAndFixNarration(newText, playerMsg);
+                        }
+
+                        const finalText = processAiResponse(reconciledRaw, ts);
+
+                        if (removed) {
+                            removed.content = finalText;
+                            removed.rawAi = stripTimeDateTags(reconciledRaw);
+                            removed.timestamp = ts;
+                            removed.memoriesSnapshot = snapshotMemories();
+                        }
+                        storyLog.splice(_editIndex, 0, removed);
+                        persistStoryLog();
+
+                        if (bubble) bubble.innerHTML = formatText(finalText);
+                        showToast("Message edited and tags updated.");
+                    } catch (e) {
+                        console.error("Edit tag reconciliation failed", e);
+                        try {
+                            restoreWorldStateBeforeIndex(_editIndex);
+                            if (removed) {
+                                storyLog.splice(_editIndex, 0, removed);
+                                persistStoryLog();
+                            }
+                            if (oldRawAi) {
+                                processAiResponse(oldRawAi, ts);
+                            }
+                        } catch {}
+                        if (bubble) bubble.innerHTML = bubblePrevHtml || formatText(newText);
+                        showToast("Saved, but tag check failed.", "rgba(180, 60, 60, 0.85)");
+                    } finally {
+                        isProcessing = false;
+                        document.getElementById("send-btn").disabled = false;
+                        if (saveBtn) {
+                            saveBtn.disabled = false;
+                            saveBtn.classList.remove("locked");
+                        }
+                        _setElDisplay(cancelBtn, "block");
+                        finishEditSession();
+                    }
+                    return;
+                }
+
+                const bubble = _editRow.querySelector(".msg-bubble");
+                if (bubble) bubble.innerHTML = formatText(newText);
+                if (entry) {
+                    entry.content = newText;
+                    persistStoryLog();
+                }
+                showToast("Message edited.");
+                finishEditSession();
+            }
+
+            function cancelEditMessage() {
+                if (!isEditing) return;
+                finishEditSession();
+                showToast("Edit cancelled.");
+            }
+
+            function finishEditSession() {
+                isEditing = false;
+                _editIndex = -1;
+                _editRow = null;
+                const input = document.getElementById("chat-input");
+                input.value = "";
+                input.style.height = "auto";
+                exitEditModeUI();
+            }
+
+            function persistStoryLog() {
+                sessionStorage.setItem(STORY_LOG_KEY, JSON.stringify(storyLog));
+            }
+
+            function showTyping() {
+                const container = document.getElementById("chat-scroll");
+                const indicator = document.createElement("div");
+                indicator.id = "typing-indicator";
+                indicator.className = "msg-row ai";
+                indicator.innerHTML = `
+                    <div class="msg-avatar bot">${getAvatarForChar(activeChar)}</div>
+                    <div class="msg-bubble typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                `;
+                container.appendChild(indicator);
+                scrollToBottom();
+            }
+
+            function hideTyping() {
+                const indicator = document.getElementById("typing-indicator");
+                if (indicator) indicator.remove();
+            }
+
+            async function sendMessage() {
+                if (isEditing) {
+                    showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                const input = document.getElementById("chat-input");
+                const text = input.value.trim();
+                if (!text || isProcessing) return;
+
+                // Add user message
+                clearRetryVariantSession();
+                appendMessage("user", text);
+                addToLog("user", text);
+                input.value = "";
+                input.style.height = "auto";
+
+                // Show typing indicator
+                isProcessing = true;
+                document.getElementById("send-btn").disabled = true;
+                showTyping();
+
+                try {
+                    const { display, rawAi } = await callAI(text);
+                    hideTyping();
+                    appendMessage("ai", display);
+                    addToLog("bot", display, { rawAi });
+                } catch (err) {
+                    hideTyping();
+                    appendMessage("ai", "Sorry, I couldn't process that. Please try again.");
+                    console.error("AI error:", err);
+                } finally {
+                    isProcessing = false;
+                    document.getElementById("send-btn").disabled = false;
+                }
+            }
+
+            // Retry the last AI message (regenerate)
+            async function retryLast() {
+                if (isEditing) {
+                    showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                if (isProcessing || storyLog.length === 0) return;
+
+                ensureRetryVariantSessionForLatestAi();
+
+                // Remove trailing bot response if present, then regenerate from last user line.
+                if (storyLog.length && storyLog[storyLog.length - 1].role === "bot") {
+                    storyLog.pop();
+                    restoreStateFromLastLogEntry();
+                }
+                let lastUserText = null;
+                for (let i = storyLog.length - 1; i >= 0; i--) {
+                    if (storyLog[i].role === "user") {
+                        lastUserText = storyLog[i].content;
+                        break;
+                    }
+                }
+                if (!lastUserText) return;
+
+                persistStoryLog();
+                renderChat();
+                isProcessing = true;
+                document.getElementById("send-btn").disabled = true;
+                showTyping();
+                
+                try {
+                    const { display, rawAi } = await callAI(lastUserText);
+                    hideTyping();
+                    appendMessage("ai", display);
+                    addToLog("bot", display, { rawAi });
+                    const botEntry = storyLog[storyLog.length - 1];
+                    if (botEntry) addRetryVariant(botEntry.timestamp, rawAi, display);
+                    updateRetrySwitcherUI();
+                } catch (err) {
+                    hideTyping();
+                    appendMessage("ai", "Sorry, I couldn't process that. Please try again.");
+                    console.error("AI error:", err);
+                } finally {
+                    isProcessing = false;
+                    document.getElementById("send-btn").disabled = false;
+                }
+            }
+
+            // Continue the conversation (send empty message to get more content)
+            async function continueLast() {
+                clearRetryVariantSession();
+                if (isEditing) {
+                    showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                if (isProcessing || storyLog.length === 0) return;
+                if (storyLog[storyLog.length - 1].role !== "bot") return;
+                
+                isProcessing = true;
+                document.getElementById("send-btn").disabled = true;
+                showTyping();
+                
+                try {
+                    const { display, rawAi } = await callAI("(continue)");
+                    hideTyping();
+                    appendMessage("ai", display);
+                    addToLog("bot", display, { rawAi });
+                } catch (err) {
+                    hideTyping();
+                    appendMessage("ai", "Sorry, I couldn't process that. Please try again.");
+                    console.error("AI error:", err);
+                } finally {
+                    isProcessing = false;
+                    document.getElementById("send-btn").disabled = false;
+                }
+            }
+
+            function isFirstMessageProtected() {
+                return storyLog.length <= 1;
+            }
+
+            // Erase the last chat message (user or bot) and roll back date/memories
+            function eraseLast() {
+                clearRetryVariantSession();
+                if (isEditing) {
+                    showToast("Finish editing with Save or Cancel.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                if (isProcessing || storyLog.length === 0) return;
+                if (isFirstMessageProtected()) {
+                    showToast("The first message is protected.", "rgba(180, 60, 60, 0.85)");
+                    return;
+                }
+                storyLog.pop();
+                restoreStateFromLastLogEntry();
+                persistStoryLog();
+                renderChat();
+            }
+
+            function askAI(prompt) {
+                return new Promise((resolve, reject) => {
+                    const requestId = Math.random().toString(36).substring(7);
+                    const timeout = setTimeout(() => {
+                        window.removeEventListener("message", handler);
+                        reject("Die KI hat zu lange gebraucht.");
+                    }, 45000);
+
+                    const handler = (event) => {
+                        if (!event || !event.data || event.data.requestId !== requestId) return;
+                        clearTimeout(timeout);
+                        window.removeEventListener("message", handler);
+                        if (event.data.type === "AI_RESPONSE") resolve(event.data.text);
+                        else reject(event.data.error || "Unbekannter Fehler");
+                    };
+
+                    window.addEventListener("message", handler);
+                    window.parent.postMessage(
+                        { type: "AI_REQUEST", instruction: prompt, requestId },
+                        "*",
+                    );
+                });
+            }
+
+            async function askAIWithRetry(prompt, maxAttempts = 4) {
+                let lastErr = null;
+                for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    try {
+                        return await askAI(prompt);
+                    } catch (err) {
+                        lastErr = err;
+                        if (attempt >= maxAttempts) break;
+                        await new Promise((resolve) => setTimeout(resolve, 1500));
+                    }
+                }
+                throw new Error(`AI request failed after ${maxAttempts} attempts: ${String(lastErr || "unknown error")}`);
+            }
+
+            async function callAI(userMessage) {
+                applyUiSettings();
+
+                const systemPrompt = buildSystemPrompt(userMessage);
+                const finalPrompt = buildNarratorPrompt(systemPrompt, userMessage);
+
+                let raw = await askAIWithRetry(finalPrompt);
+
+                const useAiCheck = isAiCheckEnabled();
+                const hasNsfwTag =
+                    raw && (/\[\[\s*NSFW\s*\]\]/i.test(raw) || /^\s*NSFW\s*$/i.test(String(raw).replace(/\[\[[\s\S]*?\]\]/g, "").trim()));
+                if (useAiCheck && raw && !hasNsfwTag) {
+                    try {
+                        const validated = await validateAndFixNarration(raw, userMessage === "(continue)" ? "" : userMessage);
+                        if (validated) raw = validated;
+                    } catch (validationErr) {
+                        console.warn("[Validation] failed, using original", validationErr);
+                    }
+                }
+
+                const logTs = Date.now();
+                raw = stripTimeDateTags(raw);
+                const display = processAiResponse(raw, logTs);
+                return { display, rawAi: String(raw || "") };
+            }
+
+            function buildSystemPrompt(playerInput = null) {
+                const settings = getSettings();
+                const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
+                const aiLang = `${aiLangSpec.name} (${aiLangSpec.native})`;
+                const useAiCheck = isAiCheckEnabled();
+                const perspective = settings.perspective || "narrator";
+                const textSize = settings.textSize || "normal";
+                const nsfwBlock = settings.nsfwBlock || "off";
+                const lengthRule = textSize === "short"
+                    ? "Keep responses concise (2-4 sentences)."
+                    : textSize === "tall"
+                        ? "Write detailed responses (8-14 sentences with strong scene detail)."
+                        : "Write medium responses (4-8 sentences).";
+                const perspectiveRule = perspective === "player"
+                    ? "Write from first-person perspective when fitting ('I')."
+                    : "Write from narrator/second-person perspective, addressing the player as 'you'.";
+
+                const playerName = activePlayer?.name || "Player";
+                const playerDesc = [
+                    activePlayer?.generally,
+                    activePlayer?.appearance,
+                    activePlayer?.personality
+                ].filter(Boolean).join("; ");
+
+                const botDesc = [
+                    activeChar?.generally,
+                    activeChar?.appearance,
+                    activeChar?.personality
+                ].filter(Boolean).join("; ");
+
+                const charSecretBlock = activeChar?.secrets && Array.isArray(activeChar.secrets) && activeChar.secrets.length
+                    ? `- Secrets: ${activeChar.secrets.map((s) => String(s).trim()).filter(Boolean).join("; ")}`
+                    : "";
+
+                // Build relationship description
+                let relationText = "";
+                if (settings.relation) {
+                    const relType = settings.relation.type || "unknown";
+                    const relSubtype = settings.relation.subtype;
+                    
+                    if (relType === "family" && relSubtype) {
+                        // For family relationships, describe from character's perspective
+                        const relationMap = {
+                            "sibling": "The player is your sibling (brother/sister).",
+                            "child": "The player is your parent (you are their child).",
+                            "parent": "The player is your child (you are their parent).",
+                            "grandchild": "The player is your grandparent (you are their grandchild).",
+                            "grandparent": "The player is your grandchild (you are their grandparent).",
+                            "cousin": "The player is your cousin.",
+                            "aunt_uncle": "The player is your niece/nephew (you are their aunt/uncle).",
+                            "niece_nephew": "The player is your aunt/uncle (you are their niece/nephew)."
+                        };
+                        relationText = relationMap[relSubtype] || `The player is your family (${relSubtype}).`;
+                    } else if (relType === "friend") {
+                        relationText = "The player is your friend.";
+                    } else if (relType === "enemy") {
+                        relationText = "The player is your enemy.";
+                    } else if (relType === "known") {
+                        relationText = "You know the player, but you are not close.";
+                    } else {
+                        relationText = "You do not know the player yet.";
+                    }
+                }
+
+                const charMemBlock = formatMemoriesForPrompt(activeChar, activeChar?.title || "Character", 10);
+                const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName, 10);
+
+                const tagRulesWithTags = `
+# METADATA TAGS (MANDATORY when you output tags yourself)
+- For lasting facts, add [[Memory:ID|short text]] using ONLY these IDs:
+  - Character: ${activeChar?.id || "CHAR_ID"} (${activeChar?.title || "Character"})
+  - Player: ${activePlayer?.id || "PLAYER_ID"} (${playerName})
+- Do NOT use date or time tags.`;
+
+                const tagRulesNoTags = `
+# CONTROL OUTPUT (AI CHECK ON)
+- Output ONLY in-character text (dialogue and narration). Do NOT output bracket tags.
+- A second-pass AI will add [[Memory]] tags when needed.`;
+
+                return `[SYSTEM INSTRUCTIONS]
+You are ${activeChar?.title || "the AI character"}, having a conversation with ${playerName} (the user).
+
+PLAYER (User) [ID: ${activePlayer?.id || "unknown"}]:
+- Name: ${playerName}
+- Description: ${playerDesc}
+${relationText ? "- Relationship: " + relationText : ""}
+${playerMemBlock}
+
+YOU (The Character) [ID: ${activeChar?.id || "unknown"}]:
+- Name: ${activeChar?.title || "Character"}
+- Description: ${botDesc}
+${charSecretBlock ? `${charSecretBlock}\n` : ""}${charMemBlock}
+
+RULES:
+1. Write ONLY in ${aiLang}.
+2. Stay completely in character as described above.
+3. Respond naturally as if having a real conversation.
+3b. ${lengthRule}
+3c. ${perspectiveRule}
+4. Close all quotation marks properly.
+5. Be descriptive and engaging.
+6. ACT ACCORDING TO THE RELATIONSHIP described above.
+7. Do NOT speak or act as the player. Do not quote the player's message.
+8. ${nsfwBlock === "on" ? "Avoid explicit sexual/offensive NSFW details. If needed, output only [[NSFW]]." : "NSFW filter is OFF, but remain coherent and character-accurate."}
+${useAiCheck ? tagRulesNoTags : tagRulesWithTags}
+
+OUTPUT FORMAT:
+Provide ONLY your response as the character. No meta commentary.
+[END SYSTEM INSTRUCTIONS]`;
+            }
+
+            function loadBackground() {
+                // First try to get background from active character
+                const charId = sessionStorage.getItem("storyki_active_character");
+                let charBackgroundUrl = null;
+
+                if (charId) {
+                    // Try to find character in story cards
+                    const storyCards = JSON.parse(sessionStorage.getItem("storyki_storycards") || "[]");
+                    const charFromStory = storyCards.find(c => c.id === charId);
+                    if (charFromStory && charFromStory.backgroundUrl) {
+                        charBackgroundUrl = charFromStory.backgroundUrl;
+                    }
+
+                    // If not found, try global characters
+                    if (!charBackgroundUrl) {
+                        const standaloneChars = JSON.parse(localStorage.getItem("storyki_standalone_characters") || "[]");
+                        const charFromStandalone = standaloneChars.find(c => c.id === charId);
+                        if (charFromStandalone && charFromStandalone.backgroundUrl) {
+                            charBackgroundUrl = charFromStandalone.backgroundUrl;
+                        }
+                        if (!charBackgroundUrl) {
+                            const chars = JSON.parse(localStorage.getItem("storyki_characters") || "[]");
+                            const charFromGlobal = chars.find(c => c.id === charId);
+                            if (charFromGlobal && charFromGlobal.backgroundUrl) {
+                                charBackgroundUrl = charFromGlobal.backgroundUrl;
+                            }
+                        }
+                    }
+                }
+
+                // Fall back to settings or default
+                const settings = getSettings();
+                const url = charBackgroundUrl || settings.backgroundUrl || "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp";
+                document.getElementById("bg-layer").style.backgroundImage = `url(${url})`;
+            }
+
+            function goBack() {
+                // Save current story data before leaving
+                saveStoryToScenarios();
+
+                // Clear session storage to prevent double-saving in index.html
+                sessionStorage.removeItem("storyki_storycards");
+                sessionStorage.removeItem("storyki_storylog");
+                sessionStorage.removeItem("storyki_active_character");
+                sessionStorage.removeItem("storyki_active_player");
+
+                window.location.href = "../index.html";
+            }
+
+            function saveStoryToScenarios() {
+                // Save the current story to scenarios before leaving
+                const storyId = sessionStorage.getItem("storyki_current_story_id");
+                const cards = JSON.parse(sessionStorage.getItem("storyki_storycards") || "[]");
+                const log = JSON.parse(sessionStorage.getItem("storyki_storylog") || "[]");
+
+                if (!cards.length) return;
+
+                const scenarios = JSON.parse(localStorage.getItem("storyki_scenarios") || "[]");
+
+                if (storyId) {
+                    // Update existing story
+                    const idx = scenarios.findIndex(s => s.id === storyId);
+                    if (idx !== -1) {
+                        scenarios[idx].data = { ...scenarios[idx].data, cards, log };
+                        scenarios[idx].updatedAt = Date.now();
+                        localStorage.setItem("storyki_scenarios", JSON.stringify(scenarios));
+                    }
+                }
+            }
+        </script>
+    </body>
+</html>
