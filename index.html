@@ -4977,6 +4977,9 @@
                         set("backgroundUrl", card.backgroundUrl);
                         if (card.canBeSpawn === true) set("canBeSpawn", true);
                         set("tags", card.tags);
+                        if (card.locationDetail === "house" && Array.isArray(card.houseRooms) && card.houseRooms.length) {
+                            set("houseRooms", card.houseRooms.map((r) => ({ ...r })));
+                        }
                         set("sublocations", card.sublocations || {});
                         set("distances", card.distances || {});
                         set("species", card.species || {});
