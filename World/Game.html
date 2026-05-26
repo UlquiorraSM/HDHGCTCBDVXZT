@@ -1010,6 +1010,13 @@
             #move-dropdown.show {
                 display: flex;
             }
+            .move-section-title {
+                padding: 8px 12px;
+                color: rgba(190, 210, 255, 0.9);
+                font-size: 0.82rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
             #travel-dropdown {
                 position: fixed;
                 background: rgba(30, 30, 35, 0.98);
@@ -4288,7 +4295,18 @@
                 // Ensure a valid location (currentLocationId or spawnId or resident-derived)
                 try {
                     if (activeChar.currentLocationId) {
-                        updateLocation(activeChar.currentLocationId);
+                        const restoredRoomId = activeChar.currentRoomId;
+                        const resolved = resolveLocationHouseRoom(activeChar.currentLocationId);
+                        let initialLocationId = activeChar.currentLocationId;
+                        if (resolved.houseId && resolved.roomId) {
+                            initialLocationId = resolved.houseId;
+                        }
+                        if (restoredRoomId) {
+                            currentRoom = restoredRoomId;
+                        } else if (resolved.houseId && resolved.roomId) {
+                            currentRoom = resolved.roomId;
+                        }
+                        updateLocation(initialLocationId);
                     } else if (activeChar.spawnId) {
                         updateLocation(activeChar.spawnId);
                         activeChar.currentLocationId = activeChar.spawnId;
@@ -4549,6 +4567,9 @@
                         const ids = card.sublocations[key];
                         if (Array.isArray(ids) && ids.includes(locId)) return card;
                     }
+                    if (String(card.locationSub || "").toLowerCase() === "building" && String(card.locationDetail || "").toLowerCase() === "house" && Array.isArray(card.houseRooms)) {
+                        if (card.houseRooms.some((room) => room && room.id === locId)) return card;
+                    }
                 }
                 return null;
             }
@@ -4559,6 +4580,11 @@
                 Object.values(loc.sublocations).forEach((arr) => {
                     if (Array.isArray(arr)) arr.forEach((id) => ids.push(id));
                 });
+                if (String(loc.locationSub || "").toLowerCase() === "building" && String(loc.locationDetail || "").toLowerCase() === "house" && Array.isArray(loc.houseRooms)) {
+                    loc.houseRooms.forEach((room) => {
+                        if (room && room.id) ids.push(room.id);
+                    });
+                }
                 return ids;
             }
 
@@ -5879,12 +5905,15 @@
                 if (!currentLocationId) return "Unknown Location";
                 try {
                     const cards = getCards();
+                    const houseRoomContext = getCurrentHouseRoomState(currentLocationId);
                     let currentLoc = cards.find((c) => c.id === currentLocationId);
-                    if (!currentLoc) return "Unknown Location";
-                    const houseRoomContext = resolveLocationHouseRoom(currentLocationId);
+                    if (!currentLoc && houseRoomContext.houseId) {
+                        currentLoc = cards.find((c) => c.id === houseRoomContext.houseId);
+                    }
                     if (houseRoomContext.houseId && houseRoomContext.roomId) {
                         currentLoc = cards.find((c) => c.id === houseRoomContext.houseId) || currentLoc;
                     }
+                    if (!currentLoc) return "Unknown Location";
 
                     const path = [];
                     let current = currentLoc;
@@ -5902,7 +5931,11 @@
                         current = parent;
                     }
 
-                    return path.join(" > ");
+                    const locationPath = path.join(" > ");
+                    if (houseRoomContext.houseId && houseRoomContext.roomId && houseRoomContext.room) {
+                        return `${locationPath} > ${houseRoomContext.room.title || houseRoomContext.room.id || "Unknown Room"}`;
+                    }
+                    return locationPath;
                 } catch (e) {
                     console.error("Path error", e);
                     return "Unknown Location";
@@ -5913,38 +5946,95 @@
                 const cards = getCards();
                 if (!locId) return { houseId: "", roomId: "" };
                 const loc = cards.find((c) => c.genre === "location" && c.id === locId);
-                if (!loc) return { houseId: "", roomId: "" };
-                const sub = String(loc.locationSub || "").toLowerCase();
-                const detail = String(loc.locationDetail || "").toLowerCase();
-                if (sub === "building" && detail === "house") {
-                    return { houseId: loc.id, roomId: "" };
+                if (loc) {
+                    const sub = String(loc.locationSub || "").toLowerCase();
+                    const detail = String(loc.locationDetail || "").toLowerCase();
+                    if (sub === "building" && detail === "house") {
+                        return { houseId: loc.id, roomId: "" };
+                    }
+                    const parent = findParentLocationById(locId, cards);
+                    if (parent && String(parent.locationSub || "").toLowerCase() === "building" && String(parent.locationDetail || "").toLowerCase() === "house") {
+                        return { houseId: parent.id, roomId: loc.id };
+                    }
+                    return { houseId: "", roomId: "" };
                 }
-                const parent = findParentLocationById(locId, cards);
-                if (parent && String(parent.locationSub || "").toLowerCase() === "building" && String(parent.locationDetail || "").toLowerCase() === "house") {
-                    return { houseId: parent.id, roomId: loc.id };
+
+                // If the current location ID is not a location card, it may be a house room ID.
+                const house = cards.find((c) =>
+                    c.genre === "location" &&
+                    String(c.locationSub || "").toLowerCase() === "building" &&
+                    String(c.locationDetail || "").toLowerCase() === "house" &&
+                    Array.isArray(c.houseRooms) &&
+                    c.houseRooms.some((room) => room && room.id === locId),
+                );
+                if (house) {
+                    return { houseId: house.id, roomId: locId };
                 }
                 return { houseId: "", roomId: "" };
+            }
+
+            function getCurrentHouseRoomState(locationId = currentLocationId, selectedRoomId = currentRoom) {
+                const cards = getCards();
+                const loc = cards.find((c) => c.genre === "location" && c.id === locationId);
+                if (loc && String(loc.locationSub || "").toLowerCase() === "building" && String(loc.locationDetail || "").toLowerCase() === "house") {
+                    const rooms = Array.isArray(loc.houseRooms) ? loc.houseRooms : [];
+                    const roomId = rooms.some((room) => room && room.id === selectedRoomId) ? selectedRoomId : "";
+                    const room = rooms.find((room) => room && room.id === roomId) || null;
+                    return { houseId: loc.id, roomId, room, rooms };
+                }
+                const house = cards.find((c) =>
+                    c.genre === "location" &&
+                    String(c.locationSub || "").toLowerCase() === "building" &&
+                    String(c.locationDetail || "").toLowerCase() === "house" &&
+                    Array.isArray(c.houseRooms) &&
+                    c.houseRooms.some((room) => room && room.id === locationId),
+                );
+                if (house) {
+                    const rooms = Array.isArray(house.houseRooms) ? house.houseRooms : [];
+                    const room = rooms.find((room) => room && room.id === locationId) || null;
+                    return { houseId: house.id, roomId: locationId, room, rooms };
+                }
+                return { houseId: "", roomId: "", room: null, rooms: [] };
             }
 
             function getVisibleLocationTitle() {
                 const cards = getCards();
                 if (!currentLocationId) return "Unknown Location";
-                const currentLoc = cards.find((c) => c.id === currentLocationId);
+                let currentLoc = cards.find((c) => c.id === currentLocationId);
+                const houseState = getCurrentHouseRoomState(currentLocationId);
+                if (!currentLoc && houseState.houseId) {
+                    currentLoc = cards.find((c) => c.id === houseState.houseId);
+                }
                 if (!currentLoc) return "Unknown Location";
-                const { houseId, roomId } = resolveLocationHouseRoom(currentLocationId);
-                if (houseId && roomId) {
-                    const house = cards.find((c) => c.id === houseId);
+                if (houseState.houseId && houseState.roomId) {
+                    const house = cards.find((c) => c.id === houseState.houseId);
                     return house ? (house.title || "Unknown Location") : (currentLoc.title || "Unknown Location");
                 }
                 return currentLoc.title || "Unknown Location";
             }
 
             function getCurrentLocationTag() {
-                const { houseId, roomId } = resolveLocationHouseRoom(currentLocationId);
-                if (houseId && roomId) return `[[Location:${houseId},${roomId}]]`;
-                if (houseId) return `[[Location:${houseId}]]`;
+                const houseState = getCurrentHouseRoomState(currentLocationId);
+                if (houseState.houseId && houseState.roomId) return `[[Location:${houseState.houseId},${houseState.roomId}]]`;
+                if (houseState.houseId) return `[[Location:${houseState.houseId}]]`;
                 if (currentLocationId) return `[[Location:${currentLocationId}]]`;
                 return "";
+            }
+
+            function buildHouseRoomContext(houseState = getCurrentHouseRoomState()) {
+                if (!houseState.houseId || !houseState.rooms.length) return "";
+                const houseTitle = getCards().find((c) => c.id === houseState.houseId)?.title || houseState.houseId;
+                const currentRoomText = houseState.room
+                    ? `${houseState.room.title || houseState.room.id || "Unnamed Room"} (${houseState.room.id})`
+                    : "None";
+                const roomLines = houseState.rooms
+                    .map((room) => {
+                        const title = room.title || room.id || "Unnamed Room";
+                        const desc = room.description ? ` — ${room.description}` : "";
+                        return `- ${title} (${room.id || "unknown"})${desc}`;
+                    })
+                    .join("\n");
+                return `# ROOM CONTEXT\n- CURRENT HOUSE: ${houseTitle} (${houseState.houseId})\n- CURRENT ROOM: ${currentRoomText}\n- HOUSE ROOMS:\n${roomLines}\n`;
             }
 
             function getAiLanguageSpec(aiLanguageCode) {
@@ -5997,7 +6087,10 @@
                 const curLocPath = getCurrentLocationPath();
                 const curLocName = getVisibleLocationTitle();
                 const curLocTag = getCurrentLocationTag();
-                const curRoomId = currentRoom || "None";
+                const houseState = getCurrentHouseRoomState();
+                const curRoomId = houseState.roomId || "None";
+                const curRoomName = houseState.room ? houseState.room.title || houseState.room.id || "Unnamed Room" : "None";
+                const roomContext = buildHouseRoomContext(houseState);
                 
                 const worldHierarchy = buildSmartLocationContext(playerInput);
                 const charContext = buildCharacterContext(playerInput, relevantMemoriesMap);
@@ -6136,9 +6229,10 @@ CRITICAL: NPC Secrets define their TRUE behavior, not their public facade. If an
 - WEEKDAY: ${curWeekday}
 - CURRENT LOCATION: ${curLocName}
 - CURRENT LOCATION TAG: ${curLocTag || "None"}
+- CURRENT ROOM: ${curRoomName}
 - CURRENT ROOM ID: ${curRoomId}
 - LOCATION PATH: ${curLocPath}
-${locationCurseContext}- PRESENT NPCs: ${presentNPCs || "None"}
+${roomContext}${locationCurseContext}- PRESENT NPCs: ${presentNPCs || "None"}
 - PRESENT SPECIES: ${presentSpecies || "None"}
 
 # CHARACTERS (PRESENT + NEARBY)
@@ -6577,12 +6671,15 @@ ${killedInstructionNoTags}`;
                 const el = document.getElementById("header-location");
                 if (card) {
                     currentLocationId = card.id;
-                    const locationContext = resolveLocationHouseRoom(card.id, cards);
-                    currentRoom = locationContext.roomId || null;
-                    if (activeChar) activeChar.currentLocationId = card.id; // Save to activeChar
+                    const houseState = getCurrentHouseRoomState(card.id);
+                    currentRoom = houseState.roomId || null;
+                    if (activeChar) {
+                        activeChar.currentLocationId = card.id;
+                        activeChar.currentRoomId = currentRoom;
+                    }
                     if (el) {
-                        const visibleTitle = locationContext.houseId && locationContext.roomId
-                            ? (cards.find((c) => c.id === locationContext.houseId)?.title || card.title)
+                        const visibleTitle = houseState.houseId && houseState.roomId
+                            ? (cards.find((c) => c.id === houseState.houseId)?.title || card.title)
                             : card.title;
                         el.textContent = visibleTitle.toUpperCase();
                     }
@@ -6622,26 +6719,20 @@ ${killedInstructionNoTags}`;
                     roomsEl.innerHTML = "";
                     return;
                 }
-                const cards = getCards();
-                const loc = cards.find((c) => c.genre === "location" && c.id === currentLocationId);
-                if (!loc) {
+                const houseState = getCurrentHouseRoomState(currentLocationId);
+                if (!houseState.houseId || houseState.rooms.length === 0) {
                     roomsEl.style.display = "none";
                     roomsEl.innerHTML = "";
                     return;
                 }
-                const isHouse = String(loc.locationSub || "").toLowerCase() === "building" && String(loc.locationDetail || "").toLowerCase() === "house";
-                const rooms = Array.isArray(loc.houseRooms) ? loc.houseRooms : [];
-                if (!isHouse || rooms.length === 0) {
-                    roomsEl.style.display = "none";
-                    roomsEl.innerHTML = "";
-                    return;
-                }
-                roomsEl.innerHTML = rooms
-                    .map((room) => {
-                        const roomId = escHtml(String(room.id || "").trim());
-                        return `<div class="header-location-room-row"><strong>Room ID:</strong> ${roomId || "unknown"}</div>`;
-                    })
-                    .join("");
+                const currentRoomLabel = houseState.room ? escHtml(houseState.room.title || houseState.room.id || "Unnamed") : "None";
+                const roomList = houseState.rooms
+                    .map((room) => escHtml(room.title || room.id || "Unnamed"))
+                    .join(", ");
+                roomsEl.innerHTML = `
+                    <div class="header-location-room-row"><strong>Current Room:</strong> ${currentRoomLabel}</div>
+                    <div class="header-location-room-row"><strong>House Rooms:</strong> ${roomList}</div>
+                `;
                 roomsEl.style.display = "block";
             }
 
@@ -10378,7 +10469,9 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                 const btn = document.getElementById("move-btn");
                 if (!btn) return;
                 const siblings = getSiblingLocations();
-                if (!siblings.length) {
+                const houseState = getCurrentHouseRoomState();
+                const roomOptions = houseState.houseId ? houseState.rooms.filter((room) => room && room.id !== houseState.roomId) : [];
+                if (!siblings.length && roomOptions.length === 0) {
                     btn.style.display = "none";
                     pendingMoveLocationId = null;
                     closeMoveDropdown();
@@ -10391,20 +10484,46 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
                 const dropdown = document.getElementById("move-dropdown");
                 if (!dropdown) return;
                 dropdown.innerHTML = "";
+                const houseState = getCurrentHouseRoomState();
+                const roomOptions = houseState.houseId ? houseState.rooms.filter((room) => room && room.id !== houseState.roomId) : [];
                 const siblings = getSiblingLocations();
-                if (siblings.length === 0) {
-                    const empty = document.createElement("div");
-                    empty.className = "move-option empty";
-                    empty.textContent = "No adjacent locations";
-                    dropdown.appendChild(empty);
-                } else {
-                    siblings.forEach(loc => {
+                let rendered = false;
+
+                if (roomOptions.length) {
+                    const heading = document.createElement("div");
+                    heading.className = "move-section-title";
+                    heading.textContent = "Rooms";
+                    dropdown.appendChild(heading);
+                    roomOptions.forEach((room) => {
+                        const btn = document.createElement("button");
+                        btn.className = "move-option" + (pendingMoveLocationId === room.id ? " selected" : "");
+                        btn.innerHTML = `<span>🛏️</span> ${escHtml(room.title || "Unnamed Room")}${pendingMoveLocationId === room.id ? ' <span style="color:#7ec9ff">✓</span>' : ''}`;
+                        btn.onclick = () => selectMoveDestination(room.id, room.title);
+                        dropdown.appendChild(btn);
+                    });
+                    rendered = true;
+                }
+
+                if (siblings.length) {
+                    const heading = document.createElement("div");
+                    heading.className = "move-section-title";
+                    heading.textContent = "Locations";
+                    dropdown.appendChild(heading);
+                    siblings.forEach((loc) => {
                         const btn = document.createElement("button");
                         btn.className = "move-option" + (pendingMoveLocationId === loc.id ? " selected" : "");
                         btn.innerHTML = `<span>📍</span> ${escHtml(loc.title || "Unnamed")}${pendingMoveLocationId === loc.id ? ' <span style="color:#7ec9ff">✓</span>' : ''}`;
                         btn.onclick = () => selectMoveDestination(loc.id, loc.title);
                         dropdown.appendChild(btn);
                     });
+                    rendered = true;
+                }
+
+                if (!rendered) {
+                    const empty = document.createElement("div");
+                    empty.className = "move-option empty";
+                    empty.textContent = "No adjacent locations";
+                    dropdown.appendChild(empty);
                 }
             }
 
@@ -10456,26 +10575,56 @@ Return ONLY the edited narration with corrected tags. No explanations.`;
 
             function moveToLocation(locationId) {
                 closeMoveDropdown();
-                if (!locationId || locationId === currentLocationId) return false;
+                if (!locationId) return false;
                 const cards = getCards();
                 const loc = cards.find(c => c.id === locationId && c.genre === "location");
+                let roomTarget = null;
+                let houseTarget = null;
+
                 if (!loc) {
-                    showToast("Location not found.", "rgba(180, 60, 60, 0.85)");
+                    houseTarget = cards.find((c) =>
+                        c.genre === "location" &&
+                        String(c.locationSub || "").toLowerCase() === "building" &&
+                        String(c.locationDetail || "").toLowerCase() === "house" &&
+                        Array.isArray(c.houseRooms) &&
+                        c.houseRooms.some((room) => room && room.id === locationId),
+                    );
+                    if (houseTarget) {
+                        roomTarget = houseTarget.houseRooms.find((room) => room && room.id === locationId) || null;
+                    }
+                    if (!roomTarget) {
+                        showToast("Location not found.", "rgba(180, 60, 60, 0.85)");
+                        return false;
+                    }
+                }
+
+                const targetHouseId = houseTarget ? houseTarget.id : null;
+                if (targetHouseId) {
+                    if (currentLocationId === targetHouseId && currentRoom === locationId) return false;
+                } else if (locationId === currentLocationId && !currentRoom) {
                     return false;
                 }
-                // Update current location
-                updateLocation(locationId);
+
+                const locationName = roomTarget ? `${roomTarget.title || "Unknown Room"}` : (loc.title || "Unknown Location");
+                if (roomTarget) {
+                    currentRoom = locationId;
+                    if (activeChar) activeChar.currentRoomId = locationId;
+                    updateLocation(houseTarget.id);
+                } else {
+                    currentRoom = null;
+                    if (activeChar) activeChar.currentRoomId = null;
+                    updateLocation(locationId);
+                }
+
                 if (activeChar) {
-                    activeChar.currentLocationId = locationId;
-                    // Mark as discovered
+                    activeChar.currentLocationId = currentLocationId;
                     if (!activeChar.discoveredLocations) activeChar.discoveredLocations = [];
-                    if (!activeChar.discoveredLocations.includes(locationId)) {
-                        activeChar.discoveredLocations.push(locationId);
+                    if (!activeChar.discoveredLocations.includes(currentLocationId)) {
+                        activeChar.discoveredLocations.push(currentLocationId);
                     }
                     saveStoryLog();
                 }
-                // Add system message about location change
-                const locationName = loc.title || "Unknown Location";
+
                 addSystemDivider(`Moved to: ${locationName}`);
                 showToast(`Moved to ${locationName}`, "rgba(60, 140, 180, 0.85)");
                 return true;
