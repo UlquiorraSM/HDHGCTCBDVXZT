@@ -1320,7 +1320,7 @@
                 </div>
                 <div id="no-players-hint" class="players-empty">
                     <div class="players-empty__icon">&#128100;</div>
-                    <p>No player characters yet. Create one to use in worlds and OC stories.</p>
+                    <p>No player characters yet. Create one to use it in Character and Group Chats.</p>
                     <button type="button" class="players-empty__cta" onclick="navigateToPlayerCreate()">Create your first player</button>
                 </div>
                 <div class="players-grid-wrap">
@@ -1595,13 +1595,13 @@
             
             let _preloadedBg = new Map();
 
-            // List of default world files to load from worlds/ folder
+            // List of default world files to load from WorldData/ folder
             // Add new world files here to make them available as defaults
-            const BUILTIN_WORLD_FILES = ["worlds/DefaultWorld.json"];
+            const BUILTIN_WORLD_FILES = ["WorldData/DefaultWorld.json"];
 
-            // List of default character files to load from characters/ folder
+            // List of default character files to load from CharacterData/ folder
             // Add new character files here to make them available as defaults
-            const BUILTIN_CHAR_FILES = ["characters/Lain.json", "characters/Konata.json", "characters/Kotonoha.json", "characters/LightYagami.json", "characters/RougeTheBat.json"];
+            const BUILTIN_CHAR_FILES = ["CharacterData/Lain.json", "CharacterData/Konata.json", "CharacterData/Kotonoha.json", "CharacterData/LightYagami.json", "CharacterData/RougeTheBat.json"];
 
             async function ensureDefaultWorlds() {
                 try {
@@ -1835,10 +1835,10 @@
             async function listUniverseWorlds() {
                 const results = [];
                 try {
-                    const manifest = await _loadJsonLocal("worlds/manifest.json");
+                    const manifest = await _loadJsonLocal("WorldData/manifest.json");
                     const files = Array.isArray(manifest) ? manifest : [];
                     for (const name of files) {
-                        const url = `worlds/${name}`;
+                        const url = `WorldData/${name}`;
                         const data = await _loadJsonLocal(url);
                         const w = data ? _extractWorld(data) : null;
                         if (!w) continue;
@@ -2664,7 +2664,7 @@
                     listEl.appendChild(card);
                 });
                 
-                // Show all card for characters/groups if more than 4 total items
+                // Show all card for CharacterData/groups if more than 4 total items
                 if (totalItems > 4) {
                     const allCard = document.createElement("div");
                     allCard.className = "world-card";
@@ -2877,7 +2877,7 @@
                     if (!allPlayers.length && !searchTerm) {
                         hintEl.classList.add("is-visible");
                         const hintP = hintEl.querySelector("p");
-                        if (hintP) hintP.textContent = "No player characters yet. Create one to use in worlds and OC stories.";
+                        if (hintP) hintP.textContent = "No player characters yet. Create one to use it in Character and Group Chats.";
                     } else if (searchTerm && !players.length) {
                         hintEl.classList.add("is-visible");
                         const hintP = hintEl.querySelector("p");
