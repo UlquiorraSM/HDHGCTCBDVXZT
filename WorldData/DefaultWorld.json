@@ -1,0 +1,528 @@
+{
+  "version": 1,
+  "type": "world_export",
+  "exportedAt": "2026-03-18T17:23:30.386Z",
+  "world": {
+    "id": "2SMK-NS7D-O1FQ",
+    "name": "World",
+    "data": {
+      "cards": [
+        {
+          "id": "SK7H-KPV1-AL8O",
+          "title": "Japan",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:33:47.102Z",
+          "updatedAt": "2026-03-18T17:22:57.946Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "country",
+          "sublocations": {
+            "country-kingdom": [
+              "98U2-G6WM-WLZ2",
+              "D6BG-936K-2EG4",
+              "8OGH-LZOX-DIZ2",
+              "WXCK-5PZ7-9K1D"
+            ]
+          },
+          "population": {
+            "country-kingdom": 122600000
+          }
+        },
+        {
+          "id": "98U2-G6WM-WLZ2",
+          "title": "Tokyo",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:34:42.637Z",
+          "updatedAt": "2026-03-18T17:23:11.986Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "city",
+          "sublocations": {
+            "village-city": [
+              "SK4T-64DJ-SN0U"
+            ]
+          },
+          "population": {
+            "village-city": 9700000
+          },
+          "residents": [
+            "MU1V-NA3X-BC5W",
+            "CA67-KP50-ETH1",
+            "99NW-JWW4-XP41",
+            "CD9K-AUEN-8QPX"
+          ]
+        },
+        {
+          "id": "D6BG-936K-2EG4",
+          "title": "Yokohama",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:35:06.925Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "city",
+          "population": {
+            "village-city": 2312221
+          }
+        },
+        {
+          "id": "8OGH-LZOX-DIZ2",
+          "title": "Osaka",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:35:21.229Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "city",
+          "population": {
+            "village-city": 2743232
+          }
+        },
+        {
+          "id": "WXCK-5PZ7-9K1D",
+          "title": "Nagoya",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:35:40.581Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "city",
+          "population": {
+            "village-city": 2342223
+          }
+        },
+        {
+          "id": "HJ2Y-KT8A-MMW1",
+          "title": "Italia",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:36:32.989Z",
+          "updatedAt": "2026-03-18T16:37:42.173Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "country",
+          "sublocations": {
+            "country-kingdom": [
+              "MB4O-2BOS-1967"
+            ]
+          },
+          "population": {
+            "country-kingdom": 59655455
+          }
+        },
+        {
+          "id": "MB4O-2BOS-1967",
+          "title": "Rom",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:37:36.605Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "city",
+          "population": {
+            "village-city": 3432332
+          }
+        },
+        {
+          "id": "FJ4B-GFNW-47M9",
+          "title": "Germany",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:38:27.965Z",
+          "updatedAt": "2026-03-18T16:39:02.828Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "country",
+          "sublocations": {
+            "country-kingdom": [
+              "WOZ7-1SM0-WC2Y"
+            ]
+          },
+          "population": {
+            "country-kingdom": 83532345
+          }
+        },
+        {
+          "id": "WOZ7-1SM0-WC2Y",
+          "title": "Berlin",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:34:42.637Z",
+          "updatedAt": "2026-03-18T16:51:12.164Z",
+          "version": "1.0",
+          "locationSub": "zivil",
+          "locationDetail": "city",
+          "sublocations": {
+            "village-city": [
+              "1IVA-HRWB-GB2W",
+              "SWAG-02CV-9RQO"
+            ]
+          },
+          "population": {
+            "village-city": 3700000
+          },
+          "residents": [
+            "ZXSR-37WW-DE3W",
+            "3IKI-0TGM-FX0F",
+            "ZKQH-2ZI6-Z6E7",
+            "OTID-TOUU-MK1C"
+          ]
+        },
+        {
+          "id": "3ZOV-1PTQ-XVSD",
+          "title": "Human",
+          "genre": "race",
+          "createdAt": "2026-03-18T16:39:20.821Z",
+          "version": "1.0",
+          "tags": [
+            "Human",
+            "Mensch"
+          ]
+        },
+        {
+          "id": "ZXSR-37WW-DE3W",
+          "title": "Elena Vance",
+          "genre": "character",
+          "createdAt": "2026-03-18T16:44:40.701Z",
+          "updatedAt": "2026-03-18T16:47:49.076Z",
+          "version": "1.0",
+          "appearance": "Elegant with a practical touch. She has chin-length wavy chestnut hair, kind hazel eyes, and usually wears silver jewelry.",
+          "personality": "Warm, observant, and fiercely protective. She is the \"calm in the storm\" who uses wit to de-escalate arguments.",
+          "age": 34,
+          "gender": "female",
+          "raceId": "3ZOV-1PTQ-XVSD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 22,
+            "month": 3
+          },
+          "relations": [
+            {
+              "targetId": "3IKI-0TGM-FX0F",
+              "targetName": "Maya Vance",
+              "relation": "Family",
+              "familySub": "Daughter"
+            },
+            {
+              "targetId": "ZKQH-2ZI6-Z6E7",
+              "targetName": "Leo Vance",
+              "relation": "Family",
+              "familySub": "Son"
+            },
+            {
+              "targetId": "OTID-TOUU-MK1C",
+              "targetName": "Cassandra \"Cass\" Rossi",
+              "relation": "Family",
+              "familySub": "Sister"
+            }
+          ]
+        },
+        {
+          "id": "3IKI-0TGM-FX0F",
+          "title": "Maya Vance",
+          "genre": "character",
+          "createdAt": "2026-03-18T16:45:35.300Z",
+          "updatedAt": "2026-03-18T16:47:53.356Z",
+          "version": "1.0",
+          "appearance": "Athletic build with long, dark hair usually tied in a high ponytail. She has a sharp gaze and is often seen in high-quality streetwear.",
+          "personality": "Ambitious, slightly sarcastic, and a total overachiever. She acts tough but secretly looks out for her siblings.",
+          "age": 18,
+          "gender": "female",
+          "raceId": "3ZOV-1PTQ-XVSD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 9,
+            "month": 2
+          },
+          "relations": [
+            {
+              "targetId": "ZXSR-37WW-DE3W",
+              "targetName": "Elena Vance",
+              "relation": "Family",
+              "familySub": "Mother"
+            },
+            {
+              "targetId": "ZKQH-2ZI6-Z6E7",
+              "targetName": "Leo Vance",
+              "relation": "Family",
+              "familySub": "Brother"
+            },
+            {
+              "targetId": "OTID-TOUU-MK1C",
+              "targetName": "Cassandra \"Cass\" Rossi",
+              "relation": "Family",
+              "familySub": "Aunt"
+            }
+          ]
+        },
+        {
+          "id": "ZKQH-2ZI6-Z6E7",
+          "title": "Leo Vance",
+          "genre": "character",
+          "createdAt": "2026-03-18T16:46:30.580Z",
+          "version": "1.0",
+          "appearance": "A messy mop of curly brown hair and a face full of freckles. He usually has grass stains on his jeans and a mischievous grin.",
+          "personality": "Imaginative, energetic, and a bit of a troublemaker. He is obsessed with dinosaurs or space and never sits still.",
+          "age": 9,
+          "gender": "male",
+          "raceId": "3ZOV-1PTQ-XVSD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 21,
+            "month": 3
+          },
+          "relations": [
+            {
+              "targetId": "ZXSR-37WW-DE3W",
+              "targetName": "Elena Vance",
+              "relation": "Family",
+              "familySub": "Mother"
+            },
+            {
+              "targetId": "3IKI-0TGM-FX0F",
+              "targetName": "Maya Vance",
+              "relation": "Family",
+              "familySub": "Sister"
+            },
+            {
+              "targetId": "OTID-TOUU-MK1C",
+              "targetName": "Cassandra \"Cass\" Rossi",
+              "relation": "Family",
+              "familySub": "Aunt"
+            }
+          ]
+        },
+        {
+          "id": "OTID-TOUU-MK1C",
+          "title": "Cassandra \"Cass\" Rossi",
+          "genre": "character",
+          "createdAt": "2026-03-18T16:47:37.620Z",
+          "version": "1.0",
+          "appearance": "Bohemian style. She wears colorful flowing scarves, multiple piercings, and has dyed hair (like a streak of blue or purple).",
+          "personality": "She is adventurous, eccentric, and tells the best stories about her travels around the world.",
+          "age": 26,
+          "gender": "female",
+          "raceId": "3ZOV-1PTQ-XVSD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 17,
+            "month": 8
+          },
+          "relations": [
+            {
+              "targetId": "ZXSR-37WW-DE3W",
+              "targetName": "Elena Vance",
+              "relation": "Family",
+              "familySub": "Sister"
+            },
+            {
+              "targetId": "3IKI-0TGM-FX0F",
+              "targetName": "Maya Vance",
+              "relation": "Family",
+              "familySub": "Niece"
+            },
+            {
+              "targetId": "ZKQH-2ZI6-Z6E7",
+              "targetName": "Leo Vance",
+              "relation": "Family",
+              "familySub": "Nephew"
+            }
+          ]
+        },
+        {
+          "id": "1IVA-HRWB-GB2W",
+          "title": "Sebastianstraße 17",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:50:36.796Z",
+          "updatedAt": "2026-03-18T17:12:46.843Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "house",
+          "canBeSpawn": true,
+          "residents": [
+            "ZXSR-37WW-DE3W",
+            "3IKI-0TGM-FX0F",
+            "ZKQH-2ZI6-Z6E7"
+          ]
+        },
+        {
+          "id": "SWAG-02CV-9RQO",
+          "title": "Heinrich-Heine-Straße 52",
+          "genre": "location",
+          "createdAt": "2026-03-18T16:51:07.756Z",
+          "updatedAt": "2026-03-18T17:12:42.419Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "house",
+          "residents": [
+            "OTID-TOUU-MK1C"
+          ]
+        },
+        {
+          "id": "MU1V-NA3X-BC5W",
+          "title": "Kenji Sato",
+          "genre": "character",
+          "createdAt": "2026-03-18T17:17:48.195Z",
+          "updatedAt": "2026-03-18T17:18:44.986Z",
+          "version": "1.0",
+          "appearance": "Lean and upright for his age. He has cropped silver hair, wears traditional jinbei (home clothes) or simple knits, and has \"laugh lines\" around his eyes.",
+          "personality": "Disciplined and quiet, but has a dry sense of humor. He spends his time gardening and practicing calligraphy.",
+          "age": 72,
+          "gender": "male",
+          "raceId": "3ZOV-1PTQ-XVSD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 17,
+            "month": 3
+          },
+          "relations": [
+            {
+              "targetId": "CA67-KP50-ETH1",
+              "targetName": "Emi Sato",
+              "relation": "Family",
+              "familySub": "Son"
+            },
+            {
+              "targetId": "99NW-JWW4-XP41",
+              "targetName": "Ren Sato",
+              "relation": "Family",
+              "familySub": "Grandson"
+            },
+            {
+              "targetId": "CD9K-AUEN-8QPX",
+              "targetName": "Hana Sato",
+              "relation": "Family",
+              "familySub": "Grandson"
+            }
+          ]
+        },
+        {
+          "id": "CA67-KP50-ETH1",
+          "title": "Emi Sato",
+          "genre": "character",
+          "createdAt": "2026-03-18T17:18:37.578Z",
+          "updatedAt": "2026-03-18T17:18:49.210Z",
+          "version": "1.0",
+          "appearance": "Always looks polished. She has a sleek bob haircut, often wears linen aprons, and has a very calming, soft-spoken presence.",
+          "personality": "The heart of the home. She is incredibly organized and a bit of a perfectionist, but very gentle. She runs a local pottery workshop.",
+          "age": 39,
+          "gender": "female",
+          "raceId": "3ZOV-1PTQ-XVSD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 6,
+            "month": 11
+          },
+          "relations": [
+            {
+              "targetId": "MU1V-NA3X-BC5W",
+              "targetName": "Kenji Sato",
+              "relation": "Family",
+              "familySub": "Father"
+            },
+            {
+              "targetId": "99NW-JWW4-XP41",
+              "targetName": "Ren Sato",
+              "relation": "Family",
+              "familySub": "Daughter"
+            },
+            {
+              "targetId": "CD9K-AUEN-8QPX",
+              "targetName": "Hana Sato",
+              "relation": "Family",
+              "familySub": "Daughter"
+            }
+          ]
+        },
+        {
+          "id": "99NW-JWW4-XP41",
+          "title": "Ren Sato",
+          "genre": "character",
+          "createdAt": "2026-03-18T17:19:49.963Z",
+          "version": "1.0",
+          "appearance": "Tall and slightly lanky. He wears thick-rimmed glasses and his school uniform (gakuran) or oversized hoodies. He usually has headphones around his neck.",
+          "personality": "A high school senior. He is hardworking and feels the pressure of university exams. He’s a \"closet otaku\" who loves retro video games.",
+          "age": 17,
+          "gender": "male",
+          "raceId": "3ZOV-1PTQ-XVSD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 27,
+            "month": 10
+          },
+          "relations": [
+            {
+              "targetId": "MU1V-NA3X-BC5W",
+              "targetName": "Kenji Sato",
+              "relation": "Family",
+              "familySub": "Grandfather"
+            },
+            {
+              "targetId": "CA67-KP50-ETH1",
+              "targetName": "Emi Sato",
+              "relation": "Family",
+              "familySub": "Mother"
+            },
+            {
+              "targetId": "CD9K-AUEN-8QPX",
+              "targetName": "Hana Sato",
+              "relation": "Family",
+              "familySub": "Sister"
+            }
+          ]
+        },
+        {
+          "id": "CD9K-AUEN-8QPX",
+          "title": "Hana Sato",
+          "genre": "character",
+          "createdAt": "2026-03-18T17:20:40.411Z",
+          "version": "1.0",
+          "appearance": "She wears her hair in two small buns with colorful clips. She usually has a bright backpack and wears vibrant, trendy colors.",
+          "personality": "Bold, curious, and obsessed with \"Kawaii\" culture. She is the most outgoing member of the family and loves TikTok dances.",
+          "age": 13,
+          "gender": "female",
+          "raceId": "3ZOV-1PTQ-XVSD",
+          "raceName": "Human",
+          "birthdate": {
+            "day": 16,
+            "month": 6
+          },
+          "relations": [
+            {
+              "targetId": "MU1V-NA3X-BC5W",
+              "targetName": "Kenji Sato",
+              "relation": "Family",
+              "familySub": "Grandfather"
+            },
+            {
+              "targetId": "CA67-KP50-ETH1",
+              "targetName": "Emi Sato",
+              "relation": "Family",
+              "familySub": "Mother"
+            },
+            {
+              "targetId": "99NW-JWW4-XP41",
+              "targetName": "Ren Sato",
+              "relation": "Family",
+              "familySub": "Brother"
+            }
+          ]
+        },
+        {
+          "id": "SK4T-64DJ-SN0U",
+          "title": "8-chōme-7 Ginza",
+          "genre": "location",
+          "createdAt": "2026-03-18T17:22:53.986Z",
+          "updatedAt": "2026-03-18T17:23:16.810Z",
+          "version": "1.0",
+          "locationSub": "building",
+          "locationDetail": "house",
+          "canBeSpawn": true,
+          "residents": [
+            "MU1V-NA3X-BC5W",
+            "CA67-KP50-ETH1",
+            "99NW-JWW4-XP41",
+            "CD9K-AUEN-8QPX"
+          ]
+        }
+      ],
+      "settings": {
+        "backgroundUrl": "https://wallpapers.com/images/hd/lake-in-the-forest-nature-xavnq3nwry0es5if.webp",
+        "coverUrl": "https://i.pinimg.com/736x/b5/50/11/b55011336000f4b29fdd5703dc0506de.jpg"
+      }
+    }
+  }
+}
