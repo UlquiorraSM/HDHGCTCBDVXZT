@@ -1642,26 +1642,71 @@
                 const storyId = Storage.get(CURRENT_STORY_ID_KEY) || "";
                 return storyId ? `${ACTIVE_SCENE_NPCS_KEY}:${storyId}` : ACTIVE_SCENE_NPCS_KEY;
             }
+            function _clearExpiredActiveNpcStates(state) {
+                if (!state || typeof state !== "object") return { ids: [], turns: {}, states: {} };
+                const nowKey = _nowTimeKey();
+                const rawStates = (state && typeof state.states === "object" && state.states) ? state.states : {};
+                const states = {};
+                Object.keys(rawStates).forEach((npcId) => {
+                    const st = rawStates[npcId];
+                    if (!st || typeof st !== "object") return;
+                    const until = st.untilTimeKey != null ? parseInt(st.untilTimeKey, 10) : null;
+                    if (until != null && nowKey > until) return;
+                    states[npcId] = st;
+                });
+                const ids = Array.isArray(state.ids) ? state.ids.filter(Boolean) : [];
+                const turns = (state && typeof state.turns === "object" && state.turns) ? state.turns : {};
+                return { ids, turns, states };
+            }
             function getActiveSceneNpcState() {
                 try {
                     const raw = Storage.get(_activeSceneNpcStorageKey());
                     const parsed = raw ? JSON.parse(raw) : null;
                     const ids = Array.isArray(parsed?.ids) ? parsed.ids.filter(Boolean) : [];
                     const turns = (parsed && typeof parsed.turns === "object" && parsed.turns) ? parsed.turns : {};
-                    return { ids, turns };
+                    const states = (parsed && typeof parsed.states === "object" && parsed.states) ? parsed.states : {};
+                    const cleaned = _clearExpiredActiveNpcStates({ ids, turns, states });
+                    if (Object.keys(cleaned.states).length !== Object.keys(states).length) {
+                        setActiveSceneNpcState(cleaned);
+                    }
+                    return cleaned;
                 } catch {
-                    return { ids: [], turns: {} };
+                    return { ids: [], turns: {}, states: {} };
                 }
             }
             function setActiveSceneNpcState(state) {
                 try {
                     const ids = Array.isArray(state?.ids) ? state.ids.filter(Boolean) : [];
                     const turns = (state && typeof state.turns === "object" && state.turns) ? state.turns : {};
-                    Storage.set(_activeSceneNpcStorageKey(), JSON.stringify({ ids, turns }));
+                    const states = (state && typeof state.states === "object" && state.states) ? state.states : {};
+                    Storage.set(_activeSceneNpcStorageKey(), JSON.stringify({ ids, turns, states }));
                 } catch {}
             }
             function getActiveSceneNpcIds() {
                 return getActiveSceneNpcState().ids;
+            }
+            function getActiveNpcStateText(npcId) {
+                const st = getActiveSceneNpcState();
+                return st.states && st.states[npcId] ? String(st.states[npcId].text || "") : "";
+            }
+            function setActiveNpcState(npcId, text, ttlMinutes = 360, byTs = null) {
+                if (!npcId) return false;
+                const st = getActiveSceneNpcState();
+                const states = { ...(st.states || {}) };
+                const nowKey = _nowTimeKey();
+                if (!text) {
+                    delete states[npcId];
+                    setActiveSceneNpcState({ ids: st.ids, turns: st.turns, states });
+                    return true;
+                }
+                states[npcId] = {
+                    text: String(text || "").trim(),
+                    updatedAt: byTs || Date.now(),
+                    updatedAtKey: nowKey,
+                    untilTimeKey: (!isNaN(ttlMinutes) ? nowKey + parseInt(ttlMinutes, 10) : null)
+                };
+                setActiveSceneNpcState({ ids: st.ids, turns: st.turns, states });
+                return true;
             }
             function clearActiveSceneNpcState() {
                 try { Storage.remove(_activeSceneNpcStorageKey()); } catch {}
@@ -1693,6 +1738,7 @@
                     const st = getActiveSceneNpcState();
                     const prevIds = new Set(st.ids || []);
                     const nextTurns = { ...(st.turns || {}) };
+                    const nextStates = { ...(st.states || {}) };
                     nextIds.forEach(id => {
                         if (!prevIds.has(id)) nextTurns[id] = fullDetailTurns;
                         if (nextTurns[id] == null) nextTurns[id] = fullDetailTurns;
@@ -1701,8 +1747,8 @@
                     Object.keys(nextTurns).forEach(id => {
                         if (!nextIds.includes(id)) delete nextTurns[id];
                     });
-
-                    setActiveSceneNpcState({ ids: nextIds, turns: nextTurns });
+                    // Keep existing states even if NPCs are no longer active until they expire naturally.
+                    setActiveSceneNpcState({ ids: nextIds, turns: nextTurns, states: nextStates });
                 } catch {}
             }
             function getActiveNpcDetailTurnsRemaining(npcId) {
@@ -3135,6 +3181,19 @@
                             }
                         } catch (e) {
                             console.warn("ActiveNPCs tag parse failed", e);
+                        }
+                        continue;
+                    }
+                    const stateTag = content.match(/^State\s*:\s*([A-Za-z0-9\-_]+)\s*,\s*([\s\S]+)$/i);
+                    if (stateTag) {
+                        try {
+                            const npcId = resolveNpcIdFromRef(stateTag[1]);
+                            const stateText = sanitizeTagValue(stateTag[2]);
+                            if (npcId && stateText) {
+                                setActiveNpcState(npcId, stateText, 360, currentNarrationTs);
+                            }
+                        } catch (e) {
+                            console.warn("State tag parse failed", e);
                         }
                         continue;
                     }
@@ -4997,6 +5056,8 @@
                             if (c.personality) contextLines.push(`  Personality: ${c.personality}`);
                             if (c.description) contextLines.push(`  Description: ${c.description}`);
                             if (c.lore) contextLines.push(`  Lore: ${c.lore}`);
+                            const currentStateText = getActiveNpcStateText(c.id);
+                            if (currentStateText) contextLines.push(`  Current State: ${currentStateText}`);
 
                             const relationLines = formatCharacterRelationList(c, cards);
                             if (relationLines.length > 0) {
@@ -6315,6 +6376,13 @@ ${cardCreationInstructionBlock}
 - NPC_IDs MUST be chosen from the NEARBY NPCs list in the CHARACTERS section.
 - Only PRESENT NPCs may speak, act, fight, or receive **character** Memory tags ([[Memory:NPC_ID|...]]). Persistent facts tied to a **Custom or Building** site (traps, prisoners, damage, hidden rooms, ongoing conditions in that place) use [[Memory:LOCATION_ID|...]] with an ID from the list above — prefer the **parent Building** ID when the fact applies to the whole property (e.g. someone held in this house’s cellar).
 
+# STATE TAGS (CURRENT NPC ACTIONS)
+- When there is at least one ActiveNPC, output a current state command for each active NPC in the exact format [[State:NPC_ID,Text]].
+- Each [[State:NPC_ID,Text]] tag must describe what that NPC is doing right now.
+- If an active NPC already has a state and it changes, replace it by emitting a new [[State:NPC_ID,Text]] tag.
+- Do not output state tags for NPCs that are not active or not present.
+- Keep state text short, present tense, and focused on the NPC's immediate action or attitude.
+
 # NPC & LOCATION MEMORY TAGS (MANDATORY WHEN CONTINUITY MATTERS)
 - Add Memory tags ONLY when they help long-term continuity (important action, meaningful decision, new fact, promise, conflict, discovery, relationship shift, item gained/lost, secret revealed, injury, plan, clear emotional milestone, **or a lasting change / situation at a Custom or Building location**).
 - Do NOT add Memory tags for trivial filler (greetings, tiny talk, vague reactions, or routine one-liners) unless it changes the story state.
@@ -7395,10 +7463,12 @@ ${killedInstructionNoTags}`;
             function buildDevSystemNpcContent() {
                 const cards = getCards();
                 const presentIds = getPresentNpcIds();
+                const presentStates = getActiveSceneNpcState().states || {};
                 const presentLines = presentIds.length
                     ? presentIds.map((id, idx) => {
                           const npc = cards.find((c) => c.genre === "character" && c.id === id);
-                          return `${idx + 1}. ${npc ? npc.title || npc.id : id} [${id}]`;
+                          const state = presentStates[id] ? ` | State: ${presentStates[id].text}` : "";
+                          return `${idx + 1}. ${npc ? npc.title || npc.id : id} [${id}]${state}`;
                       })
                     : ["(none)"];
 
