@@ -1191,8 +1191,11 @@
             }
 
             function getMemoryState(memory) {
-                if (!memory || typeof memory.messageIndex !== "number") return "New";
-                return (storyLog.length - memory.messageIndex) > 15 ? "Old" : "New";
+                if (!memory || typeof memory.messageIndex !== "number") return "Old";
+                const distance = storyLog.length - memory.messageIndex;
+                if (distance <= 15) return "Recent";
+                if (distance <= 30) return "New";
+                return "Old";
             }
 
             function extractPlayerSearchKeywords(text) {
@@ -1215,6 +1218,55 @@
                 if (words) words.forEach((w) => keywords.add(w.trim()));
 
                 return Array.from(keywords).filter(Boolean);
+            }
+
+            function memoryTextKey(memory) {
+                return String(memory?.text || "").trim().toLowerCase();
+            }
+
+            function selectRandomMemories(entity, max = 3) {
+                if (!entity || !Array.isArray(entity.memories) || !entity.memories.length) return [];
+                const recentLogTexts = storyLog.slice(-15).map((e) => String(e.content || "").toLowerCase());
+                const candidates = entity.memories.filter((memory) => {
+                    const state = getMemoryState(memory);
+                    if (state === "Recent") return false;
+                    const textLower = String(memory.text || "").toLowerCase();
+                    return !recentLogTexts.some((log) => log.includes(textLower));
+                });
+                if (!candidates.length) return [];
+                for (let i = candidates.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+                }
+                const newMatches = candidates.filter((memory) => getMemoryState(memory) === "New");
+                const oldMatches = candidates.filter((memory) => getMemoryState(memory) === "Old");
+                return [...newMatches, ...oldMatches].slice(0, max);
+            }
+
+            function selectSpeakMemories(entity, playerMessage, excludeKeys = new Set(), max = 3) {
+                if (!entity || !Array.isArray(entity.memories) || !entity.memories.length) return [];
+                const recentLogTexts = storyLog.slice(-15).map((e) => String(e.content || "").toLowerCase());
+                const keywords = extractPlayerSearchKeywords(playerMessage).map((w) => w.toLowerCase());
+                const candidates = entity.memories.filter((memory) => {
+                    const textLower = String(memory.text || "").toLowerCase();
+                    if (excludeKeys.has(textLower)) return false;
+                    if (getMemoryState(memory) === "Recent") return false;
+                    if (recentLogTexts.some((log) => log.includes(textLower))) return false;
+                    return keywords.some((keyword) => keyword && textLower.includes(keyword));
+                });
+                if (!candidates.length) return [];
+                const newMatches = candidates.filter((memory) => getMemoryState(memory) === "New");
+                const oldMatches = candidates.filter((memory) => getMemoryState(memory) === "Old");
+                const shuffle = (arr) => {
+                    const copy = [...arr];
+                    for (let i = copy.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [copy[i], copy[j]] = [copy[j], copy[i]];
+                    }
+                    return copy;
+                };
+                const selected = [...shuffle(newMatches), ...shuffle(oldMatches)].slice(0, max);
+                return selected;
             }
 
             function selectRelevantNpcMemories(entity, playerMessage, max = 4) {
@@ -1261,14 +1313,19 @@
                 return selected.map((entry) => entry.memory);
             }
 
-            function buildRelevantMemoryContext(entity, playerMessage) {
-                const selected = selectRelevantNpcMemories(entity, playerMessage, 4);
-                if (!selected.length) return "";
-                const lines = selected.map((mem) => {
-                    const state = getMemoryState(mem);
-                    return `- [${state}] ${mem.text || ""}`;
-                });
-                return `\n# RELEVANT MEMORIES\n${lines.join("\n")}`;
+            function buildMemoryContext(entity, playerMessage) {
+                if (!entity || !playerMessage) return "";
+                const randomMemories = selectRandomMemories(entity, 3);
+                const randomKeys = new Set(randomMemories.map((mem) => memoryTextKey(mem)));
+                const speakMemories = selectSpeakMemories(entity, playerMessage, randomKeys, 3);
+                const blocks = [];
+                if (randomMemories.length) {
+                    blocks.push(`\n# RANDOM MEMORIES\n${randomMemories.map((mem) => `- [${getMemoryState(mem)}] ${mem.text || ""}`).join("\n")}`);
+                }
+                if (speakMemories.length) {
+                    blocks.push(`\n# SPEAK MEMORIES\n${speakMemories.map((mem) => `- [${getMemoryState(mem)}] ${mem.text || ""}`).join("\n")}`);
+                }
+                return blocks.length ? blocks.join("\n") : "";
             }
 
             function buildRecentNpcProfilesContext(maxMessages = 7) {
@@ -2294,7 +2351,7 @@ Return ONLY the edited message with corrected Memory tags. No explanations.`;
                     : "the AI character";
 
                 const memoryContext = activeGroup && playerInput
-                    ? buildRelevantMemoryContext(currentNpc, playerInput)
+                    ? buildMemoryContext(currentNpc, playerInput)
                     : "";
                 const recentNpcProfiles = activeGroup
                     ? buildRecentNpcProfilesContext(7)
@@ -2332,7 +2389,6 @@ RULES:
 7. Do NOT speak or act as the player. Do not quote the player's message.
 8. ${nsfwBlock === "on" ? "Avoid explicit sexual/offensive NSFW details. If needed, output only [[NSFW]]." : "NSFW filter is OFF, but remain coherent and character-accurate."}
 ${tagRules}
-${memoryContext}
 
 OUTPUT FORMAT:
 Provide ONLY your response as the character. No meta commentary.
@@ -2462,6 +2518,7 @@ Provide ONLY your response as the character. No meta commentary.
                     const idx = scenarios.findIndex(s => s.id === storyId);
                     if (idx !== -1) {
                         scenarios[idx].data = { ...scenarios[idx].data, cards: cardsToSave, log };
+                        scenarios[idx].groupId = activeGroupData?.id || scenarios[idx].groupId || null;
                         scenarios[idx].updatedAt = Date.now();
                         localStorage.setItem("storyki_scenarios", JSON.stringify(scenarios));
                         return;
@@ -2473,6 +2530,7 @@ Provide ONLY your response as the character. No meta commentary.
                 const scenarioName = activeGroupData ? `Group Chat: ${activeGroupData.title || "Unnamed Group"}` : "Untitled Chat";
                 const newScenario = {
                     id: newId,
+                    groupId: activeGroupData?.id || null,
                     name: scenarioName,
                     data: {
                         cards: cardsToSave,
