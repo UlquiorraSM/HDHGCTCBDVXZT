@@ -2075,8 +2075,8 @@
                     return;
                 }
 
-                // Welten filtern: Keine parent worldId UND keine characterId (nur reine Welten)
-                let scenarios = getScenarios().filter(s => !s.worldId && !s.characterId);
+                // Welten filtern: Keine parent worldId, keine characterId und keine Gruppen-Szenarien
+                let scenarios = getScenarios().filter(s => !s.worldId && !s.characterId && !s.groupId && !s.data?.settings?.groupId);
                 
                 if (searchTerm) {
                     scenarios = scenarios.filter(s => 
