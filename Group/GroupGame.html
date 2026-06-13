@@ -1076,8 +1076,13 @@
             }
 
             function processAiResponse(raw, logTs) {
-                applyMemoryTagsFromText(raw, logTs);
-                return stripControlTags(raw);
+                const text = stripControlTags(raw);
+                const speaker = getCurrentSpeaker();
+                if (speaker && text) {
+                    applyMemoryToEntity(speaker, text, logTs, storyLog.length + 1);
+                    persistCardsToSession();
+                }
+                return text;
             }
 
             function snapshotMemories() {
@@ -1145,8 +1150,8 @@
             }
 
             function buildNarratorPrompt(systemInst, userMessage, extraNote = "") {
-                const history = buildOCChatHistoryLines(15);
-                const marker = "\n\n### CHAT LOG (last 15 messages) ###\n";
+                const history = buildOCChatHistoryLines(7);
+                const marker = "\n\n### CHAT LOG (last 7 messages) ###\n";
                 let suffix = "";
                 if (extraNote) suffix += "\n\n" + String(extraNote);
                 if (userMessage === "(continue)") {
@@ -1172,16 +1177,152 @@
                 return null;
             }
 
-            function applyMemoryToEntity(entity, text, logTs) {
+            function applyMemoryToEntity(entity, text, logTs, messageIndex) {
                 if (!entity || !text) return;
                 if (!Array.isArray(entity.memories)) entity.memories = [];
                 entity.memories.push({
                     text: String(text).trim(),
                     logTs: logTs || Date.now(),
+                    messageIndex: typeof messageIndex === "number" ? messageIndex : storyLog.length + 1,
                 });
                 if (entity.memories.length > 100) {
                     entity.memories = entity.memories.slice(-100);
                 }
+            }
+
+            function getMemoryState(memory) {
+                if (!memory || typeof memory.messageIndex !== "number") return "New";
+                return (storyLog.length - memory.messageIndex) > 15 ? "Old" : "New";
+            }
+
+            function extractPlayerSearchKeywords(text) {
+                if (!text) return [];
+                const cleaned = String(text).toLowerCase();
+                const keywords = new Set();
+
+                const quotePattern = /(['"])(.*?)\1/g;
+                let match;
+                while ((match = quotePattern.exec(cleaned)) !== null) {
+                    const phrase = String(match[2] || "").trim();
+                    if (phrase) {
+                        keywords.add(phrase);
+                        const phraseWords = phrase.match(/\b[\p{L}0-9\-_]+\b/gu);
+                        if (phraseWords) phraseWords.forEach((w) => keywords.add(w.trim()));
+                    }
+                }
+
+                const words = cleaned.match(/\b[\p{L}0-9\-_]+\b/gu);
+                if (words) words.forEach((w) => keywords.add(w.trim()));
+
+                return Array.from(keywords).filter(Boolean);
+            }
+
+            function selectRelevantNpcMemories(entity, playerMessage, max = 4) {
+                if (!entity || !Array.isArray(entity.memories) || !entity.memories.length) return [];
+                const recentLogTexts = storyLog.slice(-7).map((e) => String(e.content || "").toLowerCase());
+                const keywords = extractPlayerSearchKeywords(playerMessage);
+                const normalizedKeywords = keywords.map((w) => w.toLowerCase());
+                const entries = entity.memories.map((m) => {
+                    const textLower = String(m.text || "").toLowerCase();
+                    const visibleInRecentLogs = recentLogTexts.some((log) => log.includes(textLower));
+                    return {
+                        memory: m,
+                        state: getMemoryState(m),
+                        textLower,
+                        visibleInRecentLogs,
+                    };
+                }).filter((entry) => !entry.visibleInRecentLogs);
+                if (!entries.length) return [];
+                const matches = entries.filter((entry) => {
+                    if (!normalizedKeywords.length) return true;
+                    return normalizedKeywords.some((keyword) => entry.textLower.includes(keyword));
+                });
+                const newMatches = matches.filter((entry) => entry.state === "New");
+                const oldMatches = matches.filter((entry) => entry.state === "Old");
+                const pickRandom = (arr, count) => {
+                    const copy = [...arr];
+                    for (let i = copy.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [copy[i], copy[j]] = [copy[j], copy[i]];
+                    }
+                    return copy.slice(0, count);
+                };
+                let selected = [];
+                if (newMatches.length >= max) {
+                    selected = pickRandom(newMatches, max);
+                } else {
+                    selected = pickRandom(newMatches, newMatches.length);
+                    const remaining = max - selected.length;
+                    selected = selected.concat(pickRandom(oldMatches, remaining));
+                }
+                if (!selected.length && entries.length) {
+                    selected = pickRandom(entries, Math.min(max, entries.length));
+                }
+                return selected.map((entry) => entry.memory);
+            }
+
+            function buildRelevantMemoryContext(entity, playerMessage) {
+                const selected = selectRelevantNpcMemories(entity, playerMessage, 4);
+                if (!selected.length) return "";
+                const lines = selected.map((mem) => {
+                    const state = getMemoryState(mem);
+                    return `- [${state}] ${mem.text || ""}`;
+                });
+                return `\n# RELEVANT MEMORIES\n${lines.join("\n")}`;
+            }
+
+            function buildRecentNpcProfilesContext(maxMessages = 7) {
+                if (!activeGroup || !storyLog.length) return "";
+                const recentBotSpeakers = storyLog
+                    .slice(-maxMessages)
+                    .filter((e) => e.role === "bot" && e.speaker?.id)
+                    .map((e) => e.speaker)
+                    .reduce((acc, speaker) => {
+                        if (!acc.some((item) => item.id === speaker.id)) acc.push(speaker);
+                        return acc;
+                    }, []);
+                if (!recentBotSpeakers.length) return "";
+                const lines = recentBotSpeakers.map((speaker) => {
+                    const name = speaker.title || speaker.name || "Unnamed";
+                    const generally = speaker.generally || "No general description available.";
+                    const appearance = speaker.appearance || "No appearance description available.";
+                    const personality = speaker.personality || "No personality description available.";
+                    return `- Name: ${name}\n  Generally: ${generally}\n  Appearance: ${appearance}\n  Personality: ${personality}`;
+                });
+                return `\n# RECENT NPC PROFILES\n${lines.join("\n")}`;
+            }
+
+            function isNpcVisibleInRecentLogs(npc, maxMessages = 7) {
+                if (!npc || !npc.id) return false;
+                return storyLog
+                    .slice(-maxMessages)
+                    .some((entry) => entry.role === "bot" && entry.speaker?.id === npc.id);
+            }
+
+            function buildReferencedNpcContext(userMessage) {
+                if (!activeGroup || !userMessage) return "";
+                const lowerMessage = String(userMessage).toLowerCase();
+                const messageWords = new Set((lowerMessage.match(/\b[\p{L}0-9\-_]+\b/gu) || []).map((w) => w.trim()));
+                const referenced = activeGroup.members.filter((member) => {
+                    if (!member || !member.id) return false;
+                    if (isNpcVisibleInRecentLogs(member, 7)) return false;
+                    const title = String(member.title || member.name || "").toLowerCase();
+                    if (!title) return false;
+                    const tokens = title.split(/\s+/).filter(Boolean);
+                    if (tokens.some((token) => messageWords.has(token))) return true;
+                    // exact full name match as fallback
+                    if (lowerMessage.includes(title)) return true;
+                    return false;
+                });
+                if (!referenced.length) return "";
+                const lines = referenced.map((member) => {
+                    const name = member.title || member.name || "Unnamed";
+                    const generally = member.generally || "No general description available.";
+                    const appearance = member.appearance || "No appearance description available.";
+                    const personality = member.personality || "No personality description available.";
+                    return `- Name: ${name}\n  Generally: ${generally}\n  Appearance: ${appearance}\n  Personality: ${personality}`;
+                });
+                return `\n# REFERENCED NPCS\n${lines.join("\n")}`;
             }
 
             function applyMemoryTagsFromText(text, logTs) {
@@ -1378,6 +1519,17 @@ Return ONLY the repaired narration with tags.`;
                 };
                 if (role === "bot") {
                     entry.speaker = serializeSpeaker(getCurrentSpeaker());
+                }
+                if (role === "bot" && storyLog.length) {
+                    const lastEntry = storyLog[storyLog.length - 1];
+                    if (lastEntry.role === "bot" && lastEntry.speaker?.id && lastEntry.speaker?.id === entry.speaker?.id) {
+                        lastEntry.content = `${String(lastEntry.content || "").trim()}\n${String(content || "").trim()}`;
+                        lastEntry.rawAi = entry.rawAi || lastEntry.rawAi;
+                        lastEntry.timestamp = entry.timestamp;
+                        lastEntry.memoriesSnapshot = entry.memoriesSnapshot;
+                        persistStoryLog();
+                        return;
+                    }
                 }
                 storyLog.push(entry);
                 persistStoryLog();
@@ -1947,8 +2099,25 @@ Return ONLY the edited message with corrected Memory tags. No explanations.`;
                     return;
                 }
                 if (isProcessing || storyLog.length === 0) return;
-                if (storyLog[storyLog.length - 1].role !== "bot") return;
-                
+                const lastEntry = storyLog[storyLog.length - 1];
+                if (lastEntry.role === "user" && activeGroup) {
+                    const online = getGroupOnlineMembers();
+                    if (online.length) {
+                        if (!activeNpcManualOverride) {
+                            const randomIndex = Math.floor(Math.random() * online.length);
+                            const chosen = online[randomIndex];
+                            if (chosen) {
+                                activeNpc = chosen;
+                                activeChar = activeNpc;
+                                activeNpcManualOverride = false;
+                                updateGroupHeader();
+                            }
+                        }
+                    }
+                } else if (lastEntry.role !== "bot") {
+                    return;
+                }
+
                 isProcessing = true;
                 document.getElementById("send-btn").disabled = true;
                 showTyping();
@@ -2116,21 +2285,23 @@ Return ONLY the edited message with corrected Memory tags. No explanations.`;
                 const charMemBlock = formatMemoriesForPrompt(activeChar, activeChar?.title || "Character", 10);
                 const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName, 10);
 
-                const tagRulesWithTags = `
-# METADATA TAGS (MANDATORY when you output tags yourself)
-- For lasting facts, add [[Memory:ID|short text]] using ONLY these IDs:
-  - Character: ${activeChar?.id || "CHAR_ID"} (${activeChar?.title || "Character"})
-  - Player: ${activePlayer?.id || "PLAYER_ID"} (${playerName})
-- Do NOT use date or time tags.`;
-
-                const tagRulesNoTags = `
-# CONTROL OUTPUT (AI CHECK ON)
-- Output ONLY in-character text (dialogue and narration). Do NOT output bracket tags.
-- A second-pass AI will add [[Memory]] tags when needed.`;
+                const tagRules = activeGroup
+                    ? `# CONTROL OUTPUT\n- Output ONLY in-character text (dialogue and narration). Do NOT output bracket tags.`
+                    : `# METADATA TAGS (MANDATORY when you output tags yourself)\n- For lasting facts, add [[Memory:ID|short text]] using ONLY these IDs:\n  - Character: ${activeChar?.id || "CHAR_ID"} (${activeChar?.title || "Character"})\n  - Player: ${activePlayer?.id || "PLAYER_ID"} (${playerName})\n- Do NOT use date or time tags.`;
 
                 const speakerIdentity = activeGroup
                     ? `a member of group ${activeGroup.title || "Group"}`
                     : "the AI character";
+
+                const memoryContext = activeGroup && playerInput
+                    ? buildRelevantMemoryContext(currentNpc, playerInput)
+                    : "";
+                const recentNpcProfiles = activeGroup
+                    ? buildRecentNpcProfilesContext(7)
+                    : "";
+                const referencedNpcContext = activeGroup && playerInput
+                    ? buildReferencedNpcContext(playerInput)
+                    : "";
 
                 return `[SYSTEM INSTRUCTIONS]
 You are ${activeChar?.title || speakerIdentity}, ${speakerIdentity}, having a conversation with ${playerName} (the user).
@@ -2140,11 +2311,14 @@ PLAYER (User) [ID: ${activePlayer?.id || "unknown"}]:
 - Description: ${playerDesc}
 ${relationText ? "- Relationship: " + relationText : ""}
 ${playerMemBlock}
+${recentNpcProfiles}
+${referencedNpcContext}
 
 YOU (The Character) [ID: ${activeChar?.id || "unknown"}]:
 - Name: ${activeChar?.title || "Character"}
 - Description: ${botDesc}
 ${currentSpeakerLine ? `${currentSpeakerLine}\n` : ""}${onlineMemberLine ? `${onlineMemberLine}\n` : ""}${charSecretBlock ? `${charSecretBlock}\n` : ""}${charMemBlock}
+${memoryContext}
 
 RULES:
 1. Write ONLY in ${aiLang}.
@@ -2157,7 +2331,8 @@ RULES:
 6. ACT ACCORDING TO THE RELATIONSHIP described above.
 7. Do NOT speak or act as the player. Do not quote the player's message.
 8. ${nsfwBlock === "on" ? "Avoid explicit sexual/offensive NSFW details. If needed, output only [[NSFW]]." : "NSFW filter is OFF, but remain coherent and character-accurate."}
-${useAiCheck ? tagRulesNoTags : tagRulesWithTags}
+${tagRules}
+${memoryContext}
 
 OUTPUT FORMAT:
 Provide ONLY your response as the character. No meta commentary.
