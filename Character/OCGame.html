@@ -669,6 +669,112 @@
                     .join("\n");
             }
 
+            function getMemoryState(mem) {
+                if (!mem || typeof mem.logIndex !== "number") return "Old";
+                const distance = storyLog.length - mem.logIndex;
+                if (distance <= 15) return "Recent";
+                if (distance <= 30) return "New";
+                return "Old";
+            }
+
+            function extractPlayerSearchKeywords(text) {
+                const cleaned = String(text || "").toLowerCase();
+                const words = cleaned.match(/\b[\p{L}0-9\-_]+\b/gu) || [];
+                return words.map((w) => w.trim()).filter(Boolean);
+            }
+
+            function memoryTextKey(mem) {
+                return String(mem?.text || "").trim().toLowerCase();
+            }
+
+            function selectRandomMemories(entity, max = 3) {
+                if (!entity || !Array.isArray(entity.memories) || !entity.memories.length) return [];
+                const recentLogs = storyLog.slice(-15).map((e) => String(e.content || "").toLowerCase());
+                const candidates = entity.memories.filter((mem) => {
+                    const state = getMemoryState(mem);
+                    if (state === "Recent") return false;
+                    const text = String(mem.text || "").toLowerCase();
+                    return !recentLogs.some((log) => log.includes(text));
+                });
+                if (!candidates.length) return [];
+                const randomShuffle = [...candidates];
+                for (let i = randomShuffle.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [randomShuffle[i], randomShuffle[j]] = [randomShuffle[j], randomShuffle[i]];
+                }
+                const newFirst = randomShuffle.filter((mem) => getMemoryState(mem) === "New");
+                const oldFirst = randomShuffle.filter((mem) => getMemoryState(mem) === "Old");
+                const result = [...newFirst, ...oldFirst].slice(0, max);
+                return result;
+            }
+
+            function selectSpeakMemories(entity, keywords, excludeKeys = new Set(), max = 3) {
+                if (!entity || !Array.isArray(entity.memories) || !entity.memories.length) return [];
+                const recentLogs = storyLog.slice(-15).map((e) => String(e.content || "").toLowerCase());
+                const normalizedKeywords = (keywords || []).map((w) => String(w || "").toLowerCase());
+                const candidates = entity.memories
+                    .filter((mem) => {
+                        const state = getMemoryState(mem);
+                        if (state === "Recent") return false;
+                        const text = String(mem.text || "").toLowerCase();
+                        if (excludeKeys.has(text)) return false;
+                        if (recentLogs.some((log) => log.includes(text))) return false;
+                        return normalizedKeywords.some((keyword) => keyword && text.includes(keyword));
+                    });
+                if (!candidates.length) return [];
+                const newMatches = candidates.filter((mem) => getMemoryState(mem) === "New");
+                const oldMatches = candidates.filter((mem) => getMemoryState(mem) === "Old");
+                const pick = (arr, count) => {
+                    const copy = [...arr];
+                    for (let i = copy.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [copy[i], copy[j]] = [copy[j], copy[i]];
+                    }
+                    return copy.slice(0, count);
+                };
+                const chosen = pick(newMatches, max);
+                if (chosen.length >= max) return chosen;
+                return chosen.concat(pick(oldMatches, max - chosen.length));
+            }
+
+            function buildMemoryPromptContext(userMessage) {
+                if (!activeChar || !Array.isArray(activeChar.memories) || !activeChar.memories.length) return "";
+                const keywords = extractPlayerSearchKeywords(userMessage);
+                const randomMemories = selectRandomMemories(activeChar, 3);
+                const randomKeys = new Set(randomMemories.map(memoryTextKey));
+                const speakMemories = selectSpeakMemories(activeChar, keywords, randomKeys, 3);
+                const blocks = [];
+                if (randomMemories.length) {
+                    blocks.push(
+`# RANDOM MEMORIES
+${randomMemories.map((mem) => `- [${getMemoryState(mem)}] ${mem.text || ""}`).join("\n")}`);
+                }
+                if (speakMemories.length) {
+                    blocks.push(
+`# SPEAK MEMORIES
+${speakMemories.map((mem) => `- [${getMemoryState(mem)}] ${mem.text || ""}`).join("\n")}`);
+                }
+                return blocks.length ? `\n# MEMORY CONTEXT\n${blocks.join("\n\n")}` : "";
+            }
+
+            function saveNpcResponseMemory(text) {
+                if (!activeChar || !text) return;
+                const normalized = String(text || "").trim();
+                if (!normalized) return;
+                const existing = (activeChar.memories || []).some((mem) => memoryTextKey(mem) === normalized.toLowerCase());
+                if (existing) return;
+                if (!Array.isArray(activeChar.memories)) activeChar.memories = [];
+                activeChar.memories.push({
+                    text: normalized,
+                    logTs: Date.now(),
+                    logIndex: Math.max(0, storyLog.length - 1),
+                });
+                if (activeChar.memories.length > 100) {
+                    activeChar.memories = activeChar.memories.slice(-100);
+                }
+                persistCardsToSession();
+            }
+
             function buildNarratorPrompt(systemInst, userMessage, extraNote = "") {
                 const history = buildOCChatHistoryLines(15);
                 const marker = "\n\n### CHAT LOG (last 15 messages) ###\n";
@@ -697,12 +803,13 @@
                 return null;
             }
 
-            function applyMemoryToEntity(entity, text, logTs) {
+            function applyMemoryToEntity(entity, text, logTs, logIndex) {
                 if (!entity || !text) return;
                 if (!Array.isArray(entity.memories)) entity.memories = [];
                 entity.memories.push({
                     text: String(text).trim(),
                     logTs: logTs || Date.now(),
+                    logIndex: typeof logIndex === "number" ? logIndex : storyLog.length,
                 });
                 if (entity.memories.length > 100) {
                     entity.memories = entity.memories.slice(-100);
@@ -861,6 +968,9 @@ Return ONLY the repaired narration with tags.`;
                     memoriesSnapshot: snapshotMemories(),
                     ...extra,
                 });
+                if (role === "bot") {
+                    saveNpcResponseMemory(content);
+                }
                 persistStoryLog();
             }
 
@@ -1492,6 +1602,7 @@ Return ONLY the edited message with corrected Memory tags. No explanations.`;
                     }
                 }
 
+                const memoryContext = buildMemoryPromptContext(playerInput);
                 const charMemBlock = formatMemoriesForPrompt(activeChar, activeChar?.title || "Character", 10);
                 const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName, 10);
 
@@ -1513,6 +1624,7 @@ YOU (The Character) [ID: ${activeChar?.id || "unknown"}]:
 - Name: ${activeChar?.title || "Character"}
 - Description: ${botDesc}
 ${charSecretBlock ? `${charSecretBlock}\n` : ""}${charMemBlock}
+${memoryContext}
 
 RULES:
 1. Write ONLY in ${aiLang}.
