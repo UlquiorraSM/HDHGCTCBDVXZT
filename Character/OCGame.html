@@ -557,7 +557,7 @@
             function applyUiSettings() {
                 try {
                     const settings = getSettings();
-                    const textSize = settings.textSize || "normal";
+                    const textSize = settings.characterTextSize || settings.textSize || "normal";
                     const px = textSize === "short" ? "13px" : textSize === "tall" ? "16px" : "14px";
                     document.documentElement.style.setProperty("--msg-font-size", px);
                 } catch {}
@@ -601,7 +601,6 @@
             }
 
             function processAiResponse(raw, logTs) {
-                applyMemoryTagsFromText(raw, logTs);
                 return stripControlTags(raw);
             }
 
@@ -1185,89 +1184,18 @@ Return ONLY the edited message with corrected Memory tags. No explanations.`;
 
                 const entry = storyLog[_editIndex];
                 const isBotEntry = entry && entry.role === "bot";
-                const useTagAi = isBotEntry && isAiCheckEnabled();
-                const hasRawAi = isBotEntry && typeof entry.rawAi === "string" && entry.rawAi.trim().length > 0;
 
-                if (useTagAi) {
-                    const saveBtn = document.getElementById("edit-save-btn");
-                    const cancelBtn = document.getElementById("edit-cancel-btn");
-                    if (saveBtn) {
-                        saveBtn.disabled = true;
-                        saveBtn.classList.add("locked");
-                    }
-                    _setElDisplay(cancelBtn, "none");
-
-                    const bubble = _editRow.querySelector(".msg-bubble");
-                    const bubblePrevHtml = bubble ? bubble.innerHTML : "";
-                    if (bubble) {
-                        bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-                    }
-
-                    isProcessing = true;
-                    document.getElementById("send-btn").disabled = true;
-                    lockActionButtons(["edit-save-btn"]);
-
-                    const oldRawAi = String(entry.rawAi || "");
-                    const playerMsg = findPlayerMessageBeforeIndex(_editIndex);
-                    const ts = entry.timestamp || Date.now();
-                    const removed = storyLog.splice(_editIndex, 1)[0];
-
-                    try {
-                        restoreWorldStateBeforeIndex(_editIndex);
-
-                        let reconciledRaw;
-                        if (hasRawAi) {
-                            reconciledRaw = await reconcileTagsAfterCharacterEdit(newText, oldRawAi, playerMsg);
-                        } else {
-                            reconciledRaw = await validateAndFixNarration(newText, playerMsg);
-                        }
-
-                        const finalText = processAiResponse(reconciledRaw, ts);
-
-                        if (removed) {
-                            removed.content = finalText;
-                            removed.rawAi = stripTimeDateTags(reconciledRaw);
-                            removed.timestamp = ts;
-                            removed.memoriesSnapshot = snapshotMemories();
-                        }
-                        storyLog.splice(_editIndex, 0, removed);
-                        persistStoryLog();
-
-                        if (bubble) bubble.innerHTML = formatText(finalText);
-                        showToast("Message edited and tags updated.");
-                    } catch (e) {
-                        console.error("Edit tag reconciliation failed", e);
-                        try {
-                            restoreWorldStateBeforeIndex(_editIndex);
-                            if (removed) {
-                                storyLog.splice(_editIndex, 0, removed);
-                                persistStoryLog();
-                            }
-                            if (oldRawAi) {
-                                processAiResponse(oldRawAi, ts);
-                            }
-                        } catch {}
-                        if (bubble) bubble.innerHTML = bubblePrevHtml || formatText(newText);
-                        showToast("Saved, but tag check failed.", "rgba(180, 60, 60, 0.85)");
-                    } finally {
-                        isProcessing = false;
-                        document.getElementById("send-btn").disabled = false;
-                        if (saveBtn) {
-                            saveBtn.disabled = false;
-                            saveBtn.classList.remove("locked");
-                        }
-                        _setElDisplay(cancelBtn, "block");
-                        finishEditSession();
-                    }
-                    return;
-                }
-
-                const bubble = _editRow.querySelector(".msg-bubble");
-                if (bubble) bubble.innerHTML = formatText(newText);
                 if (entry) {
+                    const bubble = _editRow.querySelector(".msg-bubble");
+                    if (bubble) bubble.innerHTML = formatText(newText);
+
                     entry.content = newText;
+                    if (isBotEntry) {
+                        entry.rawAi = stripTimeDateTags(newText);
+                    }
                     persistStoryLog();
                 }
+
                 showToast("Message edited.");
                 finishEditSession();
             }
@@ -1493,34 +1421,21 @@ Return ONLY the edited message with corrected Memory tags. No explanations.`;
                 const systemPrompt = buildSystemPrompt(userMessage);
                 const finalPrompt = buildNarratorPrompt(systemPrompt, userMessage);
 
-                let raw = await askAIWithRetry(finalPrompt);
-
-                const useAiCheck = isAiCheckEnabled();
-                const hasNsfwTag =
-                    raw && (/\[\[\s*NSFW\s*\]\]/i.test(raw) || /^\s*NSFW\s*$/i.test(String(raw).replace(/\[\[[\s\S]*?\]\]/g, "").trim()));
-                if (useAiCheck && raw && !hasNsfwTag) {
-                    try {
-                        const validated = await validateAndFixNarration(raw, userMessage === "(continue)" ? "" : userMessage);
-                        if (validated) raw = validated;
-                    } catch (validationErr) {
-                        console.warn("[Validation] failed, using original", validationErr);
-                    }
-                }
+                const raw = await askAIWithRetry(finalPrompt);
 
                 const logTs = Date.now();
-                raw = stripTimeDateTags(raw);
-                const display = processAiResponse(raw, logTs);
-                return { display, rawAi: String(raw || "") };
+                const cleaned = stripTimeDateTags(raw);
+                const display = processAiResponse(cleaned, logTs);
+                return { display, rawAi: String(cleaned || "") };
             }
 
             function buildSystemPrompt(playerInput = null) {
                 const settings = getSettings();
-                const aiLangSpec = getAiLanguageSpec(settings.aiLanguage);
+                const aiLangSpec = getAiLanguageSpec(settings.characterAiLanguage || settings.aiLanguage);
                 const aiLang = `${aiLangSpec.name} (${aiLangSpec.native})`;
-                const useAiCheck = isAiCheckEnabled();
                 const perspective = settings.perspective || "narrator";
-                const textSize = settings.textSize || "normal";
-                const nsfwBlock = settings.nsfwBlock || "off";
+                const textSize = settings.characterTextSize || settings.textSize || "normal";
+                const nsfwBlock = settings.characterNsfwBlock || settings.nsfwBlock || "off";
                 const lengthRule = textSize === "short"
                     ? "Keep responses concise (2-4 sentences)."
                     : textSize === "tall"
@@ -1580,17 +1495,10 @@ Return ONLY the edited message with corrected Memory tags. No explanations.`;
                 const charMemBlock = formatMemoriesForPrompt(activeChar, activeChar?.title || "Character", 10);
                 const playerMemBlock = formatMemoriesForPrompt(activePlayer, playerName, 10);
 
-                const tagRulesWithTags = `
-# METADATA TAGS (MANDATORY when you output tags yourself)
-- For lasting facts, add [[Memory:ID|short text]] using ONLY these IDs:
-  - Character: ${activeChar?.id || "CHAR_ID"} (${activeChar?.title || "Character"})
-  - Player: ${activePlayer?.id || "PLAYER_ID"} (${playerName})
-- Do NOT use date or time tags.`;
-
-                const tagRulesNoTags = `
-# CONTROL OUTPUT (AI CHECK ON)
-- Output ONLY in-character text (dialogue and narration). Do NOT output bracket tags.
-- A second-pass AI will add [[Memory]] tags when needed.`;
+                const tagRules = `
+# CONTROL OUTPUT
+- Output ONLY in-character text (dialogue and narration). Do NOT output bracket tags, metadata tags, or [[Memory]] commands.
+- Keep the response suitable for the current language and style settings.`;
 
                 return `[SYSTEM INSTRUCTIONS]
 You are ${activeChar?.title || "the AI character"}, having a conversation with ${playerName} (the user).
@@ -1617,7 +1525,7 @@ RULES:
 6. ACT ACCORDING TO THE RELATIONSHIP described above.
 7. Do NOT speak or act as the player. Do not quote the player's message.
 8. ${nsfwBlock === "on" ? "Avoid explicit sexual/offensive NSFW details. If needed, output only [[NSFW]]." : "NSFW filter is OFF, but remain coherent and character-accurate."}
-${useAiCheck ? tagRulesNoTags : tagRulesWithTags}
+${tagRules}
 
 OUTPUT FORMAT:
 Provide ONLY your response as the character. No meta commentary.
