@@ -4492,16 +4492,16 @@
                     try {
                         const data = JSON.parse(e.target.result);
                         // All worlds import (replace)
-                        if (data && data.type === "all_worlds_export" && Array.isArray(data.worlds)) {
+                        if (data && data.type === "storyki_full_export") {
                             const scenarios = [];
                             const now = Date.now();
-                            data.worlds.forEach(w => {
+                            (Array.isArray(data.worlds) ? data.worlds : []).forEach(w => {
                                 let worldId = w.id || Math.random().toString(36).slice(2, 10);
                                 scenarios.push({
                                     id: worldId,
                                     name: w.name || "World",
                                     createdAt: w.createdAt || now,
-                                    updatedAt: now,
+                                    updatedAt: w.updatedAt || now,
                                     data: {
                                         cards: Array.isArray(w.data?.cards) ? w.data.cards : [],
                                         settings: w.data?.settings || {}
@@ -4515,7 +4515,7 @@
                                         worldId: worldId,
                                         name: st.name || "Story",
                                         createdAt: st.createdAt || now,
-                                        updatedAt: now,
+                                        updatedAt: st.updatedAt || now,
                                         signature: st.signature || "",
                                         official: st.official !== false,
                                         data: {
@@ -4529,10 +4529,36 @@
                                     });
                                 });
                             });
+
                             setScenarios(scenarios);
+                            localStorage.setItem("storyki_settings", JSON.stringify(data.settings || {}));
+                            localStorage.setItem("storyki_standalone_characters", JSON.stringify(data.standaloneCharacters || []));
+                            localStorage.setItem("storyki_characters", JSON.stringify(data.characters || []));
+                            localStorage.setItem("storyki_player_characters", JSON.stringify(data.playerCharacters || []));
+                            localStorage.setItem("storyki_character_groups", JSON.stringify(data.characterGroups || []));
+                            localStorage.setItem(WORLD_FAVORITES_KEY, JSON.stringify(data.worldFavorites || []));
+                            localStorage.setItem(CHARACTER_FAVORITES_KEY, JSON.stringify(data.characterFavorites || []));
+                            localStorage.setItem(PLAYER_FAVORITES_KEY, JSON.stringify(data.playerFavorites || []));
+                            localStorage.setItem(UNIVERSE_UPLOADS_KEY, JSON.stringify(data.universeUploads || []));
+
+                            if (data.session && typeof data.session === "object") {
+                                if (data.session.storycards) Storage.set("storyki_storycards", JSON.stringify(data.session.storycards));
+                                if (data.session.storylog) Storage.set("storyki_storylog", JSON.stringify(data.session.storylog));
+                                if (data.session.characters) Storage.set("storyki_characters", JSON.stringify(data.session.characters));
+                                if (data.session.settings) Storage.set("storyki_settings", JSON.stringify(data.session.settings));
+                                if (data.session.activeGroup) sessionStorage.setItem("storyki_active_group", JSON.stringify(data.session.activeGroup));
+                                if (data.session.activePlayer) sessionStorage.setItem("storyki_active_player", JSON.stringify(data.session.activePlayer));
+                                if (data.session.activeCharacter) sessionStorage.setItem("storyki_active_character", data.session.activeCharacter);
+                                if (data.session.currentStoryId) sessionStorage.setItem("storyki_current_story_id", data.session.currentStoryId);
+                                if (data.session.selectedWorldId) sessionStorage.setItem(SELECTED_WORLD_ID_KEY, data.session.selectedWorldId);
+                                if (data.session.selectedCharId) sessionStorage.setItem(SELECTED_CHAR_ID_KEY, data.session.selectedCharId);
+                                if (data.session.previousView) sessionStorage.setItem("storyki_previous_view", data.session.previousView);
+                                if (data.session.settingsBackup) localStorage.setItem("storyki_settings_backup", data.session.settingsBackup);
+                            }
+
                             renderScenarios();
                             loadBackground();
-                            alert("Alle Welten und Stories importiert.");
+                            alert("Alle Daten erfolgreich importiert.");
                             return;
                         }
                         // Character export import
@@ -4649,13 +4675,38 @@
                     const playerCharacters = JSON.parse(localStorage.getItem("storyki_player_characters") || "[]");
                     const characterGroups = JSON.parse(localStorage.getItem("storyki_character_groups") || "[]");
                     const settingsData = JSON.parse(localStorage.getItem("storyki_settings") || "{}");
+                    const worldFavorites = JSON.parse(localStorage.getItem(WORLD_FAVORITES_KEY) || "[]");
+                    const characterFavorites = JSON.parse(localStorage.getItem(CHARACTER_FAVORITES_KEY) || "[]");
+                    const playerFavorites = JSON.parse(localStorage.getItem(PLAYER_FAVORITES_KEY) || "[]");
+                    const universeUploads = JSON.parse(localStorage.getItem(UNIVERSE_UPLOADS_KEY) || "[]");
+
+                    const sessionState = {
+                        storycards: JSON.parse(Storage.get("storyki_storycards") || "[]"),
+                        storylog: JSON.parse(Storage.get("storyki_storylog") || "[]"),
+                        characters: JSON.parse(Storage.get("storyki_characters") || "[]"),
+                        settings: JSON.parse(Storage.get("storyki_settings") || "{}"),
+                        activeGroup: JSON.parse(sessionStorage.getItem("storyki_active_group") || "null"),
+                        activePlayer: JSON.parse(sessionStorage.getItem("storyki_active_player") || "null"),
+                        activeCharacter: sessionStorage.getItem("storyki_active_character") || null,
+                        currentStoryId: sessionStorage.getItem("storyki_current_story_id") || null,
+                        selectedWorldId: sessionStorage.getItem(SELECTED_WORLD_ID_KEY) || null,
+                        selectedCharId: sessionStorage.getItem(SELECTED_CHAR_ID_KEY) || null,
+                        previousView: sessionStorage.getItem("storyki_previous_view") || null,
+                        settingsBackup: localStorage.getItem("storyki_settings_backup") || null
+                    };
 
                     const hasExportData = settingsData && Object.keys(settingsData).length > 0
                         || allCharacters.length > 0
                         || standaloneCharacters.length > 0
                         || playerCharacters.length > 0
                         || characterGroups.length > 0
-                        || scenarios.length > 0;
+                        || worldFavorites.length > 0
+                        || characterFavorites.length > 0
+                        || playerFavorites.length > 0
+                        || universeUploads.length > 0
+                        || scenarios.length > 0
+                        || sessionState.storycards.length > 0
+                        || sessionState.storylog.length > 0;
 
                     if (!hasExportData) {
                         alert("Derzeit gibt es keine Daten zum Speichern.");
@@ -4799,6 +4850,11 @@
                         characters: allCharacters,
                         playerCharacters,
                         characterGroups,
+                        worldFavorites,
+                        characterFavorites,
+                        playerFavorites,
+                        universeUploads,
+                        session: sessionState,
                         worlds: worlds.map(w => ({
                             id: w.id,
                             name: w.name,
